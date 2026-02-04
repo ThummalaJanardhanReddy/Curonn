@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "curonn",
+    "slug": "curronn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    // "icon": "./assets/images/profile1.png",
+    "scheme": "curonn",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        // "foregroundImage": "./assets/images/profile1.png",
+        "backgroundColor": "#694664"
+      },
+      "package": "com.janardhan.reddy.curonn"
+      // "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/app-icon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e91fa092-6f4d-4047-94c7-8fdb5e926871"
+      }
+    }
+  }
+}

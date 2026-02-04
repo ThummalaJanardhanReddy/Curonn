@@ -1,0 +1,28 @@
+
+SQUARE APP ICON CREATED
+=======================
+
+This is a placeholder for a proper 512x512 square app icon.
+
+To create a proper square icon:
+
+1. Open any image editor (Photoshop, GIMP, Canva, etc.)
+2. Create a new 512x512 pixel image
+3. Use the Curonn logo and center it on a square background
+4. Use the app's primary colors (#694664, #4B334E)
+5. Save as PNG format
+6. Replace the current icon files
+
+OR
+
+Use online tools like:
+- https://www.canva.com/
+- https://www.figma.com/
+- https://icon.kitchen/
+
+The icon should be:
+- 512x512 pixels
+- Square format
+- PNG format
+- High quality
+- Simple and recognizable

@@ -1,0 +1,4 @@
+
+# This is a placeholder for the app icon
+# You can replace this with a proper 512x512 PNG image
+# The SVG above can be converted to PNG using online tools or image editors
