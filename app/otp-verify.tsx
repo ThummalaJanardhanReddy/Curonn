@@ -120,7 +120,9 @@ export default function OTPVerifyScreen() {
       // If OTP verification is successful, update user data and navigate
       if (otpResponse?.isSuccess && otpResponse.e_id) {
         getEmployeeDetails(otpResponse.e_id);
-        setUserData({ isVerified: true });
+        console.log("OTP verified successfully. Employee ID:", otpResponse.e_id);
+        // setUserData({ isVerified: true });
+        setUserData({ ...(userData ?? {}), isVerified: true, e_id: otpResponse.e_id });
         router.push("/username");
       } else {
         showSnackbar(otpResponse?.message || "Invalid OTP. Please try again.");

@@ -13,17 +13,20 @@ interface ToastProps {
   subtitle: string;
   onHide: () => void;
   duration?: number;
+  type?: 'success' | 'error';
 }
 
 const { width: screenWidth } = Dimensions.get('window');
 
-export default function Toast({
-  visible,
-  title,
-  subtitle,
-  onHide,
-  duration = 3000,
-}: ToastProps) {
+export default function Toast(props: ToastProps) {
+  const {
+    visible,
+    title,
+    subtitle,
+    onHide,
+    duration = 3000,
+    type = 'success',
+  } = props;
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -73,6 +76,10 @@ export default function Toast({
 
   if (!visible) return null;
 
+  // Choose color and icon based on type
+  const backgroundColor = type === 'error' ? '#ff4d4f' : '#4BB543';
+  const icon = type === 'error' ? '✗' : '✓';
+
   return (
     <Animated.View
       style={[
@@ -83,13 +90,13 @@ export default function Toast({
         },
       ]}
     >
-      <View style={styles.toast}>
+      <View style={[styles.toast, { backgroundColor }]}> {/* Color based on type */}
         <View style={styles.toastContent}>
           <Text style={styles.toastTitle}>{title}</Text>
           <Text style={styles.toastSubtitle}>{subtitle}</Text>
         </View>
         <View style={styles.successIcon}>
-          <Text style={styles.checkmark}>✓</Text>
+          <Text style={styles.checkmark}>{icon}</Text>
         </View>
       </View>
     </Animated.View>

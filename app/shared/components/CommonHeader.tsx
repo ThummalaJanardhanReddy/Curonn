@@ -21,6 +21,7 @@ interface CommonHeaderProps {
   onNotificationPress?: () => void;
   onCartPress?: () => void;
   onLocationChange?: (location: string) => void;
+  showCart?: boolean;
 }
 
 export default function CommonHeader({
@@ -31,6 +32,7 @@ export default function CommonHeader({
   onNotificationPress,
   onCartPress,
   onLocationChange,
+  showCart = true, 
 }: CommonHeaderProps) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
@@ -165,13 +167,14 @@ export default function CommonHeader({
             {/* <Text style={styles.locationSubtext}>Current Location</Text> */}
           </TouchableOpacity>
         </View>
-        
+       {showCart && ( 
         <TouchableOpacity
           style={styles.cartButton}
           onPress={handleCartPress}
         >
           <Image source={images.icons.cart} style={styles.cartIcon} />
         </TouchableOpacity>
+       )}
       </View>
 
       {/* Profile Modal */}

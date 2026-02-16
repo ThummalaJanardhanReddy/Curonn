@@ -1,3 +1,4 @@
+
 // Font family constants for Poppins
 export const fonts = {
   regular: 'Poppins-Regular',
@@ -16,6 +17,11 @@ export const fontWeights = {
 
 // Common font styles
 export const fontStyles = {
+  headercontent: {
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
+    lineHeight: 28,
+  },
   heading1: {
     fontFamily: fonts.bold,
     fontSize: 32,
@@ -56,4 +62,15 @@ export const fontStyles = {
     fontSize: 16,
     lineHeight: 24,
   },
+  errortext: {
+    fontFamily: fonts.regular,
+    fontSize: 11,
+  }
+};
+
+// Default export for compatibility with route imports
+export default {
+  fonts,
+  fontWeights,
+  fontStyles,
 };

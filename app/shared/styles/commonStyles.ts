@@ -147,6 +147,12 @@ const commonStyles = StyleSheet.create({
     paddingTop:getResponsiveSpacing(20),
     // minHeight: hp(100) - getResponsiveSpacing(20),
   },
+
+  containercontent_layout: {
+   flex: 1,
+    paddingBottom: getResponsiveSpacing(20),
+    paddingTop:getResponsiveSpacing(20),
+  },
   container_header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

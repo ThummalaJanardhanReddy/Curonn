@@ -60,6 +60,51 @@ export const FamilyHistoryApi = {
   delete: (id: string | number) => `/Histories/DeleteFamily/${id}`,
 } as const;
 
+/* Lab Test APIs */
+export const LabTestsApi = {
+  getGroups: '/LabTests/labtests/groups',
+  getAll: '/LabTests/GetAll',
+  globalSearch:'/LabTests/global-search',
+  } as const;
+
+/* Lab package APIs */
+export const LabPackagesApi = {
+  getAll: '/LabPackages/GetAll',
+  getById:  (id: string | number) => `/LabPackages/GetById/${id}`,
+  
+} as const;
+
+/* scans package APIs */
+export const XrayApi = {
+  getAll: '/Xray/GetAll',
+  getById:  (id: string | number) => `/Xray/GetById/${id}`,
+} as const;
+
+export const AddressApi = {
+   getAddressByPatientId: (patientId: string | number) =>
+    `/Employee/get-address-by-patientid?patientId=${patientId}`,
+   saveAddress: '/Employee/save-update-address',
+  setDfaultaddress:'/Employee/set-default-address',
+  getAddressById:(addressId: string | number) => `/Employee/get-address-by-id?addressId=${addressId}`,
+
+}
+
+/* Master APIs */
+export const MasterApi = {
+  getmasterdata:(categoryId: string | number) => `/MasterData/GetMasterData?categoryId=${categoryId}`,
+  
+} as const;
+
+export const LabOrdersApi = {
+  saveUpdate: '/laborders/save-update',
+  RazopayOrder: 'laborders/Razorpayment_Order_details',
+  } as const;
+
+
+  export const MyOrdersApi = {
+  Allorders: '/Employee/my-orders',
+  } as const;
+
 // ✅ Unified export for convenience
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -69,6 +114,13 @@ export const ApiRoutes = {
   Notification: NotificationApi,
   Common: CommonApi,
   FamilyHistory: FamilyHistoryApi,
+  LabTests: LabTestsApi,
+  LabPackages: LabPackagesApi,
+  Xray: XrayApi,
+  Address: AddressApi,
+  Master: MasterApi,
+  LabOrders: LabOrdersApi,
+  MyOrders:MyOrdersApi
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

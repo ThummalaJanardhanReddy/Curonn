@@ -4,7 +4,6 @@
     "slug": "curronn",
     "version": "1.0.0",
     "orientation": "portrait",
-    // "icon": "./assets/images/profile1.png",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,11 +12,18 @@
     },
     "android": {
       "adaptiveIcon": {
-        // "foregroundImage": "./assets/images/profile1.png",
         "backgroundColor": "#694664"
       },
-      "package": "com.janardhan.reddy.curonn"
-      // "softwareKeyboardLayoutMode": "pan"
+      "package": "com.janardhan.reddy.curonn",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -25,7 +31,8 @@
       "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-maps"
     ],
     "assetBundlePatterns": [
       "**/*"

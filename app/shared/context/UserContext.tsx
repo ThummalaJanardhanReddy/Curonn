@@ -2,9 +2,12 @@ import React, { createContext, ReactNode, useContext, useState } from 'react';
 
 // User data interface
 interface UserData {
-  email: string;
+  mobileNo: string;
+  emailAddress: string;
+  fullName: string;
   employeeId: string;
   isVerified: boolean;
+  e_id?: number;
 }
 
 // Context interface
@@ -16,7 +19,9 @@ interface UserContextType {
 
 // Default user data
 const defaultUserData: UserData = {
-  email: '',
+  mobileNo: '',
+  emailAddress: '',
+  fullName: '',
   employeeId: '',
   isVerified: false,
 };

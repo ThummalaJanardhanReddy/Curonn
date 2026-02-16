@@ -14,10 +14,17 @@ import {
   View,
 } from "react-native";
 import { Button, Chip } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
-
 const { height: screenHeight } = Dimensions.get("window");
-
+import MapView, { Marker } from "react-native-maps";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
+import { fontStyles } from "../../shared/styles/fonts";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import { useUser } from "../../shared/context/UserContext"; // adjust path as needed
+import { useLocalSearchParams } from "expo-router";
+import Toast from "@/app/shared/components/Toast";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -31,18 +38,32 @@ interface LocationSelectionProps {
   visible: boolean;
   onClose: () => void;
   onLocationSelected: (location: LocationData) => void;
+  addressId?: number | null;
 }
 
 export default function LocationSelection({
   visible,
   onClose,
   onLocationSelected,
+  addressId,
 }: LocationSelectionProps) {
+  // console.log("LocationSelection page opened", { addressId });
+
+  // useEffect(() => {
+  //   console.log("LocationSelection addressId:", addressId);
+  // }, [addressId]);
+
+  const { userData } = useUser();
+
+  const isEditMode = !!addressId;
+  const headerTitle = isEditMode ? "Update Address" : "Add sample collection Location";
   const [currentLocation, setCurrentLocation] =
     useState<Location.LocationObject | null>(null);
   const [address, setAddress] = useState("");
   const [houseNumber, setHouseNumber] = useState("");
   const [landmark, setLandmark] = useState("");
+  const [mapLoading, setMapLoading] = useState(true);
+  const [errors, setErrors] = useState("");
   const [selectedNickname, setSelectedNickname] = useState<
     "home" | "office" | "other"
   >("home");
@@ -50,6 +71,18 @@ export default function LocationSelection({
   const [overlayVisible, setOverlayVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+  const mapRef = useRef<MapView>(null);
+  const [fetchedIsDefault, setFetchedIsDefault] = useState(false);
+  const [markerPosition, setMarkerPosition] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({
+    title: "",
+    subtitle: "",
+    color: "#4BB543", // default to success green
+  });
 
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
@@ -70,11 +103,34 @@ export default function LocationSelection({
     });
   }, [slideAnim]);
 
+  useEffect(() => {
+    if (isEditMode && addressId) {
+      // console.log("Fetching address details for editing, addressId:", addressId);
+      axiosClient.get(ApiRoutes.Address.getAddressById(addressId))
+        .then(response => {
+          if (response.isSuccess && response.data) {
+            setAddress(response.data.address || "");
+            setHouseNumber(response.data.hNo || "");
+            setLandmark(response.data.landMark || "");
+            setSelectedNickname(response.data.addressNickname || "home");
+            setFetchedIsDefault(response.data.isDefault || false); // <-- Add this
+          }
+        })
+        .catch(err => {
+          // Optionally handle error
+        });
+    } else if (visible) {
+      setHouseNumber("");
+      setLandmark("");
+      setSelectedNickname("home");
+      setFetchedIsDefault(false);
+    }
+  }, [isEditMode, addressId,]);
+
   const getCurrentLocation = async () => {
     try {
       setIsLoading(true);
 
-      // Request permission
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -84,66 +140,58 @@ export default function LocationSelection({
         return;
       }
 
-      // Get current location with timeout
-      const location = (await Promise.race([
-        new Promise<Location.LocationObject>((resolve, reject) => {
-          Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          })
-            .then(resolve)
-            .catch(reject);
-
-          setTimeout(() => reject(new Error("Location timeout")), 15000);
-        }),
-      ])) as Location.LocationObject;
+      // Use timeInterval/distanceInterval instead of a manual race
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        // Fallback to last known location if fresh fix takes too long
+        mayShowUserSettingsDialog: true,
+      });
 
       setCurrentLocation(location);
 
-      // Try to get address from coordinates with timeout
       try {
-        const addressResult = (await Promise.race([
-          Location.reverseGeocodeAsync({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Geocoding timeout")), 8000)
-          ),
-        ])) as Location.LocationGeocodedAddress[];
+        const addressResult = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
 
         if (addressResult.length > 0) {
           const addr = addressResult[0];
-          const fullAddress = `${addr.street || ""} ${
-            addr.streetNumber || ""
-          }, ${addr.city || ""}, ${addr.region || ""}`.trim();
-          setAddress(fullAddress);
+          // Extract fields
+          const cityVillage = addr.city || "";
+          const mandal = addr.subregion || "";
+          const district = addr.district || "";
+          const country = addr.country || "";
+          const state = addr.region || "";
+          const pincode = addr.postalCode || "";
+          const fullAddress = [
+            cityVillage,
+            district,
+            mandal,
+            state,
+            country,
+            pincode,
+          ]
+            .filter(Boolean)
+            .join(", ");
+          setAddress(fullAddress || "Address not found");
         } else {
-          // Fallback to coordinates if geocoding fails
           setAddress(
-            `Lat: ${location.coords.latitude.toFixed(
-              4
-            )}, Lng: ${location.coords.longitude.toFixed(4)}`
+            `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
           );
         }
       } catch (geocodingError) {
-        console.warn("Geocoding failed, using coordinates:", geocodingError);
-        // Fallback to coordinates if geocoding fails
+        console.warn("Geocoding failed:", geocodingError);
         setAddress(
-          `Lat: ${location.coords.latitude.toFixed(
-            4
-          )}, Lng: ${location.coords.longitude.toFixed(4)}`
+          `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
         );
       }
     } catch (error) {
       console.error("Error getting location:", error);
-      if (error instanceof Error && error.message === "Location timeout") {
-        Alert.alert("Timeout", "Location request timed out. Please try again.");
-      } else {
-        Alert.alert(
-          "Error",
-          "Failed to get current location. Please check your GPS settings."
-        );
-      }
+      Alert.alert(
+        "Location Error",
+        "Could not get your location. Please ensure GPS is enabled and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -158,9 +206,13 @@ export default function LocationSelection({
     }
   }, [visible, showOverlay, hideOverlay]);
 
-  const handleConfirmLocation = () => {
+  const handleConfirmLocation = async () => {
     if (!address.trim()) {
       Alert.alert("Error", "Please enter your address");
+      return;
+    }
+    if (!houseNumber.trim()) {
+      setErrors("Please enter your house/flat number");
       return;
     }
 
@@ -173,8 +225,46 @@ export default function LocationSelection({
       nickname: selectedNickname,
     };
 
-    onLocationSelected(locationData);
-    onClose();
+    console.log("Selected location data:", locationData);
+    console.log("userData:", userData);
+    console.log("isDefault:", fetchedIsDefault);
+    const payload: any = {
+      patientId: userData?.e_id,
+      address: locationData.address,
+      hNo: locationData.houseNumber,
+      landMark: locationData.landmark,
+      addressNickname: locationData.nickname,
+      isDefault: isEditMode ? fetchedIsDefault : false, // fetchedIsDefault from API response
+      userId: userData?.e_id,
+    };
+
+    if (isEditMode && addressId) {
+      payload.addressId = addressId;
+    }
+
+
+    const responsedata:any = await axiosClient.post(
+      ApiRoutes.Address.saveAddress,
+      payload
+    );
+    console.log("saved addresses:", responsedata);
+
+    if (responsedata && responsedata.responseCode === "200") {
+      setToastMessage({
+        title: "Success",
+        subtitle: responsedata.message,
+        type: "success"
+      });
+      setShowToast(true);
+      // Optionally close modal or call onLocationSelected
+      onLocationSelected(locationData);
+      onClose();
+    }
+    // if (data.isSuccess) {
+    //   setAddresses(data.data ?? []);
+    // }
+    //onLocationSelected(locationData);
+    //onClose();
   };
 
   const handleBack = () => {
@@ -190,140 +280,273 @@ export default function LocationSelection({
       transparent={false}
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Select Location</Text>
-          <View style={styles.headerSpacer} />
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Image source={images.icons.close} style={styles.backIcon} />
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{headerTitle}</Text>
+            <View style={styles.headerSpacer} />
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Image source={images.icons.close} style={styles.backIcon} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Map Placeholder */}
-        <View style={styles.mapContainer}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6200ee" />
-              <Text style={styles.loadingText}>Getting your location...</Text>
-            </View>
-          ) : (
-            <View style={styles.mapPlaceholder}>
-              <View style={styles.mapContainer}>
-                <images.icons.location
-                  width={48}
-                  height={48}
-                  style={styles.mapIcon}
+          {/* Map Placeholder */}
+          <GooglePlacesAutocomplete
+            placeholder="Search location"
+            fetchDetails={true}
+            onPress={(data, details = null) => {
+              if (!details || !details.geometry || !details.geometry.location) {
+                Alert.alert("Could not get location details. Please try again.");
+                return;
+              }
+              console.log('Autocomplete data:', data);
+              console.log('Autocomplete details:', details);
+              const loc = details?.geometry.location;
+
+              if (!loc) return;
+
+              const coords = {
+                latitude: loc.lat,
+                longitude: loc.lng,
+              };
+
+              setMarkerPosition(coords);
+              setAddress(data.description);
+
+              mapRef.current?.animateToRegion({
+                ...coords,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              });
+            }}
+            query={{
+              key: "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic",
+              language: "en",
+            }}
+            styles={{
+              container: {
+                position: "absolute",
+                top: 80,
+                width: "85%",
+                alignSelf: "center",
+                zIndex: 10,
+                borderRadius: 8,
+                shadowColor: "#dcdcdc",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              },
+              textInput: {
+                height: 48,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: "#d1d1d2",
+                backgroundColor: "#fff",
+                paddingLeft: 40, // space for search icon
+                fontSize: 16,
+                color: "#333",
+              },
+              listView: {
+                borderRadius: 8,
+                marginTop: 4,
+                backgroundColor: "#fff",
+                borderWidth: 1,
+                borderColor: "#d1d1d2",
+                elevation: 2,
+              },
+            }}
+            renderLeftButton={() => (
+              <View style={{
+                position: "absolute",
+                left: 12,
+                top: 17,
+                zIndex: 1,
+              }}>
+                <Image
+                  source={images.icons.search} // Make sure you have a search icon in your assets
+                  style={{ width: 15, height: 15, tintColor: "#000" }}
                 />
               </View>
-              <Text style={styles.mapTitle}>Location Detected</Text>
-              <Text style={styles.mapSubtitle}>
-                {currentLocation
-                  ? `Lat: ${currentLocation.coords.latitude.toFixed(
-                      6
-                    )}, Lng: ${currentLocation.coords.longitude.toFixed(6)}`
-                  : "No location detected"}
-              </Text>
-              <TouchableOpacity
-                style={styles.refreshButton}
-                onPress={getCurrentLocation}
+            )}
+          />
+          <View style={styles.mapContainer}>
+            <TouchableOpacity
+              onPress={async () => {
+                await getCurrentLocation();
+                if (!currentLocation) return;
+
+                const coords = {
+                  latitude: currentLocation.coords.latitude,
+                  longitude: currentLocation.coords.longitude,
+                };
+
+                setMarkerPosition(coords);
+
+                mapRef.current?.animateToRegion({
+                  ...coords,
+                  latitudeDelta: 0.005,
+                  longitudeDelta: 0.005,
+                });
+              }}
+              style={{
+                position: "absolute",
+                bottom: 20,
+                right: 20,
+                backgroundColor: "#6200ee",
+                padding: 14,
+                borderRadius: 40,
+              }}
+
+            >
+              <Text style={{ color: "#fff" }}>📍</Text>
+            </TouchableOpacity>
+            {mapLoading && (
+              <View style={styles.mapLoader}>
+                <ActivityIndicator size="large" color="#6200ee" />
+                <Text style={{ marginTop: 10 }}>Loading map...</Text>
+              </View>
+            )}
+            {currentLocation ? (
+              <MapView
+                ref={mapRef}
+                style={{ flex: 1 }}
+                initialRegion={{
+                  latitude: currentLocation.coords.latitude,
+                  longitude: currentLocation.coords.longitude,
+                  latitudeDelta: 0.005,
+                  longitudeDelta: 0.005,
+                }}
+                onMapReady={() => setMapLoading(false)}
               >
-                <Text style={styles.refreshButtonText}>Refresh Location</Text>
-              </TouchableOpacity>
-            </View>
+                {(markerPosition || currentLocation) && (
+                  <Marker
+                    coordinate={{
+                      latitude:
+                        markerPosition?.latitude ||
+                        currentLocation.coords.latitude,
+                      longitude:
+                        markerPosition?.longitude ||
+                        currentLocation.coords.longitude,
+                    }}
+                  />
+                )}
+              </MapView>
+            ) : (
+              <View style={styles.loadingContainer}>
+                <Text>No location available</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Bottom Overlay */}
+          {overlayVisible && (
+            <Animated.View
+              style={[
+                styles.overlay,
+                {
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={styles.overlayContent}>
+                {/* Current Location Info */}
+                <View style={styles.locationInfo}>
+                  <View style={styles.locationHeader}>
+
+                    <images.icons.locationfill width={20} height={20} fill="#6200ee" style={styles.locationIcon} />
+
+                    <Text style={styles.locationTitle}>Current Address</Text>
+                  </View>
+                  <Text style={styles.locationAddress}>
+                    {address || "Getting address..."}
+                  </Text>
+                </View>
+
+                {/* Address Fields */}
+                <View style={styles.addressFields}>
+                  <TextInput
+                    style={styles.inputhouse}
+                    placeholder="House/Flat Number"
+                    value={houseNumber}
+                    onChangeText={text => {
+                      setHouseNumber(text);
+                      if (errors && text.trim()) setErrors(""); // Clear error on input
+                    }}
+                  />
+                  {errors ? (
+                    <Text style={styles.errortext}>{errors}</Text>
+                  ) : null}
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Landmark (Optional)"
+                    value={landmark}
+                    onChangeText={setLandmark}
+                  />
+                  {!address && (
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your address manually"
+                      value={address}
+                      onChangeText={setAddress}
+                    />
+                  )}
+                </View>
+
+                {/* Nickname Chips */}
+                <View style={styles.nicknameSection}>
+                  <Text style={styles.nicknameLabel}>
+                    Choose nickname for this address
+                  </Text>
+                  <View style={styles.chipsContainer}>
+                    {(["home", "office", "other"] as const).map((nickname) => (
+                      <Chip
+                        key={nickname}
+                        selected={selectedNickname === nickname}
+                        onPress={() => setSelectedNickname(nickname)}
+                        style={[
+                          styles.chip,
+                          selectedNickname === nickname && styles.chipSelected,
+                        ]}
+                        selectedColor="#C35E9C"
+                        textStyle={[
+                          styles.chipText,
+                          selectedNickname === nickname &&
+                          styles.chipTextSelected,
+                        ]}
+                      >
+                        {nickname.charAt(0).toUpperCase() + nickname.slice(1)}
+                      </Chip>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Confirm Button */}
+                <Button
+                  mode="contained"
+                  onPress={handleConfirmLocation}
+                  style={styles.confirmButton}
+                  contentStyle={styles.confirmButtonContent}
+                  buttonColor="#C35E9C"
+                >
+                  {isEditMode ? "Update Address" : "Confirm Address"}
+                </Button>
+              </View>
+            </Animated.View>
           )}
         </View>
 
-        {/* Bottom Overlay */}
-        {overlayVisible && (
-          <Animated.View
-            style={[
-              styles.overlay,
-              {
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.overlayContent}>
-              {/* Current Location Info */}
-              <View style={styles.locationInfo}>
-                <View style={styles.locationHeader}>
-                  <images.icons.location
-                    width={20}
-                    height={20}
-                    style={styles.locationIcon}
-                  />
-                  <Text style={styles.locationTitle}>Current Location</Text>
-                </View>
-                <Text style={styles.locationAddress}>
-                  {address || "Getting address..."}
-                </Text>
-              </View>
-
-              {/* Address Fields */}
-              <View style={styles.addressFields}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="House/Flat Number"
-                  value={houseNumber}
-                  onChangeText={setHouseNumber}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Landmark (Optional)"
-                  value={landmark}
-                  onChangeText={setLandmark}
-                />
-                {!address && (
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your address manually"
-                    value={address}
-                    onChangeText={setAddress}
-                  />
-                )}
-              </View>
-
-              {/* Nickname Chips */}
-              <View style={styles.nicknameSection}>
-                <Text style={styles.nicknameLabel}>
-                  Choose nickname for this address
-                </Text>
-                <View style={styles.chipsContainer}>
-                  {(["home", "office", "other"] as const).map((nickname) => (
-                    <Chip
-                      key={nickname}
-                      selected={selectedNickname === nickname}
-                      onPress={() => setSelectedNickname(nickname)}
-                      style={[
-                        styles.chip,
-                        selectedNickname === nickname && styles.chipSelected,
-                      ]}
-                      textStyle={[
-                        styles.chipText,
-                        selectedNickname === nickname &&
-                          styles.chipTextSelected,
-                      ]}
-                    >
-                      {nickname.charAt(0).toUpperCase() + nickname.slice(1)}
-                    </Chip>
-                  ))}
-                </View>
-              </View>
-
-              {/* Confirm Button */}
-              <Button
-                mode="contained"
-                onPress={handleConfirmLocation}
-                style={styles.confirmButton}
-                contentStyle={styles.confirmButtonContent}
-              >
-                Confirm Location
-              </Button>
-            </View>
-          </Animated.View>
-        )}
-      </View>
+        {/* Toast message */}
+        <Toast
+          visible={showToast}
+          title={toastMessage.title}
+          subtitle={toastMessage.subtitle}
+          color={toastMessage.color} // Pass the color to your Toast component
+          onHide={() => setShowToast(false)}
+          duration={3000}
+        />
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -450,6 +673,24 @@ const styles = StyleSheet.create({
   addressFields: {
     marginBottom: 20,
   },
+  inputhouse: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 5,
+    backgroundColor: "#fff",
+
+  },
+  errortext: {
+    ...fontStyles.errortext,
+    color: "red",
+    marginBottom: 8,
+    marginTop: 0,
+
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -479,19 +720,30 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
   },
   chipSelected: {
-    backgroundColor: "#6200ee",
-    borderColor: "#6200ee",
+    backgroundColor: "#fff",
+    borderColor: "#C35E9C",
   },
   chipText: {
     color: "#666",
   },
   chipTextSelected: {
-    color: "#fff",
+    color: "#C35E9C",
   },
   confirmButton: {
-    borderRadius: 8,
+    borderRadius: 50,
   },
   confirmButtonContent: {
-    paddingVertical: 8,
+    paddingVertical: 5,
+  },
+  mapLoader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    zIndex: 20,
   },
 });

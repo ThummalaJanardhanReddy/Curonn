@@ -1,6 +1,10 @@
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useState } from "react";
+import { ActivityIndicator } from "react-native";
+import { Button } from "react-native-paper";
+import React, { useCallback, useState, useEffect } from "react";
+import { router } from "expo-router";
+import { getResponsiveFontSize, getResponsiveSpacing } from '../../shared/utils/responsive';
 
 import { useFocusEffect } from "@react-navigation/native";
 import {
@@ -20,6 +24,8 @@ import { images } from "../../../assets";
 import CommonHeader from "../../shared/components/CommonHeader";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import BookingScreen from "../booking/booking";
+import ApiRoutes from "@/src/api/employee/employee";
+import axiosClient from "@/src/api/axiosClient";
 // import Svg, { Defs, Rect, Stop, RadialGradient } from 'react-native-svg';
 
 interface TestCategory {
@@ -29,6 +35,7 @@ interface TestCategory {
 }
 
 interface SubTestType {
+  groupName: string;
   id: string;
   name: string;
   image: any;
@@ -38,36 +45,115 @@ interface TestItem {
   id: string;
   name: string;
   price: string;
+  curonnPrice?: string;
+  testCount?: number;
   reportTime: string;
+  testName?: string;
   isAtHome: boolean;
+  isSuccess?: boolean;
+  testsList?: string;
+  sourceType?: string;
+  labTestMasterId?: number;
+  labPackageMasterId?: number;
+  xrayMasterId?: number;
 }
 
-export default function LabTestsScreen() {
-  const [selectedCategory, setSelectedCategory] = useState("lab-test");
-  const [selectedSubTest, setSelectedSubTest] = useState<string | null>(
-    "vitamin-iron"
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentLocation, setCurrentLocation] = useState("New York, NY"); // TODO: Implement location functionality
-  const [bookingVisible, setBookingVisible] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<{
-    name: string;
-    price: number;
-    isAtHome: boolean;
-  } | null>(null);
+interface ApiResponse<T> {
+  isSuccess: boolean;
+  message: string;
+  responseCode?: string;
+  data: T;
+  error?: any;
+}
 
+interface LabTestItem {
+  labTestMasterId: number;
+  testId: string;
+  testName: string;
+  price: number;
+  curonnPrice?: number;
+  groupName: string;
+  groupImage: string;
+}
+
+interface LabTestsResponse {
+  items: LabTestItem[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
+}
+
+interface HealthCheckItemApi {
+  labPackageMasterId: number;
+  testName: string;
+  price: number;
+  testsList: string;
+}
+
+interface HealthChecksResponse {
+  items: HealthCheckItemApi[];
+  totalCount: number;
+}
+
+interface ScanItemApi {
+  xrayMasterId: number;
+  testName: string;
+  price: number;
+}
+
+interface ScansResponse {
+  items: ScanItemApi[];
+  totalCount: number;
+}
+
+type ServiceType = "lab-test" | "health-checks" | "scans";
+
+export default function LabTestsScreen() {
+  const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("lab-test");
+  const [selectedSubTest, setSelectedSubTest] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentLocation, setCurrentLocation] = useState("New York, NY");
+  const [bookingVisible, setBookingVisible] = useState(false);
+  const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
+
+  // Lab Test Groups
+  const [subTestTypes, setSubTestTypes] = useState<SubTestType[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+
+  // Lab Test Items
+  const [testItems, setTestItems] = useState<TestItem[]>([]);
+  const [testPageNo, setTestPageNo] = useState(1);
+  const [loadingTests, setLoadingTests] = useState(false);
+  const [hasMoreTests, setHasMoreTests] = useState(true);
+
+  // Health Checks
+  const [healthCheckItems, setHealthCheckItems] = useState<TestItem[]>([]);
+  const [healthCheckPageNo, setHealthCheckPageNo] = useState(1);
+  const [loadingHealthChecks, setLoadingHealthChecks] = useState(false);
+  const [hasMoreHealthChecks, setHasMoreHealthChecks] = useState(true);
+
+  // Scans
+  const [scanItems, setScanItems] = useState<TestItem[]>([]);
+  const [scanPageNo, setScanPageNo] = useState(1);
+  const [loadingScans, setLoadingScans] = useState(false);
+  const [hasMoreScans, setHasMoreScans] = useState(true);
+  const [imageError, setImageError] = React.useState(false);
+
+  const [searchResults, setSearchResults] = useState<TestItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useFocusEffect(
-      useCallback(() => {
-        if (Platform.OS === 'android') {
-          const timeout = setTimeout(() => {
-            // Use React Native StatusBar API to set background color on Android
-            RNStatusBar.setBackgroundColor("#ffffffff", true);
-          }, 400); // Adjust timeout as needed
-          return () => clearTimeout(timeout);
-        }
-      }, [])
-    );
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        const timeout = setTimeout(() => {
+          // Use React Native StatusBar API to set background color on Android
+          RNStatusBar.setBackgroundColor("#ffffff", true);
+        }, 400); // Adjust timeout as needed
+        return () => clearTimeout(timeout);
+      }
+    }, [])
+  );
 
   // Test categories
   const testCategories: TestCategory[] = [
@@ -84,126 +170,429 @@ export default function LabTestsScreen() {
     { id: "scans", name: "Scans", selected: selectedCategory === "scans" },
   ];
 
-  // Sub test types based on selected category
-  const getSubTestTypes = (): SubTestType[] => {
-    switch (selectedCategory) {
-      case "lab-test":
-        return [
-          {
-            id: "vitamin-iron",
-            name: "Vitamin & Iron",
-            image: images.labOrders.vitamins_iron,
-          },
-          {
-            id: "typhoid",
-            name: "Typhoid",
-            image: images.labOrders.vitamins_iron,
-          },
-          {
-            id: "diabetes",
-            name: "Diabetes",
-            image: images.labOrders.vitamins_iron,
-          },
-          {
-            id: "allergy",
-            name: "Allergy",
-            image: images.labOrders.vitamins_iron,
-          },
-          {
-            id: "kidney",
-            name: "Kidney",
-            image: images.labOrders.vitamins_iron,
-          },
-        ];
-      case "health-checks":
-        return [
-          { id: "full-body", name: "Full Body", image: images.icons.calendar },
-          { id: "cardiac", name: "Cardiac", image: images.icons.calendar },
-          { id: "liver", name: "Liver", image: images.icons.calendar },
-          { id: "thyroid", name: "Thyroid", image: images.icons.calendar },
-        ];
-      case "scans":
-        return [
-          { id: "ct-scan", name: "CT Scan", image: images.icons.calendar },
-          { id: "mri", name: "MRI", image: images.icons.calendar },
-          {
-            id: "ultrasound",
-            name: "Ultrasound",
-            image: images.icons.calendar,
-          },
-          { id: "x-ray", name: "X-Ray", image: images.icons.calendar },
-        ];
-      default:
-        return [];
-    }
-  };
 
-  const subTestTypes = getSubTestTypes();
+  const fetchGlobalSearch = async (search: string) => {
+    try {
+      setIsSearching(true);
 
-  // Sample test items
-  const testItems: TestItem[] = [
-    {
-      id: "1",
-      name: "Vitamin B12 Test",
-      price: "₹299",
-      reportTime: "10-12 hours",
-      isAtHome: true,
-    },
-    {
-      id: "2",
-      name: "Iron Deficiency Test",
-      price: "₹399",
-      reportTime: "10-12 hours",
-      isAtHome: true,
-    },
-    {
-      id: "3",
-      name: "Complete Blood Count",
-      price: "₹199",
-      reportTime: "10-12 hours",
-      isAtHome: true,
-    },
-    {
-      id: "4",
-      name: "Thyroid Function Test",
-      price: "₹499",
-      reportTime: "10-12 hours",
-      isAtHome: true,
-    },
-  ];
+      const response: any = await axiosClient.get<ApiResponse<any[]>>(
+        ApiRoutes.LabTests.globalSearch,
+        { params: { search } }
+      );
+      console.log("Global Search Response:", response);
+      if (!response?.isSuccess) {
+        console.warn("Search API failed:", response?.message);
+        return;
+      }
 
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    // Auto-select first sub test type when category changes
-    const newSubTestTypes = getSubTestTypes();
-    if (newSubTestTypes.length > 0) {
-      setSelectedSubTest(newSubTestTypes[0].id);
-    } else {
-      setSelectedSubTest(null);
-    }
-  };
+      const results = response.data ?? [];
+      console.log("Search Results:", results);
 
-  const handleSubTestSelect = (subTestId: string) => {
-    setSelectedSubTest(subTestId);
-  };
-
-  const handleBookTest = (testId: string) => {
-    // Find the test item to get its details
-    const testItem = testItems.find((item) => item.id === testId);
-    if (testItem) {
-      setSelectedTest({
-        name: testItem.name,
-        price: parseInt(testItem.price.replace("₹", "")),
-        isAtHome: testItem.isAtHome,
+      const mappedResults: TestItem[] = results.map((item: any) => {
+        const base = {
+          id: String(item.masterId),
+          name: item.testName,
+          price: String(item.price),
+          curonnPrice: item.curonnPrice ?? undefined,
+          testsList: item.testList,
+          testCount: item.testList
+            ? item.testList.split(",").filter(Boolean).length
+            : undefined,
+          reportTime:
+            item.sourceType === "Single Test"
+              ? "10 to 12 hours"
+              : "48 to 72 hours",
+          isAtHome: item.sourceType === "Single Test",
+          sourceType: item.sourceType,
+        };
+        if (item.sourceType === "Single Test") {
+          return { ...base, labTestMasterId: item.masterId };
+        } else if (item.sourceType === "Package") {
+          return { ...base, labPackageMasterId: item.masterId };
+        } else if (item.sourceType === "Scan") {
+          return { ...base, xrayMasterId: item.masterId };
+        } else {
+          return base;
+        }
       });
+
+      setSearchResults(mappedResults);
+      if (mappedResults.length > 0) {
+        const firstType = mappedResults[0].sourceType;
+
+        if (firstType === "Package") {
+          setSelectedCategory("health-checks");
+        } else if (firstType === "Scan") {
+          setSelectedCategory("scans");
+        } else {
+          setSelectedCategory("lab-test");
+        }
+      }
+
+    } catch (error) {
+      console.error("Global search error:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (searchQuery.trim().length > 2) {
+        fetchGlobalSearch(searchQuery);
+      }
+
+      if (searchQuery.trim().length === 0) {
+        // Reset to original data
+        setSelectedCategory("lab-test");
+        setTestPageNo(1);
+        setHealthCheckPageNo(1);
+        setScanPageNo(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
+
+  const getDisplayedData = () => {
+    if (searchQuery.trim().length > 0) {
+      return searchResults.filter((item) => {
+        if (selectedCategory === "lab-test")
+          return item.sourceType === "Single Test";
+
+        if (selectedCategory === "health-checks")
+          return item.sourceType === "Package";
+
+        if (selectedCategory === "scans")
+          return item.sourceType === "Scan";
+
+        return false;
+      });
+    }
+    // Normal flow
+    return selectedCategory === "lab-test"
+      ? testItems
+      : selectedCategory === "health-checks"
+        ? healthCheckItems
+        : scanItems;
+  };
+  // Fetch Lab Test Groups
+  useEffect(() => {
+    if (selectedCategory !== "lab-test") return;
+    const loadLabTestGroups = async () => {
+      setLoadingGroups(true);
+      try {
+        // axiosClient already returns the API payload
+        const response: any = await axiosClient.get(ApiRoutes.LabTests.getGroups);
+
+        console.log("FULL RESPONSE:", response);
+        console.log("isSuccess:", response?.isSuccess);
+        console.log("data:", response?.data);
+
+        if (response?.isSuccess === true && Array.isArray(response.data)) {
+          setSubTestTypes(response.data);
+          setSelectedSubTest(response.data[0]?.groupName ?? null);
+        }
+      } catch (error) {
+        console.error("Error fetching lab test groups:", error);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    loadLabTestGroups();
+  }, [selectedCategory]);
+
+
+
+  const fetchLabTestsByGroup = async (
+    groupName: string,
+    pageNo = 1,
+    pageSize = 10,
+    createdBy = 1
+  ): Promise<{ tests: TestItem[]; hasMore: boolean }> => {
+    try {
+      const response: any = await axiosClient.get<ApiResponse<LabTestsResponse>>(
+        ApiRoutes.LabTests.getAll,
+        {
+          params: {
+            PageNo: pageNo,
+            PageSize: pageSize,
+            CreatedBy: createdBy,
+            GroupName: groupName,
+          },
+        }
+      );
+
+      if (!response.isSuccess) {
+        console.warn("API returned failure:", response.message);
+        return { tests: [], hasMore: false };
+      }
+
+      const items = response.data.items ?? [];
+
+      const tests: TestItem[] = items.map((item: any) => ({
+        //id: String((pageNo - 1) * pageSize + idx + 1),
+        id: String(item.labTestMasterId),
+        labTestMasterId: item.labTestMasterId,
+        name: item.testName,
+        price: item.price,               // original price
+        curonnPrice: item.curonnPrice,   // discounted price
+        reportTime: "10 to 12 hours",
+        isAtHome: true,
+      }));
+
+      return {
+        tests,
+        hasMore: items.length === pageSize,
+      };
+    } catch (error) {
+      console.error("fetchLabTestsByGroup failed:", error);
+      return { tests: [], hasMore: false };
+    }
+  };
+
+
+
+
+  // Lazy load more lab tests
+  useEffect(() => {
+    if (selectedCategory !== "lab-test" || !selectedSubTest) return;
+
+    const loadLabTests = async () => {
+      setLoadingTests(true);
+      setTestPageNo(1);
+
+      const { tests, hasMore } = await fetchLabTestsByGroup(
+        selectedSubTest,
+        1,
+        10,
+        1
+      );
+
+      setTestItems(tests);
+      setHasMoreTests(hasMore);
+      setLoadingTests(false);
+    };
+
+    loadLabTests();
+  }, [selectedCategory, selectedSubTest]);
+
+
+
+
+
+  // Fetch Health Checks
+
+  const fetchHealthChecks = async (
+    pageNo = 1,
+    pageSize = 10
+  ): Promise<{ items: TestItem[]; hasMore: boolean }> => {
+    try {
+      const response: any = await axiosClient.get<ApiResponse<HealthChecksResponse>>(
+        ApiRoutes.LabPackages.getAll,
+        {
+          params: {
+            PageNo: pageNo,
+            PageSize: pageSize,
+          },
+        }
+      );
+
+      // axiosClient already unwraps response.data
+      if (!response.isSuccess) {
+        console.warn("Health checks API failed:", response.message);
+        return { items: [], hasMore: false };
+      }
+      const getTestCount = (testsList?: string): number => {
+        if (!testsList) return 0;
+
+        return testsList
+          .split(',')
+          .map(test => test.trim())
+          .filter(Boolean).length;
+      };
+
+
+      const items = response.data.items ?? [];
+
+      const mappedItems: TestItem[] = items.map((item: any) => ({
+        id: String(item.labPackageMasterId),
+        labPackageMasterId: item.labPackageMasterId,
+        name: item.testName,
+        price: String(item.price),
+        testsList: item.testsList,
+        testCount: getTestCount(item.testsList),
+        reportTime: "48 to 72 hours",
+      }));
+
+      return {
+        items: mappedItems,
+        hasMore: items.length === pageSize,
+      };
+    } catch (error) {
+      console.error("fetchHealthChecks error:", error);
+      return { items: [], hasMore: false };
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory !== "health-checks") return;
+
+    const loadHealthChecks = async () => {
+      setLoadingHealthChecks(true);
+
+      const { items, hasMore } = await fetchHealthChecks(
+        healthCheckPageNo,
+        10
+      );
+
+      setHealthCheckItems(prev =>
+        healthCheckPageNo === 1 ? items : [...prev, ...items]
+      );
+
+      setHasMoreHealthChecks(hasMore);
+      setLoadingHealthChecks(false);
+    };
+
+    loadHealthChecks();
+  }, [selectedCategory, healthCheckPageNo]);
+
+
+
+  const handleLoadMoreTests = async () => {
+    if (loadingTests || !hasMoreTests || !selectedSubTest) return;
+
+    const nextPage = testPageNo + 1;
+    setLoadingTests(true);
+    const { tests, hasMore } = await fetchLabTestsByGroup(
+      selectedSubTest,
+      nextPage,
+      10,
+      1
+    );
+
+    setTestItems(prev => [...prev, ...tests]);
+    setHasMoreTests(hasMore);
+    setTestPageNo(nextPage);
+    setLoadingTests(false);
+  };
+
+  // Fetch Scans
+  const fetchScans = async (
+    pageNo = 1,
+    pageSize = 10
+  ): Promise<{ items: TestItem[]; hasMore: boolean }> => {
+    try {
+      const response: any = await axiosClient.get<ApiResponse<ScansResponse>>(
+        ApiRoutes.Xray.getAll,
+        {
+          params: {
+            PageNo: pageNo,
+            PageSize: pageSize,
+            CreatedBy: 1,
+          },
+        }
+      );
+
+      if (!response.isSuccess) {
+        console.warn("Scans API failed:", response.message);
+        return { items: [], hasMore: false };
+      }
+
+      const items = response.data.items ?? [];
+
+      const mappedItems: TestItem[] = items.map((item: any) => ({
+        id: String(item.xrayMasterId),
+        xrayMasterId: item.xrayMasterId,
+        name: item.testName,
+        price: String(item.price),
+        reportTime: "48 to 72 hours",
+        isAtHome: false,
+      }));
+
+      return {
+        items: mappedItems,
+        hasMore: items.length === pageSize,
+      };
+    } catch (error) {
+      console.error("fetchScans error:", error);
+      return { items: [], hasMore: false };
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory !== "scans") return;
+    const loadScans = async () => {
+      setLoadingScans(true);
+      const { items, hasMore } = await fetchScans(
+        scanPageNo,
+        10
+      );
+
+      setScanItems(prev =>
+        scanPageNo === 1 ? items : [...prev, ...items]
+      );
+
+      setHasMoreScans(hasMore);
+      setLoadingScans(false);
+    };
+
+    loadScans();
+  }, [selectedCategory, scanPageNo]);
+
+  // Handlers
+  const handleCategorySelect = (categoryId: string) => {
+    if (categoryId === selectedCategory) return;
+    setSelectedCategory(categoryId);
+    setSelectedSubTest(null);
+
+    setTestItems([]);
+    setHealthCheckItems([]);
+    setScanItems([]);
+
+    setTestPageNo(1);
+    setHealthCheckPageNo(1);
+    setScanPageNo(1);
+  };
+
+  const handleSubTestSelect = (groupName: string) => {
+    setSelectedSubTest(groupName); // groupName is used for API request
+    setTestPageNo(1);
+    setTestItems([]);
+  };
+
+  // const handleBookTest = (id: string) => {
+  //   const testItem =
+  //     selectedCategory === "lab-test"
+  //       ? testItems.find((item) => item.id === testId)
+  //       : selectedCategory === "health-checks"
+  //         ? healthCheckItems.find((item) => item.id === testId)
+  //         : scanItems.find((item) => item.id === testId);
+
+  //   if (testItem) {
+  //     console.log("Selected test for booking:", testItem);
+  //     setSelectedTest(testItem);
+  //     setBookingVisible(true);
+  //   }
+  // };
+
+  const handleBookTest = (id: string) => {
+    const testItem = getDisplayedData().find(
+      (item) => item.id === id
+    );
+    console.log("Selected test for booking:", testItem);
+    if (testItem) {
+      setSelectedTest(testItem);
       setBookingVisible(true);
     }
   };
 
-  const handleViewMoreTests = () => {
-    // Navigate to full test list
-    console.log("View more tests");
-  };
+  // const handleViewMoreTests = () => {
+  //   // Navigate to full test list
+  //   console.log("View more tests");
+  // };
 
   const renderTestCategory = ({ item }: { item: TestCategory }) => (
     <TouchableOpacity
@@ -224,26 +613,33 @@ export default function LabTestsScreen() {
     </TouchableOpacity>
   );
 
-  const renderSubTestType = ({ item }: { item: SubTestType }) => (
-    <TouchableOpacity
-      style={styles.subTestContainer}
-      onPress={() => handleSubTestSelect(item.id)}
-    >
-      <View
-        style={[
-          styles.subTestCircle,
-          selectedSubTest === item.id && styles.subTestCircleSelected,
-        ]}
+  const renderSubTestType = ({ item }: { item: any }) => {
+
+    return (
+      <TouchableOpacity
+        style={styles.subTestContainer}
+        onPress={() => handleSubTestSelect(item.groupName)}
       >
-        {typeof item.image === "function" ? (
-          <item.image style={styles.subTestImage} />
-        ) : (
-          <Image source={item.image} style={styles.subTestImage} />
-        )}
-      </View>
-      <Text style={styles.subTestName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+        <View
+          style={[
+            styles.subTestCircle,
+            selectedSubTest === item.groupName && styles.subTestCircleSelected,
+          ]}
+        >
+          <Image
+            source={
+              imageError
+                ? images.labdefault // <-- your local default image
+                : { uri: item.groupImage }
+            }
+            style={[styles.subTestImage, { width: 45, height: 45 }]}
+            onError={() => setImageError(true)}
+          />
+        </View>
+        <Text style={styles.subTestName}>{item.groupName}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderTestItem = ({ item }: { item: TestItem }) => (
     <LinearGradient
@@ -253,46 +649,146 @@ export default function LabTestsScreen() {
       end={{ x: 1, y: 0 }}
       style={styles.testCard}
     >
-      <View style={styles.testInfo}>
-        <Text style={styles.testName}>{item.name}</Text>
-        <Text style={styles.testPrice}>Starting from {item.price}</Text>
-        <Text style={styles.testReportTime}>
-          Report within {item.reportTime}
-        </Text>
-      </View>
-      <View style={styles.testAction}>
-        <PrimaryButton
-          title="Book Now"
-          onPress={() => handleBookTest(item.id)}
-          style={styles.bookButton}
-        />
-        <Text style={styles.atHomeText}>AT-Home</Text>
-      </View>
-    </LinearGradient>
+      {selectedCategory === "lab-test" && (<>
+        <View style={styles.testInfo}>
+          <Text style={styles.testName}>{item.name}</Text>
+
+          <Text style={styles.priceRow}>
+            Starting from  <Text style={styles.originalPrice}>
+              ₹{item.price}
+            </Text>
+            {' '}
+            <Text style={styles.finalPrice}>
+              ₹{item.curonnPrice}
+            </Text>
+          </Text>
+
+          {item.reportTime && (
+            <Text style={styles.testReportTime}>
+              Report within {item.reportTime}
+            </Text>
+          )}
+
+          {item.testsList && (
+            <Text style={styles.testReportTime}>
+              Tests: {item.testsList}
+            </Text>
+          )}
+        </View>
+        <View style={styles.testAction}>
+          <PrimaryButton
+            title="Book Now"
+            onPress={() => handleBookTest(item.id)}
+            style={styles.bookButton}
+          />
+          {item.isAtHome && <Text style={styles.atHomeText}>AT-Home</Text>}
+
+        </View>
+      </>)}
+
+
+      {(selectedCategory === 'health-checks' || selectedCategory === 'scans') && (
+        <>
+          <View style={styles.cardContainer}>
+            <View style={styles.testCard1}>
+              <View style={styles.testInfo}>
+                <Text style={styles.testName}>{item.name}</Text>
+                {item.testCount && (
+                  <Text style={styles.finalPrice}>
+                    {item.testCount} Tests  Included
+                  </Text>
+                )}
+
+                {item.reportTime && (
+                  <Text style={styles.testReportTime}>
+                    Report within {item.reportTime}
+                  </Text>
+                )}
+
+
+              </View>
+              <View style={styles.healthprice}>
+                <Text style={styles.priceRow}>
+                  <Text style={styles.originalPrice}>
+                    ₹{item.price}
+                  </Text>
+                  {' '}
+                  <Text style={styles.finalPrice}>
+                    ₹{item.curonnPrice}
+                  </Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.testActioncard}>
+              <Button
+                mode="outlined"
+                style={{ width: 130, height: 40, borderColor: '#BDBABA' }}
+                contentStyle={{
+                  height: 40,
+                  paddingVertical: 0,
+                  justifyContent: 'center',
+                }}
+                textColor="#694664"
+                onPress={() =>
+                  router.push({
+                    pathname: "/viewdetails",
+                    params: {
+                      id: item.id,
+                      type: selectedCategory,
+                    },
+                  })
+                }
+              >
+                View Details
+              </Button>
+              <PrimaryButton
+                title="Book Now"
+                onPress={() => handleBookTest(item.id)}
+                style={styles.bookButton}
+              />
+
+            </View>
+          </View>
+        </>)
+      }
+
+    </LinearGradient >
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        translucent={false}
-        backgroundColor="#ffffffff"
-      />
-      {/* <StatusBar
-              barStyle="light-content"
-              backgroundColor="transparent"
-              translucent
-              hidden={false}
-            /> */}
-      {/* Header */}
-    
-        <CommonHeader
-          currentLocation={currentLocation}
-          onProfilePress={() => console.log("Profile pressed")}
-          onCartPress={() => console.log("Cart pressed")}
+    <>
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          translucent={false}
+          backgroundColor="#ffffffff"
         />
+        {/* Header */}
+        <View style={styles.defaultHeader}>
+          <CommonHeader
+            currentLocation={currentLocation}
+            onProfilePress={() => console.log("Profile pressed")}
+            showCart={false}
+          />
+        </View>
+        {/* </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.containercontent}> */}
+
+        <LinearGradient
+          colors={[
+            "rgba(248, 241, 247, 1)",
+            "rgba(247, 84, 10, 0.2)",
+          ]}
+          start={{ x: 0.2, y: 0.2 }}
+          end={{ x: 0, y: 0.1 }}
+          style={{
+            flex: 1,
+            paddingHorizontal: 20, // ✅ works
+            paddingVertical: 7,
+          }}
+        >
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
@@ -316,95 +812,141 @@ export default function LabTestsScreen() {
           </View>
 
           {/* Test Categories */}
-          <View style={styles.categoriesContainer}>
-            <FlatList
-              data={testCategories}
-              renderItem={renderTestCategory}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesList}
-            />
-          </View>
-
-          {/* Sub Test Types */}
-          {selectedCategory && (
-            <View style={styles.subTestTypesContainer}>
+          {searchQuery.trim().length === 0 && (
+            <View style={styles.categoriesContainer}>
               <FlatList
-                data={subTestTypes}
-                renderItem={renderSubTestType}
+                data={testCategories}
+                renderItem={renderTestCategory}
                 keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.subTestTypesList}
+                contentContainerStyle={styles.categoriesList}
               />
             </View>
           )}
 
-          {/* Test Items */}
-          {selectedSubTest && (
+          {/* Sub Test Types for Lab Test */}
+          {selectedCategory === "lab-test" &&
+            searchQuery.trim().length === 0 && (
+              <View style={styles.subTestTypesContainer}>
+                <FlatList
+                  data={subTestTypes}
+                  renderItem={renderSubTestType}
+                  keyExtractor={(item) => item.groupName}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.subTestTypesList}
+                />
+              </View>
+            )}
+
+          <View style={styles.screen}>
+            {/* Test Items */}
             <View style={styles.testItemsContainer}>
               <FlatList
-                data={testItems}
+                data={getDisplayedData()}
                 renderItem={renderTestItem}
                 keyExtractor={(item) => item.id}
-                scrollEnabled={false}
+                onEndReached={() => {
+                  if (searchQuery.trim().length > 0) return;
+                  if (onEndReachedCalledDuringMomentum) return;
+
+                  if (selectedCategory === "lab-test") {
+                    if (hasMoreTests && !loadingTests) {
+                      handleLoadMoreTests();
+                    }
+                  }
+
+                  if (selectedCategory === "health-checks") {
+                    if (hasMoreHealthChecks && !loadingHealthChecks) {
+                      setHealthCheckPageNo(prev => prev + 1);
+                    }
+                  }
+
+                  if (selectedCategory === "scans") {
+                    if (hasMoreScans && !loadingScans) {
+                      setScanPageNo(prev => prev + 1);
+                    }
+                  }
+
+                  setOnEndReachedCalledDuringMomentum(true);
+                }}
+                onMomentumScrollBegin={() => {
+                  setOnEndReachedCalledDuringMomentum(false);
+                }}
+                onEndReachedThreshold={0.5}
+                ListEmptyComponent={() => {
+                  const isLoading =
+                    (selectedCategory === "lab-test" && loadingTests) ||
+                    (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                    (selectedCategory === "scans" && loadingScans);
+
+                  if (isLoading) return null;
+                  return (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>
+                        No data available
+                      </Text>
+                    </View>
+                  );
+                }}
+                ListFooterComponent={() => {
+                  const isLoading =
+                    (selectedCategory === "lab-test" && loadingTests) ||
+                    (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                    (selectedCategory === "scans" && loadingScans);
+
+                  if (!isLoading) return null;
+
+                  return (
+                    <View style={{ paddingVertical: 20 }}>
+                      <ActivityIndicator size="large" color="#694664" />
+                    </View>
+                  );
+                }}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                removeClippedSubviews={true}
+                showsVerticalScrollIndicator={false}
               />
             </View>
-          )}
 
-          {/* View More Tests */}
-          <TouchableOpacity
-            style={styles.viewMoreContainer}
-            onPress={handleViewMoreTests}
-          >
-            <Text style={styles.viewMoreText}>View More Tests {">>"}</Text>
-          </TouchableOpacity>
 
-          {/* Sample Collection Info */}
-          <View style={styles.sampleCollectionContainer}>
-            <Text style={styles.sampleCollectionTitle}>
-              How does sample collection work?
-            </Text>
-            <View style={styles.sampleCollectionImages}>
-              <View style={styles.sampleImageContainer}>
-                <Image
-                  source={images.sampleCollectionStep1}
-                  style={styles.sampleImage}
-                />
-              </View>
-              <View style={styles.sampleImageContainer}>
-                <Image
-                  source={images.sampleCollectionStep2}
-                  style={styles.sampleImage}
-                />
-              </View>
-              <View style={styles.sampleImageContainer}>
-                <Image
-                  source={images.sampleCollectionStep3}
-                  style={styles.sampleImage}
-                />
+
+            {/* Sample Collection Info */}
+            <View style={styles.sampleCollectionContainer}>
+              <Text style={styles.sampleCollectionTitle}>
+                How does sample collection work?
+              </Text>
+              <View style={styles.sampleCollectionImages}>
+                <View style={styles.sampleImageContainer}>
+                  <Image
+                    source={images.sampleCollectionStep1}
+                    style={styles.sampleImage}
+                  />
+                </View>
+                <View style={styles.sampleImageContainer}>
+                  <Image
+                    source={images.sampleCollectionStep2}
+                    style={styles.sampleImage}
+                  />
+                </View>
+                <View style={styles.sampleImageContainer}>
+                  <Image
+                    source={images.sampleCollectionStep3}
+                    style={styles.sampleImage}
+                  />
+                </View>
               </View>
             </View>
           </View>
 
           <View style={styles.backgroundImageContainer}>
-            {/* <Svg width="100%" height="100%">
-            <Defs>
-              <RadialGradient id="grad" cx="50%" cy="50%" r="50%">
-                <Stop offset="0" stopColor="#FFFFFF" />
-                <Stop offset="1" stopColor="#D5CDDA" />
-              </RadialGradient>
-            </Defs>
-            <Rect width="100%" height="100%" fill="url(#grad)" />
-          </Svg> */}
-            {/* <Image
-            source={images.panels.testsPage}
-            style={styles.backgroundImage}
-            resizeMode="stretch"
-          /> */}
+            {/* ...existing code... */}
           </View>
-        </ScrollView>
+
+        </LinearGradient>
 
         {/* Booking Modal */}
         {selectedTest && (
@@ -415,18 +957,35 @@ export default function LabTestsScreen() {
               setSelectedTest(null);
             }}
             serviceName={selectedTest.name}
-            servicePrice={selectedTest.price}
+            servicePrice={Number(selectedTest.price)}
+            reportTime={selectedTest.reportTime}
             isAtHome={selectedTest.isAtHome}
+            masterId={
+              selectedTest.labTestMasterId ||
+              selectedTest.labPackageMasterId ||
+              selectedTest.xrayMasterId
+            }
+            type={selectedCategory as ServiceType}
           />
         )}
- 
-    </View>
-  );
+
+      </View>
+    </>);
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.container_layout,
+    ...commonStyles.containercontent_layout,
+    backgroundColor: colors.white, // colors.bg_secondary,
+    // backgroundColor: colors.bg_primary,
+    paddingBottom: 0,
+  },
+
+  defaultHeader: {
+    paddingHorizontal: getResponsiveSpacing(20),
+  },
+  containercontent: {
+    ...commonStyles.containercontent_layout,
     backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingBottom: 0,
@@ -438,8 +997,10 @@ const styles = StyleSheet.create({
     // backgroundColor: colors.bg_primary,
   },
   searchContainer: {
-    // marginTop: 20,
     marginBottom: 20,
+  },
+  cardContainer: {
+    width: '100%',
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -518,13 +1079,12 @@ const styles = StyleSheet.create({
   },
   subTestCircleSelected: {
     // backgroundColor: '#694664',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "#694664",
   },
   subTestImage: {
-    width: "100%",
-    height: "100%",
-    tintColor: "#694664",
+    width: '100%',
+    height: '100%'
   },
   subTestName: {
     fontSize: 12,
@@ -532,9 +1092,15 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
   },
+  screen: {
+    flex: 1, // full screen height
+  },
   testItemsContainer: {
     marginBottom: 20,
+    flex: 1,
+
   },
+
   testCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -545,24 +1111,29 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: 'rgb(219, 219, 219)',
+  },
+  testCard1: {
+    flexDirection: "row",
   },
   testInfo: {
     flex: 1,
     marginRight: 16,
   },
   testName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#4B334E",
-    marginBottom: 4,
+    marginBottom: 3,
+    fontFamily: 'Poppins-Bold',
+
   },
-  testPrice: {
-    fontSize: 11,
-    color: "#4B334E",
-    fontWeight: "500",
-    marginBottom: 4,
-  },
+  // testPrice: {
+  //   fontSize: 11,
+  //   color: "#4B334E",
+  //   fontWeight: "500",
+  //   marginBottom: 4,
+  // },
   testReportTime: {
     fontSize: 8,
     color: "#4B334E",
@@ -571,10 +1142,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  healthprice: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  testActioncard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderColor: '#c3c0c0',
+    paddingTop: 12,
+    marginTop: 12,
+  },
   bookButton: {
     marginBottom: 4,
-    width: 100,
-    height: 35,
+    width: 130,
+    height: 40,
   },
   atHomeText: {
     fontSize: 10,
@@ -627,5 +1210,46 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: "100%",
     height: "100%",
+  },
+  priceRow: {
+    fontSize: 11,
+    color: "#4B334E",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: '#B0B0B0',          // light gray
+    textDecorationLine: 'line-through',
+    textDecorationStyle: 'solid',
+  },
+  finalPrice: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#C35E9C',
+  },
+  actionButton: {
+    borderColor: "#BDBABA",
+    borderWidth: 1,
+    color: "#694664",
+    width: 130,
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+  actionButtonContent: {
+    justifyContent: 'center',
+    marginBottom: 0,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
+    fontWeight: "500",
   },
 });

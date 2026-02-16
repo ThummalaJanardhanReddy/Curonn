@@ -1,6 +1,8 @@
 // Centralized asset imports for better management and type safety
 import ArrowLeft from './AppIcons/Curonn_icons/arrow_left.svg';
 import location from './AppIcons/Curonn_icons/location.svg';
+import locationfill from './AppIcons/Curonn_icons/locationfill.svg';
+
 import asthma from './AppIcons/Curonn_icons/medicalConditions/asthma.svg';
 import diabetes from './AppIcons/Curonn_icons/medicalConditions/diabetes.svg';
 import heartDisease from './AppIcons/Curonn_icons/medicalConditions/heart.svg';
@@ -94,7 +96,8 @@ export const images = {
   sampleCollectionStep1: require('./images/sampleCollectionProcess1.png'),
   sampleCollectionStep2: require('./images/sampleCollectionProcess2.png'),
   sampleCollectionStep3: require('./images/sampleCollectionProcess3.png'),
-
+  labdefault: require('./images/labdefault.png'),
+  healthpackage: require('./images/healthpackage.jpg'),
   //home
   home: {
     arrow_card: arrow_card,
@@ -189,6 +192,7 @@ export const images = {
     arrow_left: ArrowLeft,
     arrow_left_simple: ArrowLeftSimple,
     location: location,
+    locationfill: locationfill,
 
     settings: {
       addFamily: addFamily,
