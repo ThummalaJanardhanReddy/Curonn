@@ -1,6 +1,7 @@
-
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+
+
 import {
   FlatList,
   Platform,
@@ -25,6 +26,7 @@ import axiosClient from "@/src/api/axiosClient";
 import { useUser } from "../../shared/context/UserContext";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { images } from "../../../assets";
+import OrderDetails from "./OrderDetails";
 
 export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -33,14 +35,16 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const { userData } = useUser();
+  const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   // Load orders from order manager
   // Helper to map order status names to masterDataId for categoryId=7
-const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  // Debug: Log userData as soon as it changes
+  useEffect(() => {
+    console.log('[OrdersScreen] userData changed:', userData);
+  }, [userData]);
 
-  /**
-   * Fetches order status master data and returns a map: { [statusName]: masterDataId }
-   * Example: { Requested: 2867, Completed: 2711, ... }
-   */
   const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
     try {
       const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
@@ -50,7 +54,7 @@ const [searchQuery, setSearchQuery] = useState("");
       } else if (response.isSuccess && Array.isArray(response.data)) {
         data = response.data;
       }
-      const map = {};
+      const map: { [key: string]: number } = {};
       data.forEach((item: any) => {
         if (item.isActive && item.name && item.masterDataId) {
           map[item.name] = item.masterDataId;
@@ -62,7 +66,7 @@ const [searchQuery, setSearchQuery] = useState("");
       return {};
     }
   }
-  // Fetch statusId map for tabs on mount
+  // Fetch statusId map and orders on mount
   useEffect(() => {
     async function fetchStatusMapAndOrders() {
       setLoading(true);
@@ -70,12 +74,13 @@ const [searchQuery, setSearchQuery] = useState("");
       setStatusIdMap(map);
       // Fetch all orders initially
       const patientId = userData?.e_id || 0;
-      const ordersData = await fetchAllOrders(patientId, 0);
-      setOrders(ordersData);
+      if (patientId) {
+        const ordersData = await fetchAllOrders(patientId, 0);
+        setOrders(ordersData);
+      }
       setLoading(false);
     }
     fetchStatusMapAndOrders();
-    // eslint-disable-next-line
   }, [userData?.e_id]);
 
   useFocusEffect(
@@ -91,12 +96,18 @@ const [searchQuery, setSearchQuery] = useState("");
   );
 
 
-  // Refresh orders when screen comes into focus
+  // Refresh orders from API when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const allOrders = orderManager.getAllOrders();
-      setOrders(allOrders);
-    }, [])
+      const patientId = userData?.e_id || 0;
+      if (patientId) {
+        setLoading(true);
+        fetchAllOrders(patientId, 0).then((ordersData) => {
+          setOrders(ordersData);
+          setLoading(false);
+        });
+      }
+    }, [userData?.e_id])
   );
 
   // Add some sample orders if none exist (for demo purposes)
@@ -122,6 +133,7 @@ const [searchQuery, setSearchQuery] = useState("");
   useEffect(() => {
     const patientId = userData?.e_id || 0;
     let statusId = 0;
+    console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
     setLoading(true);
     // If searching by order number
     if (searchQuery.trim().length > 0) {
@@ -145,10 +157,6 @@ const [searchQuery, setSearchQuery] = useState("");
 
 
 
-  useEffect(() => {
-    const patientId = userData?.e_id || 0;
-    fetchAllOrders(patientId).then(setOrders);
-  }, []);
 
   const fetchAllOrders = async (patientId: number, statusId: number = 0, searchorderno?: string) => {
     try {
@@ -168,6 +176,17 @@ const [searchQuery, setSearchQuery] = useState("");
       console.error("Failed to fetch orders:", error);
       return [];
     }
+  };
+
+  const handleOrderPress = (order: any) => {
+    // Pass orderType and masterId explicitly
+    setSelectedOrder({
+      ...order,
+      orderType: order.orderType,
+      masterId: order.masterId,
+      statusName: order.statusName,
+    });
+    setOrderDetailsVisible(true);
   };
 
   const renderOrderCard = useCallback(
@@ -196,14 +215,13 @@ const [searchQuery, setSearchQuery] = useState("");
 
       // Format createdOn date
       const createdOn = item.createdOn ? new Date(item.createdOn).toLocaleDateString() : "";
-
       // Status color mapping
       const statusColors: { [key: string]: string } = {
-        Requested: "#c2e4ff",
+        Requested: "#d0eaff",
         Completed: "#ccface",
-        Cancelled: "#ffa59e",
+        Cancelled: "#ffd8d5",
         Inprogress: "#f8d7a7",
-        Ongoing: "#f2b1fd",
+        Ongoing: "#f7cdff",
         Pending: "#ffeeba",
         Rescheduled: "#bbecf3",
       };
@@ -216,25 +234,34 @@ const [searchQuery, setSearchQuery] = useState("");
         Cancelled: "#F44336",
         Inprogress: "#FF9800",
         Ongoing: "#9C27B0",
-        Pending: "#FFC107",
+        Pending: "#9e7600",
         Rescheduled: "#00BCD4",
       };
       const statusTextColor = statusTextColors[item.statusName] || "#000";
       return (
-        <View style={styles.orderCard}>
-          {/* Title */}
-          <Text style={styles.title}>{item.title}</Text>
-          <View style={styles.categoryrow}>
-            <Text style={styles.category}>{category}</Text>
-            {/* CreatedOn Date */}
-            <Text style={styles.categorytitle}>Created: {createdOn}</Text>
-          </View>
+        <TouchableOpacity onPress={() => handleOrderPress(item)}>
+          <View style={styles.orderCard}>
+            {/* Title */}
+            <Text style={styles.title}>{item.title}</Text>
+            <View style={styles.categoryrow}>
+              <Text style={styles.category}>{category}</Text>
+              {/* CreatedOn Date */}
+              <Text style={styles.categorytitle}>Created: {createdOn}</Text>
+            </View>
+            {item.orderType !== "Consultation" && (
+              <View style={styles.paymentrow}>
+                <Text style={styles.paymentheader}>Payment:</Text>
+                <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text>
+              </View>
+            )}
+           
 
-          {/* StatusName with background color */}
-          <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 16, paddingVertical: 6, marginTop: 4 }}>
-            <Text style={{ color: statusTextColor, fontWeight: "bold", fontSize: 12 }}>{item.statusName}</Text>
+            {/* StatusName with background color */}
+            <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 16, paddingVertical: 4, marginTop: 4 }}>
+              <Text style={{ color: statusTextColor, fontWeight: "bold", fontSize: 11 }}>{item.statusName}</Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     },
     []
@@ -263,45 +290,43 @@ const [searchQuery, setSearchQuery] = useState("");
   );
 
   return (
-    <> <View style={styles.container}>
+    <><View style={styles.container}>
       <StatusBar
         barStyle="dark-content"
         translucent={false}
-        backgroundColor="#ffffffff"
-      />
+        backgroundColor="#ffffffff" />
 
       {/* Header */}
       <View style={styles.defaultHeader}>
         <CommonHeader
-          currentLocation={currentLocation}
-          onProfilePress={() => console.log('Profile pressed')}
+          title="My Orders"
           showCart={false}
-        />
+          showLocation={false}
+          onProfilePress={() => console.log('Profile pressed')} />
       </View>
-       <View style={styles.searchContainer}>
-                  <View style={styles.searchInputContainer}>
-                    <Image source={images.icons.search} style={styles.searchIcon} />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search for Order Id"
-                      placeholderTextColor="#999"
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                    />
-                    {searchQuery.length > 0 && (
-                      <TouchableOpacity
-                        style={styles.clearButton}
-                        onPress={() => setSearchQuery("")}
-                      >
-                        <Image source={images.icons.close} style={styles.clearIcon} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Image source={images.icons.search} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for Order Id"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery} />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setSearchQuery("")}
+            >
+              <Image source={images.icons.close} style={styles.clearIcon} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
       {/* <View>
-        <Text style={{fontSize:20,fontWeight:'600',color:'#333',marginLeft:20,marginTop:10,marginBottom:10}}>{address}</Text>
-      </View> */}
+      <Text style={{fontSize:20,fontWeight:'600',color:'#333',marginLeft:20,marginTop:10,marginBottom:10}}>{address}</Text>
+    </View> */}
 
       {/* Filters */}
       {searchQuery.trim().length === 0 && (
@@ -312,35 +337,47 @@ const [searchQuery, setSearchQuery] = useState("");
             keyExtractor={(item) => item.key}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
-          />
+            contentContainerStyle={styles.filtersList} />
         </View>
       )}
 
       {/* Orders List */}
-        <View style={styles.ordersdataContainer}>
-          {loading ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-              <ActivityIndicator size="large" color="#694664" />
-            </View>
-          ) : filteredOrders.length === 0 ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 16, color: '#888' }}>No orders found</Text>
-            </View>
-          ) : (
+      <View style={styles.ordersdataContainer}>
+        {loading ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+            <ActivityIndicator size="large" color="#694664" />
+          </View>
+        ) : filteredOrders.length === 0 ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+            <Text style={{ fontSize: 16, color: '#888' }}>No orders found</Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
             <FlatList
               data={filteredOrders}
               renderItem={renderOrderCard}
               keyExtractor={(item) => item.orderNo}
               contentContainerStyle={styles.ordersList}
               showsVerticalScrollIndicator={true}
-              style={{ flex: 1 }}
-            />
-          )}
-        </View>
+              style={{ flex: 1 }} />
+
+          </View>
+        )}
+      </View>
 
     </View>
-    </>
+    <OrderDetails
+        visible={orderDetailsVisible}
+        order={selectedOrder}
+        statusName={selectedOrder?.statusName || ''}
+        onClose={() => setOrderDetailsVisible(false)}
+        refreshOrders={async () => {
+          if (userData?.e_id) {
+            const ordersData = await fetchAllOrders(userData.e_id, 0);
+            setOrders(ordersData);
+          }
+        } } /></>
+    
   );
 }
 
@@ -360,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: getResponsiveSpacing(20),
   },
-  ordersdataContainer:{
+  ordersdataContainer: {
     flex: 1,
     marginHorizontal: getResponsiveSpacing(20),
     marginTop: 10,
@@ -410,6 +447,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     marginBottom: 4
   },
+  paymentheader: {
+    fontSize: 12,
+    color: "#303030",
+     fontFamily: fonts.semiBold,
+  },
+   paymentamount: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+    marginTop:2
+  },
+  span:{
+    fontSize: 12,
+    color: "#694664",
+    
+  },
+   
   orderCard: {
     marginBottom: 10,
     paddingHorizontal: 15,
@@ -429,6 +483,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+    paymentrow: {
+    flexDirection: "row",
+  },
+
 
   orderHeader: {
     flexDirection: "row",
@@ -519,9 +577,9 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 4,
   },
-    searchContainer: {
+  searchContainer: {
     marginBottom: 5,
-      paddingHorizontal: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(20),
   },
   searchInputContainer: {
     flexDirection: "row",

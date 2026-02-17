@@ -32,8 +32,14 @@ import commonStyles, { colors } from "../styles/commonStyles";
 import FamilyMembersModal from "./FamilyMembersModal";
 import PrimaryButton from "./PrimaryButton";
 import ProfileScreenModal from "./ProfileScreenModal";
+import { fontStyles, fonts } from "../../shared/styles/fonts";
 
 const { width: screenWidth } = Dimensions.get("window");
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from "./Toast";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 interface ProfileModalProps {
   visible: boolean;
@@ -50,14 +56,70 @@ interface ProfileItem {
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [errors, setErrors] = useState("");
   const [profileForm, setProfileForm] = useState({
-    fullName: "John Doe",
-    employeeId: "EMP001",
-    email: "john.doe@example.com",
-    phone: "+1 234 567 8900",
-    age: "28",
-    gender: "Male",
+    fullName: "",
+    EmployeeCode: "",
+    emailAddress: "",
+    mobileNo: "",
+    age: "",
+    gender: "",
+    dob: "",
+    image: "",
+    eId: "",
+    roleId: "",
+    companyName: "",
+    department: "",
+    address: "",
+    branch: "",
   });
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
+  React.useEffect(() => {
+    if (!visible || !patientId) return;
+    // console.log("[ProfileModal] userData:", userData);
+    // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
+    const fetchProfile = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        // console.log("[ProfileModal] Profile data response:", response);
+        const data = response?.data ?? response;
+        setProfileForm({
+          fullName: data.fullName || "",
+          EmployeeCode: data.employeeCode,
+          emailAddress: data.emailAddress || "",
+          mobileNo: data.mobileNo || "",
+          age: data.age ? String(data.age) : "",
+          gender: data.gender || "",
+          dob: data.dob || "",
+          eId: data.eId || "",
+          roleId: data.roleId || "",
+          companyName: data.companyName || "",
+          department: data.department || "",
+          address: data.address || "",
+          branch: data.branch || "",
+          image: data.image || "",
+        });
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+        // fallback to dummy data
+        // setProfileForm({
+        //   fullName: "John Doe",
+        //   employeeId: patientId,
+        //   email: "john.doe@example.com",
+        //   phone: "+1 234 567 8900",
+        //   age: "28",
+        //   gender: "Male",
+        //   image: null,
+        // });
+      }
+    };
+    fetchProfile();
+  }, [visible, patientId]);
   const editProfileSlideAnim = useRef(new Animated.Value(screenWidth)).current;
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const [familyMembersModalVisible, setFamilyMembersModalVisible] =
@@ -141,17 +203,19 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const profileItems: ProfileItem[] =
     profileForm.gender === "Female"
       ? [
-          ...baseProfileItems,
-          {
-            id: 8,
-            title: "Menstrual History",
-            subtext: "Your menstrual history",
-            image: images.profileModal.menstrualHistory,
-          },
-        ]
+        ...baseProfileItems,
+        {
+          id: 8,
+          title: "Menstrual History",
+          subtext: "Your menstrual history",
+          image: images.profileModal.menstrualHistory,
+        },
+      ]
       : baseProfileItems;
 
   const showEditProfileModal = () => {
+    setShowToast(false);
+    setToastMessage({ title: '', subtitle: '', type: 'success' });
     setEditProfileVisible(true);
     Animated.timing(editProfileSlideAnim, {
       toValue: 0,
@@ -170,10 +234,53 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     });
   };
 
-  const handleProfileUpdate = () => {
-    // Handle profile update
-    console.log("Profile updated:", profileForm);
-    hideEditProfileModal();
+  const handleProfileUpdate = async () => {
+    // Validate required fields
+    if (!profileForm.fullName || !profileForm.age || !profileForm.gender) {
+      setToastMessage({
+        title: "Missing Required Fields",
+        subtitle: "Please fill in Full Name, Age, and Gender before updating your profile.",
+        type: "error"
+      });
+      setShowToast(true);
+      return;
+    }
+    try {
+      // Use already fetched profileForm data and all fields from getById
+      const { image, dob, ...formData } = profileForm;
+      const payload = {
+        eId: formData.eId,
+        roleId: formData.roleId,
+        companyName: formData.companyName,
+        department: formData.department,
+        address: formData.address,
+        branch: formData.branch,
+        fullName: formData.fullName,
+        EmployeeCode: formData.EmployeeCode,
+        emailAddress: formData.emailAddress,
+        mobileNo: formData.mobileNo,
+        gender: formData.gender,
+        age: formData.age ? Number(formData.age) : undefined,
+      };
+      console.log("Profile update payload:", payload);
+      const response = await axiosClient.post(ApiRoutes.Employee.update, payload);
+      console.log("Profile update response:", response);
+      setToastMessage({
+        title: "Profile Update Successfully",
+        subtitle: response?.data?.message || "",
+        type: "success"
+      });
+      setShowToast(true);
+      hideEditProfileModal();
+    } catch (error) {
+      let errorMsg = 'Something went wrong';
+      setToastMessage({
+        title: "Profile Update Failed",
+        subtitle: errorMsg,
+        type: "error"
+      });
+      setShowToast(true);
+    }
   };
 
   const showLogoutConfirmation = () => {
@@ -374,6 +481,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       </View>
     </ScrollView>
   );
+  const handleDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (date) {
+      setSelectedDate(date);
+      if (errors === "Please select service start date") setErrors("");
+    }
+  };
+
 
   const renderSettingsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -497,7 +612,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               </View>
 
               {/* Tab Buttons */}
-              <View style={styles.tabButtons}>
+              {/* <View style={styles.tabButtons}>
                 <TouchableOpacity
                   style={[
                     styles.tabButton,
@@ -530,20 +645,24 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     Settings
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
 
               {/* User Card */}
               <View style={styles.userCard}>
                 <View style={styles.userInfo}>
                   <Image
-                    source={{
-                      uri: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop",
-                    }}
+                    source={
+                      profileForm.image
+                        ? { uri: profileForm.image }
+                        : profileForm.gender === 'Female'
+                          ? images.profilefemale
+                          : images.profilemale
+                    }
                     style={styles.userImage}
                   />
                   <View style={styles.userDetails}>
-                    <Text style={styles.userName}>John Doe</Text>
-                    <Text style={styles.userInfo}>37 yrs | Male</Text>
+                    <Text style={styles.userName}>{profileForm.fullName}</Text>
+                    <Text style={styles.userInfo}>{profileForm.age ? `${profileForm.age} yrs` : "N/A"}  {profileForm.gender ? `| ${profileForm.gender}` : "N/A"}</Text>
                   </View>
                 </View>
                 {/* <TouchableOpacity
@@ -572,7 +691,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
 
             {/* Tab Content */}
-            {activeTab === 0 ? renderProfileTab() : renderSettingsTab()}
+            {/* {activeTab === 0 ? renderProfileTab() : renderSettingsTab()} */}
+            {renderSettingsTab()}
           </SafeAreaView>
         </View>
       </Modal>
@@ -637,9 +757,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
                     placeholder="Enter your employee ID"
-                    value={profileForm.employeeId}
+                    value={profileForm.EmployeeCode}
                     onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, employeeId: text })
+                      setProfileForm({ ...profileForm, EmployeeCode: text })
                     }
                   />
                 </View>
@@ -652,9 +772,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
                     placeholder="Enter your email address"
-                    value={profileForm.email}
+                    value={profileForm.emailAddress}
                     onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, email: text })
+                      setProfileForm({ ...profileForm, emailAddress: text })
                     }
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -669,28 +789,62 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
                     placeholder="Enter your phone number"
-                    value={profileForm.phone}
+                    value={profileForm.mobileNo}
                     onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, phone: text })
+                      setProfileForm({ ...profileForm, mobileNo: text })
                     }
                     keyboardType="phone-pad"
                   />
                 </View>
 
-                {/* Age Field */}
+                {/* Age Field or Calendar Picker */}
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Age</Text>
-                  <TextInput
-                    style={styles.input}
-                    underlineColorAndroid="transparent"
-                    selectionColor="transparent"
-                    placeholder="Enter your age"
-                    value={profileForm.age}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, age: text })
-                    }
-                    keyboardType="numeric"
-                  />
+                  {profileForm.age ? (
+                    <TextInput
+                      style={styles.input}
+                      underlineColorAndroid="transparent"
+                      selectionColor="transparent"
+                      placeholder="Enter your age"
+                      value={profileForm.age}
+                      onChangeText={(text) =>
+                        setProfileForm({ ...profileForm, age: text, dob: "" })
+                      }
+                      keyboardType="numeric"
+                      editable={true}
+                      onFocus={() => setShowDatePicker(true)}
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.input}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={{ color: profileForm.dob ? '#333' : '#999' }}>
+                        {profileForm.dob ? new Date(profileForm.dob).toLocaleDateString() : 'Select date of birth'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={profileForm.dob ? new Date(profileForm.dob) : new Date()}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={(event, date) => {
+                        setShowDatePicker(false);
+                        if (date) {
+                          // Calculate age immediately
+                          const today = new Date();
+                          let age = today.getFullYear() - date.getFullYear();
+                          const m = today.getMonth() - date.getMonth();
+                          if (m < 0 || (m === 0 && today.getDate() < date.getDate())) {
+                            age--;
+                          }
+                          setProfileForm({ ...profileForm, dob: date.toISOString(), age: String(age) });
+                        }
+                      }}
+                      maximumDate={new Date()}
+                    />
+                  )}
                 </View>
 
                 {/* Gender Field */}
@@ -747,6 +901,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               </ScrollView>
             </Animated.View>
           </SafeAreaView>
+          <Toast
+            visible={showToast}
+            title={toastMessage.title}
+            subtitle={toastMessage.subtitle}
+            type={toastMessage.type}
+            onHide={() => setShowToast(false)}
+            duration={3000}
+          />
         </View>
       </Modal>
 
@@ -1244,7 +1406,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   userCard: {
-    backgroundColor: "#ffffff66",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -1421,7 +1583,7 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.1,
     // shadowRadius: 4,
     elevation: 3,
-    
+
   },
   editProfileModalTitle: {
     fontSize: 18,

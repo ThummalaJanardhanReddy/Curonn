@@ -209,7 +209,7 @@ export default function LabTestsScreen() {
           return { ...base, labTestMasterId: item.masterId };
         } else if (item.sourceType === "Package") {
           return { ...base, labPackageMasterId: item.masterId };
-        } else if (item.sourceType === "Scan") {
+        } else if (item.sourceType === "Xray") {
           return { ...base, xrayMasterId: item.masterId };
         } else {
           return base;
@@ -222,7 +222,7 @@ export default function LabTestsScreen() {
 
         if (firstType === "Package") {
           setSelectedCategory("health-checks");
-        } else if (firstType === "Scan") {
+        } else if (firstType === "Xray") {
           setSelectedCategory("scans");
         } else {
           setSelectedCategory("lab-test");
@@ -265,7 +265,7 @@ export default function LabTestsScreen() {
           return item.sourceType === "Package";
 
         if (selectedCategory === "scans")
-          return item.sourceType === "Scan";
+          return item.sourceType === "Xray";
 
         return false;
       });
@@ -422,6 +422,7 @@ export default function LabTestsScreen() {
         labPackageMasterId: item.labPackageMasterId,
         name: item.testName,
         price: String(item.price),
+        curonnPrice: item.curonnPrice,   // discounted price
         testsList: item.testsList,
         testCount: getTestCount(item.testsList),
         reportTime: "48 to 72 hours",
@@ -508,6 +509,7 @@ export default function LabTestsScreen() {
         xrayMasterId: item.xrayMasterId,
         name: item.testName,
         price: String(item.price),
+        curonnPrice: item.curonnprice,   // discounted price
         reportTime: "48 to 72 hours",
         isAtHome: false,
       }));
@@ -957,7 +959,7 @@ export default function LabTestsScreen() {
               setSelectedTest(null);
             }}
             serviceName={selectedTest.name}
-            servicePrice={Number(selectedTest.price)}
+            servicePrice={Number(selectedTest.curonnPrice)}
             reportTime={selectedTest.reportTime}
             isAtHome={selectedTest.isAtHome}
             masterId={

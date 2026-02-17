@@ -12,6 +12,9 @@ import LocationSelection from '../../features/location/location-selection';
 import { getResponsiveFontSize, getResponsiveImageSize, getResponsiveSpacing } from '../utils/responsive';
 import CartModal from './CartModal';
 import ProfileModal from './ProfileModal';
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
 
 interface CommonHeaderProps {
   title?: string;
@@ -22,6 +25,7 @@ interface CommonHeaderProps {
   onCartPress?: () => void;
   onLocationChange?: (location: string) => void;
   showCart?: boolean;
+  showLocation?: boolean; // NEW: control location visibility
 }
 
 export default function CommonHeader({
@@ -32,14 +36,40 @@ export default function CommonHeader({
   onNotificationPress,
   onCartPress,
   onLocationChange,
-  showCart = true, 
+  showCart = true,
+  showLocation = true, // NEW: default true
 }: CommonHeaderProps) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(currentLocation);
+  const [profileForm, setProfileForm] = useState({
+    gender: "",
+    image: "",
+  });
   const {getCurrentAddress, address} = useLocation();
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
 
+  React.useEffect(() => {
+    if (!patientId) return;
+    // console.log("[ProfileModal] userData:", userData);
+    // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
+    const fetchProfile = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        const data = response?.data ?? response;
+        setProfileForm({
+          gender: data.gender || "",
+          image: data.image || "",
+        });
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
+    fetchProfile();
+  }, [patientId]);
+  
   useEffect(() => {
     // Fetch current address on mount
     const fetchAddress = async () => {
@@ -110,8 +140,16 @@ export default function CommonHeader({
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              {/* <Image source={images.profile} style={styles.profileIcon} /> */}
-              <images.profile style={styles.profileIcon} />
+              <Image
+                source={
+                  profileForm?.image
+                    ? { uri: profileForm.image }
+                    : profileForm?.gender === 'Female'
+                      ? images.profilefemale
+                      : images.profilemale
+                }
+                style={styles.profileIcon}
+              />
             </TouchableOpacity>
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
               <Text style={styles.homeLocationText}>{selectedLocation}   <images.icons.location style={styles.locationIcon} /></Text>
@@ -159,22 +197,24 @@ export default function CommonHeader({
             style={styles.profileButton}
             onPress={handleProfilePress}
           >
-            {/* <Image source={images.profile} style={styles.profileIcon} /> */}
             <images.profile style={styles.profileIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
-            <Text style={styles.locationText}>{selectedLocation} <images.icons.location style={[styles.locationIcon, ]} stroke={'#000000'} /></Text>
-            {/* <Text style={styles.locationSubtext}>Current Location</Text> */}
-          </TouchableOpacity>
+          {showLocation ? (
+            <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
+              <Text style={styles.locationText}>{selectedLocation} <images.icons.location style={[styles.locationIcon]} stroke={'#000000'} /></Text>
+            </TouchableOpacity>
+          ) : (
+            title ? <Text style={[styles.locationText, {marginLeft: 8}]}>{title}</Text> : null
+          )}
         </View>
-       {showCart && ( 
-        <TouchableOpacity
-          style={styles.cartButton}
-          onPress={handleCartPress}
-        >
-          <Image source={images.icons.cart} style={styles.cartIcon} />
-        </TouchableOpacity>
-       )}
+        {showCart && (
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={handleCartPress}
+          >
+            <Image source={images.icons.cart} style={styles.cartIcon} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Profile Modal */}
@@ -182,13 +222,11 @@ export default function CommonHeader({
         visible={profileVisible}
         onClose={() => setProfileVisible(false)}
       />
-      
       {/* Cart Modal */}
       <CartModal
         visible={cartVisible}
         onClose={() => setCartVisible(false)}
       />
-      
       {/* Location Selection Modal */}
       <LocationSelection
         visible={locationVisible}
@@ -256,7 +294,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(4),
   },
   profileIcon: {
-    ...getResponsiveImageSize(36, 32),
+     width: 40,
+    height: 40,
+    borderRadius: 30,
   },
   locationInfo: {
     flex: 1,

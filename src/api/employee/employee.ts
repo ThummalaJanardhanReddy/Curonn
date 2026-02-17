@@ -1,5 +1,7 @@
 // /d:/MCW/Zemplee/AndroidBuild/curronn/src/api/employee/employee.ts
 
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+
 // ✅ Centralized API route definitions for the entire app
 // Supports both static and dynamic (parameterized) endpoints
 
@@ -13,6 +15,11 @@ export const EmployeeApi = {
   uploadExcel: '/Employee/UploadExcelEmployees',
   verifyOTP: '/Employee/verify-otp',
   updateMobileProfile: '/Employee/UpdateEmployeeMobileProfile',
+  saveandupdaterelative: '/Employee/SaveOrUpdatePatientRelation',
+  GetPatientRelations: (patientId: string | number) => `/Employee/GetPatientRelations?patientId=${patientId}`,
+  GetByPatientRelationAsync: (relationId: string | number,patientId:string | number) => `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
+  deletefamilymember:'/Employee/DeletePatientRelation'
+
 } as const;
 
 export const AuthApi = {
@@ -98,11 +105,26 @@ export const MasterApi = {
 export const LabOrdersApi = {
   saveUpdate: '/laborders/save-update',
   RazopayOrder: 'laborders/Razorpayment_Order_details',
+  getLabOrderById:(labOrderId: string | number) => `/laborders/GetLabOrderById?labOrderId=${labOrderId}`,
+  cancelOrder:'/laborders/CancelOrder'
+} as const;
+
+export const MedicalOrdersApi = {
+  getMedicalOrderById:(medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
+  medicineCancel:'/medicine-orders/cancel'
   } as const;
 
+export const ConsultationApi = {
+  getappointmentById:(appointmentId: string | number) => `Appointment/get-by-id/?appointmentId=${appointmentId}`,
+reshduledata:'/Appointment/reschedule'  
+} as const;
 
   export const MyOrdersApi = {
   Allorders: '/Employee/my-orders',
+  } as const;
+
+   export const ArticlesApi = {
+  Allarticles: '/Article/get-by-status?status=published',
   } as const;
 
 // ✅ Unified export for convenience
@@ -120,7 +142,10 @@ export const ApiRoutes = {
   Address: AddressApi,
   Master: MasterApi,
   LabOrders: LabOrdersApi,
-  MyOrders:MyOrdersApi
+  MyOrders:MyOrdersApi,
+  MedicalOrders:MedicalOrdersApi,
+  ConsultationsData:ConsultationApi,
+  ArticlesData:ArticlesApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

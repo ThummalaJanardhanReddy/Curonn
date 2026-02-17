@@ -81,6 +81,8 @@ export const images = {
   // Icons
   profile: ProfileIcon,
   profile1: require('./images/profile1.png'),
+  profilemale: require('./images/maleicon.jpg'),
+  profilefemale: require('./images/femaleicon.jpg'),
   notification: require('./AppIcons/Curonn_icons/notification_list_ic.png'), // notification,
   notification_bell_svg: notificationBell_svg,
   notificationIcon: notificationIcon,

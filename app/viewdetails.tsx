@@ -56,6 +56,7 @@ export default function ViewDetailsScreen() {
       }
 
       if (response?.isSuccess) {
+        console.log("Details fetched:", response.data);
         setDetails(response.data);
       }
     } catch (error) {
@@ -149,7 +150,7 @@ export default function ViewDetailsScreen() {
         <View style={styles.footer}>
           <View style={styles.priceContainer}>
             <Text style={styles.originalPrice}>₹ {details.price}</Text>
-            <Text style={styles.finalPrice}>₹ {details.price}</Text>
+            <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
           </View>
           {/* Book Now */}
           <PrimaryButton

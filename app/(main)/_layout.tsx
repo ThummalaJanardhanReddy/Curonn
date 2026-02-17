@@ -1,4 +1,5 @@
 import { router, Tabs, usePathname } from "expo-router";
+import * as Font from 'expo-font';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet } from "react-native";
 
@@ -15,8 +16,9 @@ export default function MainLayout() {
   const [activeTab, setActiveTab] = useState(0);
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  // Tab configuration
+  // Tab configuration (must be before any early return)
   const tabs = useMemo(
     () => [
       { key: "home", title: "Home", image: images.menu.home, route: "/home" },
@@ -48,6 +50,16 @@ export default function MainLayout() {
     []
   );
 
+  useEffect(() => {
+    Font.loadAsync({
+      'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
+      'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
+      'Poppins-SemiBold': require('../../assets/fonts/Poppins-SemiBold.ttf'),
+      'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
+      // ...add all other font files
+    }).then(() => setFontsLoaded(true));
+  }, []);
+
   // Update active tab based on current route
   useEffect(() => {
     const currentTabIndex = tabs.findIndex((tab) => tab.route === pathname);
@@ -60,12 +72,15 @@ export default function MainLayout() {
     (index: number) => {
       setActiveTab(index);
       const tab = tabs[index];
-
       // Navigate to the tab's route
       router.push(tab.route as any);
     },
     [tabs]
   );
+
+  if (!fontsLoaded) {
+    return null; // or a splash/loading screen
+  }
 
   return (
     // <RegistrationGuard>

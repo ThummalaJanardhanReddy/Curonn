@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   ScrollView,
@@ -8,23 +8,26 @@ import {
   View,
 } from 'react-native';
 import { images } from '../../../assets';
+import axiosClient from '../../../src/api/axiosClient';
+import ApiRoutes from '../../../src/api/employee/employee';
 import BackButton from '../../shared/components/BackButton';
 import { colors } from '../../shared/styles/commonStyles';
 import {
   getResponsiveFontSize,
   getResponsiveSpacing
 } from '../../shared/utils/responsive';
+import { fontStyles, fonts } from "../../shared/styles/fonts";
 
 interface HealthFeedItem {
   id: string;
-  title: string;
-  content: string;
-  author: string;
-  date: string;
-  category: string;
-  readTime: string;
-  image?: any;
-  isBookmarked: boolean;
+  titleName: string;
+  descriptionName: string;
+  authorName?: string;
+  date?: string;
+  categoryName?: string;
+  readTime?: string;
+  thumbnailImag?: string;
+  isBookmarked?: boolean;
 }
 
 interface HealthFeedScreenProps {
@@ -32,74 +35,22 @@ interface HealthFeedScreenProps {
 }
 
 export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
-  const [healthFeeds, setHealthFeeds] = useState<HealthFeedItem[]>([
-    {
-      id: '1',
-      title: '10 Tips for Better Sleep Hygiene',
-      content: 'Getting quality sleep is essential for your overall health and well-being. Here are 10 evidence-based tips to improve your sleep hygiene and get better rest...',
-      author: 'Dr. Sarah Johnson',
-      date: '2024-12-15',
-      category: 'Sleep Health',
-      readTime: '5 min read',
-      image: images.healthArticle,
-      isBookmarked: false,
-    },
-    {
-      id: '2',
-      title: 'Understanding Blood Pressure: What You Need to Know',
-      content: 'Blood pressure is a crucial indicator of cardiovascular health. Learn about normal ranges, risk factors, and lifestyle changes that can help maintain healthy blood pressure levels...',
-      author: 'Dr. Michael Chen',
-      date: '2024-12-14',
-      category: 'Cardiovascular Health',
-      readTime: '7 min read',
-      image: images.healthArticle,
-      isBookmarked: true,
-    },
-    {
-      id: '3',
-      title: 'The Benefits of Regular Exercise for Mental Health',
-      content: 'Exercise isn\'t just good for your body—it\'s also incredibly beneficial for your mental health. Discover how physical activity can reduce stress, anxiety, and depression...',
-      author: 'Dr. Emily Rodriguez',
-      date: '2024-12-13',
-      category: 'Mental Health',
-      readTime: '6 min read',
-      image: images.healthArticle,
-      isBookmarked: false,
-    },
-    {
-      id: '4',
-      title: 'Nutrition Guide: Building a Balanced Diet',
-      content: 'A balanced diet is the foundation of good health. Learn about essential nutrients, portion control, and how to create meals that support your health goals...',
-      author: 'Dr. Lisa Wang',
-      date: '2024-12-12',
-      category: 'Nutrition',
-      readTime: '8 min read',
-      image: images.healthArticle,
-      isBookmarked: false,
-    },
-    {
-      id: '5',
-      title: 'Managing Stress in Daily Life',
-      content: 'Stress is a natural part of life, but chronic stress can take a toll on your health. Explore effective strategies for managing stress and building resilience...',
-      author: 'Dr. James Thompson',
-      date: '2024-12-11',
-      category: 'Mental Health',
-      readTime: '4 min read',
-      image: images.healthArticle,
-      isBookmarked: true,
-    },
-    {
-      id: '6',
-      title: 'Preventive Care: Why Regular Check-ups Matter',
-      content: 'Preventive care is one of the most important aspects of maintaining good health. Learn about essential screenings and check-ups for different age groups...',
-      author: 'Dr. Maria Garcia',
-      date: '2024-12-10',
-      category: 'Preventive Care',
-      readTime: '6 min read',
-      image: images.healthArticle,
-      isBookmarked: false,
-    },
-  ]);
+  const [healthFeeds, setHealthFeeds] = useState<HealthFeedItem[]>([]);
+
+  useEffect(() => {
+    async function fetchArticles() {
+      try {
+        const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
+        if (Array.isArray(res)) {
+          // Add isBookmarked default property for UI
+          setHealthFeeds(res.map((item: any) => ({ ...item, isBookmarked: false })));
+        }
+      } catch (e) {
+        console.error('Failed to fetch articles', e);
+      }
+    }
+    fetchArticles();
+  }, []);
 
   const [selectedArticle, setSelectedArticle] = useState<HealthFeedItem | null>(null);
 
@@ -135,28 +86,27 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
     >
       <View style={styles.feedImageContainer}>
         <Image 
-          source={item.image || images.healthArticle} 
+          source={item.thumbnailImag ? { uri: item.thumbnailImag } : images.healthArticle} 
           style={styles.feedImage}
           resizeMode="cover"
         />
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
+        {/* <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>{item.categoryName || ''}</Text>
+        </View> */}
       </View>
       
       <View style={styles.feedContent}>
-        <Text style={styles.feedTitle}>{item.title}</Text>
+        <Text style={styles.feedTitle}>{item.titleName}</Text>
         <Text style={styles.feedDescription} numberOfLines={3}>
-          {item.content}
+          {item.descriptionName}
         </Text>
         
-        <View style={styles.feedMeta}>
+        {/* <View style={styles.feedMeta}>
           <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>{item.author}</Text>
-            <Text style={styles.feedDate}>• {item.date}</Text>
-            <Text style={styles.readTime}>• {item.readTime}</Text>
+            <Text style={styles.authorName}>{item.authorName || ''}</Text>
+            <Text style={styles.feedDate}>• {item.date || ''}</Text>
+            <Text style={styles.readTime}>• {item.readTime || ''}</Text>
           </View>
-          
           <TouchableOpacity
             style={styles.bookmarkButton}
             onPress={(e) => {
@@ -168,7 +118,7 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
               {item.isBookmarked ? '🔖' : '📖'}
             </Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
     </TouchableOpacity>
   );
@@ -207,7 +157,14 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
       {selectedArticle && (
         <View style={styles.articleModalOverlay}>
           <View style={styles.articleModalContent}>
-            <View style={styles.articleHeader}>
+            <View style={[styles.articleHeader, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
+              <Text 
+                style={styles.articleTitle} 
+                numberOfLines={2} 
+                ellipsizeMode="tail"
+              >
+                {selectedArticle.titleName}
+              </Text>
               <TouchableOpacity
                 onPress={closeArticleView}
                 style={styles.articleCloseButton}
@@ -215,38 +172,26 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
                 <Image source={images.icons.close} style={styles.articleCloseIcon} />
               </TouchableOpacity>
             </View>
-            
             <ScrollView style={styles.articleBody} showsVerticalScrollIndicator={true}>
               <View style={styles.articleImageContainer}>
                 <Image 
-                  source={selectedArticle.image || images.healthArticle} 
+                  source={selectedArticle.thumbnailImag ? { uri: selectedArticle.thumbnailImag } : images.healthArticle} 
                   style={styles.articleImage}
                   resizeMode="cover"
                 />
-                <View style={styles.articleCategoryBadge}>
-                  <Text style={styles.articleCategoryText}>{selectedArticle.category}</Text>
-                </View>
+                {/* <View style={styles.articleCategoryBadge}>
+                  <Text style={styles.articleCategoryText}>{selectedArticle.categoryName || ''}</Text>
+                </View> */}
               </View>
-              
               <View style={styles.articleContent}>
-                <Text style={styles.articleTitle}>{selectedArticle.title}</Text>
-                
+{/*                 
                 <View style={styles.articleMeta}>
-                  <Text style={styles.articleAuthor}>By {selectedArticle.author}</Text>
-                  <Text style={styles.articleDate}>{selectedArticle.date}</Text>
-                  <Text style={styles.articleReadTime}>{selectedArticle.readTime}</Text>
-                </View>
-                
+                  <Text style={styles.articleAuthor}>{selectedArticle.authorName ? `By ${selectedArticle.authorName}` : ''}</Text>
+                  <Text style={styles.articleDate}>{selectedArticle.date || ''}</Text>
+                  <Text style={styles.articleReadTime}>{selectedArticle.readTime || ''}</Text>
+                </View> */}
                 <Text style={styles.articleFullContent}>
-                  {selectedArticle.content}
-                  
-                  {'\n\n'}Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                  
-                  {'\n\n'}Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                  
-                  {'\n\n'}Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-                  
-                  {'\n\n'}Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+                  {selectedArticle.descriptionName}
                 </Text>
               </View>
             </ScrollView>
@@ -340,16 +285,17 @@ const styles = StyleSheet.create({
   },
   feedTitle: {
     fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
     lineHeight: getResponsiveFontSize(24),
+     fontFamily: fonts.semiBold,
   },
   feedDescription: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     lineHeight: getResponsiveFontSize(20),
     marginBottom: getResponsiveSpacing(12),
+     fontFamily: fonts.regular,
   },
   feedMeta: {
     flexDirection: 'row',
@@ -395,7 +341,6 @@ const styles = StyleSheet.create({
   articleModalContent: {
     flex: 1,
     backgroundColor: '#fff',
-    marginTop: getResponsiveSpacing(50),
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
   },
@@ -403,9 +348,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: getResponsiveSpacing(16),
+    padding: getResponsiveSpacing(10),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    marginBottom: getResponsiveSpacing(10),
   },
   articleCloseButton: {
     padding: getResponsiveSpacing(8),
@@ -420,11 +366,13 @@ const styles = StyleSheet.create({
   },
   articleImageContainer: {
     position: 'relative',
-    height: getResponsiveSpacing(250),
+    height: getResponsiveSpacing(200),
+    paddingHorizontal: getResponsiveSpacing(10),
   },
   articleImage: {
     width: '100%',
     height: '100%',
+    borderRadius: getResponsiveSpacing(12),
   },
   articleCategoryBadge: {
     position: 'absolute',
@@ -441,14 +389,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   articleContent: {
-    padding: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(16),
+    marginTop: getResponsiveSpacing(16),
   },
   articleTitle: {
-    fontSize: getResponsiveFontSize(24),
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: getResponsiveSpacing(16),
     lineHeight: getResponsiveFontSize(32),
+    fontFamily: fonts.semiBold,
+    marginTop: getResponsiveSpacing(5),
   },
   articleMeta: {
     flexDirection: 'row',
@@ -472,9 +422,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   articleFullContent: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    lineHeight: getResponsiveFontSize(26),
+    lineHeight: getResponsiveFontSize(24),
     marginBottom: getResponsiveSpacing(30),
+    fontFamily: fonts.regular,
   },
 });

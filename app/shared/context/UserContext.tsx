@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
+import { getUserData } from '../utils/storage';
 
 // User data interface
 interface UserData {
@@ -50,6 +51,23 @@ export function UserProvider({ children }: UserProviderProps) {
     setUserData,
     clearUserData,
   };
+
+  // Load userData from AsyncStorage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const storedUserData = await getUserData();
+        if (storedUserData) {
+          setUserDataState((prev) => ({ ...prev, ...storedUserData }));
+          console.log('[UserProvider] Loaded userData from storage:', storedUserData);
+        } else {
+          console.log('[UserProvider] No userData found in storage.');
+        }
+      } catch (err) {
+        console.error('[UserProvider] Failed to load userData from storage:', err);
+      }
+    })();
+  }, []);
 
   return (
     <UserContext.Provider value={value}>

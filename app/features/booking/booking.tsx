@@ -36,6 +36,7 @@ import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 type ServiceType = "lab-test" | "health-checks" | "scans";
 
 interface BookingScreenProps {
+
   visible: boolean;
   onClose: () => void;
   serviceName: string;
@@ -57,12 +58,36 @@ export default function BookingScreen({
   type,
 }: BookingScreenProps) {
 
-  // Dynamic discount percentage (can be fetched from API in future)
-
-  const discountPercent = 10; // Example: 10%
+  const [isTodayAvailable, setIsTodayAvailable] = useState(true);
+  const [discountPercent, setDiscountPercent] = useState(10);
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
   const totalAmount = servicePrice - discountAmount;
   console.log("DEBUG: totalAmount calculated as", totalAmount);
+
+  // Fetch discount percent from Employee API
+  React.useEffect(() => {
+    async function fetchDiscount() {
+      try {
+        const patientId = userData?.e_id;
+        if (!patientId) return;
+        const res: any = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        if (res && typeof res === 'object') {
+          let discount = 0;
+          if (type === "lab-test") {
+            discount = typeof res.discountLabOrder === 'number' && res.discountLabOrder != null ? res.discountLabOrder : 0;
+          } else if (type === "health-checks") {
+            discount = typeof res.discountLabPackage === 'number' && res.discountLabPackage != null ? res.discountLabPackage : 0;
+          } else if (type === "scans") {
+            discount = typeof res.discountScanXray === 'number' && res.discountScanXray != null ? res.discountScanXray : 0;
+          }
+          setDiscountPercent(discount);
+        }
+      } catch (e) {
+        console.error('Failed to fetch discount percent', e);
+      }
+    }
+    fetchDiscount();
+  }, [userData?.e_id, type]);
   const { userData } = useUser();
   // StatusId for 'Requested' (categoryId=7)
   const [statusId, setStatusId] = useState<number>(0);
@@ -178,7 +203,7 @@ export default function BookingScreen({
       payload.labPackageMasterId = masterId || 0;
       payload.xrayMasterId = 0;
     } else if (type === "scans") {
-      payload.testType = "Scan";
+      payload.testType = "Xray";
       payload.labTestMasterId = 0;
       payload.labPackageMasterId = 0;
       payload.xrayMasterId = masterId || 0;
@@ -234,7 +259,7 @@ export default function BookingScreen({
     "07:00 AM - 08:00 AM",
     "08:00 AM - 09:00 AM",
     "09:00 AM - 10:00 AM",
-    "10:00 AM - 11:00 PM",
+    "10:00 AM - 11:00 AM",
   ];
 
   // Dynamic relationship types from MasterData API
@@ -656,9 +681,11 @@ export default function BookingScreen({
                         <Text style={styles.dropdownText}>
                           {selectedRelation ? selectedRelation.name : "Select Relation"}
                         </Text>
-                        {/* TypeScript fix: Replace SVG Image with a placeholder View */}
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
+                      {errors === "Please select relation type" && (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                      )}
                     </View>
 
                     {/* Full Name */}
@@ -671,6 +698,9 @@ export default function BookingScreen({
                         placeholder="Enter full name"
                         placeholderTextColor="#999"
                       />
+                      {errors === "Please enter full name" && (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                      )}
                     </View>
 
                     {/* Age */}
@@ -684,6 +714,9 @@ export default function BookingScreen({
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                       />
+                      {errors === "Please enter age" && (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                      )}
                     </View>
 
                     {/* Gender */}
@@ -696,9 +729,11 @@ export default function BookingScreen({
                         <Text style={styles.dropdownText}>
                           {gender || "Select Gender"}
                         </Text>
-                        {/* TypeScript fix: Replace SVG Image with a placeholder View */}
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
+                      {errors === "Please select gender" && (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                      )}
                     </View>
                   </View>
                 )}
