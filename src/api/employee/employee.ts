@@ -17,8 +17,8 @@ export const EmployeeApi = {
   updateMobileProfile: '/Employee/UpdateEmployeeMobileProfile',
   saveandupdaterelative: '/Employee/SaveOrUpdatePatientRelation',
   GetPatientRelations: (patientId: string | number) => `/Employee/GetPatientRelations?patientId=${patientId}`,
-  GetByPatientRelationAsync: (relationId: string | number,patientId:string | number) => `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
-  deletefamilymember:'/Employee/DeletePatientRelation'
+  GetByPatientRelationAsync: (relationId: string | number, patientId: string | number) => `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
+  deletefamilymember: '/Employee/DeletePatientRelation'
 
 } as const;
 
@@ -71,61 +71,70 @@ export const FamilyHistoryApi = {
 export const LabTestsApi = {
   getGroups: '/LabTests/labtests/groups',
   getAll: '/LabTests/GetAll',
-  globalSearch:'/LabTests/global-search',
-  } as const;
+  globalSearch: '/LabTests/global-search',
+} as const;
 
 /* Lab package APIs */
 export const LabPackagesApi = {
   getAll: '/LabPackages/GetAll',
-  getById:  (id: string | number) => `/LabPackages/GetById/${id}`,
-  
+  getById: (id: string | number) => `/LabPackages/GetById/${id}`,
+
 } as const;
 
 /* scans package APIs */
 export const XrayApi = {
   getAll: '/Xray/GetAll',
-  getById:  (id: string | number) => `/Xray/GetById/${id}`,
+  getById: (id: string | number) => `/Xray/GetById/${id}`,
 } as const;
 
 export const AddressApi = {
-   getAddressByPatientId: (patientId: string | number) =>
+  getAddressByPatientId: (patientId: string | number) =>
     `/Employee/get-address-by-patientid?patientId=${patientId}`,
-   saveAddress: '/Employee/save-update-address',
-  setDfaultaddress:'/Employee/set-default-address',
-  getAddressById:(addressId: string | number) => `/Employee/get-address-by-id?addressId=${addressId}`,
+  saveAddress: '/Employee/save-update-address',
+  setDfaultaddress: '/Employee/set-default-address',
+  getAddressById: (addressId: string | number) => `/Employee/get-address-by-id?addressId=${addressId}`,
 
 }
 
 /* Master APIs */
 export const MasterApi = {
-  getmasterdata:(categoryId: string | number) => `/MasterData/GetMasterData?categoryId=${categoryId}`,
-  
+  getmasterdata: (categoryId: string | number) => `/MasterData/GetMasterData?categoryId=${categoryId}`,
+
 } as const;
 
 export const LabOrdersApi = {
   saveUpdate: '/laborders/save-update',
   RazopayOrder: 'laborders/Razorpayment_Order_details',
-  getLabOrderById:(labOrderId: string | number) => `/laborders/GetLabOrderById?labOrderId=${labOrderId}`,
-  cancelOrder:'/laborders/CancelOrder'
+  getLabOrderById: (labOrderId: string | number) => `/laborders/GetLabOrderById?labOrderId=${labOrderId}`,
+  cancelOrder: '/laborders/CancelOrder'
 } as const;
 
 export const MedicalOrdersApi = {
-  getMedicalOrderById:(medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
-  medicineCancel:'/medicine-orders/cancel'
-  } as const;
-
-export const ConsultationApi = {
-  getappointmentById:(appointmentId: string | number) => `Appointment/get-by-id/?appointmentId=${appointmentId}`,
-reshduledata:'/Appointment/reschedule'  
+  getMedicalOrderById: (medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
+  medicineCancel: '/medicine-orders/cancel',
+  getDrugGroups: '/medicine-orders/drug-groups',
+  getActiveCart: '/medicine-orders/GetActiveCart',
+  saveCartItem: '/medicine-orders/save-cart-item',
+  updateCartQuantity: (cartId: number | string, quantity: number) =>
+    `/medicine-orders/cart/update-quantity?cartId=${cartId}&quantity=${quantity}`,
+  updateCartQuantityBase: '/medicine-orders/cart/update-quantity',
+  deleteCartItem: '/medicine-orders/cart/delete',
+  getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
+    `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
 } as const;
 
-  export const MyOrdersApi = {
-  Allorders: '/Employee/my-orders',
-  } as const;
+export const ConsultationApi = {
+  getappointmentById: (appointmentId: string | number) => `Appointment/get-by-id/?appointmentId=${appointmentId}`,
+  reshduledata: '/Appointment/reschedule'
+} as const;
 
-   export const ArticlesApi = {
+export const MyOrdersApi = {
+  Allorders: '/Employee/my-orders',
+} as const;
+
+export const ArticlesApi = {
   Allarticles: '/Article/get-by-status?status=published',
-  } as const;
+} as const;
 
 // ✅ Unified export for convenience
 export const ApiRoutes = {
@@ -142,10 +151,10 @@ export const ApiRoutes = {
   Address: AddressApi,
   Master: MasterApi,
   LabOrders: LabOrdersApi,
-  MyOrders:MyOrdersApi,
-  MedicalOrders:MedicalOrdersApi,
-  ConsultationsData:ConsultationApi,
-  ArticlesData:ArticlesApi,
+  MyOrders: MyOrdersApi,
+  MedicalOrders: MedicalOrdersApi,
+  ConsultationsData: ConsultationApi,
+  ArticlesData: ArticlesApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

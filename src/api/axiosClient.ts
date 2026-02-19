@@ -20,9 +20,14 @@ axiosClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Optionally log requests in dev mode
+    // Optionally log requests in dev mode (include params and resolved full URL)
     if (__DEV__) {
-      console.log('📤 API Request:', config.method?.toUpperCase(), config.url, config.data || '');
+      const fullUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
+      console.log('📤 API Request:', config.method?.toUpperCase(), fullUrl, {
+        params: config.params,
+        data: config.data,
+        headers: config.headers,
+      });
     }
 
     return config;
