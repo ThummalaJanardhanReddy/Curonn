@@ -1043,7 +1043,7 @@ export default function BookingScreen({
                             setFieldErrors((prev) => ({ ...prev, fullName: "" }));
                           }
                         }}
-                        placeholder="Enter full name"
+                        placeholder="Enter"
                         placeholderTextColor="#999"
                       />
                       {fieldErrors.fullName ? (
@@ -1061,7 +1061,7 @@ export default function BookingScreen({
                             setFieldErrors((prev) => ({ ...prev, age: "" }));
                           }
                         }}
-                        placeholder="Enter age"
+                        placeholder="Enter"
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                       />
@@ -1076,7 +1076,7 @@ export default function BookingScreen({
                         onPress={() => setShowGenderDropdown(true)}
                       >
                         <Text style={styles.dropdownText}>
-                          {gender || "Select Gender"}
+                          {gender || "Select"}
                         </Text>
                         <Image
                           source={images.icons.edit as any}
@@ -1093,7 +1093,7 @@ export default function BookingScreen({
             </View>
 
             {/* Cancellation Policy */}
-            <View style={styles.section}>
+            <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
                 <Text style={styles.policyText}>
@@ -1426,7 +1426,7 @@ export default function BookingScreen({
                   </TouchableOpacity>
                   {errors === "Please select service start date" && (
                     <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4,fontFamily:fonts.regular }}
                     >
                       {errors}
                     </Text>
@@ -1510,7 +1510,7 @@ export default function BookingScreen({
                         <Text style={styles.dropdownText}>
                           {selectedRelation
                             ? selectedRelation.name
-                            : "Select Relation"}
+                            : "Select"}
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
@@ -1529,7 +1529,7 @@ export default function BookingScreen({
                             setFieldErrors((prev) => ({ ...prev, fullName: "" }));
                           }
                         }}
-                        placeholder="Enter full name"
+                        placeholder="Enter"
                         placeholderTextColor="#999"
                       />
                       {fieldErrors.fullName ? (
@@ -1547,7 +1547,7 @@ export default function BookingScreen({
                             setFieldErrors((prev) => ({ ...prev, age: "" }));
                           }
                         }}
-                        placeholder="Enter age"
+                        placeholder="Enter"
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                       />
@@ -1562,7 +1562,7 @@ export default function BookingScreen({
                         onPress={() => setShowGenderDropdown(true)}
                       >
                         <Text style={styles.dropdownText}>
-                          {gender || "Select Gender"}
+                          {gender || "Select"}
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
@@ -1586,10 +1586,10 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 16, color: "#333" }}>
+                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.regular }}>
                     Item Price
                   </Text>
-                  <Text style={{ fontSize: 16, color: "#333" }}>
+                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.medium }}>
                     {"\u20B9"}
                     {servicePrice}
                   </Text>
@@ -1601,10 +1601,10 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 16, color: "#333" }}>
+                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.regular }}>
                     Offer Discount ({discountPercent}%)
                   </Text>
-                  <Text style={{ fontSize: 16, color: "#C15E9C" }}>
+                  <Text style={{ fontSize: 14, color: "#C15E9C",fontFamily:fonts.medium }}>
                     -{"\u20B9"}
                     {discountAmount}
                   </Text>
@@ -1623,14 +1623,14 @@ export default function BookingScreen({
                   }}
                 >
                   <Text
-                    style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}
+                    style={{ fontSize: 14,  color: "#333",fontFamily:fonts.bold }}
                   >
                     To Pay
                   </Text>
                   <Text
                     style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
+                      fontFamily:fonts.bold ,
+                      fontSize: 14,
                       color: colors.primary,
                     }}
                   >
@@ -1642,7 +1642,7 @@ export default function BookingScreen({
             </View>
 
             {/* Cancellation Policy */}
-            <View style={styles.section}>
+            <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
                 <Text style={styles.policyText}>
@@ -1883,10 +1883,14 @@ const styles = StyleSheet.create({
   section: {
     marginTop: getResponsiveSpacing(10),
   },
+    cancellsection: {
+    marginTop: getResponsiveSpacing(10),
+    marginBottom: getResponsiveSpacing(10),
+  },
   sectionTitle: {
     fontSize: 13,
     color: "#000000",
-    marginBottom: getResponsiveSpacing(4),
+    marginBottom: getResponsiveSpacing(2),
     fontFamily: fonts.semiBold
   },
   serviceCard: {
@@ -1943,6 +1947,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(5),
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1956,10 +1961,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "400",
     color: "#333",
-    marginBottom: 8,
+    marginBottom: 3,
+    fontFamily: fonts.medium
   },
   dateInput: {
     flexDirection: "row",
@@ -1969,12 +1975,13 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: "#fff",
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 13,
     color: "#333",
+    fontFamily: fonts.regular
   },
   placeholderText: {
     color: "#999",
@@ -1994,19 +2001,22 @@ const styles = StyleSheet.create({
   },
   timeSlot: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#fff",
+    color: "#333",
+    fontFamily: fonts.regular
   },
   selectedTimeSlot: {
     backgroundColor: "#C15E9C",
     borderColor: "#C15E9C",
   },
   timeSlotText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#333",
+    fontFamily: fonts.regular
   },
   selectedTimeSlotText: {
     color: "#fff",
@@ -2016,6 +2026,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#dbdbdb",
+     marginBottom: getResponsiveSpacing(5),
     padding: 16,
   },
   deliveryCard: {
@@ -2024,6 +2035,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#dbdbdb",
+     marginBottom: getResponsiveSpacing(5),
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -2048,8 +2060,9 @@ const styles = StyleSheet.create({
     width: "49%",
   },
   radioLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#2B2B2B",
+    fontFamily: fonts.regular
   },
   othersForm: {
     marginTop: 16,
@@ -2065,10 +2078,12 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
+     paddingBottom: 8,
+    paddingTop: 10,
     color: "#333",
     backgroundColor: "#fff",
+     fontSize: 13,
+    fontFamily: fonts.regular
   },
   dropdown: {
     flexDirection: "row",
@@ -2078,12 +2093,14 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingBottom: 8,
+    paddingTop: 10,
     backgroundColor: "#fff",
   },
   dropdownText: {
-    fontSize: 16,
+    fontSize: 13,
     color: "#333",
+    fontFamily: fonts.regular
   },
   dropdownIcon: {
     width: 16,
@@ -2092,19 +2109,21 @@ const styles = StyleSheet.create({
   },
   policyCard: {},
   policyText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
     lineHeight: 20,
     marginBottom: 8,
+    fontFamily: fonts.regular
   },
   learnMoreButton: {
     alignSelf: "flex-start",
   },
   learnMoreText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#0881FC",
     fontWeight: "500",
     textDecorationLine: "underline",
+    fontFamily: fonts.medium
   },
   addressCard: {
     backgroundColor: "#fff",
@@ -2112,6 +2131,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#dbdbdb",
+        marginBottom: getResponsiveSpacing(5),
   },
   addressHeader: {
     flexDirection: "row",
@@ -2202,8 +2222,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f0f0f0",
   },
   dropdownOptionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#333",
+    fontFamily: fonts.regular
   },
   razorpaycloseButton: {
     position: "relative",
@@ -2288,6 +2309,7 @@ const styles = StyleSheet.create({
   deliveryLabel: {
     fontSize: 16,
     color: "#333",
+    fontFamily: fonts.regular
   },
   deliveryValue: {
     fontSize: 16,

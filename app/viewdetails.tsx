@@ -24,7 +24,7 @@ import { fontStyles } from "./shared/styles/fonts";
 
 interface RouteParams {
   id: string;
-  type: "health-checks" | "scans";
+  type: "lab-test" | "health-checks" | "scans";
 }
 
 export default function ViewDetailsScreen() {
@@ -44,7 +44,12 @@ export default function ViewDetailsScreen() {
       setLoading(true);
 
       let response: any;
-
+      if (type === "lab-test") {
+        response = await axiosClient.get(
+          ApiRoutes.LabTests.getById(id)
+        );
+      }
+      else{
       if (type === "health-checks") {
         response = await axiosClient.get(
           ApiRoutes.LabPackages.getById(id)
@@ -53,6 +58,7 @@ export default function ViewDetailsScreen() {
         response = await axiosClient.get(
           ApiRoutes.Xray.getById(id)
         );
+      }
       }
 
       if (response?.isSuccess) {

@@ -74,7 +74,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const [formData, setFormData] = useState({
     name: '',
     relation: '',
-    gender: 'Male',
+    gender: 'male',
     age: ''
   });
 
@@ -110,7 +110,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     setFormData({
       name: '',
       relation: '',
-      gender: 'Male',
+      gender: 'male',
       age: ''
     });
     setEditingMember(null);
@@ -130,7 +130,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       try {
         // Match Swagger: POST with empRelationId as query param, empty body
         const url = `${ApiRoutes.Employee.deletefamilymember}?empRelationId=${empRelationId}`;
-        const response = await axiosClient.post(url, {});
+        const response:any = await axiosClient.post(url, {});
         console.log('Delete response:', response);
         let message = "Family Member has been deleted successfully.";
         if (response && response.data && typeof response.data === 'object' && response.data.message) {
@@ -271,7 +271,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     <View key={member.relationId} style={styles.familyMemberCard}>
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.relationName}</Text>
-        <Text style={styles.memberRelation}>{relationTypes.find(r => r.masterDataId === member.relationId)?.name || ''} | {member.gender} | {member.age}</Text>
+        <Text style={styles.memberRelation}>{relationTypes.find(r => r.masterDataId === member.relationId)?.name || ''} | {member.gender} | {member.age} yrs</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity
@@ -326,7 +326,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     <View style={styles.formContainer}>
       {/* Relation Type Dropdown */}
       <View style={styles.dropdownContainer}>
-        <Text style={styles.label}>Relation Type *</Text>
+        <Text style={styles.label}>Relation Type</Text>
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setShowRelationDropdown(true)}
@@ -346,7 +346,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           />
         </TouchableOpacity>
         {errors && errors.relation && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors.relation}</Text>
+          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.relation}</Text>
         )}
       </View>
 
@@ -399,32 +399,32 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
       {/* Full Name */}
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Full Name *</Text>
+        <Text style={styles.label}>Full Name</Text>
         <TextInput
           style={styles.input}
           underlineColorAndroid="transparent"
           selectionColor="transparent"
-          placeholder="Enter full name"
+          placeholder="Enter "
           value={formData.name}
           onChangeText={text => handleInputChange('name', text)}
         />
         {errors && errors.name && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4,fontFamily: fonts.regular }}>{errors.name}</Text>
+          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.name}</Text>
         )}
       </View>
 
       {/* Gender */}
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Gender *</Text>
+        <Text style={styles.label}>Gender</Text>
         <View style={styles.radioContainer}>
           <TouchableOpacity
             style={styles.radioOption}
-            onPress={() => handleInputChange('gender', 'Male')}
+            onPress={() => handleInputChange('gender', 'male')}
           >
             <RadioButton
-              value="Male"
-              status={formData.gender === 'Male' ? 'checked' : 'unchecked'}
-              onPress={() => handleInputChange('gender', 'Male')}
+              value="male"
+              status={formData.gender === 'male' ? 'checked' : 'unchecked'}
+              onPress={() => handleInputChange('gender', 'male')}
               color="#C15E9C"
             />
             <Text style={styles.radioText}>Male</Text>
@@ -443,42 +443,27 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           </TouchableOpacity>
         </View>
         {errors && errors.gender && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4,fontFamily: fonts.regular }}>{errors.gender}</Text>
+          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.gender}</Text>
         )}
       </View>
 
       {/* Age */}
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Age *</Text>
-        <TouchableOpacity
+        <Text style={styles.label}>Age</Text>
+        <TextInput
           style={styles.input}
-          onPress={() => setShowDatePicker(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={{ color: formData.age ? '#333' : '#999' }}>
-            {formData.age ? formData.age : 'Select date of birth'}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(event, date) => {
-              setShowDatePicker(false);
-              if (date) {
-                const today = new Date();
-                let age = today.getFullYear() - date.getFullYear();
-                const m = today.getMonth() - date.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < date.getDate())) {
-                  age--;
-                }
-                handleInputChange('age', String(age));
-              }
-            }}
-            maximumDate={new Date()}
-          />
-        )}
+          underlineColorAndroid="transparent"
+          selectionColor="transparent"
+          placeholder="Enter"
+          value={formData.age}
+          onChangeText={text => {
+            // Allow only numbers, max 2 digits
+            const numeric = text.replace(/[^0-9]/g, "").slice(0, 2);
+            handleInputChange('age', numeric);
+          }}
+          keyboardType="numeric"
+          maxLength={2}
+        />
         {errors && errors.age && (
           <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.age}</Text>
         )}
@@ -486,15 +471,11 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
       {/* Action Buttons */}
       <View style={styles.formButtons}>
-        {/* <SecondaryButton 
-          title="Cancel" 
-          onPress={handleCancel}
-          style={styles.cancelButton}
-        /> */}
         <PrimaryButton
           title={isEditMode ? 'Update Family' : 'Save Family'}
           onPress={handleSaveMember}
           style={styles.saveButton}
+          disabled={!(formData.relation && formData.name && formData.gender && formData.age)}
         />
       </View>
     </View>
@@ -605,7 +586,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#202427',
-    fontFamily: fonts.semiBold,
+     fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: 4,
@@ -664,7 +645,7 @@ const styles = StyleSheet.create({
      fontFamily: fonts.regular,
   },
   familyMembersList: {
-    gap: 16,
+    gap: 10,
   },
   familyMemberCard: {
     flexDirection: 'row',
@@ -695,7 +676,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   memberRelation: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
     fontFamily: fonts.regular,
   },
@@ -729,11 +710,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
     color: colors.primary,
-    marginBottom: 2,
-     fontFamily: fonts.medium,
+     fontSize: 14,
+    marginBottom: 3,
+    fontFamily: fonts.semiBold
+
   },
   dropdownButton: {
     flexDirection: 'row',
@@ -743,10 +724,11 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
+    height: 40,
   },
   dropdownButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#333',
      fontFamily: fonts.regular,
   },
@@ -802,9 +784,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-     fontFamily: fonts.regular,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#333',
+    fontFamily: fonts.regular,
+    includeFontPadding: false, // Android fix
+    textAlignVertical: 'center', // Android fix
   },
   radioContainer: {
     flexDirection: 'row',
@@ -817,7 +802,7 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: 16,
     color: '#333',
-    marginLeft: 8,
+    marginLeft:5,
   },
   formButtons: {
     flexDirection: 'row',

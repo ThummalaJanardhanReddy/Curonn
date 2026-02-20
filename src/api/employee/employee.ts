@@ -72,6 +72,7 @@ export const LabTestsApi = {
   getGroups: '/LabTests/labtests/groups',
   getAll: '/LabTests/GetAll',
   globalSearch: '/LabTests/global-search',
+   getById: (id: string | number) => `/LabTests/GetById/${id}`,
 } as const;
 
 /* Lab package APIs */

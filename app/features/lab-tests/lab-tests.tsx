@@ -669,6 +669,8 @@ export default function LabTestsScreen() {
       style={styles.testCard}
     >
       {selectedCategory === "lab-test" && (<>
+      <View style={styles.cardContainer}>
+       <View style={styles.testCard1}>
         <View style={styles.testInfo}>
           <Text style={styles.testName}>{item.name}</Text>
 
@@ -694,7 +696,37 @@ export default function LabTestsScreen() {
             </Text>
           )}
         </View>
-        <View style={styles.testAction}>
+        </View>
+         <View style={styles.testActioncard}>
+              <Button
+                mode="outlined"
+                style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
+                contentStyle={{
+                  height: 40,
+                  paddingVertical: 0,
+                  justifyContent: 'center',
+                }}
+                textColor="#000000"
+                onPress={() =>
+                  router.push({
+                    pathname: "/viewdetails",
+                    params: {
+                      id: item.id,
+                      type: selectedCategory,
+                    },
+                  })
+                }
+              >
+                View Details
+              </Button>
+              <PrimaryButton
+                title="Book Now"
+                onPress={() => handleBookTest(item.id)}
+                style={styles.bookButton}
+              />
+
+            </View> </View>
+        {/* <View style={styles.testAction}>
           <PrimaryButton
             title="Book Now"
             onPress={() => handleBookTest(item.id)}
@@ -702,7 +734,7 @@ export default function LabTestsScreen() {
           />
           {item.isAtHome && <Text style={styles.atHomeText}>AT-Home</Text>}
 
-        </View>
+        </View> */}
       </>)}
 
 
@@ -762,7 +794,7 @@ export default function LabTestsScreen() {
                 View Details
               </Button>
               <PrimaryButton
-                title="Book Now1"
+                title="Book Now"
                 onPress={() => handleBookTest(item.id)}
                 style={styles.bookButton}
               />
@@ -803,8 +835,8 @@ export default function LabTestsScreen() {
             "rgba(255, 255, 255, 1)",
             "rgba(247, 84, 10, 0.3)",
           ]}
-          start={{ x: 0.1, y: 0.2 }}
-          end={{ x: 0, y: 0 }}
+          start={{ x: 0.2, y: 1}}
+          end={{ x: 0.1, y: 0.2 }}
           style={{
             paddingHorizontal: 20, // ✅ works
             paddingVertical: 5,
@@ -863,7 +895,7 @@ export default function LabTestsScreen() {
 
             </LinearGradient>
              <View style={styles.containercontent}>
-          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
+          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 5 }}>
             <View style={styles.testItemsContainer}>
               <FlatList
                 data={getDisplayedData()}
@@ -1212,7 +1244,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   sampleCollectionContainer: {
-    marginBottom: 30,
+    marginBottom: 0,
     justifyContent: "flex-start",
     // alignItems: 'center',
   },
