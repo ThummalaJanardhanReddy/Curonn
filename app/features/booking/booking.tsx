@@ -2,7 +2,7 @@ import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Image,
   Modal,
@@ -28,22 +28,34 @@ import {
 import LocationSelection from "../location/location-selection";
 import AddressSelection from "../address/address-selection";
 import { useUser } from "../../shared/context/UserContext";
+import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
-// import RazorpayCheckout from 'react-native-razorpay';
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from '@/app/shared/styles/fonts';
+// Guarded access to expo-router's useSearchParams hook (for medicine flow).
+let maybeUseSearchParams: any = null;
+try {
+  const rr = require("expo-router");
+  maybeUseSearchParams =
+    rr && typeof rr.useSearchParams === "function" ? rr.useSearchParams : null;
+} catch (e) {
+  maybeUseSearchParams = null;
+}
+
 type ServiceType = "lab-test" | "health-checks" | "scans";
 
 interface BookingScreenProps {
-
   visible: boolean;
   onClose: () => void;
   serviceName: string;
   servicePrice: number;
   isAtHome: boolean;
+  /** Lab-test flow only */
   masterId?: number;
+  /** Lab-test flow only */
   type?: ServiceType;
+  /** Lab-test flow only */
   reportTime?: string;
 }
 
@@ -52,64 +64,45 @@ export default function BookingScreen({
   onClose,
   serviceName,
   servicePrice,
-  reportTime,
   isAtHome,
   masterId,
   type,
+  reportTime,
 }: BookingScreenProps) {
-
-  const [isTodayAvailable, setIsTodayAvailable] = useState(true);
-  const [discountPercent, setDiscountPercent] = useState(10);
-  const discountAmount = Math.round((servicePrice * discountPercent) / 100);
-  const totalAmount = servicePrice - discountAmount;
-  console.log("DEBUG: totalAmount calculated as", totalAmount);
+  // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
-  // Fetch discount percent from Employee API
-  React.useEffect(() => {
-    async function fetchDiscount() {
-      try {
-        const patientId = userData?.e_id;
-        if (!patientId) return;
-        const res: any = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
-        if (res && typeof res === 'object') {
-          let discount = 0;
-          if (type === "lab-test") {
-            discount = typeof res.discountLabOrder === 'number' && res.discountLabOrder != null ? res.discountLabOrder : 0;
-          } else if (type === "health-checks") {
-            discount = typeof res.discountLabPackage === 'number' && res.discountLabPackage != null ? res.discountLabPackage : 0;
-          } else if (type === "scans") {
-            discount = typeof res.discountScanXray === 'number' && res.discountScanXray != null ? res.discountScanXray : 0;
-          }
-          setDiscountPercent(discount);
-        }
-      } catch (e) {
-        console.error('Failed to fetch discount percent', e);
-      }
-    }
-    fetchDiscount();
-  }, [userData?.e_id, type]);
-  // StatusId for 'Requested' (categoryId=7)
-  const [statusId, setStatusId] = useState<number>(0);
+
+  // ─── Medicine-flow flag (parsed from search params / global) ───────
+  const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
+  const [incomingCartItems, setIncomingCartItems] = useState<Array<any>>([]);
+
+  // ─── Shared state ──────────────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
-  const [errors, setErrors] = useState("");
   const [patientType, setPatientType] = useState("self");
-  const [relationType, setRelationType] = useState("");
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [showRelationDropdown, setShowRelationDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-  const [showLocationSelection, setShowLocationSelection] = useState(false);
-  const [showAllAddress, setShowAllAdderss] = useState(false);
-  const [bookingVisible, setBookingVisible] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+
+  // ─── Lab-test flow state ───────────────────────────────────────────
+  const [errors, setErrors] = useState("");
+  const [isTodayAvailable, setIsTodayAvailable] = useState(true);
+  const [discountPercent, setDiscountPercent] = useState(10);
+  const discountAmount = Math.round((servicePrice * discountPercent) / 100);
+  const totalAmount = servicePrice - discountAmount;
+  const [statusId, setStatusId] = useState<number>(0);
+  const [razorpayOrderId, setRazorpayOrderId] = useState("");
+  const [showConfirmExit, setShowConfirmExit] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [addressVisible, setAddressVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
-  // TypeScript fix: use 'any' for SavedAddress if type is missing
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [editAddressId, setEditAddressId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  // Unified address state (shared by both flows)
   const [selectedLocation, setSelectedLocation] = useState<{
     addressId: number;
     address: string;
@@ -117,291 +110,193 @@ export default function BookingScreen({
     landmark: string;
     nickname: string;
   } | null>(null);
+  // Lab-test: dynamic relation types from API
+  const [labRelationTypes, setLabRelationTypes] = useState<
+    { masterDataId: number; name: string }[]
+  >([]);
+  const [selectedRelation, setSelectedRelation] = useState<{
+    masterDataId: number;
+    name: string;
+  } | null>(null);
+  // Lab-test toast has type
+  const [showToastLab, setShowToastLab] = useState(false);
+  const [toastMessageLab, setToastMessageLab] = useState<{
+    title: string;
+    subtitle: string;
+    type: "success" | "error";
+  }>({ title: "", subtitle: "", type: "success" });
 
-  const [showPayment, setShowPayment] = useState(false);
-  const [razorpayOrderId, setRazorpayOrderId] = useState("");
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
-  const [showConfirmExit, setShowConfirmExit] = useState(false);
-  // Fetch statusId for 'Requested' from MasterData API (categoryId=7)
-  const fetchStatusId = async () => {
-    try {
-      const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
-      let status = 0;
-      if (Array.isArray(response)) {
-        const requested = response.find((item: any) => item.name === 'Requested' && item.isActive);
-        if (requested) status = requested.masterDataId;
-      } else if (response.isSuccess && Array.isArray(response.data)) {
-        const requested = response.data.find((item: any) => item.name === 'Requested' && item.isActive);
-        if (requested) status = requested.masterDataId;
-      }
-      setStatusId(status);
-    } catch (error) {
-      console.error('Failed to fetch statusId for Requested', error);
-    }
-  };
-  fetchStatusId();
-  // Fetch addresses and set the first as selectedLocation on mount
-  React.useEffect(() => {
-    if (userData?.e_id) {
-      fetchAddresses();
-    }
-    // eslint-disable-next-line
-  }, [userData?.e_id]);
+  // ─── Medicine flow state ───────────────────────────────────────────
+  const [relationType, setRelationType] = useState("");
+  const [showToastMed, setShowToastMed] = useState(false);
+  const [toastMessageMed, setToastMessageMed] = useState({
+    title: "",
+    subtitle: "",
+  });
+  const [medRazorpayOrderId, setMedRazorpayOrderId] = useState<string | null>(
+    null
+  );
 
+  // ─── Shared constants ──────────────────────────────────────────────
+  const genderOptions = ["Male", "Female", "Other"];
 
-
-  // Helper to build lab order payload
-  const buildLabOrderPayload = (paymentData?: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }) => {
-    const isSelfService = patientType === "self";
-    const payload: any = {
-      labOrderId: 0,
-      testName: serviceName,
-      patientId: userData?.e_id || 0,
-      address: selectedLocation?.address || "",
-      hNo: selectedLocation?.houseNumber || "",
-      landMark: selectedLocation?.landmark || "",
-      addressNickname: selectedLocation?.nickname
-        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
-        : "",
-      serviceDate: selectedDate ? formatDate(selectedDate) : "",
-      timeSlot: selectedTimeSlot,
-      isSelfService,
-      paymentDetails: String(totalAmount), // must be string for API
-      isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0, // set to patientId
-      labPartnerId: 0,
-      statusId: statusId, // Use fetched statusId for 'Requested'
-      paymentAmount: totalAmount,
-      razorpayOrderId: paymentData?.razorpayOrderId || "",
-      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
-      razorpaySignature: paymentData?.razorpaySignature || "",
-
-    };
-    // Relation details
-    if (isSelfService) {
-      payload.relationId = 0;
-      payload.relationName = "";
-      payload.relationAge = 0;
-      payload.relationGender = "";
-    } else if (selectedRelation) {
-      payload.relationId = selectedRelation.masterDataId;
-      payload.relationName = fullName;
-      payload.relationAge = age ? Number(age) : 0;
-      payload.relationGender = gender;
-    }
-    // Master IDs and testType
-    if (type === "lab-test") {
-      payload.testType = "Single Test";
-      payload.labTestMasterId = masterId || 0;
-      payload.labPackageMasterId = 0;
-      payload.xrayMasterId = 0;
-    } else if (type === "health-checks") {
-      payload.testType = "Package";
-      payload.labTestMasterId = 0;
-      payload.labPackageMasterId = masterId || 0;
-      payload.xrayMasterId = 0;
-    } else if (type === "scans") {
-      payload.testType = "Xray";
-      payload.labTestMasterId = 0;
-      payload.labPackageMasterId = 0;
-      payload.xrayMasterId = masterId || 0;
-    }
-    return payload;
-  };
-
-  // Save lab order after payment
-  const saveLabOrder = async (paymentData: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }) => {
-    const payload = buildLabOrderPayload(paymentData);
-    payload.createdBy = 1; // Fix createdBy to 1
-    payload.req = "web"; // Ensure req field is present
-    console.log("Lab order payload after payment:", payload);
-    try {
-      const response: any = await axiosClient.post(ApiRoutes.LabOrders.saveUpdate, payload);
-      console.log("Lab order API response:", response);
-      if (response.success) {
-        setToastMessage({
-          title: "Order Success",
-          subtitle: response.message || "Your lab order was placed successfully!",
-          type: "success"
-        });
-        setShowToast(true);
-        setTimeout(() => {
-          setShowToast(false);
-          setShowPayment(false);
-          onClose();
-          router.push("/(main)/orders");
-        }, 1500);
-      } else {
-        console.log("Order failed, response message:", response.message);
-        setToastMessage({
-          title: "Order Failed",
-          subtitle: response.message || "Failed to place order.",
-          type: "error"
-        });
-        setShowToast(true);
-      }
-    } catch (error) {
-      console.log("Order error:", error);
-      setToastMessage({
-        title: "Order Error",
-        subtitle: "Something went wrong.",
-        type: "error"
-      });
-      setShowToast(true);
-    }
-  };
-
-
-  // Sample time slots (would come from API)
-  const timeSlots = [
+  // Lab-test time slots
+  const labTimeSlots = [
     "07:00 AM - 08:00 AM",
     "08:00 AM - 09:00 AM",
     "09:00 AM - 10:00 AM",
     "10:00 AM - 11:00 AM",
   ];
 
-  // Dynamic relationship types from MasterData API
-  const [relationTypes, setRelationTypes] = useState<{
-    masterDataId: number;
-    name: string;
-  }[]>([]);
-  const [selectedRelation, setSelectedRelation] = useState<{
-    masterDataId: number;
-    name: string;
-  } | null>(null);
+  // Medicine time slots
+  const medTimeSlots = [
+    "09:00 AM - 10:00 AM",
+    "10:00 AM - 11:00 AM",
+    "11:00 AM - 12:00 PM",
+    "02:00 PM - 03:00 PM",
+    "03:00 PM - 04:00 PM",
+    "04:00 PM - 05:00 PM",
+  ];
 
-  // Gender options for dropdown
-  const genderOptions = ["Male", "Female", "Other"];
+  // Medicine static relation types
+  const medRelationTypes = [
+    "Father",
+    "Mother",
+    "Brother",
+    "Sister",
+    "Son",
+    "Daughter",
+    "Spouse",
+    "Other",
+  ];
 
-  React.useEffect(() => {
-    console.log('DEBUG: useEffect for relationTypes called');
-    // Fetch relationship types from MasterData API (categoryId=5)
+  // ═══════════════════════════════════════════════════════════════════
+  // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
+  // ═══════════════════════════════════════════════════════════════════
+  const { userData } = useUser();
+  // Fetch discount percent from Employee API
+  useEffect(() => {
+    if (isFromMedicalFlag) return;
+    async function fetchDiscount() {
+      try {
+        const patientId = userData?.e_id;
+        if (!patientId) return;
+        const res: any = await axiosClient.get(
+          ApiRoutes.Employee.getById(patientId)
+        );
+        if (res && typeof res === "object") {
+          let discount = 0;
+          if (type === "lab-test") {
+            discount =
+              typeof res.discountLabOrder === "number" &&
+              res.discountLabOrder != null
+                ? res.discountLabOrder
+                : 0;
+          } else if (type === "health-checks") {
+            discount =
+              typeof res.discountLabPackage === "number" &&
+              res.discountLabPackage != null
+                ? res.discountLabPackage
+                : 0;
+          } else if (type === "scans") {
+            discount =
+              typeof res.discountScanXray === "number" &&
+              res.discountScanXray != null
+                ? res.discountScanXray
+                : 0;
+          }
+          setDiscountPercent(discount);
+        }
+      } catch (e) {
+        console.error("Failed to fetch discount percent", e);
+      }
+    }
+    fetchDiscount();
+  }, [userData?.e_id, type, isFromMedicalFlag]);
+
+  // Fetch statusId for 'Requested' from MasterData API (categoryId=7)
+  useEffect(() => {
+    if (isFromMedicalFlag) return;
+    const fetchStatusId = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(7)
+        );
+        let status = 0;
+        if (Array.isArray(response)) {
+          const requested = response.find(
+            (item: any) => item.name === "Requested" && item.isActive
+          );
+          if (requested) status = requested.masterDataId;
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          const requested = response.data.find(
+            (item: any) => item.name === "Requested" && item.isActive
+          );
+          if (requested) status = requested.masterDataId;
+        }
+        setStatusId(status);
+      } catch (error) {
+        console.error("Failed to fetch statusId for Requested", error);
+      }
+    };
+    fetchStatusId();
+  }, [isFromMedicalFlag]);
+
+  // Fetch relationship types from MasterData API (categoryId=5)
+  useEffect(() => {
+    if (isFromMedicalFlag) return;
     const fetchRelationTypes = async () => {
       try {
-        console.log('DEBUG: fetchRelationTypes called');
         const response: any = await axiosClient.get(
           ApiRoutes.Master.getmasterdata(5)
         );
-        console.log('DEBUG: fetchRelationTypes response:', response);
-        // If response is an array, use it directly
         if (Array.isArray(response)) {
           const filtered = response
             .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setRelationTypes(filtered);
-          console.log('DEBUG: setRelationTypes:', filtered);
+            .map((item: any) => ({
+              masterDataId: item.masterDataId,
+              name: item.name,
+            }));
+          setLabRelationTypes(filtered);
         } else if (response.isSuccess && Array.isArray(response.data)) {
-          // fallback for old API shape
           const filtered = response.data
             .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setRelationTypes(filtered);
-          console.log('DEBUG: setRelationTypes:', filtered);
+            .map((item: any) => ({
+              masterDataId: item.masterDataId,
+              name: item.name,
+            }));
+          setLabRelationTypes(filtered);
         }
       } catch (error) {
         console.error("Failed to fetch relation types", error);
       }
     };
     fetchRelationTypes();
-  }, []);
+  }, [isFromMedicalFlag]);
 
-  const handleBookNow = async () => {
-    // Validate required fields
-    if (!selectedDate || !formatDate(selectedDate).trim()) {
-      setErrors("Please select service start date");
-      return;
+  // Fetch addresses and set the default as selectedLocation on mount (shared by both flows)
+  useEffect(() => {
+    if (userData?.e_id) {
+      fetchAddresses();
     }
-    if (!selectedTimeSlot.trim()) {
-      setErrors("Please select time slot");
-      return;
-    }
-    if (patientType === "other" && (!selectedRelation || !fullName || !age || !gender)) {
-      setErrors("Please fill all patient details");
-      return;
-    }
-
-    setErrors(""); // Clear errors if validation passes
-
-    // Get Razorpay order_id from backend (GET method)
-    try {
-      const query = `?amount=${totalAmount * 100}&patientId=${userData?.e_id || 0}`;
-      const orderRes: any = await axiosClient.get(ApiRoutes.LabOrders.RazopayOrder + query);
-      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
-        setRazorpayOrderId(orderRes.order_id);
-        setShowPayment(true);
-      } else {
-        setToastMessage({
-          title: "Order Error",
-          subtitle: orderRes?.message || "Failed to create payment order.",
-          type: "error"
-        });
-        setShowToast(true);
-      }
-    } catch (err) {
-      setToastMessage({
-        title: "Order Error",
-        subtitle: "Failed to create payment order.",
-        type: "error"
-      });
-      setShowToast(true);
-    }
-  };
-
-  const handleViewAddress = () => {
-    setAddressVisible(true);
-  };
-
-  const handleAddAddress = () => {
-    setShowLocationSelection(true);
-  };
-
-  const handleLocationSelected = (locationData: any) => {
-    setSelectedLocation({
-      addressId: locationData.addressId,
-      address: locationData.address,
-      houseNumber: locationData.houseNumber,
-      landmark: locationData.landmark,
-      nickname: locationData.nickname,
-    });
-    setShowLocationSelection(false);
-  };
-
-  const handleAddressSelected = (locationData: any) => {
-    setSelectedLocation({
-      addressId: locationData.addressId,
-      address: locationData.address,
-      houseNumber: locationData.houseNumber,
-      landmark: locationData.landmark,
-      nickname: locationData.nickname,
-    });
-    setShowLocationSelection(false);
-  };
-
-  const handleDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (date) {
-      setSelectedDate(date);
-      if (errors === "Please select service start date") setErrors("");
-    }
-  };
+  }, [userData?.e_id]);
 
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      // Ensure patientId is defined
       const patientId = userData?.e_id;
-      if (!patientId) {
-        throw new Error("Patient ID is not available");
-      }
+      if (!patientId) throw new Error("Patient ID is not available");
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId)
       );
-
-      console.log("Fetched addresses:", responcedata);
-      if (responcedata.isSuccess && Array.isArray(responcedata.data) && responcedata.data.length > 0) {
-        // Find the default address (isDefault: true)
-        const defaultAddress = responcedata.data.find((addr: any) => addr.isDefault === true);
+      if (
+        responcedata.isSuccess &&
+        Array.isArray(responcedata.data) &&
+        responcedata.data.length > 0
+      ) {
+        const defaultAddress = responcedata.data.find(
+          (addr: any) => addr.isDefault === true
+        );
         if (defaultAddress) {
           setSelectedLocation({
             addressId: defaultAddress.addressId,
@@ -430,7 +325,6 @@ export default function BookingScreen({
       const response: any = await axiosClient.get(
         ApiRoutes.Address.getAddressById(addressId)
       );
-      console.log("Fetched address by ID:", response); // <-- Add this
       if (response.isSuccess && response.data) {
         const addr = response.data;
         setSelectedLocation({
@@ -448,15 +342,895 @@ export default function BookingScreen({
     }
   };
 
-  const formatDate = (date: Date) => {
+  // Build lab order payload
+  const buildLabOrderPayload = (paymentData?: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    const isSelfService = patientType === "self";
+    const payload: any = {
+      labOrderId: 0,
+      testName: serviceName,
+      patientId: userData?.e_id || 0,
+      address: selectedLocation?.address || "",
+      hNo: selectedLocation?.houseNumber || "",
+      landMark: selectedLocation?.landmark || "",
+      addressNickname: selectedLocation?.nickname
+        ? selectedLocation.nickname.charAt(0).toUpperCase() +
+          selectedLocation.nickname.slice(1)
+        : "",
+      serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
+      timeSlot: selectedTimeSlot,
+      isSelfService,
+      paymentDetails: String(totalAmount),
+      isPaymentDone: !!paymentData,
+      createdBy: userData?.e_id || 0,
+      labPartnerId: 0,
+      statusId: statusId,
+      paymentAmount: totalAmount,
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
+    };
+    if (isSelfService) {
+      payload.relationId = 0;
+      payload.relationName = "";
+      payload.relationAge = 0;
+      payload.relationGender = "";
+    } else if (selectedRelation) {
+      payload.relationId = selectedRelation.masterDataId;
+      payload.relationName = fullName;
+      payload.relationAge = age ? Number(age) : 0;
+      payload.relationGender = gender;
+    }
+    if (type === "lab-test") {
+      payload.testType = "Single Test";
+      payload.labTestMasterId = masterId || 0;
+      payload.labPackageMasterId = 0;
+      payload.xrayMasterId = 0;
+    } else if (type === "health-checks") {
+      payload.testType = "Package";
+      payload.labTestMasterId = 0;
+      payload.labPackageMasterId = masterId || 0;
+      payload.xrayMasterId = 0;
+    } else if (type === "scans") {
+      payload.testType = "Xray";
+      payload.labTestMasterId = 0;
+      payload.labPackageMasterId = 0;
+      payload.xrayMasterId = masterId || 0;
+    }
+    return payload;
+  };
+
+  // Save lab order after payment
+  const saveLabOrder = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    const payload = buildLabOrderPayload(paymentData);
+    payload.createdBy = 1;
+    payload.req = "web";
+    try {
+      const response: any = await axiosClient.post(
+        ApiRoutes.LabOrders.saveUpdate,
+        payload
+      );
+      if (response.success) {
+        setToastMessageLab({
+          title: "Order Success",
+          subtitle:
+            response.message || "Your lab order was placed successfully!",
+          type: "success",
+        });
+        setShowToastLab(true);
+        setTimeout(() => {
+          setShowToastLab(false);
+          setShowPayment(false);
+          onClose();
+          router.push("/(main)/orders");
+        }, 1500);
+      } else {
+        setToastMessageLab({
+          title: "Order Failed",
+          subtitle: response.message || "Failed to place order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (error) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+
+  // Lab-test date format: YYYY-MM-DD
+  const formatDateLab = (date: Date) => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
   };
+
+  // Lab-test: handleBookNow
+  const handleBookNowLab = async () => {
+    if (!selectedDate || !formatDateLab(selectedDate).trim()) {
+      setErrors("Please select service start date");
+      return;
+    }
+    if (!selectedTimeSlot.trim()) {
+      setErrors("Please select time slot");
+      return;
+    }
+    if (
+      patientType === "others" &&
+      (!selectedRelation || !fullName || !age || !gender)
+    ) {
+      setErrors("Please fill all patient details");
+      return;
+    }
+    setErrors("");
+    try {
+      const query = `?amount=${totalAmount * 100}&patientId=${userData?.e_id || 0}`;
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+
+  const handleViewAddress = () => {
+    setAddressVisible(true);
+  };
+
+  const handleAddAddress = () => {
+    setEditAddressId(null);
+    setAddressVisible(false);
+    setLocationModalVisible(true);
+  };
+
+  const handleEditAddress = () => {
+    if (selectedLocation && selectedLocation.addressId) {
+      setEditAddressId(selectedLocation.addressId);
+      setLocationModalVisible(true);
+    }
+  };
+
+  const handleLabDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (date) {
+      setSelectedDate(date);
+      if (errors === "Please select service start date") setErrors("");
+    }
+  };
+
   const handleEdit = () => {
     onClose();
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MEDICINE FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === true)
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Parse search params for cart items / isFromMedical
+  const searchParams = maybeUseSearchParams ? maybeUseSearchParams() : null;
+
+  useEffect(() => {
+    try {
+      const sp = searchParams;
+      if (!sp) return;
+      const flag =
+        sp.isFromMedical === "true" ||
+        sp.isFromMedical === true ||
+        sp.isFromMedical === "1";
+      setIsFromMedicalFlag(!!flag);
+      if (sp.cartItems) {
+        try {
+          const decoded = decodeURIComponent(sp.cartItems as string);
+          const parsed = JSON.parse(decoded);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed.map((it: any) => ({
+              ...it,
+              medicineName:
+                it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
+              medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
+            }));
+            setIncomingCartItems(normalized);
+          }
+        } catch (e) {
+          console.warn("Failed to parse cartItems from query params", e);
+        }
+      }
+    } catch (e) {
+      console.warn("Error parsing search params", e);
+    }
+  }, [searchParams?.isFromMedical, searchParams?.cartItems]);
+
+  // Fallback: global cart
+  useEffect(() => {
+    try {
+      const g = (global as any).__BOOKING_CART;
+      if (g && Array.isArray(g) && g.length > 0) {
+        const normalized = g.map((it: any) => ({
+          ...it,
+          medicineName:
+            it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
+          medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
+        }));
+        setIncomingCartItems(normalized);
+        setIsFromMedicalFlag(true);
+        try {
+          (global as any).__BOOKING_CART = null;
+        } catch (e) {}
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  // Medicine cart totals
+  const itemsTotal = useMemo(() => {
+    return incomingCartItems.reduce((sum: number, it: any) => {
+      const p = Number(it.price || 0);
+      const q = Number(it.quantity || 1);
+      return sum + p * q;
+    }, 0);
+  }, [incomingCartItems]);
+
+  const deliveryCharges = useMemo(() => {
+    if (itemsTotal === 0) return 0;
+    return itemsTotal < 500 ? 50 : 0;
+  }, [itemsTotal]);
+
+  const displayedTotal = useMemo(
+    () => itemsTotal + deliveryCharges,
+    [itemsTotal, deliveryCharges]
+  );
+
+  // Quantity handlers for medical cart items
+  const handleIncreaseQuantity = (index: number) => {
+    setIncomingCartItems((prev) => {
+      const copy = [...prev];
+      const current = Number(copy[index]?.quantity || 1);
+      copy[index] = { ...copy[index], quantity: current + 1 };
+      return copy;
+    });
+  };
+
+  const handleDecreaseQuantity = (index: number) => {
+    setIncomingCartItems((prev) => {
+      const copy = [...prev];
+      const current = Math.max(1, Number(copy[index]?.quantity || 1) - 1);
+      copy[index] = { ...copy[index], quantity: current };
+      return copy;
+    });
+  };
+
+  // Medicine: date format DD/MM/YYYY
+  const formatDateMed = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+
+  // Medicine: build order payload for /api/medicine-orders/save-order
+  const buildMedOrderPayload = (paymentData?: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    const isSelfService = patientType === "self";
+    const payload: any = {
+      medicineOrderId: 0,
+      orderType: "Medicine",
+      patientId: userData?.e_id || 0,
+      address: selectedLocation?.address || "",
+      hNo: selectedLocation?.houseNumber || "",
+      landMark: selectedLocation?.landmark || "",
+      addressNickname: selectedLocation?.nickname
+        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+        : "",
+      deliveryDate: selectedDate ? selectedDate.toISOString() : "",
+      timeSlot: selectedTimeSlot,
+      isSelfService,
+      paymentDetails: String(displayedTotal),
+      isPaymentDone: !!paymentData,
+      createdBy: userData?.e_id || 0,
+      statusId: 0, // Set if needed
+      handlingFee: 0,
+      deliveryCharges: deliveryCharges,
+      expectedDeliveryDate: selectedDate ? selectedDate.toISOString() : "",
+      deliveryNotes: "",
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
+      paymentAmount: displayedTotal,
+      cartItems: incomingCartItems.map((ci: any) => ({
+        cartId: ci.cartId || 0,
+        medicineOrderId: 0,
+        medicineId: ci.medicineId || 0,
+        patientId: userData?.e_id || 0,
+        medicineName: ci.medicineName || "",
+        quantity: ci.quantity || 1,
+        price: ci.price || 0,
+        offer: ci.offer || 0,
+        discount: ci.discount || 0,
+        totalPrice: (ci.price || 0) * (ci.quantity || 1),
+        description: ci.description || "",
+      })),
+    };
+    if (isSelfService) {
+      payload.relationId = 0;
+      payload.relationName = "";
+      payload.relationAge = 0;
+      payload.relationGender = "";
+    } else {
+      payload.relationId = 0; // Set if you have relation master id
+      payload.relationName = fullName;
+      payload.relationAge = age ? Number(age) : 0;
+      payload.relationGender = gender;
+    }
+    return payload;
+  };
+
+  // Medicine: save order after payment
+  const saveMedOrder = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    const payload = buildMedOrderPayload(paymentData);
+    try {
+      const response: any = await axiosClient.post(
+        "/api/medicine-orders/save-order",
+        payload
+      );
+      if (response && response.isSuccess) {
+        setToastMessageMed({
+          title: "Order Success",
+          subtitle: response.message || "Your medicine order was placed successfully!",
+        });
+        setShowToastMed(true);
+        setTimeout(() => {
+          setShowToastMed(false);
+          setShowPayment(false);
+          if (onClose) onClose();
+          router.push("/(main)/orders");
+        }, 1500);
+      } else {
+        setToastMessageMed({
+          title: "Order Failed",
+          subtitle: response?.message || "Failed to place order.",
+        });
+        setShowToastMed(true);
+      }
+    } catch (error) {
+      setToastMessageMed({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
+      });
+      setShowToastMed(true);
+    }
+  };
+
+  // Medicine: handleBookNow (now like lab flow)
+  const handleBookNowMed = async () => {
+    if (incomingCartItems.length === 0) {
+      alert("No medicines selected");
+      return;
+    }
+    // if (!selectedDate) {
+    //   alert("Please select a date for delivery");
+    //   return;
+    // }
+    // if (!selectedTimeSlot) {
+    //   alert("Please select a time slot");
+    //   return;
+    // }
+    if (patientType === "other") {
+      if (!relationType || !fullName || !age || !gender) {
+        alert("Please fill all patient details");
+        return;
+      }
+    }
+    try {
+      // Create Razorpay order (simulate like lab flow)
+  const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || 0}`;
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setMedRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageMed({
+          title: "Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+        });
+        setShowToastMed(true);
+      }
+    } catch (err) {
+      setToastMessageMed({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+      });
+      setShowToastMed(true);
+    }
+  };
+
+
+
+  const handleMedDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+    }
+  };
+
+  const closeHandler = () => {
+    if (onClose) return onClose();
+    router.back();
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════
+
+  if (isFromMedicalFlag) {
+    // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
+    const content = (
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Order Info</Text>
+            <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
+              <Image source={images.icons.close} style={styles.closeIcon} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Medicine List */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Medicine List</Text>
+              <View style={styles.medicineListCard}>
+                {incomingCartItems.length === 0 ? (
+                  <Text style={styles.emptyText}>No medicines selected</Text>
+                ) : (
+                  incomingCartItems.map((ci, idx) => (
+                    <View key={`${ci.medicineId ?? idx}_${ci.cartId ?? 0}`}>
+                      <View style={styles.medicineItem}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.medicineName}>
+                            {ci.medicineName}
+                          </Text>
+                          {ci.pack && (
+                            <Text style={styles.medicinePack}>{ci.pack}</Text>
+                          )}
+                          {ci.description && (
+                            <Text style={styles.medicineDesc} numberOfLines={2}>
+                              {ci.description}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.medicineRight}>
+                          <Text style={styles.medicinePrice}>
+                            {"\u20B9"}
+                            {(
+                              Number(ci.price || 0) * Number(ci.quantity || 1)
+                            ).toFixed(0)}
+                          </Text>
+                          <View style={styles.qtyControl}>
+                            <TouchableOpacity
+                              style={styles.qtyButton}
+                              onPress={() => handleDecreaseQuantity(idx)}
+                            >
+                              <Text style={styles.qtyBtnText}>
+                                {"\u2212"}
+                              </Text>
+                            </TouchableOpacity>
+                            <Text style={styles.qtyText}>
+                              {ci.quantity || 1}
+                            </Text>
+                            <TouchableOpacity
+                              style={styles.qtyButton}
+                              onPress={() => handleIncreaseQuantity(idx)}
+                            >
+                              <Text style={styles.qtyBtnText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                      {idx !== incomingCartItems.length - 1 && (
+                        <View style={styles.itemDivider} />
+                      )}
+                    </View>
+                  ))
+                )}
+              </View>
+
+              <View style={styles.deliveryCard}>
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>Item Price</Text>
+                  <Text style={styles.deliveryValue}>
+                    {"\u20B9"}
+                    {itemsTotal.toFixed(0)}
+                  </Text>
+                </View>
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>Delivery Charges</Text>
+                  <Text style={styles.deliveryValue}>
+                    {"\u20B9"}
+                    {deliveryCharges}
+                  </Text>
+                </View>
+                <View style={styles.lineSeparator} />
+                <View style={[styles.deliveryRow, { marginTop: 6 }]}>
+                  <Text style={styles.toPayLabel}>TO PAY</Text>
+                  <Text style={styles.toPayValue}>
+                    {"\u20B9"}
+                    {displayedTotal.toFixed(0)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Service Address */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Service Address</Text>
+              {selectedLocation && (
+                <View style={styles.addressCard}>
+                  <View style={styles.addressHeader}>
+                    <View style={styles.addressInfo}>
+                      <Text style={styles.addressNickname}>
+                        {selectedLocation.nickname.charAt(0).toUpperCase() +
+                          selectedLocation.nickname.slice(1)}
+                      </Text>
+                      <Text style={styles.addressText}>
+                        {selectedLocation.houseNumber &&
+                          `${selectedLocation.houseNumber}, `}
+                        {selectedLocation.address}
+                      </Text>
+                      {selectedLocation.landmark && (
+                        <Text style={styles.landmarkText}>
+                          Near {selectedLocation.landmark}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.editAddressButton}
+                      onPress={handleEditAddress}
+                    >
+                      <Text style={styles.editAddressText}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Button
+                    style={{
+                      borderRadius: 8,
+                      width: "80%",
+                      borderColor: "#0580FA",
+                      borderStyle: "solid",
+                      borderWidth: 1,
+                      marginTop: 12,
+                    }}
+                    labelStyle={{ color: "#0580FA" }}
+                    onPress={handleViewAddress}
+                  >
+                    + Add your service address
+                  </Button>
+                </View>
+              )}
+              <View
+                style={{
+                  backgroundColor: "#FBFBFB",
+                  borderRadius: 8,
+                  padding: 10,
+                  alignItems: "center",
+                  marginTop: selectedLocation ? 12 : 0,
+                }}
+              />
+            </View>
+
+            {/* Patient Details */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Patient Details</Text>
+              <View style={styles.patientCard}>
+                <View style={styles.radioGroup}>
+                  <View style={styles.radioOption}>
+                    <RadioButton
+                      value="self"
+                      status={patientType === "self" ? "checked" : "unchecked"}
+                      onPress={() => setPatientType("self")}
+                      color="#C15E9C"
+                    />
+                    <Text style={styles.radioLabel}>Self Service</Text>
+                  </View>
+                  <View style={styles.radioOption}>
+                    <RadioButton
+                      value="others"
+                      status={
+                        patientType === "others" ? "checked" : "unchecked"
+                      }
+                      onPress={() => setPatientType("others")}
+                      color="#C15E9C"
+                    />
+                    <Text style={styles.radioLabel}>For Others</Text>
+                  </View>
+                </View>
+
+                {patientType === "others" && (
+                  <View style={styles.othersForm}>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Relation Type</Text>
+                      <TouchableOpacity
+                        style={styles.dropdown}
+                        onPress={() => setShowRelationDropdown(true)}
+                      >
+                        <Text style={styles.dropdownText}>
+                          {relationType || "Select Relation"}
+                        </Text>
+                        <Image
+                          source={images.icons.edit as any}
+                          style={styles.dropdownIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Full Name</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={fullName}
+                        onChangeText={setFullName}
+                        placeholder="Enter full name"
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Age</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={age}
+                        onChangeText={setAge}
+                        placeholder="Enter age"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Gender</Text>
+                      <TouchableOpacity
+                        style={styles.dropdown}
+                        onPress={() => setShowGenderDropdown(true)}
+                      >
+                        <Text style={styles.dropdownText}>
+                          {gender || "Select Gender"}
+                        </Text>
+                        <Image
+                          source={images.icons.edit as any}
+                          style={styles.dropdownIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Cancellation Policy */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cancellation Policy</Text>
+              <View style={styles.policyCard}>
+                <Text style={styles.policyText}>
+                  Free cancellation is done more than 2 hrs before the service
+                  or if a professional isn&apos;t assigned. A fee will be charged
+                  otherwise.
+                </Text>
+                <TouchableOpacity style={styles.learnMoreButton}>
+                  <Text style={styles.learnMoreText}>Learn more</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Book Now Button */}
+          <View style={styles.footer}>
+            <PrimaryButton
+              title={`Confirm & Pay \u20B9${displayedTotal.toFixed(0)}`}
+              onPress={handleBookNowMed}
+              style={{ width: "100%" }}
+            />
+          </View>
+
+          {/* Payment Gateway Modal for Medicine (like lab flow) */}
+          {showPayment && medRazorpayOrderId && (
+            <RazorpayCheckout
+              orderId={medRazorpayOrderId}
+              amount={displayedTotal}
+              onSuccess={(paymentData: any) => {
+                // Save order after payment
+                saveMedOrder({
+                  razorpayOrderId: paymentData.razorpayOrderId,
+                  razorpayPaymentId: paymentData.razorpayPaymentId,
+                  razorpaySignature: paymentData.razorpaySignature,
+                });
+              }}
+              onFailure={() => {
+                setShowPayment(false);
+                setToastMessageMed({
+                  title: "Payment Failed",
+                  subtitle: "Payment was not completed.",
+                });
+                setShowToastMed(true);
+              }}
+              onClose={() => setShowPayment(false)}
+            />
+          )}
+
+          {/* Relation Type Dropdown Modal */}
+          <Modal
+            visible={showRelationDropdown}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowRelationDropdown(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              onPress={() => setShowRelationDropdown(false)}
+            >
+              <View style={styles.dropdownModal}>
+                {medRelationTypes.map((relation, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setRelationType(relation);
+                      setShowRelationDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>{relation}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* Gender Dropdown Modal */}
+          <Modal
+            visible={showGenderDropdown}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowGenderDropdown(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              onPress={() => setShowGenderDropdown(false)}
+            >
+              <View style={styles.dropdownModal}>
+                {genderOptions.map((genderOption, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setGender(genderOption);
+                      setShowGenderDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>
+                      {genderOption}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* Date Picker */}
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate || new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleMedDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+
+          {/* All Address View Modal */}
+          {userData?.e_id && (
+            <AddressSelection
+              visible={addressVisible}
+              patientId={userData?.e_id}
+              onSelect={(addressId) => {
+                setAddressVisible(false);
+                if (addressId) {
+                  fetchAddressById(addressId.toString());
+                }
+              }}
+              onAddNew={() => {
+                setEditAddressId(null);
+                setAddressVisible(false);
+                setLocationModalVisible(true);
+              }}
+              onEdit={(addressId) => {
+                setAddressVisible(false);
+                setEditAddressId(addressId);
+                setLocationModalVisible(true);
+              }}
+              onClose={() => setAddressVisible(false)}
+            />
+          )}
+
+          {/* Location Selection Modal */}
+          <LocationSelection
+            visible={locationModalVisible}
+            addressId={editAddressId}
+            onClose={() => setLocationModalVisible(false)}
+            onLocationSelected={(newAddress) => {
+              setSavedAddresses((prev) => [
+                ...prev,
+                { id: Date.now().toString(), ...newAddress },
+              ]);
+              setLocationModalVisible(false);
+              setAddressVisible(true);
+            }}
+          />
+
+          {/* Toast Notification */}
+          <Toast
+            visible={showToastMed}
+            title={toastMessageMed.title}
+            subtitle={toastMessageMed.subtitle}
+            onHide={() => setShowToastMed(false)}
+            duration={3000}
+          />
+        </View>
+      </SafeAreaView>
+    );
+
+    // If this component was opened as a modal (visible prop provided), wrap content in Modal
+    if (visible) {
+      return (
+        <Modal
+          visible={visible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={closeHandler}
+        >
+          {content}
+        </Modal>
+      );
+    }
+    return content;
+  }
+
+  // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
     <Modal
       visible={visible}
@@ -492,12 +1266,12 @@ export default function BookingScreen({
                   Report within {reportTime}
                 </Text>
 
-                {/* Divider */}
                 <View style={styles.serviceDivider} />
 
                 <View style={styles.serviceFooter}>
                   <Text style={styles.servicePrice}>
-                    ₹{servicePrice}
+                    {"\u20B9"}
+                    {servicePrice}
                   </Text>
                   <TouchableOpacity
                     style={styles.editAddressButton1}
@@ -540,13 +1314,7 @@ export default function BookingScreen({
                     </View>
                     <TouchableOpacity
                       style={styles.editAddressButton}
-                      onPress={() => {
-                        // Use the same logic as address-selection.tsx: onEdit(item.addressId)
-                        if (selectedLocation && selectedLocation.addressId) {
-                          setEditAddressId(selectedLocation.addressId);
-                          setLocationModalVisible(true);
-                        }
-                      }}
+                      onPress={handleEditAddress}
                     >
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
@@ -576,9 +1344,10 @@ export default function BookingScreen({
 
             {/* Sample Pickup Date & Time */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sample Pickup Date & Time</Text>
+              <Text style={styles.sectionTitle}>
+                Sample Pickup Date & Time
+              </Text>
               <View style={styles.dateTimeCard}>
-                {/* Date Selection */}
                 <View style={styles.dateSection}>
                   <Text style={styles.fieldLabel}>Service Start Date</Text>
                   <TouchableOpacity
@@ -591,7 +1360,9 @@ export default function BookingScreen({
                         !selectedDate && styles.placeholderText,
                       ]}
                     >
-                      {selectedDate ? formatDate(selectedDate) : "dd/mm/yyyy"}
+                      {selectedDate
+                        ? formatDateLab(selectedDate)
+                        : "dd/mm/yyyy"}
                     </Text>
                     <Image
                       source={images.icons.calendar}
@@ -599,15 +1370,18 @@ export default function BookingScreen({
                     />
                   </TouchableOpacity>
                   {errors === "Please select service start date" && (
-                    <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                    <Text
+                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                    >
+                      {errors}
+                    </Text>
                   )}
                 </View>
 
-                {/* Time Slots */}
                 <View style={styles.timeSection}>
                   <Text style={styles.fieldLabel}>Select Time Slot</Text>
                   <View style={styles.timeSlotsContainer}>
-                    {timeSlots.map((slot, index) => (
+                    {labTimeSlots.map((slot, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
@@ -616,14 +1390,15 @@ export default function BookingScreen({
                         ]}
                         onPress={() => {
                           setSelectedTimeSlot(slot);
-                          if (errors === "Please select time slot") setErrors("");
+                          if (errors === "Please select time slot")
+                            setErrors("");
                         }}
                       >
                         <Text
                           style={[
                             styles.timeSlotText,
                             selectedTimeSlot === slot &&
-                            styles.selectedTimeSlotText,
+                              styles.selectedTimeSlotText,
                           ]}
                         >
                           {slot}
@@ -632,7 +1407,11 @@ export default function BookingScreen({
                     ))}
                   </View>
                   {errors === "Please select time slot" && (
-                    <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                    <Text
+                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                    >
+                      {errors}
+                    </Text>
                   )}
                 </View>
               </View>
@@ -665,30 +1444,33 @@ export default function BookingScreen({
                   </View>
                 </View>
 
-                {/* For Others Form */}
                 {patientType === "others" && (
                   <View style={styles.othersForm}>
-                    {/* Relation Type */}
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Relation Type</Text>
                       <TouchableOpacity
                         style={styles.dropdown}
-                        onPress={() => {
-                          console.log('DEBUG: relationTypes:', relationTypes);
-                          setShowRelationDropdown(true);
-                        }}
+                        onPress={() => setShowRelationDropdown(true)}
                       >
                         <Text style={styles.dropdownText}>
-                          {selectedRelation ? selectedRelation.name : "Select Relation"}
+                          {selectedRelation
+                            ? selectedRelation.name
+                            : "Select Relation"}
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
                       {errors === "Please select relation type" && (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {errors}
+                        </Text>
                       )}
                     </View>
-
-                    {/* Full Name */}
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Full Name</Text>
                       <TextInput
@@ -699,11 +1481,17 @@ export default function BookingScreen({
                         placeholderTextColor="#999"
                       />
                       {errors === "Please enter full name" && (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {errors}
+                        </Text>
                       )}
                     </View>
-
-                    {/* Age */}
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Age</Text>
                       <TextInput
@@ -715,11 +1503,17 @@ export default function BookingScreen({
                         keyboardType="numeric"
                       />
                       {errors === "Please enter age" && (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {errors}
+                        </Text>
                       )}
                     </View>
-
-                    {/* Gender */}
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Gender</Text>
                       <TouchableOpacity
@@ -732,7 +1526,15 @@ export default function BookingScreen({
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
                       {errors === "Please select gender" && (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {errors}
+                        </Text>
                       )}
                     </View>
                   </View>
@@ -740,22 +1542,68 @@ export default function BookingScreen({
               </View>
             </View>
 
-            {/* Delivery Card */}
+            {/* Order Summary */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Order Summary</Text>
               <View style={styles.deliveryCard}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, color: "#333" }}>Item Price</Text>
-                  <Text style={{ fontSize: 16, color: "#333" }}>₹{servicePrice}</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, color: "#333" }}>
+                    Item Price
+                  </Text>
+                  <Text style={{ fontSize: 16, color: "#333" }}>
+                    {"\u20B9"}
+                    {servicePrice}
+                  </Text>
                 </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, color: "#333" }}>Offer Discount ({discountPercent}%)</Text>
-                  <Text style={{ fontSize: 16, color: "#C15E9C" }}>-₹{discountAmount}</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, color: "#333" }}>
+                    Offer Discount ({discountPercent}%)
+                  </Text>
+                  <Text style={{ fontSize: 16, color: "#C15E9C" }}>
+                    -{"\u20B9"}
+                    {discountAmount}
+                  </Text>
                 </View>
-                <View style={{ height: 1, backgroundColor: "#eee", marginVertical: 8 }} />
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>To Pay</Text>
-                  <Text style={{ fontSize: 16, fontWeight: "bold", color: colors.primary }}>₹{totalAmount}</Text>
+                <View
+                  style={{
+                    height: 1,
+                    backgroundColor: "#eee",
+                    marginVertical: 8,
+                  }}
+                />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}
+                  >
+                    To Pay
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: colors.primary,
+                    }}
+                  >
+                    {"\u20B9"}
+                    {totalAmount}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -766,8 +1614,8 @@ export default function BookingScreen({
               <View style={styles.policyCard}>
                 <Text style={styles.policyText}>
                   Free cancellation is done more than 2 hrs before the service
-                  or if a professional isn&apos;t assigned. A fee will be
-                  charged otherwise.
+                  or if a professional isn&apos;t assigned. A fee will be charged
+                  otherwise.
                 </Text>
                 <TouchableOpacity style={styles.learnMoreButton}>
                   <Text style={styles.learnMoreText}>Learn more</Text>
@@ -779,8 +1627,8 @@ export default function BookingScreen({
           {/* Book Now Button */}
           <View style={styles.footer}>
             <PrimaryButton
-              title={`Confirm &  Pay ₹${totalAmount}`}
-              onPress={handleBookNow}
+              title={`Confirm &  Pay \u20B9${totalAmount}`}
+              onPress={handleBookNowLab}
               style={{ width: "100%" }}
             />
           </View>
@@ -798,7 +1646,7 @@ export default function BookingScreen({
             >
               <View style={styles.dropdownModal}>
                 <ScrollView style={{ maxHeight: 250 }}>
-                  {relationTypes.map((relation) => (
+                  {labRelationTypes.map((relation) => (
                     <TouchableOpacity
                       key={relation.masterDataId}
                       style={styles.dropdownOption}
@@ -807,7 +1655,9 @@ export default function BookingScreen({
                         setShowRelationDropdown(false);
                       }}
                     >
-                      <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                      <Text style={styles.dropdownOptionText}>
+                        {relation.name}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -844,19 +1694,20 @@ export default function BookingScreen({
               </View>
             </TouchableOpacity>
           </Modal>
-          {/* Razorpay Payment Modal (Full Screen, no close button) */}
+
+          {/* Razorpay Payment Modal */}
           <Modal
             visible={showPayment}
             animationType="slide"
             presentationStyle="fullScreen"
             onRequestClose={() => {
               setShowPayment(false);
-              setToastMessage({
+              setToastMessageLab({
                 title: "Payment Not Completed",
                 subtitle: "You exited before completing the payment.",
-                type: "error"
+                type: "error",
               });
-              setShowToast(true);
+              setShowToastLab(true);
             }}
           >
             <SafeAreaView style={{ flex: 1 }}>
@@ -867,53 +1718,46 @@ export default function BookingScreen({
                 email={userData?.emailAddress || ""}
                 contact={userData?.mobileNo || ""}
                 orderId={razorpayOrderId}
-                onSuccess={data => {
+                onSuccess={(data) => {
                   setShowPayment(false);
-                  console.log("Payment success, Razorpay details:", data);
-                  // Save lab order after payment
                   saveLabOrder({
-                    razorpayOrderId: data.razorpay_order_id || razorpayOrderId || "",
+                    razorpayOrderId:
+                      data.razorpay_order_id || razorpayOrderId || "",
                     razorpayPaymentId: data.razorpay_payment_id || "",
                     razorpaySignature: data.razorpay_signature || "",
                   });
                 }}
                 onFailure={(err) => {
-                  console.log("Payment failed:", err);
-
-                  // Close confirm modal if open
                   setShowConfirmExit(false);
-
-                  // Small delay ensures WebView unmounts properly
                   setTimeout(() => {
                     setShowPayment(false);
-
                     if (err?.cancelled) {
-                      setToastMessage({
+                      setToastMessageLab({
                         title: "Payment Cancelled",
                         subtitle: "Payment not completed.",
-                        type: "error"
+                        type: "error",
                       });
                     } else {
-                      setToastMessage({
+                      setToastMessageLab({
                         title: "Payment Failed",
                         subtitle: "Your payment was not completed.",
-                        type: "error"
+                        type: "error",
                       });
                     }
-
-                    setShowToast(true);
+                    setShowToastLab(true);
                   }, 300);
                 }}
               />
             </SafeAreaView>
           </Modal>
+
           {/* Date Picker */}
           {showDatePicker && (
             <DateTimePicker
               value={selectedDate || new Date()}
               mode="date"
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleDateChange}
+              onChange={handleLabDateChange}
               minimumDate={new Date()}
             />
           )}
@@ -924,26 +1768,21 @@ export default function BookingScreen({
               visible={addressVisible}
               patientId={userData?.e_id}
               onSelect={(addressId) => {
-                console.log("Selected address:", addressId);
                 setAddressVisible(false);
                 if (addressId) {
                   fetchAddressById(addressId.toString());
                 }
               }}
               onAddNew={() => {
-                console.log("Add new address");
                 setEditAddressId(null);
                 setAddressVisible(false);
                 setLocationModalVisible(true);
               }}
-
               onEdit={(addressId) => {
-                console.log("Edit addressId:", addressId); // Check value here
                 setAddressVisible(false);
-                setEditAddressId(addressId); // Store the addressId for editing
+                setEditAddressId(addressId);
                 setLocationModalVisible(true);
               }}
-
               onClose={() => setAddressVisible(false)}
             />
           )}
@@ -951,7 +1790,7 @@ export default function BookingScreen({
           {/* Location Selection Modal */}
           <LocationSelection
             visible={locationModalVisible}
-            addressId={editAddressId} // Pass addressId for editing
+            addressId={editAddressId}
             onClose={() => setLocationModalVisible(false)}
             onLocationSelected={(newAddress) => {
               setSavedAddresses((prev) => [
@@ -959,20 +1798,19 @@ export default function BookingScreen({
                 { id: Date.now().toString(), ...newAddress },
               ]);
               setLocationModalVisible(false);
-              setAddressVisible(true); // Open AddressSelection modal
+              setAddressVisible(true);
             }}
           />
-
         </View>
       </SafeAreaView>
 
       {/* Toast Notification */}
       <Toast
-        visible={showToast}
-        title={toastMessage.title}
-        subtitle={toastMessage.subtitle}
-        type={toastMessage.type}
-        onHide={() => setShowToast(false)}
+        visible={showToastLab}
+        title={toastMessageLab.title}
+        subtitle={toastMessageLab.subtitle}
+        type={toastMessageLab.type}
+        onHide={() => setShowToastLab(false)}
         duration={3000}
       />
     </Modal>
@@ -989,14 +1827,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 3.84,
-    // elevation: 5,
   },
   headerTitle: {
     fontSize: 16,
@@ -1044,7 +1874,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // marginBottom: 12,
   },
   serviceName: {
     fontSize: 15,
@@ -1153,14 +1982,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbdbdb",
     padding: 16,
-    // shadowColor: '#000',
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 3.84,
-    // elevation: 3,
   },
   deliveryCard: {
     backgroundColor: "#fff",
@@ -1178,7 +1999,6 @@ const styles = StyleSheet.create({
     // elevation: 3,
   },
   radioGroup: {
-    // marginBottom: 16,
     flexDirection: "row",
     gap: 8,
   },
@@ -1191,12 +2011,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 8,
     width: "49%",
-    // marginBottom: 4,
   },
   radioLabel: {
     fontSize: 14,
     color: "#2B2B2B",
-    // marginLeft: 4,
   },
   othersForm: {
     marginTop: 16,
@@ -1237,19 +2055,7 @@ const styles = StyleSheet.create({
     height: 16,
     tintColor: "#666",
   },
-  policyCard: {
-    // backgroundColor: '#fff',
-    // borderRadius: 12,
-    // padding: 16,
-    // shadowColor: '#000',
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 3.84,
-    // elevation: 3,
-  },
+  policyCard: {},
   policyText: {
     fontSize: 14,
     color: "#666",
@@ -1339,7 +2145,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    // marginTop: 16
   },
   modalOverlay: {
     flex: 1,
@@ -1353,7 +2158,7 @@ const styles = StyleSheet.create({
     padding: 8,
     minWidth: 200,
     maxHeight: 400,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   dropdownOption: {
     paddingHorizontal: 16,
@@ -1366,12 +2171,106 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   razorpaycloseButton: {
-    position: 'relative',
+    position: "relative",
     top: 40,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     left: 20,
     zIndex: 10,
     borderRadius: 20,
     padding: 8,
-  }
+  },
+  // Medicine-specific styles
+  medicineListCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+  },
+  emptyText: {
+    color: "#666",
+    fontSize: 14,
+  },
+  medicineItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  medicineName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 6,
+  },
+  medicinePack: {
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 4,
+  },
+  medicineDesc: {
+    fontSize: 12,
+    color: "#666",
+  },
+  medicineRight: {
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  medicinePrice: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 8,
+  },
+  qtyControl: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F1E6EE",
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  qtyButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "transparent",
+  },
+  qtyBtnText: {
+    fontSize: 18,
+    color: colors.primary,
+    fontWeight: "600",
+  },
+  qtyText: {
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: "#333",
+  },
+  itemDivider: {
+    height: 1,
+    backgroundColor: "#F5F5F5",
+  },
+  deliveryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  deliveryLabel: {
+    fontSize: 16,
+    color: "#333",
+  },
+  deliveryValue: {
+    fontSize: 16,
+    color: "#333",
+  },
+  lineSeparator: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 8,
+  },
+  toPayLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+  },
+  toPayValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.primary,
+  },
 });

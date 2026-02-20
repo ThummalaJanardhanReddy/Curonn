@@ -1,5 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import axiosClient from '../../../src/api/axiosClient';
+import ApiRoutes from '../../../src/api/employee/employee';
 import {
   FlatList,
   Image,
@@ -17,6 +20,7 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from '../../shared/utils/responsive';
+import { useUser } from '../../shared/context/UserContext';
 
 interface Medicine {
   id: string;
@@ -30,134 +34,123 @@ interface Medicine {
   description: string;
   rating: number;
   reviews: number;
+  // API specific
+  curonnPrice?: number;
+  streepBoxPrice?: number;
+  streepBoxQty?: string;
+  totalPrice?: number;
 }
 
 export default function MedicineListScreen() {
+  const { userData } = useUser();
+  const patientId = userData?.e_id ?? 0;
   const { category } = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{ [key: string]: number }>({});
+  // Map local medicineId -> server cartId returned by save-cart-item
+  const [cartServerIds, setCartServerIds] = useState<{ [key: string]: number }>({});
+  // Per-item loading state to prevent duplicate requests
+  const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>({});
 
-  // Mock medicines data based on category
-  const medicines = useMemo(() => {
-    const baseMedicines: Medicine[] = [
-      {
-        id: '1',
-        name: 'Vitamin D3 1000IU',
-        manufacturer: 'Health Plus',
-        price: '₹299',
-        originalPrice: '₹399',
-        discount: '25%',
-        image: 'https://images.unsplash.com/photo-1550572017-edd951aa0b2b?w=100&h=100&fit=crop',
-        inStock: true,
-        description: 'Essential vitamin for bone health and immune support',
-        rating: 4.7,
-        reviews: 89,
-      },
-      {
-        id: '2',
-        name: 'Multivitamin Complex',
-        manufacturer: 'NutriLife',
-        price: '₹499',
-        originalPrice: '₹599',
-        discount: '17%',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-        inStock: true,
-        description: 'Complete daily multivitamin for overall health',
-        rating: 4.5,
-        reviews: 156,
-      },
-      {
-        id: '3',
-        name: 'Omega-3 Fish Oil',
-        manufacturer: 'Marine Health',
-        price: '₹699',
-        originalPrice: '₹899',
-        discount: '22%',
-        image: 'https://images.unsplash.com/photo-1550572017-edd951aa0b2b?w=100&h=100&fit=crop',
-        inStock: true,
-        description: 'High-quality fish oil for heart and brain health',
-        rating: 4.6,
-        reviews: 203,
-      },
-      {
-        id: '4',
-        name: 'Calcium + Vitamin D',
-        manufacturer: 'BoneCare',
-        price: '₹399',
-        originalPrice: '₹499',
-        discount: '20%',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-        inStock: false,
-        description: 'Strong bones and teeth support formula',
-        rating: 4.4,
-        reviews: 78,
-      },
-      {
-        id: '5',
-        name: 'Iron Supplement',
-        manufacturer: 'Vitality Plus',
-        price: '₹249',
-        originalPrice: '₹299',
-        discount: '17%',
-        image: 'https://images.unsplash.com/photo-1550572017-edd951aa0b2b?w=100&h=100&fit=crop',
-        inStock: true,
-        description: 'Gentle iron supplement for energy and vitality',
-        rating: 4.3,
-        reviews: 92,
-      },
-      {
-        id: '6',
-        name: 'Vitamin C 1000mg',
-        manufacturer: 'Immune Boost',
-        price: '₹199',
-        originalPrice: '₹249',
-        discount: '20%',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-        inStock: true,
-        description: 'High potency vitamin C for immune support',
-        rating: 4.8,
-        reviews: 167,
-      },
-    ];
+  // API payload and response types for clarity
+  type SaveCartPayload = {
+    cartId: number;
+    medicineOrderId: number;
+    medicineId: string | number;
+    patientId: number;
+    medicineName: string;
+    quantity: number;
+    price: number;
+    offer: number;
+    discount: number;
+    totalPrice: number;
+    description?: string;
+  };
 
-    // Filter medicines based on category
-    switch (category) {
-      case 'vitamins-supplements':
-        return baseMedicines;
-      case 'pain-relief':
-        return baseMedicines.map(med => ({
-          ...med,
-          name: med.name.replace('Vitamin', 'Pain Relief').replace('Multivitamin', 'Ibuprofen').replace('Omega-3', 'Paracetamol').replace('Calcium', 'Aspirin').replace('Iron', 'Acetaminophen').replace('Vitamin C', 'Naproxen'),
-          description: 'Effective pain relief and inflammation reduction',
-        }));
-      case 'skin-hair-care':
-        return baseMedicines.map(med => ({
-          ...med,
-          name: med.name.replace('Vitamin D3', 'Biotin').replace('Multivitamin', 'Collagen').replace('Omega-3', 'Hair Growth').replace('Calcium', 'Skin Care').replace('Iron', 'Keratin').replace('Vitamin C', 'Anti-Aging'),
-          description: 'Nourishing formula for healthy skin and hair',
-        }));
-      case 'sexual-wellness':
-        return baseMedicines.map(med => ({
-          ...med,
-          name: med.name.replace('Vitamin D3', 'Testosterone').replace('Multivitamin', 'Libido Boost').replace('Omega-3', 'Energy Plus').replace('Calcium', 'Stamina').replace('Iron', 'Vitality').replace('Vitamin C', 'Performance'),
-          description: 'Natural support for sexual wellness and vitality',
-        }));
-      case 'digestive-health':
-        return baseMedicines.map(med => ({
-          ...med,
-          name: med.name.replace('Vitamin D3', 'Probiotics').replace('Multivitamin', 'Digestive Enzymes').replace('Omega-3', 'Fiber Plus').replace('Calcium', 'Gut Health').replace('Iron', 'Prebiotics').replace('Vitamin C', 'Digestive Aid'),
-          description: 'Support for healthy digestion and gut health',
-        }));
-      case 'diabetes-care':
-        return baseMedicines.map(med => ({
-          ...med,
-          name: med.name.replace('Vitamin D3', 'Blood Sugar').replace('Multivitamin', 'Glucose Control').replace('Omega-3', 'Insulin Support').replace('Calcium', 'Diabetic Care').replace('Iron', 'Sugar Balance').replace('Vitamin C', 'Metabolic'),
-          description: 'Natural support for blood sugar management',
-        }));
-      default:
-        return baseMedicines;
+  type SaveCartResponse = {
+    cartId?: number;
+    // other response fields may exist; keep flexible
+    [key: string]: any;
+  };
+
+  // State for medicines fetched from API
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [hasMore, setHasMore] = useState(true);
+
+  const group = (useLocalSearchParams() as any).groupName as string | undefined;
+
+  // Map API item to our UI model
+  const mapApiToMedicine = (item: any): Medicine => {
+    const curPrice = item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0;
+    const original = item.streepBoxPrice ?? item.originalPrice ?? 0;
+    return {
+      id: (item.id ?? item.medicineMasterId ?? item.medicineId ?? Math.random().toString()).toString(),
+      name: item.medicineName ?? item.name ?? item.drugName ?? 'Unknown',
+      manufacturer: item.manufacturer ?? item.brand ?? '',
+      price: `₹${curPrice}`,
+      originalPrice: original ? `₹${original}` : '',
+      discount: item.discount ?? item.discountText ?? '',
+      image: item.imageUrl ?? item.image ?? '',
+      inStock: item.instock ?? item.inStock ?? item.available ?? true,
+      description: item.streepBoxQty ?? item.shortDescription ?? item.streepBoxQty ?? '',
+      rating: item.rating ?? 0,
+      reviews: item.reviews ?? 0,
+      curonnPrice: curPrice,
+      streepBoxPrice: original,
+      streepBoxQty: item.streepBoxQty ?? '',
+      totalPrice: item.totalPrice ?? 0,
+    };
+  };
+
+  const loadMedicines = async (opts?: { reset?: boolean }) => {
+    if (!group && !category) {
+      setMedicines([]);
+      return;
     }
-  }, [category]);
+
+    const groupName = group ?? ((): string => {
+      // derive pretty name from slug category if groupName not provided
+      return (category ?? '').toString().replace(/-/g, ' ');
+    })();
+
+    const currentPage = opts?.reset ? 1 : page;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize, searchQuery || undefined);
+      const res: any = await axiosClient.get(url);
+      // axiosClient returns response.data already per interceptor; handle array or { data: [...] }
+      const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? [];
+      const mapped = list.map(mapApiToMedicine);
+
+      setMedicines(prev => (currentPage === 1 ? mapped : [...prev, ...mapped]));
+      setHasMore(mapped.length >= pageSize);
+      if (opts?.reset) setPage(1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load medicines');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // load on mount and when category/group/search/page changes
+  useEffect(() => {
+    // when category or group changes or searchQuery changes, reset to page 1
+    setPage(1);
+    loadMedicines({ reset: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, group, searchQuery]);
+
+  useEffect(() => {
+    if (page === 1) return; // already loaded by reset
+    loadMedicines();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const filteredMedicines = useMemo(() => {
     if (!searchQuery) return medicines;
@@ -173,24 +166,136 @@ export default function MedicineListScreen() {
     router.back();
   }, []);
 
-  const addToCart = useCallback((medicineId: string) => {
-    setCart(prev => ({
-      ...prev,
-      [medicineId]: (prev[medicineId] || 0) + 1
-    }));
-  }, []);
+  // helper: build save-cart payload consistently
+  const createSaveCartPayload = useCallback((medicine: Medicine, quantity: number): SaveCartPayload => {
+    const price = medicine.curonnPrice ?? medicine.totalPrice ?? 0;
+    return {
+      cartId: 0,
+      medicineOrderId: 0,
+      medicineId: medicine.id,
+      patientId: patientId,
+      medicineName: medicine.name,
+      quantity,
+      price,
+      offer: 0,
+      discount: 0,
+      totalPrice: price * quantity,
+      description: medicine.description ?? '',
+    };
+  }, [patientId]);
 
-  const removeFromCart = useCallback((medicineId: string) => {
-    setCart(prev => {
-      const newCart = { ...prev };
-      if (newCart[medicineId] > 1) {
-        newCart[medicineId] -= 1;
+  // Increment: POST for new item, PUT update for existing
+  const handleIncrement = useCallback(async (medicine: Medicine) => {
+    const medicineId = medicine.id;
+    if (cartLoading[medicineId]) return; // prevent duplicate requests
+
+    setCartLoading(prev => ({ ...prev, [medicineId]: true }));
+    try {
+      const currentQty = cart[medicineId] || 0;
+      const nextQty = currentQty + 1;
+
+      if (currentQty === 0) {
+        // first-time add -> POST save-cart-item
+        const payload = createSaveCartPayload(medicine, nextQty);
+        console.log('[handleIncrement] POST ->', ApiRoutes.MedicalOrders.saveCartItem, payload);
+        const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
+        console.log('[handleIncrement] POST response ->', res);
+
+        // backend may return cartId in several shapes
+        // backend may return cart id in different shapes (camelCase or snake_case)
+        const returnedCartId =
+          res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? res?.data?.cart_id ?? 0;
+        if (returnedCartId) {
+          setCartServerIds(prev => ({ ...prev, [medicineId]: Number(returnedCartId) }));
+        } else {
+          console.warn('[handleIncrement] no cartId returned for', medicineId, res);
+        }
+
+        // update local cart only after server confirms
+        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
       } else {
-        delete newCart[medicineId];
+        // already in cart: update quantity on server
+        const cartId = cartServerIds[medicineId];
+        if (cartId) {
+          const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, nextQty);
+          console.log('[handleIncrement] PUT ->', url);
+          const res: any = await axiosClient.put(url);
+          console.log('[handleIncrement] PUT response ->', res);
+        } else {
+          // fallback to save endpoint if server id missing
+          const payload = createSaveCartPayload(medicine, nextQty);
+          console.log('[handleIncrement] fallback POST ->', ApiRoutes.MedicalOrders.saveCartItem, payload);
+          const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
+          console.log('[handleIncrement] fallback POST response ->', res);
+          const returnedCartId =
+            res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? res?.data?.cart_id ?? 0;
+          if (returnedCartId) {
+            setCartServerIds(prev => ({ ...prev, [medicineId]: Number(returnedCartId) }));
+          } else {
+            console.warn('[handleIncrement] fallback did not return cartId for', medicineId, res);
+          }
+        }
+        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
       }
-      return newCart;
-    });
-  }, []);
+    } catch (err: any) {
+      console.error('handleIncrement failed', medicineId, err);
+      Alert.alert('Could not update cart', err?.message ?? 'Please try again');
+    } finally {
+      setCartLoading(prev => ({ ...prev, [medicineId]: false }));
+    }
+  }, [cart, cartLoading, cartServerIds, createSaveCartPayload]);
+
+  // Decrement: PUT when >1, DELETE (server) when quantity goes from 1 -> 0
+  const handleDecrement = useCallback(async (medicineId: string) => {
+    if (cartLoading[medicineId]) return;
+    setCartLoading(prev => ({ ...prev, [medicineId]: true }));
+    try {
+      const currentQty = cart[medicineId] || 0;
+      if (currentQty <= 0) return;
+
+      if (currentQty === 1) {
+        // requirement: call DELETE endpoint only
+        const cartId = cartServerIds[medicineId];
+        if (cartId) {
+          // send both cartId and cart_id to be robust against backend param naming
+          console.log('[handleDecrement] DELETE ->', ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId } });
+          const res: any = await axiosClient.delete(ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId, cart_id: cartId } });
+          console.log('[handleDecrement] DELETE response ->', res);
+        } else {
+          // no server id available; cannot call DELETE - clear local state and log
+          console.warn('No server cart id for delete; clearing local entry', medicineId);
+        }
+
+        setCart(prev => {
+          const next = { ...prev };
+          delete next[medicineId];
+          return next;
+        });
+        setCartServerIds(prev => {
+          const next = { ...prev };
+          delete next[medicineId];
+          return next;
+        });
+      } else {
+        const nextQty = currentQty - 1;
+        const cartId = cartServerIds[medicineId];
+        if (cartId) {
+          const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, nextQty);
+          console.log('[handleDecrement] PUT ->', url);
+          const res: any = await axiosClient.put(url);
+          console.log('[handleDecrement] PUT response ->', res);
+        } else {
+          console.warn('No server cart id for decrement fallback for', medicineId);
+        }
+        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
+      }
+    } catch (err: any) {
+      console.error('handleDecrement failed', medicineId, err);
+      Alert.alert('Could not update cart', err?.message ?? 'Please try again');
+    } finally {
+      setCartLoading(prev => ({ ...prev, [medicineId]: false }));
+    }
+  }, [cart, cartLoading, cartServerIds]);
 
   const getCategoryTitle = useCallback(() => {
     switch (category) {
@@ -216,53 +321,50 @@ export default function MedicineListScreen() {
       const quantity = cart[item.id] || 0;
       const isInCart = quantity > 0;
 
+      // Determine displayed price values
+      const displayPrice = item.curonnPrice ?? item.totalPrice ?? 0;
+      const displayOriginal = item.streepBoxPrice ?? 0;
+
       return (
-        <View style={styles.medicineCard}>
-          <View style={styles.medicineInfo}>
-            <Image source={{ uri: item.image }} style={styles.medicineImage} />
-            <View style={styles.medicineDetails}>
-              <Text style={styles.medicineName}>{item.name}</Text>
-              <Text style={styles.manufacturer}>{item.manufacturer}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.price}>{item.price}</Text>
-                <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>{item.discount} OFF</Text>
-                </View>
+        <View style={styles.medicineCardLarge}>
+          <View style={styles.cardRow}>
+            <View style={styles.imageColumn}>
+              <Image source={{ uri: item.image }} style={styles.cardImage} />
+              <View style={styles.imagePriceContainer}>
+                {displayOriginal ? (
+                  <Text style={styles.imageOriginalPrice}>₹{displayOriginal}</Text>
+                ) : null}
+                <Text style={styles.imagePrice}>₹{displayPrice}</Text>
               </View>
             </View>
-          </View>
-          <View style={styles.actionContainer}>
-            {isInCart ? (
-              <View style={styles.quantityContainer}>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => removeFromCart(item.id)}
-                >
-                  <Text style={styles.quantityButtonText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.quantityText}>{quantity}</Text>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => addToCart(item.id)}
-                >
-                  <Text style={styles.quantityButtonText}>+</Text>
-                </TouchableOpacity>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle} numberOfLines={2}>{item.name}</Text>
+              <Text style={styles.cardSubtitle} numberOfLines={1}>{item.streepBoxQty}</Text>
+
+              <View style={styles.actionUnderSubtitle}>
+                {isInCart ? (
+                  <View style={styles.quantityPill}>
+                    <TouchableOpacity onPress={() => handleDecrement(item.id)}>
+                      <Text style={styles.quantitySign}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.quantityNumber}>{quantity}</Text>
+                    <TouchableOpacity onPress={() => handleIncrement(item)}>
+                      <Text style={styles.quantitySign}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.addPill} onPress={() => handleIncrement(item)}>
+                    <Text style={styles.addPillText}>Add to Cart</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addToCartButton}
-                onPress={() => addToCart(item.id)}
-              >
-                <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-              </TouchableOpacity>
-            )}
+            </View>
           </View>
         </View>
       );
     },
-    [cart, addToCart, removeFromCart]
+    [cart, handleIncrement, handleDecrement]
   );
 
   const getTotalCartItems = useCallback(() => {
@@ -282,7 +384,7 @@ export default function MedicineListScreen() {
           />
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.cartButton}>
+          <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
             <Image source={images.icons.cart} style={styles.cartIcon} />
             {getTotalCartItems() > 0 && (
               <View style={styles.cartBadge}>
@@ -323,6 +425,13 @@ export default function MedicineListScreen() {
         contentContainerStyle={styles.medicinesList}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Continue button fixed at bottom */}
+      <View style={styles.continueContainer} pointerEvents="box-none">
+        <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/cart' as unknown as any)}>
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -417,6 +526,7 @@ const styles = StyleSheet.create({
   },
   medicinesList: {
     padding: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(160),
   },
   medicineCard: {
     backgroundColor: '#fff',
@@ -432,6 +542,117 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
   },
+  /* Large card to match design */
+  medicineCardLarge: {
+    backgroundColor: '#fff',
+    borderRadius: getResponsiveSpacing(12),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(14),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardImage: {
+    ...getResponsiveImageSize(64, 64),
+    borderRadius: getResponsiveSpacing(8),
+    marginRight: getResponsiveSpacing(12),
+    backgroundColor: '#fff',
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: '#3B2032',
+    marginBottom: getResponsiveSpacing(6),
+  },
+  cardSubtitle: {
+    fontSize: getResponsiveFontSize(12),
+    color: '#8A6F7F',
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: getResponsiveSpacing(12),
+  },
+  cardOriginalPrice: {
+    fontSize: getResponsiveFontSize(12),
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  cardPrice: {
+    fontSize: getResponsiveFontSize(16),
+    color: '#E04F85',
+    fontWeight: '700',
+    marginTop: getResponsiveSpacing(4),
+  },
+  cardAction: {
+    marginLeft: getResponsiveSpacing(12),
+  },
+  actionUnderSubtitle: {
+    marginTop: getResponsiveSpacing(10),
+    alignItems: 'flex-end',
+  },
+  imageColumn: {
+    width: getResponsiveSpacing(80),
+    alignItems: 'center',
+    marginRight: getResponsiveSpacing(12),
+  },
+  imagePriceContainer: {
+    marginTop: getResponsiveSpacing(8),
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  imageOriginalPrice: {
+    fontSize: getResponsiveFontSize(12),
+    color: '#999',
+    textDecorationLine: 'line-through',
+    marginRight: getResponsiveSpacing(6),
+  },
+  imagePrice: {
+    fontSize: getResponsiveFontSize(14),
+    color: '#E04F85',
+    fontWeight: '700',
+    marginLeft: getResponsiveSpacing(2),
+  },
+  quantityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: getResponsiveSpacing(20),
+    borderWidth: 1,
+    borderColor: '#E04F85',
+    paddingHorizontal: getResponsiveSpacing(10),
+    paddingVertical: getResponsiveSpacing(6),
+  },
+  quantitySign: {
+    color: '#E04F85',
+    fontSize: getResponsiveFontSize(18),
+    paddingHorizontal: getResponsiveSpacing(8),
+  },
+  quantityNumber: {
+    color: '#3B2032',
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: '700',
+  },
+  addPill: {
+    backgroundColor: colors.primary,
+    borderRadius: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(8),
+  },
+  addPillText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: '700',
+  },
   medicineInfo: {
     flexDirection: 'row',
     marginBottom: getResponsiveSpacing(8),
@@ -440,6 +661,84 @@ const styles = StyleSheet.create({
     ...getResponsiveImageSize(60, 60),
     borderRadius: getResponsiveSpacing(8),
     marginRight: getResponsiveSpacing(12),
+  },
+  // compact row layout for list items
+  medicineInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  medicineImageSmall: {
+    ...getResponsiveImageSize(72, 72),
+    borderRadius: getResponsiveSpacing(8),
+    marginRight: getResponsiveSpacing(12),
+  },
+  medicineDetailsSmall: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  medicineNameSmall: {
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: '700',
+    color: '#3B2032',
+  },
+  descriptionSmall: {
+    fontSize: getResponsiveFontSize(12),
+    color: '#7A6B78',
+    marginTop: getResponsiveSpacing(4),
+  },
+  priceRow: {
+    marginTop: getResponsiveSpacing(6),
+  },
+  priceLarge: {
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: '#E04F85',
+  },
+  originalPriceSmall: {
+    fontSize: getResponsiveFontSize(12),
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  actionRight: {
+    marginLeft: getResponsiveSpacing(8),
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  quantityContainerSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(6),
+    paddingVertical: getResponsiveSpacing(4),
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  quantityButtonSmall: {
+    width: getResponsiveSpacing(28),
+    height: getResponsiveSpacing(28),
+    borderRadius: getResponsiveSpacing(14),
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityTextSmall: {
+    color: colors.primary,
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: '600',
+    marginHorizontal: getResponsiveSpacing(8),
+  },
+  addToCartButtonSmall: {
+    backgroundColor: colors.primary,
+    borderRadius: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(8),
+  },
+  addToCartButtonTextSmall: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(12),
+    fontWeight: '600',
   },
   medicineDetails: {
     flex: 1,
@@ -533,5 +832,26 @@ const styles = StyleSheet.create({
     marginHorizontal: getResponsiveSpacing(12),
     minWidth: getResponsiveSpacing(20),
     textAlign: 'center',
+  },
+  continueContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 20,
+    alignItems: 'center',
+  },
+  continueButton: {
+    width: '90%',
+    backgroundColor: colors.primary,
+    borderRadius: getResponsiveSpacing(30),
+    paddingVertical: getResponsiveSpacing(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+  },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
   },
 });

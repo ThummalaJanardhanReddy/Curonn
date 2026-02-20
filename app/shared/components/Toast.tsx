@@ -92,8 +92,8 @@ export default function Toast(props: ToastProps) {
     >
       <View style={[styles.toast, { backgroundColor }]}> {/* Color based on type */}
         <View style={styles.toastContent}>
-          <Text style={styles.toastTitle}>{title}</Text>
-          <Text style={styles.toastSubtitle}>{subtitle}</Text>
+          <Text style={styles.toastTitle}>{typeof title === 'string' ? title : String(title)}</Text>
+          <Text style={styles.toastSubtitle}>{typeof subtitle === 'string' ? subtitle : String(subtitle)}</Text>
         </View>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>{icon}</Text>
