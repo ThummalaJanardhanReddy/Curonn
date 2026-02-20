@@ -3,6 +3,7 @@ import { getUserData } from '../utils/storage';
 
 // User data interface
 interface UserData {
+  email: string;
   mobileNo: string;
   emailAddress: string;
   fullName: string;
@@ -22,6 +23,7 @@ interface UserContextType {
 const defaultUserData: UserData = {
   mobileNo: '',
   emailAddress: '',
+  email:'',
   fullName: '',
   employeeId: '',
   isVerified: false,

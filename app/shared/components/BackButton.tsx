@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { images } from '../../../assets';
 import { colors } from '../styles/commonStyles';
+import { fonts } from '../styles/fonts';
 
 interface BackButtonProps {
   title: string;
@@ -66,9 +67,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '500',
     textAlign: 'left',
     alignItems: 'flex-start',
     flexShrink: 1,
+    fontFamily: fonts.regular,
   },
 });

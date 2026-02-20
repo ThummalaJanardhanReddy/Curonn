@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from './shared/components/BackButton';
 import PrimaryButton from './shared/components/PrimaryButton';
 import commonStyles, { colors } from './shared/styles/commonStyles';
+import { fonts } from './shared/styles/fonts';
 
 export default function TermsScreen() {
   const [canContinue, setCanContinue] = useState(false);
@@ -145,23 +146,25 @@ const styles = StyleSheet.create({
   container: {
     // ...commonStyles.container_layout,
     flex: 1,
+    backgroundColor: '#F5F4F9', // colors.bg_primary,
   },
   header: {
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
     color: '#000000',
-    marginBottom: 8,
+    marginBottom: 0,
     textAlign: 'left',
-    marginTop: 10,
+    marginTop: 5,
+    fontFamily: fonts.semiBold,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#000000',
     textAlign: 'left',
+    fontFamily: fonts.regular,
   },
   scrollContainer: {
     flex: 1,
@@ -170,32 +173,34 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#000000',
     marginTop: 12,
     marginBottom: 6,
     textAlign: 'left',
+    fontFamily: fonts.medium,
   },
   termsText: {
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 22,
     color: '#000000',
     marginBottom: 8,
     textAlign: 'left',
+     fontFamily: fonts.regular,
   },
   scrollIndicator: {
     alignItems: 'center',
     marginTop: 30,
     marginBottom: 20,
     padding: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F5F4F9',
     borderRadius: 8,
   },
   scrollText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
     color: '#333',
+    fontFamily: fonts.regular,
   },
   buttonContainer: {
     marginTop: 10,

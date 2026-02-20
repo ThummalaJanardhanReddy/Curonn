@@ -5,7 +5,7 @@ import { Button } from "react-native-paper";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
 import { getResponsiveFontSize, getResponsiveSpacing } from '../../shared/utils/responsive';
-
+import { fonts } from '@/app/shared/styles/fonts';
 import { useFocusEffect } from "@react-navigation/native";
 import {
   FlatList,
@@ -26,6 +26,8 @@ import PrimaryButton from "../../shared/components/PrimaryButton";
 import BookingScreen from "../booking/booking";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
+import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
+import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg';
 // import Svg, { Defs, Rect, Stop, RadialGradient } from 'react-native-svg';
 
 interface TestCategory {
@@ -628,25 +630,40 @@ export default function LabTestsScreen() {
             selectedSubTest === item.groupName && styles.subTestCircleSelected,
           ]}
         >
+          {/* {imageError ? (
+            <LabdefaultIcon width={45} height={45} />
+          ) : (
+            <Image
+              source={{ uri: item.groupImage }}
+              style={[styles.subTestImage, { width: 45, height: 45 }]}
+              onError={() => setImageError(true)}
+            />
+          )} */}
           <Image
             source={
               imageError
-                ? images.labdefault // <-- your local default image
+                ? images.labdefault 
                 : { uri: item.groupImage }
             }
             style={[styles.subTestImage, { width: 45, height: 45 }]}
             onError={() => setImageError(true)}
           />
         </View>
-        <Text style={styles.subTestName}>{item.groupName}</Text>
+        <Text
+          style={[
+            styles.subTestName,
+            selectedSubTest === item.groupName && styles.subTestNameSelected,
+          ]}
+        >
+          {item.groupName}
+        </Text>
       </TouchableOpacity>
     );
   };
 
   const renderTestItem = ({ item }: { item: TestItem }) => (
     <LinearGradient
-      colors={["#FFFFFF", "#D5CDDA"]}
-      locations={[0.0, 1.0]}
+      colors={['#fff', '#D5CDDA']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.testCard}
@@ -715,7 +732,7 @@ export default function LabTestsScreen() {
                     ₹{item.price}
                   </Text>
                   {' '}
-                  <Text style={styles.finalPrice}>
+                  <Text style={styles.finalPrice1}>
                     ₹{item.curonnPrice}
                   </Text>
                 </Text>
@@ -725,13 +742,13 @@ export default function LabTestsScreen() {
             <View style={styles.testActioncard}>
               <Button
                 mode="outlined"
-                style={{ width: 130, height: 40, borderColor: '#BDBABA' }}
+                style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
                 contentStyle={{
                   height: 40,
                   paddingVertical: 0,
                   justifyContent: 'center',
                 }}
-                textColor="#694664"
+                textColor="#000000"
                 onPress={() =>
                   router.push({
                     pathname: "/viewdetails",
@@ -778,27 +795,29 @@ export default function LabTestsScreen() {
 
       <View style={styles.containercontent}> */}
 
-        <LinearGradient
+       
+          {/* Search Bar */}
+          
+             <LinearGradient
           colors={[
-            "rgba(248, 241, 247, 1)",
-            "rgba(247, 84, 10, 0.2)",
+            "rgba(255, 255, 255, 1)",
+            "rgba(247, 84, 10, 0.3)",
           ]}
-          start={{ x: 0.2, y: 0.2 }}
-          end={{ x: 0, y: 0.1 }}
+          start={{ x: 0.1, y: 0.2 }}
+          end={{ x: 0, y: 0 }}
           style={{
-            flex: 1,
             paddingHorizontal: 20, // ✅ works
-            paddingVertical: 7,
+            paddingVertical: 5,
           }}
         >
-          {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
-              <Image source={images.icons.search} style={styles.searchIcon} />
+              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+              {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search for lab tests"
-                placeholderTextColor="#999"
+                placeholderTextColor="#000"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -842,13 +861,15 @@ export default function LabTestsScreen() {
               </View>
             )}
 
-          <View style={styles.screen}>
-            {/* Test Items */}
+            </LinearGradient>
+             <View style={styles.containercontent}>
+          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
             <View style={styles.testItemsContainer}>
               <FlatList
                 data={getDisplayedData()}
                 renderItem={renderTestItem}
                 keyExtractor={(item) => item.id}
+                scrollEnabled={false}
                 onEndReached={() => {
                   if (searchQuery.trim().length > 0) return;
                   if (onEndReachedCalledDuringMomentum) return;
@@ -913,10 +934,6 @@ export default function LabTestsScreen() {
                 showsVerticalScrollIndicator={false}
               />
             </View>
-
-
-
-            {/* Sample Collection Info */}
             <View style={styles.sampleCollectionContainer}>
               <Text style={styles.sampleCollectionTitle}>
                 How does sample collection work?
@@ -942,13 +959,13 @@ export default function LabTestsScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
           <View style={styles.backgroundImageContainer}>
             {/* ...existing code... */}
           </View>
-
-        </LinearGradient>
+</View>
+        {/* </LinearGradient> */}
 
         {/* Booking Modal */}
         {selectedTest && (
@@ -990,7 +1007,9 @@ const styles = StyleSheet.create({
     ...commonStyles.containercontent_layout,
     backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
-    paddingBottom: 0,
+    paddingHorizontal: 20, // ✅ works
+    paddingTop: 0,
+            paddingVertical: 7,
   },
   content: {
     flex: 1,
@@ -1010,21 +1029,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 4,
+    height: 40,
+    marginTop: 5
   },
   searchIcon: {
-    width: 20,
-    height: 20,
     marginRight: 8,
-    tintColor: "#999",
+    tintColor: "#808080",
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 12,
     paddingVertical: 4,
-    color: "#333",
+    color: "#000",
+    paddingTop: 4,
+    fontFamily: fonts.regular,
   },
   clearButton: {
     padding: 4,
@@ -1053,31 +1074,38 @@ const styles = StyleSheet.create({
     backgroundColor: "#694664",
   },
   categoryButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#694664",
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#251729",
+    fontFamily: fonts.regular,
+    lineHeight: 20,
+
   },
   categoryButtonTextSelected: {
     color: "#fff",
+    fontFamily: fonts.semiBold,
+
   },
   subTestTypesContainer: {
     marginBottom: 20,
   },
   subTestTypesList: {
-    gap: 16,
+    gap: 3,
   },
   subTestContainer: {
     alignItems: "center",
     width: 80,
   },
   subTestCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#D9D9D9",
   },
   subTestCircleSelected: {
     // backgroundColor: '#694664',
@@ -1089,17 +1117,22 @@ const styles = StyleSheet.create({
     height: '100%'
   },
   subTestName: {
-    fontSize: 12,
+    fontSize: 10,
     textAlign: "center",
-    color: "#333",
+    color: "#251729",
     fontWeight: "500",
+    fontFamily: fonts.regular,
+
+  },
+  subTestNameSelected: {
+    fontFamily: fonts.semiBold,
   },
   screen: {
     flex: 1, // full screen height
   },
   testItemsContainer: {
     marginBottom: 20,
-    flex: 1,
+    // flex: 1,
 
   },
 
@@ -1109,11 +1142,11 @@ const styles = StyleSheet.create({
     // Add a linear gradient background from left (#FFFFFF) to right (#D5CDDA)
     // Note: This requires react-native-linear-gradient. If not available, fallback to a View with backgroundColor.
     overflow: "hidden", // To ensure borderRadius clips the gradient
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgb(219, 219, 219)',
+    borderColor: '#DBDBDB',
   },
   testCard1: {
     flexDirection: "row",
@@ -1124,10 +1157,9 @@ const styles = StyleSheet.create({
   },
   testName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#4B334E",
+    color: "#000",
     marginBottom: 3,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: fonts.bold,
 
   },
   // testPrice: {
@@ -1137,8 +1169,9 @@ const styles = StyleSheet.create({
   //   marginBottom: 4,
   // },
   testReportTime: {
-    fontSize: 8,
+    fontSize: 10,
     color: "#4B334E",
+    fontFamily: fonts.regular,
   },
   testAction: {
     alignItems: "center",
@@ -1165,6 +1198,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#4B334E",
     fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   viewMoreContainer: {
     alignItems: "flex-start",
@@ -1188,6 +1222,7 @@ const styles = StyleSheet.create({
     color: "#4B334E",
     marginBottom: 16,
     textAlign: "justify",
+    fontFamily: fonts.semiBold,
   },
   sampleCollectionImages: {
     flexDirection: "row",
@@ -1218,17 +1253,24 @@ const styles = StyleSheet.create({
     color: "#4B334E",
     fontWeight: "500",
     marginBottom: 4,
+    fontFamily: fonts.regular,
   },
   originalPrice: {
     fontSize: 12,
-    color: '#B0B0B0',          // light gray
+    color: '#887f8b',          // light gray
     textDecorationLine: 'line-through',
     textDecorationStyle: 'solid',
+    fontFamily: fonts.regular,
   },
   finalPrice: {
     fontSize: 12,
-    fontWeight: 'bold',
     color: '#C35E9C',
+    fontFamily: fonts.bold,
+  },
+  finalPrice1: {
+    fontSize: 16,
+    color: '#000',
+    fontFamily: fonts.bold,
   },
   actionButton: {
     borderColor: "#BDBABA",

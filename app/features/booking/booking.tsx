@@ -32,7 +32,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 // import RazorpayCheckout from 'react-native-razorpay';
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
-
+import { fonts } from '@/app/shared/styles/fonts';
 type ServiceType = "lab-test" | "health-checks" | "scans";
 
 interface BookingScreenProps {
@@ -63,7 +63,7 @@ export default function BookingScreen({
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
   const totalAmount = servicePrice - discountAmount;
   console.log("DEBUG: totalAmount calculated as", totalAmount);
-
+  const { userData } = useUser();
   // Fetch discount percent from Employee API
   React.useEffect(() => {
     async function fetchDiscount() {
@@ -88,7 +88,6 @@ export default function BookingScreen({
     }
     fetchDiscount();
   }, [userData?.e_id, type]);
-  const { userData } = useUser();
   // StatusId for 'Requested' (categoryId=7)
   const [statusId, setStatusId] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -486,10 +485,10 @@ export default function BookingScreen({
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
                   <Text style={styles.serviceLocation}>
-                    {isAtHome ? "At HOME" : "At Lab"}
+                    {isAtHome ? "AT HOME" : "AT Lab"}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 8, color: "#4B334E" }}>
+                <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
                   Report within {reportTime}
                 </Text>
 
@@ -500,12 +499,19 @@ export default function BookingScreen({
                   <Text style={styles.servicePrice}>
                     ₹{servicePrice}
                   </Text>
-                  <SecondaryButton
+                  <TouchableOpacity
+                    style={styles.editAddressButton1}
+                    onPress={handleEdit}
+                  >
+                    <Text style={styles.editAddressText}>Edit</Text>
+                  </TouchableOpacity>
+
+                  {/* <SecondaryButton
                     title="Edit"
                     onPress={handleEdit}
-                    width={60}
+                    width={50}
                     height={25}
-                  />
+                  /> */}
                 </View>
               </View>
             </View>
@@ -545,23 +551,17 @@ export default function BookingScreen({
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
                   </View>
-                  <Button
-                    style={{
-                      borderRadius: 8,
-                      width: "80%",
-                      borderColor: "#0580FA",
-                      borderStyle: "solid",
-                      borderWidth: 1,
-                      marginTop: 12,
-                    }}
-                    labelStyle={{ color: "#0580FA" }}
+
+                  <TouchableOpacity
+                    style={styles.addnewaddressButton}
                     onPress={handleViewAddress}
                   >
-                    + Add your sample collection address
-                  </Button>
+                    <Text style={styles.AddressText}>+ Add New Address</Text>
+                  </TouchableOpacity>
+
                 </View>
               )}
-              <View
+              {/* <View
                 style={{
                   backgroundColor: "#FBFBFB",
                   borderRadius: 8,
@@ -571,7 +571,7 @@ export default function BookingScreen({
                 }}
               >
 
-              </View>
+              </View> */}
             </View>
 
             {/* Sample Pickup Date & Time */}
@@ -861,7 +861,7 @@ export default function BookingScreen({
           >
             <SafeAreaView style={{ flex: 1 }}>
               <RazorpayPaymentScreen
-               key={razorpayOrderId}
+                key={razorpayOrderId}
                 amount={totalAmount * 100}
                 name={userData?.fullName || ""}
                 email={userData?.emailAddress || ""}
@@ -1000,8 +1000,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#202427",
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: 8,
@@ -1019,15 +1019,18 @@ const styles = StyleSheet.create({
     marginTop: getResponsiveSpacing(10),
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 13,
     color: "#000000",
-    marginBottom: getResponsiveSpacing(12),
+    marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.semiBold
   },
   serviceCard: {
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(5),
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1044,15 +1047,16 @@ const styles = StyleSheet.create({
     // marginBottom: 12,
   },
   serviceName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4B334E",
+    fontSize: 15,
+    color: "#000000",
     flex: 1,
+    fontFamily: fonts.semiBold
   },
   serviceLocation: {
     fontSize: 11,
     fontWeight: "400",
-    color: "#251729",
+    color: "#000",
+    fontFamily: fonts.regular
   },
   serviceDivider: {
     height: 1,
@@ -1065,14 +1069,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   servicePrice: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
     color: colors.primary,
+    fontFamily: fonts.semiBold
   },
   dateTimeCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1144,6 +1150,8 @@ const styles = StyleSheet.create({
   patientCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
     padding: 16,
     // shadowColor: '#000',
     // shadowOffset: {
@@ -1158,6 +1166,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1259,14 +1269,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
   },
   addressHeader: {
     flexDirection: "row",
@@ -1279,31 +1283,56 @@ const styles = StyleSheet.create({
   },
   addressNickname: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#C15E9C",
     marginBottom: 4,
+    fontFamily: fonts.semiBold
   },
   addressText: {
-    fontSize: 16,
-    color: "#333",
-    lineHeight: 22,
+    fontSize: 12,
+    color: "#000",
+    lineHeight: 18,
     marginBottom: 4,
+    fontFamily: fonts.regular
   },
   landmarkText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
+    fontFamily: fonts.regular
   },
   editAddressButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 2,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#C15E9C",
+  },
+  addnewaddressButton: {
+    borderRadius: 8,
+    width: "50%",
+    borderColor: "#0580FA",
+    borderStyle: "solid",
+    borderWidth: 1,
+    paddingVertical: 3,
+    paddingHorizontal: 12,
+    textAlign: "center",
+    marginTop: 12,
+    height: 28,
+  },
+  AddressText: {
+    color: "#0580FA", fontSize: 13, fontFamily: fonts.medium
+  },
+  editAddressButton1: {
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: "#C15E9C",
   },
   editAddressText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#C15E9C",
     fontWeight: "500",
+    fontFamily: fonts.regular
   },
   footer: {
     padding: 20,

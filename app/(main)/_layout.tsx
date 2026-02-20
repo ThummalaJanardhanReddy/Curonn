@@ -6,6 +6,16 @@ import { Image, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import RegistrationGuard from "../shared/components/RegistrationGuard";
+import HomeIcon from '../../assets/AppIcons/Curonn_icons/menu/new/home.svg';
+import HomeIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/home_select.svg';
+import LabIcon from '../../assets/AppIcons/Curonn_icons/menu/new/lab.svg';
+import LabIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/lab_select.svg';
+import DoctorIcon from '../../assets/AppIcons/Curonn_icons/menu/new/doctor.svg';
+import DoctorIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/doctor_select.svg';
+import MedicineIcon from '../../assets/AppIcons/Curonn_icons/menu/new/medicine.svg';
+import MedicineIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/medicine_select.svg';
+import OrderIcon from '../../assets/AppIcons/Curonn_icons/menu/new/orders.svg';
+import OrderIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/orders_slect.svg';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -21,30 +31,34 @@ export default function MainLayout() {
   // Tab configuration (must be before any early return)
   const tabs = useMemo(
     () => [
-      { key: "home", title: "Home", image: images.menu.home, route: "/home" },
+      { key: "home", title: "Home", image: HomeIcon, selectedImage: HomeIconSelected, route: "/main/home", width: 24, height: 24 },
       {
         key: "lab-tests",
         title: "Lab Tests",
-        image: images.menu.labTests,
+        image: LabIcon, selectedImage: LabIconSelected,
         route: "/lab-tests",
+        width: 24, height: 24
       },
       {
         key: "my-doctor",
         title: "My Doctor",
-        image: images.menu.myDoctor,
+        image: DoctorIcon, selectedImage: DoctorIconSelected,
         route: "/my-doctor",
+         width: 24, height: 24
       },
       {
         key: "medicines",
         title: "Medicines",
-        image: images.menu.medicines,
+        image: MedicineIcon, selectedImage: MedicineIconSelected,
         route: "/medicines",
+         width: 24, height: 24
       },
       {
         key: "orders",
         title: "Orders",
-        image: images.menu.orders,
+        image: OrderIcon, selectedImage: OrderIconSelected,
         route: "/orders",
+        width: 24, height: 24
       },
     ],
     []
@@ -170,7 +184,6 @@ export default function MainLayout() {
           tabBarStyle: {
             backgroundColor: "#5F4660",
             borderTopWidth: 0,
-
             height: 70 + insets.bottom,
             paddingBottom: insets.bottom,
             paddingTop: 7,
@@ -183,23 +196,22 @@ export default function MainLayout() {
             name={tab.key}
             options={{
               title: tab.title,
-              tabBarIcon: ({ color, size }) =>
-                typeof tab.image === "function" ? (
-                  // SVG component
-                  <tab.image
-                    width={size}
-                    height={size}
-                    stroke={color}
-                    strokeWidth={2}
+              tabBarIcon: ({ color, size, focused }) => {
+                // Use selectedImage for all tabs when focused
+                const IconComponent = focused && tab.selectedImage ? tab.selectedImage : tab.image;
+                return typeof IconComponent === "function" ? (
+                  <IconComponent
+                    width={tab.width || size}
+                    height={tab.height || size}
                   />
                 ) : (
-                  // PNG/JPG
                   <Image
-                    source={tab.image}
+                    source={IconComponent}
                     style={{ width: size, height: size, tintColor: color }}
                     resizeMode="contain"
                   />
-                ),
+                );
+              },
             }}
           />
         ))}

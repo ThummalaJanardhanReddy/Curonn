@@ -30,6 +30,7 @@ import SocialHabitsScreen from "../../features/profile/social-habits";
 import { getResponsivePadding } from "../../shared/utils/responsive";
 import commonStyles, { colors } from "../styles/commonStyles";
 import FamilyMembersModal from "./FamilyMembersModal";
+// ...existing code...
 import PrimaryButton from "./PrimaryButton";
 import ProfileScreenModal from "./ProfileScreenModal";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
@@ -76,6 +77,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     department: "",
     address: "",
     branch: "",
+    noFamilyMembers:""
   });
   const { userData } = useUser();
   const patientId = userData?.e_id;
@@ -103,6 +105,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           address: data.address || "",
           branch: data.branch || "",
           image: data.image || "",
+          noFamilyMembers:data.noFamilyMembers || 0,
         });
       } catch (error) {
         console.error("[ProfileModal] Failed to fetch profile data:", error);
@@ -612,8 +615,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               </View>
 
               {/* Tab Buttons */}
-              {/* <View style={styles.tabButtons}>
-                <TouchableOpacity
+              <View style={styles.tabButtons}>
+                {/* <TouchableOpacity
                   style={[
                     styles.tabButton,
                     activeTab === 0 && styles.activeTabButton,
@@ -628,10 +631,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   >
                     Profile
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
                 <TouchableOpacity
                   style={[
-                    styles.tabButton,
+                    styles.tabButton ,
                     activeTab === 1 && styles.activeTabButton,
                   ]}
                   onPress={() => setActiveTab(1)}
@@ -645,7 +648,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     Settings
                   </Text>
                 </TouchableOpacity>
-              </View> */}
+              </View>
 
               {/* User Card */}
               <View style={styles.userCard}>
@@ -965,6 +968,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       <FamilyMembersModal
         visible={familyMembersModalVisible}
         onClose={hideFamilyMembersModal}
+        maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
       />
 
       {/* Location Selection Modal */}
@@ -1373,6 +1377,7 @@ const styles = StyleSheet.create({
     gap: 20,
     // paddingHorizontal: 32,
     paddingVertical: 8,
+    marginTop: 5,
     // borderBottomWidth: 1,
     // borderBottomColor: '#eee',
   },
@@ -1404,9 +1409,10 @@ const styles = StyleSheet.create({
     flex: 1,
     // backgroundColor: 'blue',
     paddingTop: 10,
+    backgroundColor: "#fff",
   },
   userCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#B0A3B1",
     borderRadius: 18,
     paddingHorizontal: 20,
     paddingVertical: 16,

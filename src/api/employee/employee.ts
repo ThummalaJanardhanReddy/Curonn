@@ -92,6 +92,7 @@ export const AddressApi = {
     `/Employee/get-address-by-patientid?patientId=${patientId}`,
    saveAddress: '/Employee/save-update-address',
   setDfaultaddress:'/Employee/set-default-address',
+  deleteaddress:'/Employee/delete-address',
   getAddressById:(addressId: string | number) => `/Employee/get-address-by-id?addressId=${addressId}`,
 
 }

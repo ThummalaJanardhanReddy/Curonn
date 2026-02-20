@@ -15,6 +15,9 @@ import ProfileModal from './ProfileModal';
 import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
+import { fonts } from '../../shared/styles/fonts';
+import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
+import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 
 interface CommonHeaderProps {
   title?: string;
@@ -47,7 +50,7 @@ export default function CommonHeader({
     gender: "",
     image: "",
   });
-  const {getCurrentAddress, address} = useLocation();
+  const { getCurrentAddress, address } = useLocation();
   const { userData } = useUser();
   const patientId = userData?.e_id;
 
@@ -69,7 +72,7 @@ export default function CommonHeader({
     };
     fetchProfile();
   }, [patientId]);
-  
+
   useEffect(() => {
     // Fetch current address on mount
     const fetchAddress = async () => {
@@ -79,7 +82,7 @@ export default function CommonHeader({
         if (onLocationChange) {
           onLocationChange(address);
         }
-    };
+      };
     }
     fetchAddress();
   }, []);
@@ -87,7 +90,7 @@ export default function CommonHeader({
   useEffect(() => {
     setSelectedLocation(address);
   }, [address]);
-  
+
   const handleProfilePress = () => {
     console.log('Profile button pressed');
     setProfileVisible(true);
@@ -129,8 +132,16 @@ export default function CommonHeader({
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
-
+  let mandal = selectedLocation;
+  let rest = '';
+  if (selectedLocation && selectedLocation.includes(',')) {
+    const parts = selectedLocation.split(',');
+    mandal = parts[0].trim();
+    rest = parts.slice(1).join(',').trim();
+  }
   if (isHomePage) {
+    // Split the address at the first comma
+
     // Home page style with background and different layout
     return (
       <>
@@ -140,20 +151,22 @@ export default function CommonHeader({
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              <Image
-                source={
-                  profileForm?.image
-                    ? { uri: profileForm.image }
-                    : profileForm?.gender === 'Female'
-                      ? images.profilefemale
-                      : images.profilemale
-                }
-                style={styles.profileIcon}
-              />
+              {profileForm?.image ? (
+                <Image
+                  source={{ uri: profileForm.image }}
+                  style={styles.profileIcon}
+                />
+              ) : profileForm?.gender === 'Female' ? (
+                <WomenIcon width={40} height={40} style={styles.profileIcon} />
+              ) : (
+                <MenIcon width={40} height={40} style={styles.profileIcon} />
+              )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
-              <Text style={styles.homeLocationText}>{selectedLocation}   <images.icons.location style={styles.locationIcon} /></Text>
-              {/* <Text style={styles.homeLocationSubtext}>Current Location</Text> */}
+              <View style={styles.locationhead}>
+                <Text style={styles.homeLocationText}>{mandal} &nbsp;<images.icons.location style={styles.locationIcon} /></Text>
+                {rest ? <Text style={styles.homeLocationSubtext}>{rest} </Text> : null}
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -161,32 +174,31 @@ export default function CommonHeader({
             style={styles.notificationButton}
             onPress={handleNotificationPress}
           >
-            {/* <Image source={images.notification} style={styles.notificationIcon} /> */}
             <images.notification_bell_svg style={styles.notificationIcon} />
-          </TouchableOpacity> 
+          </TouchableOpacity>
         </View>
 
-      {/* Profile Modal */}
-      <ProfileModal
-        visible={profileVisible}
-        onClose={() => setProfileVisible(false)}
-      />
-      
-      {/* Cart Modal */}
-      <CartModal
-        visible={cartVisible}
-        onClose={() => setCartVisible(false)}
-      />
-      
-      {/* Location Selection Modal */}
-      <LocationSelection
-        visible={locationVisible}
-        onClose={handleLocationClose}
-        onLocationSelected={handleLocationSelected}
-      />
-    </>
-  );
-}
+        {/* Profile Modal */}
+        <ProfileModal
+          visible={profileVisible}
+          onClose={() => setProfileVisible(false)}
+        />
+
+        {/* Cart Modal */}
+        <CartModal
+          visible={cartVisible}
+          onClose={() => setCartVisible(false)}
+        />
+
+        {/* Location Selection Modal */}
+        <LocationSelection
+          visible={locationVisible}
+          onClose={handleLocationClose}
+          onLocationSelected={handleLocationSelected}
+        />
+      </>
+    );
+  }
 
   // Default style for other pages (like lab-tests)
   return (
@@ -197,14 +209,28 @@ export default function CommonHeader({
             style={styles.profileButton}
             onPress={handleProfilePress}
           >
-            <images.profile style={styles.profileIcon} />
+            {profileForm?.image ? (
+              <Image
+                source={{ uri: profileForm.image }}
+                style={styles.profileIcon}
+              />
+            ) : profileForm?.gender === 'Female' ? (
+              <WomenIcon width={40} height={40} style={styles.profileIcon} />
+            ) : (
+              <MenIcon width={40} height={40} style={styles.profileIcon} />
+            )}
           </TouchableOpacity>
           {showLocation ? (
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
-              <Text style={styles.locationText}>{selectedLocation} <images.icons.location style={[styles.locationIcon]} stroke={'#000000'} /></Text>
+              <View style={styles.locationhead}>
+                <Text style={styles.locationText}>{mandal} &nbsp;<images.icons.location style={[styles.locationIcon]} stroke={'#000000'} /></Text>
+                {rest ? <Text style={styles.sublocationText}>{rest}</Text> : null}
+              </View>
             </TouchableOpacity>
+
+
           ) : (
-            title ? <Text style={[styles.locationText, {marginLeft: 8}]}>{title}</Text> : null
+            title ? <Text style={[styles.locationText, { marginLeft: 8 }]}>{title}</Text> : null
           )}
         </View>
         {showCart && (
@@ -253,15 +279,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   homeLocationText: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(13),
     fontWeight: '600',
     color: 'white',
-    marginBottom: getResponsiveSpacing(2),
+    marginBottom: getResponsiveSpacing(0),
+    fontFamily: fonts.bold,
+    lineHeight: 18,
   },
+
   homeLocationSubtext: {
     fontSize: getResponsiveFontSize(12),
     color: 'white',
-    opacity: 0.8,
+    fontFamily: fonts.regular
+  },
+
+  sublocationText: {
+    fontSize: getResponsiveFontSize(12),
+    fontFamily: fonts.regular,
+    color: '#000',
   },
   notificationButton: {
     padding: getResponsiveSpacing(8),
@@ -294,22 +329,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(4),
   },
   profileIcon: {
-     width: 40,
+    width: 40,
     height: 40,
     borderRadius: 30,
   },
   locationInfo: {
     flex: 1,
+    lineHeight: 14,
+  },
+  locationhead: {
+    lineHeight: 15,
+    marginTop: getResponsiveSpacing(5),
   },
   locationIcon: {
     ...getResponsiveImageSize(26, 26),
     marginLeft: getResponsiveSpacing(10),
   },
   locationText: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(13),
     fontWeight: '600',
-    color: '#333',
-    marginBottom: getResponsiveSpacing(2),
+    color: '#000',
+    marginBottom: getResponsiveSpacing(0),
+    fontFamily: fonts.bold,
+    lineHeight: 18,
   },
   locationSubtext: {
     fontSize: getResponsiveFontSize(12),

@@ -14,6 +14,12 @@ import PrimaryButton from './shared/components/PrimaryButton';
 import RegistrationLayout from './shared/components/ui/registration-layout';
 import commonStyles, { colors } from './shared/styles/commonStyles';
 import { saveUserData, setRegistrationCompleted } from './shared/utils/storage';
+import axiosClient from '../src/api/axiosClient';
+import { ApiRoutes } from '../src/api/employee/employee';
+import { fonts } from './shared/styles/fonts';
+import { useUser } from "./shared/context/UserContext";
+import Toast from './shared/components/Toast';
+import { useLocalSearchParams } from 'expo-router';
 
 interface PersonalizationData {
   gender: string;
@@ -46,7 +52,10 @@ const MEDICAL_CONDITIONS = [
   // { label: 'No Issues 1', key: 'noIssues1' },
 ];
 
+
+
 export default function PersonalizationScreen() {
+  const params = useLocalSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<PersonalizationData>({
     gender: '',
@@ -55,10 +64,28 @@ export default function PersonalizationScreen() {
     weight: { value: '', unit: 'kg' },
     medicalConditions: [],
   });
+  const [profileForm, setProfileForm] = useState({
+    fullName: "",
+    EmployeeCode: "",
+    emailAddress: "",
+    mobileNo: "",
+    age: "",
+    gender: "",
+    dob: "",
+    image: "",
+    eId: "",
+    roleId: "",
+    companyName: "",
+    department: "",
+    address: "",
+    branch: "",
+  });
   const textInputRef = useRef<any>(null);
   const heightInputRef = useRef<any>(null);
   const weightInputRef = useRef<any>(null);
-
+  const { userData } = useUser();
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [showToast, setShowToast] = useState(false);
   // Auto-focus TextInput when on step 2 (age input), step 3 (height input), or step 4 (weight input)
   useEffect(() => {
     if (currentStep === 2 && textInputRef.current) {
@@ -108,22 +135,97 @@ export default function PersonalizationScreen() {
   };
 
   const totalSteps = 5;
+  const patientId = userData?.e_id;
+  React.useEffect(() => {
+    if (!patientId) return;
+    // console.log("[ProfileModal] userData:", userData);
+    // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
+    const fetchProfile = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        // console.log("[ProfileModal] Profile data response:", response);
+        const data = response?.data ?? response;
+        setProfileForm({
+          fullName: data.fullName || "",
+          EmployeeCode: data.employeeCode,
+          emailAddress: data.emailAddress || "",
+          mobileNo: data.mobileNo || "",
+          age: data.age ? String(data.age) : "",
+          gender: data.gender || "",
+          dob: data.dob || "",
+          eId: data.eId || "",
+          roleId: data.roleId || "",
+          companyName: data.companyName || "",
+          department: data.department || "",
+          address: data.address || "",
+          branch: data.branch || "",
+          image: data.image || "",
+        });
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+
+      }
+    };
+    fetchProfile();
+  }, [patientId]);
+
+
 
   const handleContinue = async () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      // All steps completed, save registration status and user data
+      // All steps completed, update employee profile, save registration status and user data
       try {
-        await setRegistrationCompleted(true);
-        await saveUserData(data);
-        // Navigate to landing page
-        router.push('/home');
-      } catch (error) {
-        console.error('Error saving registration data:', error);
-        // Still navigate even if saving fails
-        router.push('/home');
-      }
+           const { ...formData } = profileForm;
+        const payload = {
+          eId: userData?.e_id, // fallback if eId is not present
+          roleId: formData.roleId,
+           fullName: formData.fullName,
+           branch: formData.branch,
+          emailAddress: formData.emailAddress,
+          companyName: formData.companyName,
+          department: formData.department,
+          EmployeeCode: formData.EmployeeCode,
+          mobileNo: formData.mobileNo,
+          address: formData.address,
+          gender: data.gender,
+          age: data.age,
+          height: data.height.value,
+          heightMeasurement: data.height.unit,
+          weight: data.weight.value,
+          weightMeasurement: data.weight.unit,
+          medicalCondition: data.medicalConditions.join(','),
+        };
+        console.log('Updating employee with payload:', payload);
+          const response: any = await axiosClient.post(ApiRoutes.Employee.update, payload);
+          console.log('Employee update response:', response);
+          let message = "Employee registration completed successfully";
+          if (response?.id) {
+            setToastMessage({
+              title: "Employee Details Saved Successfully",
+              subtitle: response?.data?.message || "Saved successfully!",
+              type: "success"
+            });
+            setShowToast(true);
+            await setRegistrationCompleted(true);
+            await saveUserData(data);
+            router.push('/home');
+          } else {
+            // Show error or handle failure
+            const msg = response?.message || response?.data?.message || 'Failed to update employee details.';
+            setToastMessage({
+              title: "Failed to update employee details.",
+              subtitle: response?.data?.message,
+              type: "Failed"
+            });
+            setShowToast(true);
+          }
+        } catch (err) {
+          console.error('Failed to update employee:', err);
+          router.push('/home');
+        }
+      
     }
   };
 
@@ -177,7 +279,7 @@ export default function PersonalizationScreen() {
                       style={[
                         styles.radioButton,
                         data.gender === option.value &&
-                          styles.radioButtonSelected,
+                        styles.radioButtonSelected,
                       ]}
                     >
                       {data.gender === option.value && (
@@ -209,16 +311,25 @@ export default function PersonalizationScreen() {
                 end: data.age.length,
               }}
               mode="outlined"
-              style={[styles.textInput,]}
-              contentStyle={{ fontSize: 28, height: 75, textAlign: 'justify', justifyContent: 'flex-start', paddingHorizontal: 16, }}
+              style={styles.textInput}
+              contentStyle={{ fontSize: 28, height: 75, textAlign: 'left', justifyContent: 'flex-start', paddingHorizontal: 16, }}
               keyboardType="numeric"
               theme={{ roundness: 17 }}
               // left={<TextInput.Icon icon="calendar" />}
-              placeholder="age"
-              placeholderTextColor= '#9D9D9F'
+              placeholder="0"
+              placeholderTextColor='#9D9D9F'
               outlineColor="#9D9D9F"
               activeOutlineColor="#9D9D9F"
-              // textColor="#9D9D9F"
+              outlineStyle={{ borderWidth: 1 }}
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                if (isStepValid()) {
+                  handleContinue();
+                } else {
+                  textInputRef.current?.blur();
+                }
+              }}
+            // textColor="#9D9D9F"
             />
           </View>
         );
@@ -250,20 +361,29 @@ export default function PersonalizationScreen() {
                       }
                     }
                   }
-                  
+
                   // Default behavior for all other cases
                   setData({ ...data, height: { ...data.height, value: text } });
                 }}
                 mode="outlined"
                 style={styles.heightWeightInput}
-                theme={{roundness:17}}
-                contentStyle={{ fontSize: 28, height: 75, textAlign: 'justify', justifyContent: 'flex-start', paddingHorizontal: 16, }}
+                theme={{ roundness: 17 }}
+                contentStyle={{ fontSize: 28, height: 75, textAlign: 'left', justifyContent: 'flex-start', paddingHorizontal: 16, }}
                 keyboardType="numeric"
-                placeholder={`height`}
+                placeholder={`0.0`}
                 placeholderTextColor={'#9D9D9F'}
                 outlineColor="#9D9D9F"
+                outlineStyle={{ borderWidth: 1 }}
                 activeOutlineColor="#9D9D9F"
-                // textColor="#9D9D9F"
+                returnKeyType="go"
+                onSubmitEditing={() => {
+                  if (isStepValid()) {
+                    handleContinue();
+                  } else {
+                    heightInputRef.current?.blur();
+                  }
+                }}
+              // textColor="#9D9D9F"
               />
 
               <View style={styles.unitButtonsContainer}>
@@ -289,7 +409,7 @@ export default function PersonalizationScreen() {
                     style={[
                       styles.unitButtonText,
                       data.height.unit === 'ft' &&
-                        styles.unitButtonTextSelected,
+                      styles.unitButtonTextSelected,
                     ]}
                   >
                     ft
@@ -318,7 +438,7 @@ export default function PersonalizationScreen() {
                     style={[
                       styles.unitButtonText,
                       data.height.unit === 'cm' &&
-                        styles.unitButtonTextSelected,
+                      styles.unitButtonTextSelected,
                     ]}
                   >
                     cm
@@ -346,14 +466,23 @@ export default function PersonalizationScreen() {
                 }
                 mode="outlined"
                 style={styles.heightWeightInput}
-                contentStyle={{ fontSize: 28,  textAlign: 'justify', }}
+                contentStyle={{ fontSize: 28, textAlign: 'left', }}
                 keyboardType="numeric"
-                theme={{roundness:17}}
-                placeholder={`weight`}
+                theme={{ roundness: 17 }}
+                placeholder={`0.00`}
                 placeholderTextColor={'#9D9D9F'}
                 outlineColor="#9D9D9F"
+                 outlineStyle={{ borderWidth: 1 }}
                 activeOutlineColor="#9D9D9F"
-                // textColor="#9D9D9F"
+                 returnKeyType="go"
+                onSubmitEditing={() => {
+                  if (isStepValid()) {
+                    handleContinue();
+                  } else {
+                    weightInputRef.current?.blur();
+                  }
+                }}
+              // textColor="#9D9D9F"
               />
 
               <View style={styles.unitButtonsContainer}>
@@ -379,7 +508,7 @@ export default function PersonalizationScreen() {
                     style={[
                       styles.unitButtonText,
                       data.weight.unit === 'kg' &&
-                        styles.unitButtonTextSelected,
+                      styles.unitButtonTextSelected,
                     ]}
                   >
                     kg
@@ -408,7 +537,7 @@ export default function PersonalizationScreen() {
                     style={[
                       styles.unitButtonText,
                       data.weight.unit === 'lb' &&
-                        styles.unitButtonTextSelected,
+                      styles.unitButtonTextSelected,
                     ]}
                   >
                     lb
@@ -431,7 +560,10 @@ export default function PersonalizationScreen() {
               {MEDICAL_CONDITIONS.map((condition) => (
                 <TouchableOpacity
                   key={condition.key}
-                  style={styles.medicalConditionRow}
+                  style={[
+                    styles.medicalConditionRow,
+                    data.medicalConditions.includes(condition.label) && { borderColor: colors.primary }
+                  ]}
                   onPress={() => {
                     if (condition.label === 'No Issues') {
                       // If "No Issues" is selected, clear all other selections
@@ -494,34 +626,34 @@ export default function PersonalizationScreen() {
                       </View>
                     </LinearGradient>
                   ) : ( */}
-                    <View style={styles.medicalConditionContent}>
-                      <View style={styles.medicalConditionLeft}>
-                        <View style={styles.medicalConditionImageContainer}>
-                          {React.createElement(images.medicalConditions[condition.key as keyof typeof images.medicalConditions], {
-                            width: 27,
-                            height: 27,
-                            style: styles.medicalConditionImage
-                          })}
-                        </View>
-                        <Text style={styles.medicalConditionText}>
-                          {condition.label}
-                        </Text>
+                  <View style={styles.medicalConditionContent}>
+                    <View style={styles.medicalConditionLeft}>
+                      <View style={styles.medicalConditionImageContainer}>
+                        {React.createElement(images.medicalConditions[condition.key as keyof typeof images.medicalConditions], {
+                          width: 27,
+                          height: 27,
+                          style: styles.medicalConditionImage
+                        })}
                       </View>
+                      <Text style={styles.medicalConditionText}>
+                        {condition.label}
+                      </Text>
+                    </View>
 
-                      <View style={styles.medicalConditionRadio}>
-                        <View
-                          style={[
-                            styles.medicalRadioButton,
-                            data.medicalConditions.includes(condition.label) &&
-                              styles.medicalRadioButtonSelected,
-                          ]}
-                        >
-                          {data.medicalConditions.includes(condition.label) && (
-                            <View style={styles.medicalRadioButtonInner} />
-                          )}
-                        </View>
+                    <View style={styles.medicalConditionRadio}>
+                      <View
+                        style={[
+                          styles.medicalRadioButton,
+                          data.medicalConditions.includes(condition.label) &&
+                          styles.medicalRadioButtonSelected,
+                        ]}
+                      >
+                        {data.medicalConditions.includes(condition.label) && (
+                          <View style={styles.medicalRadioButtonInner} />
+                        )}
                       </View>
                     </View>
+                  </View>
                   {/* // )} */}
                 </TouchableOpacity>
               ))}
@@ -534,8 +666,8 @@ export default function PersonalizationScreen() {
     }
   };
 
-  return (
-    // <View style={styles.container}>
+  return (<>
+
     <RegistrationLayout headerBackgroundColor={colors.bg_primary}>
       <View style={styles.header}>
         <BackButton
@@ -585,10 +717,18 @@ export default function PersonalizationScreen() {
           style={styles.backgroundImage}
           resizeMode="stretch"
         />
-      </View> 
-      </RegistrationLayout>
-    // {/* </View> */}
-  );
+      </View>
+
+    </RegistrationLayout>
+    <Toast
+      visible={showToast}
+      title={toastMessage.title}
+      subtitle={toastMessage.subtitle}
+      type={toastMessage.type}
+      onHide={() => setShowToast(false)}
+      duration={3000}
+    />
+  </>);
 }
 
 const styles = StyleSheet.create({
@@ -605,25 +745,31 @@ const styles = StyleSheet.create({
   },
   stepTextContainer: {
     alignItems: 'center',
-    marginBottom: 0,    
+    marginBottom: 0,
   },
   stepsText: {
     fontSize: 14,
     color: '#80808E',
     textAlign: 'center',
     marginBottom: 10,
+    fontFamily: fonts.regular,
   },
   title: {
     fontSize: 24,
-    fontWeight: '600',
     color: '#2B2C43',
     marginBottom: 8,
     textAlign: 'left',
+    fontFamily: fonts.regular,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'left',
+    fontFamily: fonts.regular,
+
+    // marginBottom: 10,
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   progressContainer: {
     // paddingHorizontal: 40,
@@ -649,7 +795,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    // paddingHorizontal: 32,
+     paddingHorizontal: 0,
     paddingTop: 10,
     // paddingBottom: 25,
     // marginBottom:20,
@@ -660,19 +806,23 @@ const styles = StyleSheet.create({
     // backgroundColor: '#1060c2ff'
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'regular',
     color: colors.black,
-    marginBottom: 15,
+    marginBottom: 10,
     textAlign: 'center',
+    fontFamily: fonts.regular,
+    lineHeight: 26
     // lineHeight: 32,
   },
   stepSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.black,
+    fontWeight: '400',
     textAlign: 'center',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
+    fontFamily: fonts.regular,
 
     // marginBottom: 10,
     lineHeight: 22,
@@ -687,7 +837,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     textAlignVertical: 'center',
     // paddingHorizontal: 14,
-    width: '55%',
+    width: '75%',
     alignSelf: 'center',
   },
   unitToggle: {
@@ -720,6 +870,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: '100%',
     alignSelf: 'center',
+    borderRadius: 20,
+    justifyContent: 'center',
+    textAlign: 'center',
     gap: 12,
     // backgroundColor: '#fff',
     // borderRadius: 30,
@@ -733,10 +886,13 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 0,
     marginBottom: 8,
     backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#CAC8C8',
     borderRadius: 20,
     padding: 16,
     height: 68,
-    width: '100%',
+    width: '98%',
+    marginLeft: '1%',
   },
   radioContainer: {
     marginLeft: 16,
@@ -763,8 +919,8 @@ const styles = StyleSheet.create({
   },
   genderOptionText: {
     fontSize: 16,
-    fontWeight: '700',
     color: colors.black,
+    fontFamily: fonts.semiBold,
   },
 
   // Height/Weight section styles
@@ -780,6 +936,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     height: 75,
+    textAlign: 'left',
+    fontFamily: fonts.regular,
     // maxWidth: '100%',
     borderRadius: 16,
   },
@@ -856,14 +1014,14 @@ const styles = StyleSheet.create({
     marginTop: 5,
     width: '100%',
     alignSelf: 'center',
-    gap: 12,
+    gap: 10,
     marginBottom: 10
   },
   medicalConditionRow: {
-    marginBottom: 8,
+    marginBottom: 3,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: '#E45C9C',
+    borderColor: '#CAC8C8',
     overflow: 'hidden',
     height: 64,
     width: '100%',
@@ -904,7 +1062,7 @@ const styles = StyleSheet.create({
     borderRadius: 24.5,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#838BC2',
+    borderColor: '#d6d6d6',
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -928,6 +1086,8 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+    fontFamily: fonts.regular,
+    paddingLeft: 4,
   },
   medicalConditionRadio: {
     marginRight: 24,
@@ -956,16 +1116,17 @@ const styles = StyleSheet.create({
     // backgroundColor: 'red',
     // paddingTop: 5,
     alignItems: 'center',
-    paddingBottom: 0,
+    paddingBottom: 10,
     zIndex: 1,
   },
   continueButton: {
     width: '100%',
     zIndex: 1,
+    fontFamily: fonts.regular,
   },
   backgroundImageContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 30,
     left: 0,
     right: 0,
     height: 125,

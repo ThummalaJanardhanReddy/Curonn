@@ -28,6 +28,7 @@ import Toast from './Toast';
 interface FamilyMembersModalProps {
   visible: boolean;
   onClose: () => void;
+  maxFamilyMembers?: number;
 }
 
 interface FamilyMember {
@@ -41,7 +42,7 @@ interface FamilyMember {
 
 // Removed hardcoded relationTypes. Now using relationTypes state from API.
 
-export default function FamilyMembersModal({ visible, onClose }: FamilyMembersModalProps) {
+export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers }: FamilyMembersModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
@@ -52,6 +53,9 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [showForm, setShowForm] = useState(false);
+    const [showRelationDropdown, setShowRelationDropdown] = useState(false);
+  const [selectedRelation, setSelectedRelation] = useState<{ masterDataId: number; name: string } | null>(null);
+
   const [showDropdown, setShowDropdown] = useState(false);
   interface FormErrors {
     name?: string;
@@ -66,10 +70,7 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
     masterDataId: number;
     name: string;
   }[]>([]);
-  const [selectedRelation, setSelectedRelation] = useState<{
-    masterDataId: number;
-    name: string;
-  } | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     relation: '',
@@ -122,9 +123,10 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
     resetForm();
   };
 
+
+
   const handleDeleteMember = async (empRelationId: number) => {
-    try {
-      // As per Swagger, use POST and include both empRelationId and deletedBy (patientId) in payload
+    // As per Swagger, use POST and include both empRelationId and deletedBy (patientId) in payload
       try {
         // Match Swagger: POST with empRelationId as query param, empty body
         const url = `${ApiRoutes.Employee.deletefamilymember}?empRelationId=${empRelationId}`;
@@ -161,36 +163,41 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
         });
         setShowToast(true);
       }
-      // Fetch details from GetByPatientRelationAsync using relationId and patientId
-      const response = await axiosClient.get(ApiRoutes.Employee.GetByPatientRelationAsync(member.relationId, member.patientId));
-      let data = null;
-      if (Array.isArray(response) && response.length > 0) {
-        data = response[0];
-      } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
-        data = response.data[0];
-      }
-      if (data) {
-        setEditingMember(data);
-        // Find relation name from relationTypes
-        const relationType = relationTypes.find(r => r.masterDataId === data.relationId);
-        setFormData({
-          name: data.relationName || '',
-          relation: relationType ? relationType.name : '',
-          gender: data.gender || '',
-          age: data.age ? String(data.age) : ''
-        });
-        setIsEditMode(true);
-        setShowForm(true);
-      }
-    } catch (error) {
-      setToastMessage({
-        title: 'Fetch Failed',
-        subtitle: 'Could not fetch family member details.',
-        type: 'error',
-      });
-      setShowToast(true);
     }
-  };
+
+
+    const handleEditMember = async (member: any) => {
+      // Fetch details from GetByPatientRelationAsync using relationId and patientId
+      try {
+        const response = await axiosClient.get(ApiRoutes.Employee.GetByPatientRelationAsync(member.relationId, member.patientId));
+        let data = null;
+        if (Array.isArray(response) && response.length > 0) {
+          data = response[0];
+        } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          data = response.data[0];
+        }
+        if (data) {
+          setEditingMember(data);
+          // Find relation name from relationTypes
+          const relationType = relationTypes.find(r => r.masterDataId === data.relationId);
+          setFormData({
+            name: data.relationName || '',
+            relation: relationType ? relationType.name : '',
+            gender: data.gender || '',
+            age: data.age ? String(data.age) : ''
+          });
+          setIsEditMode(true);
+          setShowForm(true);
+        }
+      } catch (error) {
+        setToastMessage({
+          title: 'Fetch Failed',
+          subtitle: 'Could not fetch family member details.',
+          type: 'error',
+        });
+        setShowToast(true);
+      }
+    };
 
   const handleSaveMember = () => {
     let newErrors = {};
@@ -314,44 +321,72 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
     };
     fetchRelationTypes();
   }, []);
+
   const renderForm = () => (
     <View style={styles.formContainer}>
-      {/* <Text style={styles.formTitle}>
-        {isEditMode ? 'Edit Family Member' : 'Add Family Member'}
-      </Text> */}
-
       {/* Relation Type Dropdown */}
       <View style={styles.dropdownContainer}>
         <Text style={styles.label}>Relation Type *</Text>
         <TouchableOpacity
           style={styles.dropdownButton}
-          onPress={() => setShowDropdown(!showDropdown)}
+          onPress={() => setShowRelationDropdown(true)}
           activeOpacity={1}
         >
           <Text style={[
             styles.dropdownButtonText,
-            !formData.relation && styles.placeholderText
+            !selectedRelation && styles.placeholderText
           ]}>
-            {formData.relation || 'Select relation type'}
+            {selectedRelation ? selectedRelation.name : 'Select relation type'}
           </Text>
           <IconButton
-            icon={showDropdown ? "chevron-up" : "chevron-down"}
+            icon={showRelationDropdown ? "chevron-up" : "chevron-down"}
             size={20}
             iconColor="#666"
             rippleColor="transparent"
           />
         </TouchableOpacity>
+        {errors && errors.relation && (
+          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors.relation}</Text>
+        )}
+      </View>
 
-        {showDropdown && (
-          <View style={[styles.dropdownOverlay, { maxHeight: 250 }]}> {/* Add maxHeight to overlay for scroll */}
-            <ScrollView style={styles.dropdownList} nestedScrollEnabled={true}>
+      {/* Relation Type Dropdown Modal */}
+      <Modal
+        visible={showRelationDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRelationDropdown(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}
+            onPress={() => setShowRelationDropdown(false)}
+            activeOpacity={1}
+          />
+          <View style={{
+            maxHeight: 300,
+            width: '80%',
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#ccc',
+            zIndex: 2,
+            overflow: 'hidden',
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+          }}>
+            <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled={true}>
               {relationTypes.map((relation) => (
                 <TouchableOpacity
                   key={relation.masterDataId}
                   style={styles.dropdownOption}
                   onPress={() => {
+                    setSelectedRelation(relation);
                     handleInputChange('relation', relation.name);
-                    setShowDropdown(false);
+                    setShowRelationDropdown(false);
                   }}
                 >
                   <Text style={styles.dropdownOptionText}>{relation.name}</Text>
@@ -359,11 +394,8 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
               ))}
             </ScrollView>
           </View>
-        )}
-        {errors && errors.relation && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors.relation}</Text>
-        )}
-      </View>
+        </View>
+      </Modal>
 
       {/* Full Name */}
       <View style={styles.inputContainer}>
@@ -491,24 +523,26 @@ export default function FamilyMembersModal({ visible, onClose }: FamilyMembersMo
           renderForm()
         ) : (
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Add Button */}
-            <TouchableOpacity style={styles.addButton} onPress={handleAddMember} activeOpacity={1}>
-              <LinearGradient
-                colors={['#EEC4E2', '#F9EFF2', '#EEDAF5', '#F3B9BC']}
-                locations={[0.0, 0.47, 0.75, 1.0]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0, y: 0.5 }}
-                style={styles.addButtonBackground}
-              />
-              <View style={styles.addButtonContent}>
-                <Image
-                  source={images.icons.addCircle}
-                  style={styles.addButtonIcon}
-                  resizeMode="contain"
+            {/* Add Button (only show if under max limit) */}
+            {(!maxFamilyMembers || familyMembers.length < maxFamilyMembers) && (
+              <TouchableOpacity style={styles.addButton} onPress={handleAddMember} activeOpacity={1}>
+                <LinearGradient
+                  colors={['#EEC4E2', '#F9EFF2', '#EEDAF5', '#F3B9BC']}
+                  locations={[0.0, 0.47, 0.75, 1.0]}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0, y: 0.5 }}
+                  style={styles.addButtonBackground}
                 />
-                <Text style={styles.addButtonText}>Add Family Members</Text>
-              </View>
-            </TouchableOpacity>
+                <View style={styles.addButtonContent}>
+                  <Image
+                    source={images.icons.addCircle}
+                    style={styles.addButtonIcon}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.addButtonText}>Add Family Members</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             {/* Family Members List */}
             <View style={styles.familyMembersList}>
@@ -641,7 +675,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 12,
     backgroundColor: '#fff',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   memberImage: {
     width: 40,

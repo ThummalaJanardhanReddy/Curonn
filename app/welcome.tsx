@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../assets";
 import PrimaryButton from "./shared/components/PrimaryButton";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
+import { fonts } from './shared/styles/fonts';
 import {
   getResponsiveFontSize,
   getResponsiveSpacing,
@@ -19,7 +20,7 @@ export default function WelcomeScreen() {
 
   const handleContinue = () => {
     try {
-      console.log("Navigating to terms screen...");
+      //console.log("Navigating to terms screen...");
       router.push("/terms");
     } catch (error) {
       console.error("Error navigating to terms:", error);
@@ -82,33 +83,36 @@ const styles = StyleSheet.create({
   header: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
   welcomeImage: {
     width: wp(100),
     height: hp(55),
     resizeMode: "contain",
-    marginBottom: getResponsiveSpacing(80),
+    marginBottom: getResponsiveSpacing(30),
   },
   welcomeText: {
-    fontSize: getResponsiveFontSize(28),
-    fontWeight: "semibold",
+    fontSize: getResponsiveFontSize(24),
+    fontWeight:400,
     color: colors.black,
     textAlign: "center",
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(15),
+    fontFamily: fonts.regular,
   },
   logo: {
     // width: wp(80),
     // height: hp(15),
     resizeMode: "contain",
-    marginBottom: getResponsiveSpacing(30),
+    marginBottom: getResponsiveSpacing(15),
   },
   supportText: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(14),
     textAlign: "center",
-    lineHeight: getResponsiveFontSize(24),
+    lineHeight: getResponsiveFontSize(22),
     paddingHorizontal: getResponsiveSpacing(20),
     marginBottom: getResponsiveSpacing(20),
+    fontFamily: fonts.regular,
+    color: '#141F2A',
   },
   buttonContainer: {
     alignItems: "center",

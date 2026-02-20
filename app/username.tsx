@@ -1,5 +1,5 @@
 import { images } from '@/assets';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Image,
   ScrollView,
@@ -13,14 +13,26 @@ import RegistrationLayout from './shared/components/ui/registration-layout';
 import { useUser } from './shared/context/UserContext';
 import commonStyles, { colors } from './shared/styles/commonStyles';
 import { fonts } from './shared/styles/fonts';
+import { saveUserData, setRegistrationCompleted } from './shared/utils/storage';
 
 export default function UsernameScreen() {
-  const {userData, setUserData} = useUser();
+  const { userData, setUserData } = useUser();
   // Simulate API response for username
   const apiUsername = userData?.fullName || 'John Doe'; // This would come from API
 
-  const handleContinue = () => {
-    router.push('/personalization');
+  // Get mobile_details_updated from router params
+  const params = useLocalSearchParams();
+  const mobileDetailsUpdated = params.mobile_details_updated === 'true';
+
+  const handleContinue = async() => {
+    if (mobileDetailsUpdated) {
+      await setRegistrationCompleted(true);
+      console.log("Mobile details updated, redirecting to home...");
+      router.push('/home');
+    } else {
+      router.push('/personalization');
+    }
+   // router.push('/personalization');
   };
 
   const handleBack = () => {
@@ -59,6 +71,7 @@ export default function UsernameScreen() {
           style={styles.continueButton}
         />
       </View>
+      
       {/* Background Image */}
       <View style={styles.backgroundImageContainer}>
         <Image source={images.panels.personalization_bottom} style={styles.backgroundImage} />
@@ -96,13 +109,14 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: 'flex-start',
+    fontFamily: fonts.regular,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
     color: colors.primary,
     marginBottom: 20,
     textAlign: 'center',
+    fontFamily: fonts.semiBold,
   },
   subtitle: {
     fontSize: 24,
@@ -115,7 +129,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     // paddingHorizontal: 32,
-    paddingBottom: 20,
+    paddingBottom: 10,
     paddingTop: 10,
     zIndex: 1,
     // alignItems: 'center',
@@ -127,7 +141,7 @@ const styles = StyleSheet.create({
   },
   backgroundImageContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     right: 0,
     height: 130,

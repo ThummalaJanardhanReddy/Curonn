@@ -23,6 +23,7 @@ import BackButton from "./shared/components/BackButton";
 import PrimaryButton from "./shared/components/PrimaryButton";
 import { useUser } from "./shared/context/UserContext";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
+import {fonts} from "./shared/styles/fonts";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -38,6 +39,7 @@ interface ValidationResponse {
 }
 
 export default function VerifyDetailsScreen() {
+
   const { userData, setUserData } = useUser();
   const [employeeId, setEmployeeId] = useState(userData.employeeId || "");
   const [email, setEmail] = useState(userData.email || "");
@@ -55,6 +57,16 @@ export default function VerifyDetailsScreen() {
   };
 
   const bottomAnim = useRef(new Animated.Value(0)).current;
+
+  // Ref for Employee ID input
+  const employeeIdInputRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Focus Employee ID input on mount
+    setTimeout(() => {
+      employeeIdInputRef.current?.focus();
+    }, 300);
+  }, []);
 
   useEffect(() => {
     const showEvent =
@@ -202,7 +214,7 @@ export default function VerifyDetailsScreen() {
     return (
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={{ flex: 1, }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={0}
         >
@@ -216,7 +228,7 @@ export default function VerifyDetailsScreen() {
           >
             {/* Header */}
             <View style={styles.header}>
-              <images.curonnLogo style={styles.image} width={170} height={44} />
+              <images.curonnLogo style={styles.image} width={234} height={60} />
               <Text style={styles.title}>Verify your Details</Text>
               <Text style={styles.subtitle}>We will verify your access</Text>
             </View>
@@ -227,6 +239,7 @@ export default function VerifyDetailsScreen() {
               <Text style={styles.label}>Employee ID</Text>
     
               <TextInput
+                ref={employeeIdInputRef}
                 placeholder="eg: 235262"
                 placeholderTextColor="#9D9D9F"
                 value={employeeId}
@@ -239,16 +252,17 @@ export default function VerifyDetailsScreen() {
                 mode="outlined"
                 style={styles.textInput}
                 contentStyle={styles.textInputContent}
-                theme={customTheme}
+                theme={{ ...customTheme, roundness: 8, colors: { ...customTheme.colors, outline: '#E45C9C' }, }}
                 error={!!employeeIdError}
                 autoCapitalize="none"
                 autoCorrect={false}
                 outlineColor="#95959B"
-                activeOutlineColor="#9D9D9F"
+                activeOutlineColor="#E45C9C"
+                outlineStyle={{ borderWidth: 1 }}
               />
     
               {employeeIdError ? (
-                <HelperText type="error" visible>
+                <HelperText type="error" visible style={{ fontFamily: fonts.regular }}>
                   {employeeIdError}
                 </HelperText>
               ) : null}
@@ -269,17 +283,20 @@ export default function VerifyDetailsScreen() {
                 mode="outlined"
                 style={styles.textInput}
                 contentStyle={styles.textInputContent}
-                theme={customTheme}
+                theme={{ ...customTheme, roundness: 8, colors: { ...customTheme.colors, outline: '#9D9D9F' }, }}
                 error={!!emailError}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 outlineColor="#9D9D9F"
-                activeOutlineColor="#9D9D9F"
+                activeOutlineColor="#E45C9C"
+                outlineStyle={{ borderWidth: 1 }}
+                returnKeyType="go"
+                onSubmitEditing={handleContinue}
               />
     
               {emailError ? (
-                <HelperText type="error" visible>
+                <HelperText type="error" visible style={{ fontFamily: fonts.regular }}>
                   {emailError}
                 </HelperText>
               ) : null}
@@ -298,14 +315,14 @@ export default function VerifyDetailsScreen() {
                 By signing up, you agree to Curonn{"\n"}
                 <Text
                   style={styles.linkText}
-                  onPress={() => console.log("Terms of services")}
+                 
                 >
                   Terms of services
                 </Text>{" "}
                 and{" "}
                 <Text
                   style={styles.linkText}
-                  onPress={() => console.log("privacy policy")}
+                 
                 >
                   privacy policy
                 </Text>
@@ -350,6 +367,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
     paddingBottom: 20,
+    
   },
   header: {
     alignItems: "center",
@@ -361,38 +379,40 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2B2C43",
-    marginBottom: 8,
-    textAlign: "center",
+ fontSize: 22,
+    color: '#000000',
+    marginBottom: 0,
+    textAlign: 'left',
+    marginTop: 5,
+    fontFamily: fonts.semiBold,
   },
   subtitle: {
     fontSize: 13,
     color: colors.black,
     textAlign: "center",
+    fontFamily: fonts.regular,
   },
   formContainer: {
     // paddingHorizontal: 0,
   },
   label: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 14,
     color: colors.black,
-    marginBottom: 8,
+    marginBottom: 2,
     marginTop: 16,
+    fontFamily: fonts.semiBold,
   },
   textInput: {
     backgroundColor: "#fff",
     paddingHorizontal: 16,
     // paddingVertical: 1,
-    marginBottom: 8,
+    marginBottom: 5,
     borderRadius: 50,
     height: 50,
   },
   textInputContent: {
     borderRadius: 50,
-    paddingHorizontal: 2,
+    paddingHorizontal: 1,
     height: 50,
   },
   termsContainer: {
@@ -409,6 +429,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1A82F7",
     textDecorationLine: "underline",
+     fontFamily: fonts.regular,
     // fontWeight: '500',
   },
   // buttonContainer: {
@@ -447,11 +468,12 @@ const styles = StyleSheet.create({
   },
   
   termsText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 16,
+fontSize: 13,
+    lineHeight: 22,
+    color: '#000000',
+    marginBottom: 8,
+    textAlign: 'center',
+     fontFamily: fonts.regular,
   },
   
   buttonContainer: {

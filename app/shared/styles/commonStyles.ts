@@ -144,7 +144,7 @@ const commonStyles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(20),
-    paddingTop:getResponsiveSpacing(20),
+    paddingTop:getResponsiveSpacing(15),
     // minHeight: hp(100) - getResponsiveSpacing(20),
   },
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { getResponsiveFontSize, getResponsiveSpacing, wp } from '../utils/responsive';
+import { fonts } from '../styles/fonts';
 
 interface PrimaryButtonProps {
   title: string;
@@ -49,6 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(23),
     alignItems: 'center',
     justifyContent: 'center',
+    fontFamily: fonts.semiBold,
     // elevation: 2,
     // shadowColor: '#000',
     // shadowOffset: {
@@ -60,9 +62,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: '600',
+    fontSize: getResponsiveFontSize(15),
     textAlign: 'center',
+    fontFamily: fonts.semiBold,
   },
   buttonDisabled: {
     backgroundColor: '#CCCCCC',
@@ -72,5 +74,6 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: '#999999',
+    fontFamily: fonts.regular,
   },
 });

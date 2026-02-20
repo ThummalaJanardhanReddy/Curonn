@@ -10,32 +10,74 @@ export const useLocation = () => {
   const [address, setAddress] = useState<string>('');
 
   const getCurrentLocation = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Request permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setError('Location permission is required to use this feature.');
-        return null;
+      try {
+        setIsLoading(true);
+  
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission denied",
+            "Location permission is required to use this feature."
+          );
+          return;
+        }
+  
+        // Use timeInterval/distanceInterval instead of a manual race
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          // Fallback to last known location if fresh fix takes too long
+          mayShowUserSettingsDialog: true,
+        });
+  
+        setCurrentLocation(location);
+  
+        try {
+          const addressResult = await Location.reverseGeocodeAsync({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+  
+          if (addressResult.length > 0) {
+            const addr = addressResult[0];
+            // Extract fields
+            const cityVillage = addr.city || "";
+            const mandal = addr.subregion || "";
+            const district = addr.district || "";
+            const country = addr.country || "";
+            const state = addr.region || "";
+            const pincode = addr.postalCode || "";
+            const fullAddress = [
+              cityVillage,
+              district,
+              mandal,
+              state,
+              country,
+              pincode,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            setAddress(fullAddress || "Address not found");
+          } else {
+            setAddress(
+              `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
+            );
+          }
+        } catch (geocodingError) {
+          console.warn("Geocoding failed:", geocodingError);
+          setAddress(
+            `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
+          );
+        }
+      } catch (error) {
+        console.error("Error getting location:", error);
+        Alert.alert(
+          "Location Error",
+          "Could not get your location. Please ensure GPS is enabled and try again."
+        );
+      } finally {
+        setIsLoading(false);
       }
-
-      // Get current location
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      setCurrentLocation(location);
-      return location;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get current location';
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
     try {
@@ -99,10 +141,15 @@ export const useLocation = () => {
   
           if (addressResult.length > 0) {
             const addr = addressResult[0];
-            const fullAddress = `${addr.street || ""} ${
-              addr.streetNumber || ""
-            } ${addr.city || ""}, ${addr.region || ""}`.trim();
-            setAddress(fullAddress);
+            // Village (city) for first row, district, mandal, state for second row
+            const mandal = addr.subregion || '';
+
+            const village = addr.city || '';
+            const district = addr.district || '';
+            const state = addr.region || '';
+            // Compose as: 'village\ndistrict, mandal, state'
+            const formattedAddress = `${[district,village,state].filter(Boolean).join(', ')}`;
+            setAddress(formattedAddress);
           } else {
             // Fallback to coordinates if geocoding fails
             setAddress(

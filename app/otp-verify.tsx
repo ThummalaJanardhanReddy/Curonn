@@ -3,6 +3,10 @@ import { ApiRoutes } from "@/src/api/employee/employee";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import type { TextInput as TextInputType } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+
+import { Dimensions } from "react-native";
+
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +24,7 @@ import BackButton from "./shared/components/BackButton";
 import PrimaryButton from "./shared/components/PrimaryButton";
 import { useUser } from "./shared/context/UserContext";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
+import { fonts } from "./shared/styles/fonts";
 
 // API Response interface
 interface OTPResponse {
@@ -54,6 +59,7 @@ export default function OTPVerifyScreen() {
     roundness: 8,
   };
 
+  const screenHeight = Dimensions.get("window").height;
   // Helper function to show snackbar messages
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
@@ -105,7 +111,7 @@ export default function OTPVerifyScreen() {
       // API expects OTP as string, not number
       const requestData = {
         otp: otpString,
-        email: userData.email || "sneha@abc.com",
+        email: userData.email || "",
       };
 
       console.log("Sending OTP request:", requestData);
@@ -121,9 +127,12 @@ export default function OTPVerifyScreen() {
       if (otpResponse?.isSuccess && otpResponse.e_id) {
         getEmployeeDetails(otpResponse.e_id);
         console.log("OTP verified successfully. Employee ID:", otpResponse.e_id);
-        // setUserData({ isVerified: true });
         setUserData({ ...(userData ?? {}), isVerified: true, e_id: otpResponse.e_id });
-        router.push("/username");
+        // Pass mobile_details_updated to username page via query param
+        router.push({
+          pathname: "/username",
+          params: { mobile_details_updated: otpResponse.mobile_details_updated ? "true" : "false" },
+        });
       } else {
         showSnackbar(otpResponse?.message || "Invalid OTP. Please try again.");
         setOtp(["", "", "", ""]);
@@ -178,7 +187,7 @@ export default function OTPVerifyScreen() {
     const validateUser = (await axiosClient.get(ApiRoutes.Employee.validate, {
       params: { employeeId: userData?.employeeId, emailId: userData?.email },
     })) as ValidationResponse;
-    if(!validateUser.isSuccess) showSnackbar('Something went wrong...')
+    if (!validateUser.isSuccess) showSnackbar('Something went wrong...')
     setResendTimer(30);
     showSnackbar("A new OTP has been sent to your email");
   };
@@ -190,21 +199,24 @@ export default function OTPVerifyScreen() {
   const isOtpComplete = otp.every((digit) => digit !== "");
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, height: screenHeight}}>
       {/* <RegistrationLayout headerBackgroundColor="#f5f5f5"> */}
       <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1}}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
+       <KeyboardAwareScrollView
+                   style={styles.container}
+                   contentContainerStyle={styles.contentContainer}
+                   keyboardShouldPersistTaps="handled"
+                   enableOnAndroid
+                   extraScrollHeight={80}
+                   showsVerticalScrollIndicator={false}
+                 >
           <View style={styles.header}>
             <View>
-              <images.curonnLogo style={styles.image} width={170} height={44} />
+              <images.curonnLogo style={styles.image} width={234} height={60} />
             </View>
             <Text style={styles.title}>Verify your details</Text>
             <Text style={styles.subtitle}>We will verify your access</Text>
@@ -214,9 +226,9 @@ export default function OTPVerifyScreen() {
             <Text style={styles.infoText}>
               You will receive an OTP on your email
             </Text>
-            {userData.email ? (
+            {/* {userData.email ? (
               <Text style={styles.emailText}>{userData.email}</Text>
-            ) : null}
+            ) : null} */}
 
             <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
@@ -239,6 +251,12 @@ export default function OTPVerifyScreen() {
                   outlineColor="#2B2C43"
                   activeOutlineColor="#2B2C43"
                   textColor="#000000"
+                  returnKeyType={index === 3 ? "go" : "next"}
+                  outlineColor="#9D9D9F"
+                activeOutlineColor="#E45C9C"
+                outlineStyle={{ borderWidth: 1 }}
+                  blurOnSubmit={index === 3}
+                  onSubmitEditing={index === 3 ? handleVerify : undefined}
                 />
               ))}
             </View>
@@ -255,19 +273,31 @@ export default function OTPVerifyScreen() {
               )}
             </View>
           </View>
-        </ScrollView>
+        
 
-        <Text style={styles.termsText}>
-          <Text>By signing up, you agree to Curonn{"\n"}</Text>
-          <Text style={styles.linkText} onPress={() => {}}>
-            Terms of services
-          </Text>
-          <Text> and </Text>
-          <Text style={styles.linkText} onPress={() => {}}>
-            privacy policy
-          </Text>
-          <Text>.</Text>
-        </Text>
+         {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
+        <View style={styles.bottomContainer}>
+                      {/* Terms */}
+                      <View style={{ flexDirection: "row", justifyContent: "center",  }}>
+         <Text style={styles.termsText}>
+                        By signing up, you agree to Curonn{"\n"}
+                        <Text
+                          style={styles.linkText}
+                          onPress={() => console.log("Terms of services")}
+                        >
+                          Terms of services
+                        </Text>{" "}
+                        and{" "}
+                        <Text
+                          style={styles.linkText}
+                          onPress={() => console.log("privacy policy")}
+                        >
+                          privacy policy
+                        </Text>
+                        .
+                      </Text>
+        </View>
+        
 
         <View style={styles.buttonContainer}>
           <BackButton
@@ -285,6 +315,7 @@ export default function OTPVerifyScreen() {
             style={styles.verifyButton}
           />
         </View>
+        </View>
 
         <Snackbar
           visible={snackbarVisible}
@@ -298,6 +329,7 @@ export default function OTPVerifyScreen() {
         >
           {snackbarMessage}
         </Snackbar>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
 
       {/* </RegistrationLayout> */}
@@ -308,14 +340,17 @@ export default function OTPVerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     ...commonStyles.container_layout,
-    backgroundColor: "#F5F4F9",
-    flexGrow: 1,
+    flex: 1,
+    // minHeight: 100,
+    // paddingBottom: getResponsivePadding(40),
+    backgroundColor: "#F5F4F9", // '#ffffff',
+    // height: screenHeight, // moved to SafeAreaView
   },
   scrollContainer: {
     flex: 1,
   },
   contentContainer: {
-    // padding: 20,
+    flexGrow: 1,
     paddingBottom: 20,
   },
   header: {
@@ -329,15 +364,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: "700",
-    color: "#2B2C43",
-    marginBottom: 8,
-    textAlign: "center",
+    color: '#000000',
+    marginBottom: 0,
+    textAlign: 'left',
+    marginTop: 5,
+    fontFamily: fonts.semiBold,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.black,
-    textAlign: "center",
+    color: '#000000',
+    textAlign: 'left',
+    fontFamily: fonts.regular,
   },
   formContainer: {
     // paddingHorizontal: 20,
@@ -348,6 +385,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     marginBottom: 10,
+    fontFamily: fonts.regular,
   },
   emailText: {
     fontSize: 14,
@@ -355,52 +393,72 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 20,
+    fontFamily: fonts.regular,
   },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 30,
     paddingHorizontal: 20,
+    marginTop: 10,
   },
   otpInput: {
     width: 55,
-    height: 50,
+    height: 55,
     fontSize: 28,
-    fontWeight: "bold",
     backgroundColor: "#fff",
     borderRadius: 8,
+    fontWeight: "700",
+    fontFamily: fonts.semiBold,
+
   },
   resendContainer: {
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
+    fontFamily: fonts.regular,
   },
   resendText: {
     fontSize: 14,
-    color: "#666",
-    fontStyle: "italic",
+    color: "#000",
+    fontFamily: fonts.regular,
   },
   resendButton: {
     fontSize: 14,
     color: "#2196F3",
+     fontFamily: fonts.regular,
     // textDecorationLine: 'underline',
   },
+    bottomContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#F5F4F9",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
+    // borderTopWidth: 1,
+    // borderTopColor: "#E2E2E4",
+  },
   termsText: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    textAlign: "center",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    alignItems: "center",
+fontSize: 13,
+    lineHeight: 22,
+    color: '#000000',
+    marginBottom: 8,
+    textAlign: 'center',
+     fontFamily: fonts.regular,
   },
   linkText: {
     color: "#2196F3",
+    fontFamily: fonts.regular,
     // textDecorationLine: 'underline',
   },
   buttonContainer: {
-    flexDirection: "row",
+      flexDirection: "row",
     justifyContent: "space-between",
+    paddingTop: 10,
+    gap: 16,
     // padding: 20,
     // paddingBottom: 40,
     // gap: 16,

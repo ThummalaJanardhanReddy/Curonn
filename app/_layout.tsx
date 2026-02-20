@@ -1,6 +1,8 @@
+
 import { Stack } from 'expo-router';
 import { MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { UserProvider } from './shared/context/UserContext';
+import AppFontLoader from './shared/components/AppFontLoader';
 
 const theme = {
   ...MD3LightTheme,
@@ -12,17 +14,18 @@ const theme = {
 };
 
 export default function RootLayout() {
-  
   return (
-    <UserProvider>
-      <PaperProvider theme={theme}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-      </PaperProvider>
-    </UserProvider>
+    <AppFontLoader>
+      <UserProvider>
+        <PaperProvider theme={theme}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+        </PaperProvider>
+      </UserProvider>
+    </AppFontLoader>
   );
 }

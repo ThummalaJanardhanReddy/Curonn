@@ -44,8 +44,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e91fa092-6f4d-4047-94c7-8fdb5e926871"
+        "projectId": "724aa124-7694-4c3e-8ce0-e4184c59dc15"
       }
-    }
+    },
+    "owner": "narasimharapra"
   }
 }

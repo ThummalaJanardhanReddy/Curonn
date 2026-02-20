@@ -98,7 +98,7 @@ export const images = {
   sampleCollectionStep1: require('./images/sampleCollectionProcess1.png'),
   sampleCollectionStep2: require('./images/sampleCollectionProcess2.png'),
   sampleCollectionStep3: require('./images/sampleCollectionProcess3.png'),
-  labdefault: require('./images/labdefault.png'),
+  labdefault: require('./AppIcons/Curonn_icons/lab_detault_ic.png'),
   healthpackage: require('./images/healthpackage.jpg'),
   //home
   home: {
@@ -160,7 +160,7 @@ export const images = {
     orders: OrdersIcon,
   },
   menu: {
-    home: require('./AppIcons/Curonn_icons/menu/png/home.png'),
+    home: require('./AppIcons/Curonn_icons/menu/new/home.svg'),
     home_selected: require('./AppIcons/Curonn_icons/menu/png/home_select.png'),
     labTests: require('./AppIcons/Curonn_icons/menu/png/lab.png'),
     labTests_selected: require('./AppIcons/Curonn_icons/menu/png/lab_select.png'),

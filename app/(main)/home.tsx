@@ -110,6 +110,7 @@ export default function HomeScreen() {
 
   // Handle status bar when notification modal opens/closes
   useEffect(() => {
+    console.log("Home Page data Started")
     // if (notificationVisible) {
     //   StatusBar.setBarStyle('dark-content', true);
     //   StatusBar.setBackgroundColor('#fff', true);
@@ -126,13 +127,13 @@ export default function HomeScreen() {
         id: 1,
         title: `Consult a \nDoctor`,
         image: images.home.doctor_card,
-        route: "/consult-doctor",
+        route: "/my-doctor",
       },
       {
         id: 2,
         title: "Order \nMedicines",
         image: images.home.medicine_card,
-        route: "/lab-tests",
+        route: "/medicines",
       },
     ],
     []
@@ -253,10 +254,8 @@ export default function HomeScreen() {
     ({ item }: { item: any }) => (
       <TouchableOpacity
         style={styles.serviceCard}
+        activeOpacity={1}
         onPress={() => router.push(item.route)}
-        accessibilityLabel={`${item.title} service`}
-        accessibilityRole="button"
-        accessibilityHint={`Tap to access ${item.title}`}
       >
         <Text style={styles.serviceCardTitle}>{item.title}</Text>
         <View style={styles.serviceCardBottom}>
@@ -298,6 +297,7 @@ export default function HomeScreen() {
     ({ item }: { item: any }) => (
       <TouchableOpacity
         style={styles.articleCard}
+        activeOpacity={1}
         accessibilityLabel={`${item.titleName} article`}
         accessibilityRole="button"
         accessibilityHint={`Tap to read ${item.titleName}`}
@@ -310,8 +310,8 @@ export default function HomeScreen() {
         />
         <View style={styles.articleContent}>
           <Text style={styles.articleTitle}>{item.titleName}</Text>
-          <Text style={styles.articleExcerpt} numberOfLines={4}>{item.descriptionName}</Text>
-          <Text style={styles.articleReadTime}>{item.readTime || ''}</Text>
+          <Text style={styles.articleExcerpt} numberOfLines={2}>{item.descriptionName}</Text>
+          {/* <Text style={styles.articleReadTime}>{item.readTime || ''}</Text> */}
         </View>
       </TouchableOpacity>
     ),
@@ -388,22 +388,17 @@ export default function HomeScreen() {
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
           <View style={{ alignItems: "center", paddingHorizontal: 30 }}>
             <Text
-              style={{ fontSize: 50, fontWeight: 600, color: colors.white }}
+              style={styles.transhead}
             >
               Transform
             </Text>
             <Text
-              style={{ fontSize: 40, fontWeight: 600, color: colors.white }}
+              style={styles.transinner}
             >
               Your Life
             </Text>
             <Text
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: colors.white,
-                marginTop: 20,
-              }}
+              style={styles.curonhealth}
             >
               with Curonn.health
             </Text>
@@ -458,8 +453,8 @@ export default function HomeScreen() {
                 ]}
                 labelStyle={{
                   color: "#fff",
+                  fontFamily: fonts.medium,
                   fontSize: 14,
-                  fontWeight: "bold",
                   lineHeight: 18, // Ensures text is vertically centered
                 }}
                 contentStyle={{
@@ -508,7 +503,7 @@ export default function HomeScreen() {
                 labelStyle={{
                   color: "#000",
                   fontSize: 14,
-                  fontWeight: "bold",
+                  fontFamily: fonts.medium,
                   lineHeight: 18, // Ensures text is vertically centered
                 }}
                 contentStyle={{
@@ -557,7 +552,7 @@ export default function HomeScreen() {
                   labelStyle={{
                     color: "#fff",
                     fontSize: 14,
-                    fontWeight: "bold",
+                    fontFamily: fonts.medium,
                     lineHeight: 18, // Ensures text is vertically centered
                   }}
                   contentStyle={{
@@ -608,7 +603,7 @@ export default function HomeScreen() {
             You can also
           </Text>
           <View style={styles.actionButtons}>
-            <Button
+            {/* <Button
               mode="outlined"
               style={[styles.actionButton, { backgroundColor: "white" }]}
               labelStyle={{
@@ -620,7 +615,7 @@ export default function HomeScreen() {
               onPress={() => showBottomModal("faq")}
             >
               FAQs
-            </Button>
+            </Button> */}
             <Button
               mode="outlined"
               style={[styles.actionButton, { backgroundColor: "white" }]}
@@ -628,7 +623,7 @@ export default function HomeScreen() {
                 color: "black",
                 justifyContent: "flex-start",
                 fontSize: 14,
-                fontWeight: "700",
+                fontFamily: fonts.semiBold,
               }}
               onPress={() => showBottomModal("feedback")}
             >
@@ -868,7 +863,6 @@ const styles = StyleSheet.create({
   },
   articletitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#000",
     marginBottom: 4,
     fontFamily: fonts.semiBold,
@@ -891,6 +885,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     // backgroundColor: '#f5f5f5',
+    
+  },
+  transhead: {
+    fontSize: 50,
+    fontWeight: 600,
+    color: colors.white,
+    fontFamily: fonts.bold,
+    lineHeight: 50,
+  },
+  transinner: {
+    fontSize: 50, fontWeight: 600, color: colors.white,
+    fontFamily: fonts.bold,
+    lineHeight:70
+    
+  },
+  curonhealth: {
+    fontSize: 16, fontWeight: 400, color: colors.white,
+    fontFamily: fonts.regular,
   },
   yogaImage: {
     width: "100%",
@@ -902,19 +914,22 @@ const styles = StyleSheet.create({
     // backgroundColor: 'red',
   },
   sectionTitle: {
-    fontSize: getResponsiveFontSize(20),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(16),
     color: "#333",
-    marginBottom: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(10),
+    fontFamily: fonts.semiBold,
+    marginTop: getResponsiveSpacing(10),
   },
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    
   },
   serviceCardWrapper: {
     // width: '48%',
     // marginBottom: 8,
+    gap: getResponsiveSpacing(15),
   },
   serviceCard: {
     height: getResponsiveSpacing(160),
@@ -938,9 +953,10 @@ const styles = StyleSheet.create({
   },
   serviceCardTitle: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "700",
     color: "#4B334E",
     flex: 1,
+    fontFamily: fonts.bold,
+    lineHeight: getResponsiveFontSize(20),
   },
   serviceCardBottom: {
     flexDirection: "row",
@@ -990,14 +1006,16 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#4B334E",
+    lineHeight: 24,
     marginBottom: 4,
+    fontFamily: fonts.bold,
   },
   featureSubtitle: {
     fontSize: 12,
     color: "#000000",
     marginBottom: 12,
+     fontFamily: fonts.regular,
   },
   featureButton: {
     alignSelf: "flex-start",
@@ -1040,16 +1058,17 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   ambulanceTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "black",
+     fontSize: 20,
+    color: "#000000",
+    lineHeight: 24,
     marginBottom: 4,
+    fontFamily: fonts.bold,
   },
   ambulanceSubtitle: {
     fontSize: 12,
     color: "black",
     marginBottom: 12,
-    fontWeight: "light",
+    fontFamily: fonts.regular
   },
   ambulanceButton: {
     alignSelf: "flex-start",
@@ -1063,12 +1082,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dividerText: {
-    fontSize: 18,
-    fontWeight: "semibold",
+    fontSize: 16,
     color: "white",
     alignItems: "flex-start",
     justifyContent: "flex-start",
     alignSelf: "flex-start",
+    fontFamily: fonts.semiBold,
   },
   quoteSection: {
     alignItems: "flex-start",
@@ -1261,18 +1280,20 @@ const styles = StyleSheet.create({
   },
   articleContent: {
     padding: 16,
+    paddingTop: 12
   },
   articleTitle: {
     fontSize: 16,
-    fontWeight: "600",
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 5,
+    fontFamily: fonts.semiBold,
+    lineHeight: 22,
   },
   articleExcerpt: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: '#000000',
     lineHeight: 20,
-    marginBottom: 8,
+    fontFamily: fonts.regular,
   },
   articleReadTime: {
     fontSize: 12,
