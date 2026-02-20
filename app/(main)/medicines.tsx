@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
@@ -27,6 +27,8 @@ import ApiRoutes from '../../src/api/employee/employee';
 // We'll lazy-load inside the handlers and guard accordingly.
 import { useUser } from '../shared/context/UserContext';
 import { fontStyles, fonts } from "../shared/styles/fonts";
+import { prescriptionStore } from '../shared/utils/prescriptionStore';
+import type { PrescriptionImage } from '../shared/utils/prescriptionStore';
 
 export default function MedicinesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,8 +41,11 @@ export default function MedicinesScreen() {
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
 
-  const [selectedImages, setSelectedImages] = useState<Array<{ uri: string; fileName?: string }>>([]);
+  const [selectedImages, setSelectedImages] = useState<PrescriptionImage[]>([]);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  // State for edit back-flow: pre-fill modal with previously entered data
+  const [initialModalNotes, setInitialModalNotes] = useState('');
+  const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
 
   // Helper: dynamic import so the app doesn't crash at module-evaluation time when the
   // native module is missing. Returns null when import fails.
@@ -61,14 +66,25 @@ export default function MedicinesScreen() {
   useEffect(() => {
     (async () => {
       const mod = await getImagePicker();
-      // eslint-disable-next-line no-console
-      console.log('ImagePicker runtime object (dynamic):', mod);
-      // eslint-disable-next-line no-console
       console.log('launchImageLibraryAsync type:', typeof (mod as any)?.launchImageLibraryAsync);
-      // eslint-disable-next-line no-console
-      console.log('launchCameraAsync type:', typeof (mod as any)?.launchCameraAsync);
     })();
   }, [getImagePicker]);
+
+  // Detect when returning from BookingPayLater after tapping "Edit"
+  useFocusEffect(
+    useCallback(() => {
+      const stored = prescriptionStore.get();
+      if (stored.isEditMode && stored.images.length > 0) {
+        // Restore the images and notes so the modal pre-fills correctly
+        setSelectedImages(stored.images);
+        setInitialModalNotes(stored.notes);
+        setInitialModalOption(stored.option);
+        // Clear the editMode flag so this doesn't re-trigger
+        prescriptionStore.set({ ...stored, isEditMode: false });
+        setConfirmModalVisible(true);
+      }
+    }, []),
+  );
 
   useEffect(() => {
     const loadGroups = async () => {
@@ -111,7 +127,7 @@ export default function MedicinesScreen() {
   const prescriptionOptions = [
     { id: 'gallery', title: 'Gallery', icon: icons.gallery ?? icons.calendar },
     { id: 'camera', title: 'Take a Photo', icon: icons.camera ?? icons.calendar },
-    { id: 'curonn', title: 'Curonn Rx', icon: icons.pill ?? icons.calendar },
+    // { id: 'curonn', title: 'Curonn Rx', icon: icons.pill ?? icons.calendar },
   ];
 
   const pickFromGallery = useCallback(async () => {
@@ -195,7 +211,9 @@ export default function MedicinesScreen() {
   }, []);
 
   const handleConfirmNext = useCallback(async (notes: string, option: 'all' | 'specific') => {
-    console.log('Confirm next', { notes, option, images: selectedImages });
+    // Data is already in prescriptionStore (written by PrescriptionUploadModal);
+    // just close the modal — navigation happens inside the modal.
+    console.log('handleConfirmNext', { notes, option, imagesCount: selectedImages.length });
     setConfirmModalVisible(false);
   }, [selectedImages]);
 
@@ -285,12 +303,19 @@ export default function MedicinesScreen() {
 
       <PrescriptionUploadModal
         visible={confirmModalVisible}
-        onClose={() => setConfirmModalVisible(false)}
+        onClose={() => {
+          setConfirmModalVisible(false);
+          // If user closes without proceeding, clear pre-fill state
+          setInitialModalNotes('');
+          setInitialModalOption('all');
+        }}
         selectedImages={selectedImages}
         onRemove={removeSelectedImage}
         onUploadMoreGallery={pickFromGallery}
         onTakePhoto={takePhoto}
         onNext={handleConfirmNext}
+        initialNotes={initialModalNotes}
+        initialOption={initialModalOption}
       />
     </View>
   );
@@ -356,7 +381,7 @@ const styles = StyleSheet.create({
     marginHorizontal: getResponsiveSpacing(4),
   },
   prescriptionCard: {
-    backgroundColor: '#BABCBA',
+    backgroundColor: '#f1f3f1ff',
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     alignItems: 'center',
@@ -414,9 +439,9 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: getResponsiveFontSize(12),
     fontWeight: '600',
-    color:"#000000",
+    color: "#000000",
     flex: 1,
-        fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold,
 
     marginRight: getResponsiveSpacing(8),
   },
