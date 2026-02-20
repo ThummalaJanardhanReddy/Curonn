@@ -89,7 +89,15 @@ export default function BookingScreen({
   const [showPayment, setShowPayment] = useState(false);
 
   // ─── Lab-test flow state ───────────────────────────────────────────
+  // Only use field-specific errors for relation, fullName, age, gender in LAB flow
+  // All other errors (address, date, timeSlot) use a string
   const [errors, setErrors] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    relation: "",
+    fullName: "",
+    age: "",
+    gender: ""
+  });
   const [isTodayAvailable, setIsTodayAvailable] = useState(true);
   const [discountPercent, setDiscountPercent] = useState(10);
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
@@ -159,21 +167,11 @@ export default function BookingScreen({
   ];
 
   // Medicine static relation types
-  const medRelationTypes = [
-    "Father",
-    "Mother",
-    "Brother",
-    "Sister",
-    "Son",
-    "Daughter",
-    "Spouse",
-    "Other",
-  ];
 
   // ═══════════════════════════════════════════════════════════════════
   // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
   // ═══════════════════════════════════════════════════════════════════
-  const { userData } = useUser();
+
   // Fetch discount percent from Employee API
   useEffect(() => {
     if (isFromMedicalFlag) return;
@@ -459,22 +457,49 @@ export default function BookingScreen({
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
+    // Validate address, date, timeSlot as string errors
+    if (!selectedLocation) {
+      setErrors("Please select or add new address");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      return;
+    }
     if (!selectedDate || !formatDateLab(selectedDate).trim()) {
       setErrors("Please select service start date");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       return;
     }
     if (!selectedTimeSlot.trim()) {
       setErrors("Please select time slot");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       return;
     }
-    if (
-      patientType === "others" &&
-      (!selectedRelation || !fullName || !age || !gender)
-    ) {
-      setErrors("Please fill all patient details");
-      return;
+    // Validate only relation, fullName, age, gender as field errors
+    if (patientType === "others") {
+      let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
+      let hasError = false;
+      if (!selectedRelation) {
+        newFieldErrors.relation = "Please select relation type";
+        hasError = true;
+      }
+      if (!fullName.trim()) {
+        newFieldErrors.fullName = "Please enter full name";
+        hasError = true;
+      }
+      if (!age.trim()) {
+        newFieldErrors.age = "Please enter age";
+        hasError = true;
+      }
+      if (!gender.trim()) {
+        newFieldErrors.gender = "Please select gender";
+        hasError = true;
+      }
+      setFieldErrors(newFieldErrors);
+      setErrors("");
+      if (hasError) return;
+    } else {
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      setErrors("");
     }
-    setErrors("");
     try {
       const query = `?amount=${totalAmount * 100}&patientId=${userData?.e_id || 0}`;
       const orderRes: any = await axiosClient.get(
@@ -994,34 +1019,55 @@ export default function BookingScreen({
                         onPress={() => setShowRelationDropdown(true)}
                       >
                         <Text style={styles.dropdownText}>
-                          {relationType || "Select Relation"}
+                          {selectedRelation
+                            ? selectedRelation.name
+                            : "Select Relation"}
                         </Text>
                         <Image
                           source={images.icons.edit as any}
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
+                      {fieldErrors.relation  ? (
+                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                          ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Full Name</Text>
                       <TextInput
                         style={styles.textInput}
                         value={fullName}
-                        onChangeText={setFullName}
+                        onChangeText={(text) => {
+                          setFullName(text);
+                          if (fieldErrors.fullName) {
+                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                          }
+                        }}
                         placeholder="Enter full name"
                         placeholderTextColor="#999"
                       />
+                      {fieldErrors.fullName ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Age</Text>
                       <TextInput
                         style={styles.textInput}
                         value={age}
-                        onChangeText={setAge}
+                        onChangeText={(text) => {
+                          setAge(text);
+                          if (fieldErrors.age) {
+                            setFieldErrors((prev) => ({ ...prev, age: "" }));
+                          }
+                        }}
                         placeholder="Enter age"
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                       />
+                      {fieldErrors.age ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Gender</Text>
@@ -1037,6 +1083,9 @@ export default function BookingScreen({
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
+                      {fieldErrors.gender ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                      ) : null}
                     </View>
                   </View>
                 )}
@@ -1105,16 +1154,19 @@ export default function BookingScreen({
               onPress={() => setShowRelationDropdown(false)}
             >
               <View style={styles.dropdownModal}>
-                {medRelationTypes.map((relation, index) => (
+                {labRelationTypes.map((relation, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={relation.masterDataId}
                     style={styles.dropdownOption}
                     onPress={() => {
-                      setRelationType(relation);
+                      setSelectedRelation(relation);
+                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                        setFieldErrors((prev) => ({ ...prev, relation: "" }));
+                      }
                       setShowRelationDropdown(false);
                     }}
                   >
-                    <Text style={styles.dropdownOptionText}>{relation}</Text>
+                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -1139,6 +1191,9 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setGender(genderOption);
+                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                        setFieldErrors((prev) => ({ ...prev, gender: "" }));
+                      }
                       setShowGenderDropdown(false);
                     }}
                   >
@@ -1293,7 +1348,7 @@ export default function BookingScreen({
             {/* Service Address */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Service Address</Text>
-              {selectedLocation && (
+              {selectedLocation ? (
                 <View style={styles.addressCard}>
                   <View style={styles.addressHeader}>
                     <View style={styles.addressInfo}>
@@ -1319,27 +1374,27 @@ export default function BookingScreen({
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
                   </View>
-
+                </View>
+              ) : (
+                <View style={styles.addressCard}>
+                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0,fontFamily:fonts.regular }}>
+                    No address found. Please add a new address.
+                  </Text>
                   <TouchableOpacity
                     style={styles.addnewaddressButton}
                     onPress={handleViewAddress}
                   >
                     <Text style={styles.AddressText}>+ Add New Address</Text>
                   </TouchableOpacity>
-
                 </View>
               )}
-              {/* <View
-                style={{
-                  backgroundColor: "#FBFBFB",
-                  borderRadius: 8,
-                  padding: 10,
-                  alignItems: "center",
-                  marginTop: selectedLocation ? 12 : 0,
-                }}
-              >
-
-              </View> */}
+              {errors === "Please select or add new address" && (
+                    <Text
+                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                    >
+                      {errors}
+                    </Text>
+                  )}
             </View>
 
             {/* Sample Pickup Date & Time */}
@@ -1438,7 +1493,7 @@ export default function BookingScreen({
                         patientType === "others" ? "checked" : "unchecked"
                       }
                       onPress={() => setPatientType("others")}
-                      color="#ff0000"
+                      color="#C15E9C"
                     />
                     <Text style={styles.radioLabel}>For Others</Text>
                   </View>
@@ -1459,60 +1514,46 @@ export default function BookingScreen({
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
-                      {errors === "Please select relation type" && (
-                        <Text
-                          style={{
-                            color: "#ff0000",
-                            fontSize: 13,
-                            marginTop: 4,
-                          }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
+                      {fieldErrors.relation  ? (
+                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                          ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Full Name</Text>
                       <TextInput
                         style={styles.textInput}
                         value={fullName}
-                        onChangeText={setFullName}
+                         onChangeText={(text) => {
+                          setFullName(text);
+                          if (fieldErrors.fullName) {
+                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                          }
+                        }}
                         placeholder="Enter full name"
                         placeholderTextColor="#999"
                       />
-                      {errors === "Please enter full name" && (
-                        <Text
-                          style={{
-                            color: "#ff0000",
-                            fontSize: 13,
-                            marginTop: 4,
-                          }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
+                      {fieldErrors.fullName ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Age</Text>
                       <TextInput
                         style={styles.textInput}
                         value={age}
-                        onChangeText={setAge}
+                         onChangeText={(text) => {
+                          setAge(text);
+                          if (fieldErrors.age) {
+                            setFieldErrors((prev) => ({ ...prev, age: "" }));
+                          }
+                        }}
                         placeholder="Enter age"
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                       />
-                      {errors === "Please enter age" && (
-                        <Text
-                          style={{
-                            color: "#ff0000",
-                            fontSize: 13,
-                            marginTop: 4,
-                          }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
+                      {fieldErrors.age ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Gender</Text>
@@ -1525,17 +1566,9 @@ export default function BookingScreen({
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
-                      {errors === "Please select gender" && (
-                        <Text
-                          style={{
-                            color: "#ff0000",
-                            fontSize: 13,
-                            marginTop: 4,
-                          }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
+                      {fieldErrors.gender ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                      ) : null}
                     </View>
                   </View>
                 )}
@@ -1645,22 +1678,21 @@ export default function BookingScreen({
               onPress={() => setShowRelationDropdown(false)}
             >
               <View style={styles.dropdownModal}>
-                <ScrollView style={{ maxHeight: 250 }}>
-                  {labRelationTypes.map((relation) => (
-                    <TouchableOpacity
-                      key={relation.masterDataId}
-                      style={styles.dropdownOption}
-                      onPress={() => {
-                        setSelectedRelation(relation);
-                        setShowRelationDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownOptionText}>
-                        {relation.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                {labRelationTypes.map((relation, index) => (
+                  <TouchableOpacity
+                    key={relation.masterDataId}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setSelectedRelation(relation);
+                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                        setFieldErrors((prev) => ({ ...prev, relation: "" }));
+                      }
+                      setShowRelationDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </TouchableOpacity>
           </Modal>
@@ -1683,6 +1715,9 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setGender(genderOption);
+                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                        setFieldErrors((prev) => ({ ...prev, gender: "" }));
+                      }
                       setShowGenderDropdown(false);
                     }}
                   >

@@ -762,7 +762,7 @@ export default function LabTestsScreen() {
                 View Details
               </Button>
               <PrimaryButton
-                title="Book Now"
+                title="Book Now1"
                 onPress={() => handleBookTest(item.id)}
                 style={styles.bookButton}
               />
