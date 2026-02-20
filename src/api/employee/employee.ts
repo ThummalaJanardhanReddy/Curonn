@@ -72,7 +72,7 @@ export const LabTestsApi = {
   getGroups: '/LabTests/labtests/groups',
   getAll: '/LabTests/GetAll',
   globalSearch: '/LabTests/global-search',
-   getById: (id: string | number) => `/LabTests/GetById/${id}`,
+  getById: (id: string | number) => `/LabTests/GetById/${id}`,
 } as const;
 
 /* Lab package APIs */
@@ -93,7 +93,7 @@ export const AddressApi = {
     `/Employee/get-address-by-patientid?patientId=${patientId}`,
   saveAddress: '/Employee/save-update-address',
   setDfaultaddress: '/Employee/set-default-address',
-  deleteaddress:'/Employee/delete-address',
+  deleteaddress: '/Employee/delete-address',
   getAddressById: (addressId: string | number) => `/Employee/get-address-by-id?addressId=${addressId}`,
 
 }
@@ -123,6 +123,7 @@ export const MedicalOrdersApi = {
   deleteCartItem: '/medicine-orders/cart/delete',
   getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
     `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+  saveOrder: '/medicine-orders/save-order',
 } as const;
 
 export const ConsultationApi = {
@@ -136,6 +137,10 @@ export const MyOrdersApi = {
 
 export const ArticlesApi = {
   Allarticles: '/Article/get-by-status?status=published',
+} as const;
+
+export const PrescriptionOrdersApi = {
+  savePrescriptionOrder: '/medicine-orders/SavePrescriptionOrderAsync',
 } as const;
 
 // ✅ Unified export for convenience
@@ -157,6 +162,7 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
+  PrescriptionOrders: PrescriptionOrdersApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

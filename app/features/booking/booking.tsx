@@ -28,7 +28,7 @@ import {
 import LocationSelection from "../location/location-selection";
 import AddressSelection from "../address/address-selection";
 import { useUser } from "../../shared/context/UserContext";
-import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
+// import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
@@ -140,10 +140,8 @@ export default function BookingScreen({
   const [toastMessageMed, setToastMessageMed] = useState({
     title: "",
     subtitle: "",
+    type: "success" as "success" | "error",
   });
-  const [medRazorpayOrderId, setMedRazorpayOrderId] = useState<string | null>(
-    null
-  );
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
@@ -187,19 +185,19 @@ export default function BookingScreen({
           if (type === "lab-test") {
             discount =
               typeof res.discountLabOrder === "number" &&
-              res.discountLabOrder != null
+                res.discountLabOrder != null
                 ? res.discountLabOrder
                 : 0;
           } else if (type === "health-checks") {
             discount =
               typeof res.discountLabPackage === "number" &&
-              res.discountLabPackage != null
+                res.discountLabPackage != null
                 ? res.discountLabPackage
                 : 0;
           } else if (type === "scans") {
             discount =
               typeof res.discountScanXray === "number" &&
-              res.discountScanXray != null
+                res.discountScanXray != null
                 ? res.discountScanXray
                 : 0;
           }
@@ -356,7 +354,7 @@ export default function BookingScreen({
       landMark: selectedLocation?.landmark || "",
       addressNickname: selectedLocation?.nickname
         ? selectedLocation.nickname.charAt(0).toUpperCase() +
-          selectedLocation.nickname.slice(1)
+        selectedLocation.nickname.slice(1)
         : "",
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
@@ -408,14 +406,16 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildLabOrderPayload(paymentData);
-    payload.createdBy = 1;
+    payload.createdBy = userData?.e_id || 1;
     payload.req = "web";
+    console.log("📤 Lab Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.LabOrders.saveUpdate,
         payload
       );
-      if (response.success) {
+      console.log("📥 Lab Save Order Response:", JSON.stringify(response, null, 2));
+      if (response && (response.success || response.isSuccess)) {
         setToastMessageLab({
           title: "Order Success",
           subtitle:
@@ -426,8 +426,8 @@ export default function BookingScreen({
         setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
-          onClose();
-          router.push("/(main)/orders");
+          if (onClose) onClose();
+          router.replace("/(main)/orders");
         }, 1500);
       } else {
         setToastMessageLab({
@@ -438,6 +438,7 @@ export default function BookingScreen({
         setShowToastLab(true);
       }
     } catch (error) {
+      console.error("[Booking] saveLabOrder error:", error);
       setToastMessageLab({
         title: "Order Error",
         subtitle: "Something went wrong.",
@@ -501,10 +502,12 @@ export default function BookingScreen({
       setErrors("");
     }
     try {
-      const query = `?amount=${totalAmount * 100}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || 0}`;
+      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
       );
+      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
@@ -608,7 +611,7 @@ export default function BookingScreen({
         setIsFromMedicalFlag(true);
         try {
           (global as any).__BOOKING_CART = null;
-        } catch (e) {}
+        } catch (e) { }
       }
     } catch (e) {
       // ignore
@@ -669,6 +672,11 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const isSelfService = patientType === "self";
+
+    // Get current date in yyyy-mm-dd format
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
@@ -679,21 +687,21 @@ export default function BookingScreen({
       addressNickname: selectedLocation?.nickname
         ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
         : "",
-      deliveryDate: selectedDate ? selectedDate.toISOString() : "",
-      timeSlot: selectedTimeSlot,
+      deliveryDate: formattedDate,
+      timeSlot: selectedTimeSlot || "",
       isSelfService,
-      paymentDetails: String(displayedTotal),
+      paymentDetails: displayedTotal.toFixed(2),
       isPaymentDone: !!paymentData,
       createdBy: userData?.e_id || 0,
-      statusId: 0, // Set if needed
+      statusId: statusId,
       handlingFee: 0,
       deliveryCharges: deliveryCharges,
-      expectedDeliveryDate: selectedDate ? selectedDate.toISOString() : "",
+      expectedDeliveryDate: formattedDate,
       deliveryNotes: "",
       razorpayOrderId: paymentData?.razorpayOrderId || "",
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
-      paymentAmount: displayedTotal,
+      paymentAmount: Number(displayedTotal.toFixed(2)),
       cartItems: incomingCartItems.map((ci: any) => ({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
@@ -704,7 +712,7 @@ export default function BookingScreen({
         price: ci.price || 0,
         offer: ci.offer || 0,
         discount: ci.discount || 0,
-        totalPrice: (ci.price || 0) * (ci.quantity || 1),
+        totalPrice: Number(((ci.price || 0) * (ci.quantity || 1)).toFixed(2)),
         description: ci.description || "",
       })),
     };
@@ -713,15 +721,15 @@ export default function BookingScreen({
       payload.relationName = "";
       payload.relationAge = 0;
       payload.relationGender = "";
-    } else {
-      payload.relationId = 0; // Set if you have relation master id
+    } else if (selectedRelation) {
+      payload.relationId = selectedRelation.masterDataId;
       payload.relationName = fullName;
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
     return payload;
   };
-
+console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -729,34 +737,47 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
+    console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
-        "/api/medicine-orders/save-order",
+        ApiRoutes.MedicalOrders.saveOrder,
         payload
       );
-      if (response && response.isSuccess) {
+      console.log("📥 Medicine Save Order Response:", JSON.stringify(response, null, 2));
+      if (response && (response.isSuccess || response.success)) {
+        console.log("✅ Medicine Order Success. Showing toast and starting timeout...");
         setToastMessageMed({
           title: "Order Success",
           subtitle: response.message || "Your medicine order was placed successfully!",
+          type: "success",
         });
         setShowToastMed(true);
         setTimeout(() => {
+          console.log("🕒 Timeout finished. Closing modal and navigating...");
           setShowToastMed(false);
           setShowPayment(false);
-          if (onClose) onClose();
-          router.push("/(main)/orders");
+          if (onClose) {
+            console.log("Calling onClose...");
+            onClose();
+          }
+          console.log("Navigating to orders screen...");
+          router.replace("/(main)/orders");
         }, 1500);
       } else {
+        console.log("❌ Medicine Order Failed:", response?.message);
         setToastMessageMed({
           title: "Order Failed",
           subtitle: response?.message || "Failed to place order.",
+          type: "error",
         });
         setShowToastMed(true);
       }
     } catch (error) {
+      console.error("[Booking] saveMedOrder error:", error);
       setToastMessageMed({
         title: "Order Error",
         subtitle: "Something went wrong.",
+        type: "error",
       });
       setShowToastMed(true);
     }
@@ -765,36 +786,65 @@ export default function BookingScreen({
   // Medicine: handleBookNow (now like lab flow)
   const handleBookNowMed = async () => {
     if (incomingCartItems.length === 0) {
-      alert("No medicines selected");
+      setToastMessageMed({
+        title: "Cart Empty",
+        subtitle: "No medicines selected",
+        type: "error",
+      });
+      setShowToastMed(true);
       return;
     }
-    // if (!selectedDate) {
-    //   alert("Please select a date for delivery");
-    //   return;
-    // }
-    // if (!selectedTimeSlot) {
-    //   alert("Please select a time slot");
-    //   return;
-    // }
-    if (patientType === "other") {
-      if (!relationType || !fullName || !age || !gender) {
-        alert("Please fill all patient details");
-        return;
-      }
+
+    // Validate address, date, timeSlot
+    if (!selectedLocation) {
+      setErrors("Please select or add new address");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      return;
     }
+
+    // Validate patient details
+    if (patientType === "others") {
+      let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
+      let hasError = false;
+      if (!selectedRelation) {
+        newFieldErrors.relation = "Please select relation type";
+        hasError = true;
+      }
+      if (!fullName.trim()) {
+        newFieldErrors.fullName = "Please enter full name";
+        hasError = true;
+      }
+      if (!age.trim()) {
+        newFieldErrors.age = "Please enter age";
+        hasError = true;
+      }
+      if (!gender.trim()) {
+        newFieldErrors.gender = "Please select gender";
+        hasError = true;
+      }
+      setFieldErrors(newFieldErrors);
+      setErrors("");
+      if (hasError) return;
+    } else {
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      setErrors("");
+    }
+
     try {
-      // Create Razorpay order (simulate like lab flow)
-  const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || 0}`;
+      console.log("📤 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
       );
+      console.log("📥 Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
-        setMedRazorpayOrderId(orderRes.order_id);
+        setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
       } else {
         setToastMessageMed({
           title: "Order Error",
           subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
         });
         setShowToastMed(true);
       }
@@ -802,6 +852,7 @@ export default function BookingScreen({
       setToastMessageMed({
         title: "Order Error",
         subtitle: "Failed to create payment order.",
+        type: "error",
       });
       setShowToastMed(true);
     }
@@ -813,6 +864,7 @@ export default function BookingScreen({
     setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setSelectedDate(selectedDate);
+      if (errors === "Please select delivery date") setErrors("");
     }
   };
 
@@ -972,6 +1024,13 @@ export default function BookingScreen({
                   </Button>
                 </View>
               )}
+              {errors === "Please select or add new address" && (
+                <Text
+                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                >
+                  {errors}
+                </Text>
+              )}
               <View
                 style={{
                   backgroundColor: "#FBFBFB",
@@ -982,6 +1041,7 @@ export default function BookingScreen({
                 }}
               />
             </View>
+
 
             {/* Patient Details */}
             <View style={styles.section}>
@@ -1028,9 +1088,9 @@ export default function BookingScreen({
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
-                      {fieldErrors.relation  ? (
-                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                          ) : null}
+                      {fieldErrors.relation ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Full Name</Text>
@@ -1118,29 +1178,61 @@ export default function BookingScreen({
           </View>
 
           {/* Payment Gateway Modal for Medicine (like lab flow) */}
-          {showPayment && medRazorpayOrderId && (
-            <RazorpayCheckout
-              orderId={medRazorpayOrderId}
-              amount={displayedTotal}
-              onSuccess={(paymentData: any) => {
-                // Save order after payment
-                saveMedOrder({
-                  razorpayOrderId: paymentData.razorpayOrderId,
-                  razorpayPaymentId: paymentData.razorpayPaymentId,
-                  razorpaySignature: paymentData.razorpaySignature,
-                });
-              }}
-              onFailure={() => {
-                setShowPayment(false);
-                setToastMessageMed({
-                  title: "Payment Failed",
-                  subtitle: "Payment was not completed.",
-                });
-                setShowToastMed(true);
-              }}
-              onClose={() => setShowPayment(false)}
-            />
-          )}
+          <Modal
+            visible={showPayment}
+            animationType="slide"
+            presentationStyle="fullScreen"
+            onRequestClose={() => {
+              setShowPayment(false);
+              setToastMessageMed({
+                title: "Payment Not Completed",
+                subtitle: "You exited before completing the payment.",
+                type: "error",
+              });
+              setShowToastMed(true);
+            }}
+          >
+            <SafeAreaView style={{ flex: 1 }}>
+              <RazorpayPaymentScreen
+                key={razorpayOrderId}
+                amount={Math.round(displayedTotal * 100)}
+                name={userData?.fullName || ""}
+                email={userData?.emailAddress || ""}
+                contact={userData?.mobileNo || ""}
+                orderId={razorpayOrderId}
+                onSuccess={(data) => {
+                  setShowPayment(false);
+                  saveMedOrder({
+                    razorpayOrderId:
+                      data.razorpay_order_id || razorpayOrderId || "",
+                    razorpayPaymentId: data.razorpay_payment_id || "",
+                    razorpaySignature: data.razorpay_signature || "",
+                  });
+                }}
+                onFailure={(err) => {
+                  setShowConfirmExit(false);
+                  setTimeout(() => {
+                    setShowPayment(false);
+                    if (err?.cancelled) {
+                      setToastMessageMed({
+                        title: "Payment Cancelled",
+                        subtitle: "Payment not completed.",
+                        type: "error",
+                      });
+                      setShowToastMed(true);
+                    } else {
+                      setToastMessageMed({
+                        title: "Payment Failed",
+                        subtitle: "Your payment was not completed.",
+                        type: "error",
+                      });
+                      setShowToastMed(true);
+                    }
+                  }, 300);
+                }}
+              />
+            </SafeAreaView>
+          </Modal>
 
           {/* Relation Type Dropdown Modal */}
           <Modal
@@ -1377,7 +1469,7 @@ export default function BookingScreen({
                 </View>
               ) : (
                 <View style={styles.addressCard}>
-                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0,fontFamily:fonts.regular }}>
+                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
                     No address found. Please add a new address.
                   </Text>
                   <TouchableOpacity
@@ -1389,12 +1481,12 @@ export default function BookingScreen({
                 </View>
               )}
               {errors === "Please select or add new address" && (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {errors}
-                    </Text>
-                  )}
+                <Text
+                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                >
+                  {errors}
+                </Text>
+              )}
             </View>
 
             {/* Sample Pickup Date & Time */}
@@ -1426,7 +1518,7 @@ export default function BookingScreen({
                   </TouchableOpacity>
                   {errors === "Please select service start date" && (
                     <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4,fontFamily:fonts.regular }}
+                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
                     >
                       {errors}
                     </Text>
@@ -1453,7 +1545,7 @@ export default function BookingScreen({
                           style={[
                             styles.timeSlotText,
                             selectedTimeSlot === slot &&
-                              styles.selectedTimeSlotText,
+                            styles.selectedTimeSlotText,
                           ]}
                         >
                           {slot}
@@ -1514,16 +1606,16 @@ export default function BookingScreen({
                         </Text>
                         <View style={styles.dropdownIcon} />
                       </TouchableOpacity>
-                      {fieldErrors.relation  ? (
-                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                          ) : null}
+                      {fieldErrors.relation ? (
+                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.formField}>
                       <Text style={styles.fieldLabel}>Full Name</Text>
                       <TextInput
                         style={styles.textInput}
                         value={fullName}
-                         onChangeText={(text) => {
+                        onChangeText={(text) => {
                           setFullName(text);
                           if (fieldErrors.fullName) {
                             setFieldErrors((prev) => ({ ...prev, fullName: "" }));
@@ -1541,7 +1633,7 @@ export default function BookingScreen({
                       <TextInput
                         style={styles.textInput}
                         value={age}
-                         onChangeText={(text) => {
+                        onChangeText={(text) => {
                           setAge(text);
                           if (fieldErrors.age) {
                             setFieldErrors((prev) => ({ ...prev, age: "" }));
@@ -1586,10 +1678,10 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.regular }}>
+                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
                     Item Price
                   </Text>
-                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.medium }}>
+                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.medium }}>
                     {"\u20B9"}
                     {servicePrice}
                   </Text>
@@ -1601,10 +1693,10 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 14, color: "#333",fontFamily:fonts.regular }}>
+                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
                     Offer Discount ({discountPercent}%)
                   </Text>
-                  <Text style={{ fontSize: 14, color: "#C15E9C",fontFamily:fonts.medium }}>
+                  <Text style={{ fontSize: 14, color: "#C15E9C", fontFamily: fonts.medium }}>
                     -{"\u20B9"}
                     {discountAmount}
                   </Text>
@@ -1623,13 +1715,13 @@ export default function BookingScreen({
                   }}
                 >
                   <Text
-                    style={{ fontSize: 14,  color: "#333",fontFamily:fonts.bold }}
+                    style={{ fontSize: 14, color: "#333", fontFamily: fonts.bold }}
                   >
                     To Pay
                   </Text>
                   <Text
                     style={{
-                      fontFamily:fonts.bold ,
+                      fontFamily: fonts.bold,
                       fontSize: 14,
                       color: colors.primary,
                     }}
@@ -1737,49 +1829,86 @@ export default function BookingScreen({
             presentationStyle="fullScreen"
             onRequestClose={() => {
               setShowPayment(false);
-              setToastMessageLab({
-                title: "Payment Not Completed",
-                subtitle: "You exited before completing the payment.",
-                type: "error",
-              });
-              setShowToastLab(true);
+              if (isFromMedicalFlag) {
+                setToastMessageMed({
+                  title: "Payment Not Completed",
+                  subtitle: "You exited before completing the payment.",
+                  type: "error",
+                });
+                setShowToastMed(true);
+              } else {
+                setToastMessageLab({
+                  title: "Payment Not Completed",
+                  subtitle: "You exited before completing the payment.",
+                  type: "error",
+                });
+                setShowToastLab(true);
+              }
             }}
           >
             <SafeAreaView style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
-                amount={totalAmount * 100}
+                amount={isFromMedicalFlag ? Math.round(displayedTotal * 100) : totalAmount * 100}
                 name={userData?.fullName || ""}
                 email={userData?.emailAddress || ""}
                 contact={userData?.mobileNo || ""}
                 orderId={razorpayOrderId}
                 onSuccess={(data) => {
                   setShowPayment(false);
-                  saveLabOrder({
-                    razorpayOrderId:
-                      data.razorpay_order_id || razorpayOrderId || "",
-                    razorpayPaymentId: data.razorpay_payment_id || "",
-                    razorpaySignature: data.razorpay_signature || "",
-                  });
+                  if (isFromMedicalFlag) {
+                    saveMedOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
+                  } else {
+                    saveLabOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
+                  }
                 }}
                 onFailure={(err) => {
                   setShowConfirmExit(false);
                   setTimeout(() => {
                     setShowPayment(false);
                     if (err?.cancelled) {
-                      setToastMessageLab({
-                        title: "Payment Cancelled",
-                        subtitle: "Payment not completed.",
-                        type: "error",
-                      });
+                      if (isFromMedicalFlag) {
+                        setToastMessageMed({
+                          title: "Payment Cancelled",
+                          subtitle: "Payment not completed.",
+                          type: "error",
+                        });
+                        setShowToastMed(true);
+                      } else {
+                        setToastMessageLab({
+                          title: "Payment Cancelled",
+                          subtitle: "Payment not completed.",
+                          type: "error",
+                        });
+                        setShowToastLab(true);
+                      }
                     } else {
-                      setToastMessageLab({
-                        title: "Payment Failed",
-                        subtitle: "Your payment was not completed.",
-                        type: "error",
-                      });
+                      if (isFromMedicalFlag) {
+                        setToastMessageMed({
+                          title: "Payment Failed",
+                          subtitle: "Your payment was not completed.",
+                          type: "error",
+                        });
+                        setShowToastMed(true);
+                      } else {
+                        setToastMessageLab({
+                          title: "Payment Failed",
+                          subtitle: "Your payment was not completed.",
+                          type: "error",
+                        });
+                        setShowToastLab(true);
+                      }
                     }
-                    setShowToastLab(true);
                   }, 300);
                 }}
               />
@@ -1883,7 +2012,7 @@ const styles = StyleSheet.create({
   section: {
     marginTop: getResponsiveSpacing(10),
   },
-    cancellsection: {
+  cancellsection: {
     marginTop: getResponsiveSpacing(10),
     marginBottom: getResponsiveSpacing(10),
   },
@@ -2026,7 +2155,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#dbdbdb",
-     marginBottom: getResponsiveSpacing(5),
+    marginBottom: getResponsiveSpacing(5),
     padding: 16,
   },
   deliveryCard: {
@@ -2035,7 +2164,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#dbdbdb",
-     marginBottom: getResponsiveSpacing(5),
+    marginBottom: getResponsiveSpacing(5),
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -2078,11 +2207,11 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
-     paddingBottom: 8,
+    paddingBottom: 8,
     paddingTop: 10,
     color: "#333",
     backgroundColor: "#fff",
-     fontSize: 13,
+    fontSize: 13,
     fontFamily: fonts.regular
   },
   dropdown: {
@@ -2131,7 +2260,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#dbdbdb",
-        marginBottom: getResponsiveSpacing(5),
+    marginBottom: getResponsiveSpacing(5),
   },
   addressHeader: {
     flexDirection: "row",
