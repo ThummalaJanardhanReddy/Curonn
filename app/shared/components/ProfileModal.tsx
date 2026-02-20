@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
+import { setStatusBarStyle, setStatusBarBackgroundColor } from 'expo-status-bar';
 import {
   Alert,
   Animated,
@@ -9,11 +10,14 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  StatusBar as RNStatusBar,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
@@ -43,7 +47,8 @@ import Toast from "./Toast";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
-
+import { router } from "expo-router";
+const { height: screenHeight } = Dimensions.get("window");
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -81,12 +86,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     branch: "",
     noFamilyMembers: ""
   });
-    // Track original values for edit detection
-    const [originalProfile, setOriginalProfile] = useState({
-      fullName: "",
-      age: "",
-      gender: ""
-    });
+  // Track original values for edit detection
+  const [originalProfile, setOriginalProfile] = useState({
+    fullName: "",
+    age: "",
+    gender: ""
+  });
   const { userData } = useUser();
   const patientId = userData?.e_id;
   React.useEffect(() => {
@@ -115,11 +120,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           image: data.image || "",
           noFamilyMembers: data.noFamilyMembers || 0,
         });
-          setOriginalProfile({
-            fullName: data.fullName || "",
-            age: data.age ? String(data.age) : "",
-            gender: data.gender || ""
-          });
+        setOriginalProfile({
+          fullName: data.fullName || "",
+          age: data.age ? String(data.age) : "",
+          gender: data.gender || ""
+        });
       } catch (error) {
         console.error("[ProfileModal] Failed to fetch profile data:", error);
         // fallback to dummy data
@@ -136,6 +141,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     };
     fetchProfile();
   }, [visible, patientId]);
+  useEffect(() => {
+  if (visible) {
+    setStatusBarStyle('dark');
+    setStatusBarBackgroundColor('#7E6781');
+  }
+}, [visible]);
   const editProfileSlideAnim = useRef(new Animated.Value(screenWidth)).current;
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const [familyMembersModalVisible, setFamilyMembersModalVisible] =
@@ -168,6 +179,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [rateAppModalVisible, setRateAppModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        const timeout = setTimeout(() => {
+          // Use React Native StatusBar API to set background color on Android
+          RNStatusBar.setBackgroundColor("#7E6781", true);
+        }, 400); // Adjust timeout as needed
+        return () => clearTimeout(timeout);
+      }
+    }, [])
+  );
 
   // Profile data
   const baseProfileItems: ProfileItem[] = [
@@ -287,7 +310,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         type: "success"
       });
       setShowToast(true);
-      hideEditProfileModal();
+      // Wait for 1 second before hiding the modal so the toast is visible
+      setTimeout(() => {
+        hideEditProfileModal();
+      }, 1000);
     } catch (error) {
       let errorMsg = 'Something went wrong';
       setToastMessage({
@@ -316,7 +342,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   // Settings handlers
   const handleMyOrders = () => {
-    setMyOrdersModalVisible(true);
+    router.push("/orders");
   };
 
   const handleHealthFeed = () => {
@@ -616,8 +642,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         transparent={true}
         onRequestClose={onClose}
       >
+        <SafeAreaView style={{ flex: 1, height: screenHeight}}>
         <View style={styles.modalOverlay}>
+         
+          {/* <StatusBar barStyle="dark-content" backgroundColor="#fff" /> */}
           <SafeAreaView style={styles.modalContent}>
+           
             {/* Header */}
             <View style={styles.modalHeaderContainer}>
               <View style={styles.modalHeader}>
@@ -711,7 +741,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             {/* {activeTab === 0 ? renderProfileTab() : renderSettingsTab()} */}
             {renderSettingsTab()}
           </SafeAreaView>
+          
         </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Edit Profile Modal */}
@@ -751,39 +783,40 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
               >
-                {/* Full Name Field */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Full Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    underlineColorAndroid="transparent"
-                    selectionColor="transparent"
-                    placeholder="Enter"
-                    value={profileForm.fullName}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, fullName: text })
-                    }
-                  />
-                </View>
-
-                {/* Employee ID Field */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Employee ID</Text>
+                <SafeAreaView style={{ flex: 1 }}>
+                  {/* Full Name Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Full Name</Text>
                     <TextInput
-                      style={[styles.input, { backgroundColor: '#f9f9f9' }]}
+                      style={styles.input}
+                      underlineColorAndroid="transparent"
+                      selectionColor="transparent"
+                      placeholder="Enter"
+                      value={profileForm.fullName}
+                      onChangeText={(text) =>
+                        setProfileForm({ ...profileForm, fullName: text })
+                      }
+                    />
+                  </View>
+
+                  {/* Employee ID Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Employee ID</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: '#f1f1f1' }]}
                       underlineColorAndroid="transparent"
                       selectionColor="transparent"
                       placeholder="Enter your employee ID"
                       value={profileForm.EmployeeCode}
                       editable={false}
-                  />
-                </View>
+                    />
+                  </View>
 
-                {/* Email ID Field */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Email ID</Text>
+                  {/* Email ID Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Email ID</Text>
                     <TextInput
-                      style={[styles.input, { backgroundColor: '#f9f9f9' }]}
+                      style={[styles.input, { backgroundColor: '#f1f1f1' }]}
                       underlineColorAndroid="transparent"
                       selectionColor="transparent"
                       placeholder="Enter your email address"
@@ -791,24 +824,24 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       editable={false}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                  />
-                </View>
+                    />
+                  </View>
 
-                {/* Phone Number Field */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Phone Number</Text>
+                  {/* Phone Number Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Phone Number</Text>
                     <TextInput
-                      style={[styles.input, { backgroundColor: '#f9f9f9' }]}
+                      style={[styles.input, { backgroundColor: '#f1f1f1' }]}
                       underlineColorAndroid="transparent"
                       selectionColor="transparent"
                       placeholder="Enter your phone number"
                       value={profileForm.mobileNo}
                       editable={false}
                       keyboardType="phone-pad"
-                  />
-                </View>
+                    />
+                  </View>
 
-                {/* Age Field or Calendar Picker */}
+                  {/* Age Field or Calendar Picker */}
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldLabel}>Age</Text>
                     <TextInput
@@ -828,67 +861,67 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     />
                   </View>
 
-                {/* Gender Field */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Gender</Text>
-                  <View style={styles.radioContainer}>
-                    <TouchableOpacity
-                      style={styles.radioOption}
+                  {/* Gender Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Gender</Text>
+                    <View style={styles.radioContainer}>
+                      <TouchableOpacity
+                        style={styles.radioOption}
                         onPress={() =>
                           setProfileForm({ ...profileForm, gender: "Male" })
                         }
-                    >
-                      <View style={styles.radioButton}>
-                        {profileForm.gender === "Male" || profileForm.gender === "male"  && (
-                          <View style={styles.radioButtonSelected} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabel}>Male</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() =>
-                        setProfileForm({ ...profileForm, gender: "Female" })
-                      }
-                    >
-                      <View style={styles.radioButton}>
-                        {profileForm.gender === "Female" && (
-                          <View style={styles.radioButtonSelected} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabel}>Female</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() =>
-                        setProfileForm({ ...profileForm, gender: "Other" })
-                      }
-                    >
-                      <View style={styles.radioButton}>
-                        {profileForm.gender === "Other" && (
-                          <View style={styles.radioButtonSelected} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabel}>Other</Text>
-                    </TouchableOpacity>
+                      >
+                        <View style={styles.radioButton}>
+                          {profileForm.gender === "Male" || profileForm.gender === "male" && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Male</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() =>
+                          setProfileForm({ ...profileForm, gender: "Female" })
+                        }
+                      >
+                        <View style={styles.radioButton}>
+                          {profileForm.gender === "Female" && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Female</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() =>
+                          setProfileForm({ ...profileForm, gender: "Other" })
+                        }
+                      >
+                        <View style={styles.radioButton}>
+                          {profileForm.gender === "Other" && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Other</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
 
-                 
+                </SafeAreaView>
               </ScrollView>
-               {/* Update button only enabled if Full Name, Age, or Gender changed */}
-               <View style={styles.updateButtonContainer}>
-                  <PrimaryButton
-                    title="Update"
-                    onPress={handleProfileUpdate}
-                    style={styles.updateButton}
-                    disabled={
-                      profileForm.fullName === originalProfile.fullName &&
-                      profileForm.age === originalProfile.age &&
-                      profileForm.gender === originalProfile.gender
-                    }
-                  />
-                  </View>
+              {/* Update button only enabled if Full Name, Age, or Gender changed */}
+              <View style={styles.updateButtonContainer}>
+                <PrimaryButton
+                  title="Update"
+                  onPress={handleProfileUpdate}
+                  style={styles.updateButton}
+                  disabled={
+                    profileForm.fullName === originalProfile.fullName &&
+                    profileForm.age === originalProfile.age &&
+                    profileForm.gender === originalProfile.gender
+                  }
+                />
+              </View>
             </Animated.View>
           </SafeAreaView>
           <Toast
@@ -1313,7 +1346,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "#f5f4f9",
   },
   modalContent: {
     flex: 1,
@@ -1430,7 +1463,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 17,
-    color: "#333",
+    color: "#000000",
     marginBottom: 4,
     fontFamily: fonts.semiBold,
     lineHeight: 22
@@ -1591,6 +1624,8 @@ const styles = StyleSheet.create({
   editProfileForm: {
     paddingHorizontal: 20,
     paddingTop: 16,
+    backgroundColor: "#f5f4f9",
+
   },
   scrollContent: {
     paddingBottom: 40,
@@ -1606,16 +1641,17 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#9D9D9F",
     borderRadius: 8,
     padding: 12,
     paddingBottom: 8,
-    paddingTop:9,
+    paddingTop: 9,
     fontSize: 14,
     backgroundColor: "#fff",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
+    color: "#000",
   },
-  updateButtonContainer:{
+  updateButtonContainer: {
     paddingHorizontal: 20,
   },
   radioContainer: {

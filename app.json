@@ -2,6 +2,7 @@
   "expo": {
     "name": "curonn",
     "slug": "curronn",
+    "icon": "./assets/curonn_appicon.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "curonn",
@@ -12,7 +13,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#694664"
+        "foregroundImage": "./assets/curonn_appicon.png",
+        "backgroundColor": "#C35E9C"
       },
       "package": "com.janardhan.reddy.curonn",
       "permissions": [

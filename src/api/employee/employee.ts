@@ -113,6 +113,8 @@ export const LabOrdersApi = {
 
 export const MedicalOrdersApi = {
   getMedicalOrderById: (medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
+  
+  getMedicalOrderFullById: (medicineOrderId: string | number) =>`/medicine-orders/medicine-order/get-by-id/${medicineOrderId}`,
   medicineCancel: '/medicine-orders/cancel',
   getDrugGroups: '/medicine-orders/drug-groups',
   getActiveCart: '/medicine-orders/GetActiveCart',

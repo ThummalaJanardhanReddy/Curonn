@@ -28,6 +28,7 @@ interface CommonHeaderProps {
   onCartPress?: () => void;
   onLocationChange?: (location: string) => void;
   showCart?: boolean;
+  showProfile?: boolean;
   showLocation?: boolean; // NEW: control location visibility
 }
 
@@ -40,6 +41,7 @@ export default function CommonHeader({
   onCartPress,
   onLocationChange,
   showCart = true,
+  showProfile = true,
   showLocation = true, // NEW: default true
 }: CommonHeaderProps) {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -205,6 +207,7 @@ export default function CommonHeader({
     <>
       <View style={styles.defaultHeader}>
         <View style={styles.headerLeft}>
+          {showProfile && (
           <TouchableOpacity
             style={styles.profileButton}
             onPress={handleProfilePress}
@@ -220,6 +223,7 @@ export default function CommonHeader({
               <MenIcon width={40} height={40} style={styles.profileIcon} />
             )}
           </TouchableOpacity>
+          )}
           {showLocation ? (
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
               <View style={styles.locationhead}>

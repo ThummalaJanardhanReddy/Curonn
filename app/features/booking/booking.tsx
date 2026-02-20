@@ -1373,7 +1373,22 @@ export default function BookingScreen({
                     >
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
+                    
                   </View>
+                   <Button
+                    style={{
+                      borderRadius: 8,
+                      width: "80%",
+                      borderColor: "#0580FA",
+                      borderStyle: "solid",
+                      borderWidth: 1,
+                      marginTop: 12,
+                    }}
+                    labelStyle={{ color: "#0580FA" }}
+                    onPress={handleViewAddress}
+                  >
+                    +  Add New Address
+                  </Button>
                 </View>
               ) : (
                 <View style={styles.addressCard}>

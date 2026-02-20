@@ -7,10 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Dimensions,
   TextInput,
   TouchableOpacity,
   Platform,
-  View
+  View,
+  Alert
 } from 'react-native';
 import { IconButton, RadioButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +25,7 @@ import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { useUser } from "../../shared/context/UserContext";
+const { height: screenHeight } = Dimensions.get("window");
 import Toast from './Toast';
 
 interface FamilyMembersModalProps {
@@ -121,55 +124,74 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const handleAddMember = () => {
     setShowForm(true);
     resetForm();
+    setSelectedRelation(null); // Clear cached relation type
+    setFormData({
+      name: '',
+      relation: '',
+      gender: 'male',
+      age: ''
+    });
   };
 
 
 
   const handleDeleteMember = async (empRelationId: number) => {
     // As per Swagger, use POST and include both empRelationId and deletedBy (patientId) in payload
-      try {
-        // Match Swagger: POST with empRelationId as query param, empty body
-        const url = `${ApiRoutes.Employee.deletefamilymember}?empRelationId=${empRelationId}`;
-        const response:any = await axiosClient.post(url, {});
-        console.log('Delete response:', response);
-        let message = "Family Member has been deleted successfully.";
-        if (response && response.data && typeof response.data === 'object' && response.data.message) {
-          message = response.data.message;
-        } else if (response && response.data === true) {
-          message = "Family Member has been deleted successfully.";
-        }
-        setToastMessage({
-          title: "Deleted",
-          subtitle: message,
-          type: "success"
-        });
-        setShowToast(true);
-        if (fetchFamilyMembersRef.current) {
-          await fetchFamilyMembersRef.current();
-        }
-      } catch (error) {
-        let errorMsg = 'Something went wrong';
-        if (error && typeof error === 'object') {
-          if ('response' in error && error.response && error.response.data && error.response.data.message) {
-            errorMsg = error.response.data.message;
-          } else if ('message' in error) {
-            errorMsg = error.message;
-          }
-        }
-        setToastMessage({
-          title: "Delete Failed",
-          subtitle: errorMsg,
-          type: "error"
-        });
-        setShowToast(true);
+    try {
+      // Match Swagger: POST with empRelationId as query param, empty body
+      const url = `${ApiRoutes.Employee.deletefamilymember}?empRelationId=${empRelationId}`;
+      const response:any = await axiosClient.post(url, {});
+      console.log('Delete response:', response);
+      let message = "Family Member has been deleted successfully.";
+      if (response && response.data && typeof response.data === 'object' && response.data.message) {
+        message = response.data.message;
+      } else if (response && response.data === true) {
+        message = "Family Member has been deleted successfully.";
       }
+      setToastMessage({
+        title: "Deleted",
+        subtitle: message,
+        type: "success"
+      });
+      setShowToast(true);
+      if (fetchFamilyMembersRef.current) {
+        await fetchFamilyMembersRef.current();
+      }
+    } catch (error) {
+      let errorMsg = 'Something went wrong';
+      if (error && typeof error === 'object') {
+        if ('response' in error && error.response && error.response.data && error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if ('message' in error) {
+          errorMsg = error.message;
+        }
+      }
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: errorMsg,
+        type: "error"
+      });
+      setShowToast(true);
     }
+  }
+
+  const confirmDeleteMember = (empRelationId: number) => {
+    Alert.alert(
+      'Delete Family Member',
+      'Are you sure you want to delete this family member?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', style: 'destructive', onPress: () => handleDeleteMember(empRelationId) }
+      ]
+    );
+  };
 
 
     const handleEditMember = async (member: any) => {
       // Fetch details from GetByPatientRelationAsync using relationId and patientId
       try {
         const response = await axiosClient.get(ApiRoutes.Employee.GetByPatientRelationAsync(member.relationId, member.patientId));
+        console.log('GetByPatientRelationAsync response:', response);
         let data = null;
         if (Array.isArray(response) && response.length > 0) {
           data = response[0];
@@ -186,6 +208,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
             gender: data.gender || '',
             age: data.age ? String(data.age) : ''
           });
+          setSelectedRelation(relationType || null); // <-- auto-populate selectedRelation
           setIsEditMode(true);
           setShowForm(true);
         }
@@ -282,7 +305,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, { borderColor: '#ff0000', marginLeft: 8 }]}
-          onPress={() => handleDeleteMember(member.empRelationId)}
+          onPress={() => confirmDeleteMember(member.empRelationId)}
         >
           <Text style={[styles.actionButtonText, { color: '#ff0000' }]}>Delete</Text>
         </TouchableOpacity>
@@ -323,6 +346,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   }, []);
 
   const renderForm = () => (
+    <SafeAreaView style={{ flex: 1, height: screenHeight}}>
     <View style={styles.formContainer}>
       {/* Relation Type Dropdown */}
       <View style={styles.dropdownContainer}>
@@ -336,7 +360,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
             styles.dropdownButtonText,
             !selectedRelation && styles.placeholderText
           ]}>
-            {selectedRelation ? selectedRelation.name : 'Select relation type'}
+            {selectedRelation ? selectedRelation.name : 'Select'}
           </Text>
           <IconButton
             icon={showRelationDropdown ? "chevron-up" : "chevron-down"}
@@ -469,16 +493,31 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
         )}
       </View>
 
-      {/* Action Buttons */}
+     
+    </View>
+
+         {/* Action Buttons */}
       <View style={styles.formButtons}>
         <PrimaryButton
           title={isEditMode ? 'Update Family' : 'Save Family'}
           onPress={handleSaveMember}
           style={styles.saveButton}
-          disabled={!(formData.relation && formData.name && formData.gender && formData.age)}
+          disabled={
+            isEditMode
+              ? (
+                  !(formData.relation && formData.name && formData.gender && formData.age) ||
+                  editingMember &&
+                  formData.name === (editingMember.relationName || '') &&
+                  formData.relation === (relationTypes.find(r => r.masterDataId === editingMember.relationId)?.name || '') &&
+                  formData.gender === (editingMember.gender || '') &&
+                  formData.age === (editingMember.age ? String(editingMember.age) : '')
+                )
+              : !(formData.relation && formData.name && formData.gender && formData.age)
+          }
         />
       </View>
-    </View>
+    </SafeAreaView>
+
   );
 
   return (
@@ -488,6 +527,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       transparent={false}
       onRequestClose={onClose}
     >
+      <SafeAreaView style={{ flex: 1, height: screenHeight}}>
       <SafeAreaView style={styles.modalContent}>
         {/* Header */}
         <View style={styles.modalHeader}>
@@ -538,6 +578,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           </ScrollView>
         )}
         {/* Toast Message (removed duplicate PrimaryButton) */}
+      </SafeAreaView>
       </SafeAreaView>
       <Toast
         visible={showToast}
@@ -695,7 +736,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsivePadding(25),
     paddingTop: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f4f9',
   },
   formTitle: {
     fontSize: 20,
@@ -721,11 +762,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#9D9D9F",
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingTop:3,
     backgroundColor: '#fff',
-    height: 40,
+    height: 42,
   },
   dropdownButtonText: {
     fontSize: 13,
@@ -782,14 +824,15 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+        borderColor: "#9D9D9F",
+    borderRadius: 8,    paddingHorizontal: 12,
     fontSize: 13,
     color: '#333',
     fontFamily: fonts.regular,
     includeFontPadding: false, // Android fix
     textAlignVertical: 'center', // Android fix
+    backgroundColor: '#fff',
+    height: 42,
   },
   radioContainer: {
     flexDirection: 'row',
@@ -802,12 +845,16 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: 16,
     color: '#333',
-    marginLeft:5,
+    marginLeft:0,
+    fontFamily: fonts.regular,
+    paddingTop: 2,
   },
   formButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 32,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,

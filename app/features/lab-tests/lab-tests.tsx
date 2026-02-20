@@ -642,7 +642,7 @@ export default function LabTestsScreen() {
           <Image
             source={
               imageError
-                ? images.labdefault 
+                ? images.labdefault
                 : { uri: item.groupImage }
             }
             style={[styles.subTestImage, { width: 45, height: 45 }]}
@@ -669,63 +669,63 @@ export default function LabTestsScreen() {
       style={styles.testCard}
     >
       {selectedCategory === "lab-test" && (<>
-      <View style={styles.cardContainer}>
-       <View style={styles.testCard1}>
-        <View style={styles.testInfo}>
-          <Text style={styles.testName}>{item.name}</Text>
+        <View style={styles.cardContainer}>
+          <View style={styles.testCard1}>
+            <View style={styles.testInfo}>
+              <Text style={styles.testName}>{item.name}</Text>
 
-          <Text style={styles.priceRow}>
-            Starting from  <Text style={styles.originalPrice}>
-              ₹{item.price}
-            </Text>
-            {' '}
-            <Text style={styles.finalPrice}>
-              ₹{item.curonnPrice}
-            </Text>
-          </Text>
+              <Text style={styles.priceRow}>
+                Starting from  <Text style={styles.originalPrice}>
+                  ₹{item.price}
+                </Text>
+                {' '}
+                <Text style={styles.finalPrice}>
+                  ₹{item.curonnPrice}
+                </Text>
+              </Text>
 
-          {item.reportTime && (
-            <Text style={styles.testReportTime}>
-              Report within {item.reportTime}
-            </Text>
-          )}
+              {item.reportTime && (
+                <Text style={styles.testReportTime}>
+                  Report within {item.reportTime}
+                </Text>
+              )}
 
-          {item.testsList && (
-            <Text style={styles.testReportTime}>
-              Tests: {item.testsList}
-            </Text>
-          )}
-        </View>
-        </View>
-         <View style={styles.testActioncard}>
-              <Button
-                mode="outlined"
-                style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-                contentStyle={{
-                  height: 40,
-                  paddingVertical: 0,
-                  justifyContent: 'center',
-                }}
-                textColor="#000000"
-                onPress={() =>
-                  router.push({
-                    pathname: "/viewdetails",
-                    params: {
-                      id: item.id,
-                      type: selectedCategory,
-                    },
-                  })
-                }
-              >
-                View Details
-              </Button>
-              <PrimaryButton
-                title="Book Now"
-                onPress={() => handleBookTest(item.id)}
-                style={styles.bookButton}
-              />
+              {item.testsList && (
+                <Text style={styles.testReportTime}>
+                  Tests: {item.testsList}
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={styles.testActioncard}>
+            <Button
+              mode="outlined"
+              style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
+              contentStyle={{
+                height: 40,
+                paddingVertical: 0,
+                justifyContent: 'center',
+              }}
+              textColor="#000000"
+              onPress={() =>
+                router.push({
+                  pathname: "/viewdetails",
+                  params: {
+                    id: item.id,
+                    type: selectedCategory,
+                  },
+                })
+              }
+            >
+              View Details
+            </Button>
+            <PrimaryButton
+              title="Book Now"
+              onPress={() => handleBookTest(item.id)}
+              style={styles.bookButton}
+            />
 
-            </View> </View>
+          </View> </View>
         {/* <View style={styles.testAction}>
           <PrimaryButton
             title="Book Now"
@@ -827,16 +827,16 @@ export default function LabTestsScreen() {
 
       <View style={styles.containercontent}> */}
 
-       
-          {/* Search Bar */}
-          
-             <LinearGradient
+
+        {/* Search Bar */}
+
+        <LinearGradient
           colors={[
             "rgba(255, 255, 255, 1)",
-            "rgba(247, 84, 10, 0.3)",
+            "rgba(247, 84, 10, 0.2)",
           ]}
-          start={{ x: 0.2, y: 1}}
-          end={{ x: 0.1, y: 0.2 }}
+          start={{ x: 0.1, y: 0.4 }}
+          end={{ x: 0.1, y: 0.1 }}
           style={{
             paddingHorizontal: 20, // ✅ works
             paddingVertical: 5,
@@ -893,8 +893,8 @@ export default function LabTestsScreen() {
               </View>
             )}
 
-            </LinearGradient>
-             <View style={styles.containercontent}>
+        </LinearGradient>
+        <View style={styles.containercontent}>
           <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 5 }}>
             <View style={styles.testItemsContainer}>
               <FlatList
@@ -996,7 +996,7 @@ export default function LabTestsScreen() {
           <View style={styles.backgroundImageContainer}>
             {/* ...existing code... */}
           </View>
-</View>
+        </View>
         {/* </LinearGradient> */}
 
         {/* Booking Modal */}
@@ -1041,7 +1041,7 @@ const styles = StyleSheet.create({
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
     paddingTop: 0,
-            paddingVertical: 7,
+    paddingVertical: 7,
   },
   content: {
     flex: 1,

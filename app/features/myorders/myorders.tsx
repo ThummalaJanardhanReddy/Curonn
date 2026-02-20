@@ -27,6 +27,7 @@ import { useUser } from "../../shared/context/UserContext";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { images } from "../../../assets";
 import OrderDetails from "./OrderDetails";
+import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
 
 export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -117,13 +118,10 @@ export default function OrdersScreen() {
   const filters = useMemo(
     () => [
       { key: "all", title: "All Orders" },
-      { key: "Requested", title: "Requested" },
-      { key: "Inprogress", title: "Inprogress" },
-      { key: "Rescheduled", title: "Rescheduled" },
+      { key: "Requested", title: "In Progress" },
       { key: "Completed", title: "Completed" },
       { key: "Cancelled", title: "Cancelled" },
-      { key: "Ongoing", title: "Ongoing" },
-      { key: "Pending", title: "Pending" },
+     
     ],
     []
   );
@@ -156,8 +154,6 @@ export default function OrdersScreen() {
   const filteredOrders = orders;
 
 
-
-
   const fetchAllOrders = async (patientId: number, statusId: number = 0, searchorderno?: string) => {
     try {
       let query = `?patientId=${patientId}&statusId=${statusId}`;
@@ -178,6 +174,34 @@ export default function OrdersScreen() {
     }
   };
 
+
+  const formatDate = (isoDate: string) => {
+  const date = new Date(isoDate);
+
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const getOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  const month = months[date.getMonth()];
+  const day = getOrdinal(date.getDate());
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  const ampm = hours >= 12 ? "pm" : "am";
+  hours = hours % 12 || 12;
+
+  return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+};
+
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
     setSelectedOrder({
@@ -193,28 +217,35 @@ export default function OrdersScreen() {
     ({ item }: { item: any }) => {
       // Map orderType to category
       let category = "";
+      let iconSource = null;
       switch (item.orderType) {
         case "Single Test":
           category = "Lab Test";
+          iconSource = images.labicon;
           break;
         case "Package":
           category = "Health Checks";
+          iconSource = images.labicon;
           break;
-        case "Scan":
-          category = "Scan";
+        case "Xray":
+          category = "Xray";
+          iconSource = images.labicon;
           break;
         case "Medicine":
           category = "Medicine";
+          iconSource = images.medicalicon;
           break;
         case "Consultation":
           category = "Consultation";
+          iconSource = images.consultationicon;
           break;
         default:
           category = item.orderType;
+          iconSource = null;
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? new Date(item.createdOn).toLocaleDateString() : "";
+      const createdOn = item.createdOn ? formatDate(item.createdOn): "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
@@ -238,27 +269,37 @@ export default function OrdersScreen() {
         Rescheduled: "#00BCD4",
       };
       const statusTextColor = statusTextColors[item.statusName] || "#000";
+      // Display 'Inprogress' instead of 'Requested'
+      const displayStatusName = item.statusName === "Requested" ? "In Progress" : item.statusName;
       return (
         <TouchableOpacity onPress={() => handleOrderPress(item)}>
           <View style={styles.orderCard}>
-            {/* Title */}
-            <Text style={styles.title}>{item.title}</Text>
-            <View style={styles.categoryrow}>
-              <Text style={styles.category}>{category}</Text>
-              {/* CreatedOn Date */}
-              <Text style={styles.categorytitle}>Created: {createdOn}</Text>
+            <View style={styles.orderLeft}>
+              {iconSource && (
+                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain',borderRadius:10 }} />
+              )}
+              <Text style={styles.orderno}>{item.orderNo}</Text>
             </View>
-            {item.orderType !== "Consultation" && (
-              <View style={styles.paymentrow}>
-                <Text style={styles.paymentheader}>Payment:</Text>
-                <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text>
+            <View style={styles.orderRight}>
+              {/* Title */}
+              <Text style={styles.title}>{item.title}</Text>
+              <View style={styles.categoryrow}>
+                <Text style={styles.categorytitle}>{createdOn}</Text>
+                {/* <Text style={styles.category}>{category}</Text> */}
+                {/* CreatedOn Date */}
               </View>
-            )}
-           
-
-            {/* StatusName with background color */}
-            <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 16, paddingVertical: 4, marginTop: 4 }}>
-              <Text style={{ color: statusTextColor, fontWeight: "bold", fontSize: 11 }}>{item.statusName}</Text>
+              <View style={styles.categoryrow}>
+                {/* StatusName with background color */}
+                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2,paddingTop:4, marginTop: 0 }}>
+                  <Text style={{ color: statusTextColor, fontSize: 10,fontFamily:fonts.regular }}>{displayStatusName}</Text>
+                </View>
+                {item.orderType !== "Consultation" && (
+                  <View style={styles.paymentrow}>
+                    {/* <Text style={styles.paymentheader}>Payment:</Text> */}
+                    <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -300,13 +341,27 @@ export default function OrdersScreen() {
       <View style={styles.defaultHeader}>
         <CommonHeader
           title="My Orders"
+          showProfile={false}
           showCart={false}
           showLocation={false}
           onProfilePress={() => console.log('Profile pressed')} />
       </View>
+
+               <LinearGradient
+                colors={[
+                  "rgba(255, 255, 255, 1)",
+                  "rgba(247, 84, 10, 0.2)",
+                ]}
+                start={{ x: 0.1, y: 0.6}}
+                end={{ x: 0.1, y: 0.1 }}
+                style={{
+                  paddingHorizontal: 0, // ✅ works
+                  paddingVertical: 5,
+                }}
+              >
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Image source={images.icons.search} style={styles.searchIcon} />
+           <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search for Order Id"
@@ -337,10 +392,10 @@ export default function OrdersScreen() {
             keyExtractor={(item) => item.key}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList} />
+            contentContainerStyle={[styles.filtersList, { paddingLeft: 20,paddingRight:20 }]} />
         </View>
       )}
-
+</LinearGradient>
       {/* Orders List */}
       <View style={styles.ordersdataContainer}>
         {loading ? (
@@ -393,9 +448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
   },
   filtersContainer: {
-    backgroundColor: "#fff",
     paddingVertical: 10,
-    paddingHorizontal: getResponsiveSpacing(20),
   },
   ordersdataContainer: {
     flex: 1,
@@ -407,33 +460,40 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 20,
   },
   filterChip: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+     paddingHorizontal: 20,
+    paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: "rgba(105, 70, 100, 0.4)",
     color: "rgba(0, 0, 0, 1)",
     marginRight: 10,
+    fontFamily: fonts.regular,
   },
   selectedFilterChip: {
     backgroundColor: "#694664",
+    
+  },
+    orderRight: {
+    flex: 1,
   },
   filterChipText: {
-    fontSize: 14,
-    color: "rgba(0, 0, 0, 1)",
-    fontWeight: "500",
+   fontSize: 13,
+    fontWeight: "400",
+    color: "#251729",
+    fontFamily: fonts.regular,
+    lineHeight: 20,
   },
   selectedFilterChipText: {
-    color: "#fff",
+     color: "#fff",
+    fontFamily: fonts.semiBold,
   },
   ordersList: {
     // padding: 20,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 16,
     color: "#000",
-    marginBottom: 4,
-    fontFamily: fonts.semiBold,
+    fontWeight: "600",
+    fontFamily: fonts.bold,
   },
   category: {
     fontSize: 12,
@@ -453,10 +513,11 @@ const styles = StyleSheet.create({
      fontFamily: fonts.semiBold,
   },
    paymentamount: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 13,
+    color: "#000000",
     marginBottom: 4,
-    marginTop:2
+    marginTop:2,
+      fontFamily: fonts.semiBold,
   },
   span:{
     fontSize: 12,
@@ -464,19 +525,20 @@ const styles = StyleSheet.create({
     
   },
    
+  
+  
   orderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     marginBottom: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e2e2e2",
-    shadowColor: "#dcdcdc",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+
   },
 
   categoryrow: {
@@ -487,7 +549,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
 
-
+  orderLeft: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  orderno: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+  },
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -579,7 +650,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     marginBottom: 5,
-    paddingHorizontal: getResponsiveSpacing(20),
+    paddingHorizontal: 20
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -589,7 +660,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
+    height: 40,
+    marginTop: 5
   },
   searchIcon: {
     width: 16,
@@ -599,9 +672,11 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 12,
     paddingVertical: 4,
-    color: "#333",
+    color: "#000",
+    paddingTop: 4,
+    fontFamily: fonts.regular,
   },
   clearButton: {
     padding: 4,

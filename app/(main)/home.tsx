@@ -8,6 +8,10 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useUser } from "../shared/context/UserContext";
+import { Dimensions } from "react-native";
+// Carousel slider for orders
+
 import {
   Animated,
   FlatList,
@@ -22,6 +26,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import OrderDetails from "../features/myorders/OrderDetails";
 import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../assets";
@@ -33,9 +38,9 @@ import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
-  SCREEN_WIDTH,
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
+ const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // FAQ data
 const faqs = [
@@ -68,8 +73,159 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
+  
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+
+ 
+// Fetch all orders for the user
+const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
+  try {
+    let query = `?patientId=${patientId}&statusId=${statusId}`;
+    const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
+    if (response.isSuccess && Array.isArray(response.data)) {
+      return response.data;
+    } else {
+      return [];
+    }
+  } catch (error) {
+    return [];
+  }
+};
+  const { userData } = useUser();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [showOrderSlider, setShowOrderSlider] = useState(false);
+    const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
+    const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
+  useEffect(() => {
+    if (userData?.e_id) {
+      fetchAllOrders(userData.e_id, 0).then((data) => {
+        setOrders(data);
+        setShowOrderSlider(Array.isArray(data) && data.length > 0);
+      });
+    }
+  }, [userData?.e_id]);
+  // Order slider card
+  const [activeOrderIndex, setActiveOrderIndex] = useState(0);
+  const handleCloseOrderCard = (index: number) => {
+    const newOrders = orders.filter((_, i) => i !== index);
+    setOrders(newOrders);
+    if (activeOrderIndex >= newOrders.length) {
+      setActiveOrderIndex(Math.max(0, newOrders.length - 1));
+    }
+    if (newOrders.length === 0) setShowOrderSlider(false);
+  };
+
+  // Format date as 'Feb 20th, 2026, 12:14 PM'
+  const formatDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    const getOrdinal = (n: number) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const month = months[date.getMonth()];
+    const day = getOrdinal(date.getDate());
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${month} ${day}, ${year}, ${hours}:${minutes} ${ampm}`;
+  };
+
+  const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
+    const createdOn = item.createdOn ? formatDate(item.createdOn) : "";
+    // Status display
+    const status = item.statusName === 'Requested' ? 'In Progress' : (item.statusName || 'N/A');
+    // Status color mapping
+    const statusColors: { [key: string]: string } = {
+      Requested: "#d0eaff",
+      Completed: "#ccface",
+      Cancelled: "#ffd8d5",
+      Inprogress: "#f8d7a7",
+      Ongoing: "#f7cdff",
+      Pending: "#ffeeba",
+      Rescheduled: "#bbecf3",
+    };
+    const statusTextColors: { [key: string]: string } = {
+      Requested: "#006cc5",
+      Completed: "#4CAF50",
+      Cancelled: "#F44336",
+      Inprogress: "#FF9800",
+      Ongoing: "#9C27B0",
+      Pending: "#9e7600",
+      Rescheduled: "#00BCD4",
+    };
+    // Normalize status key for color mapping
+    const statusKey = item.statusName === 'Requested' ? 'Requested' : (item.statusName || '');
+    const statusBgColor = statusColors[statusKey] || "#666";
+    const statusTxtColor = statusTextColors[statusKey] || "#fff";
+    return (
+      <View style={{
+        width: SCREEN_WIDTH * 0.95,
+        marginHorizontal: 10,
+        borderRadius: 18,
+        padding: 5,
+        marginBottom: 10,
+        position: 'relative',
+        backgroundColor: 'transparent',
+      }}>
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 10, right: 20, zIndex: 2 }}
+          onPress={() => handleCloseOrderCard(index)}
+        >
+          <Image source={images.icons.close} style={{ width: 22, height: 22, tintColor: '#694664' }} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 14,  color: '#C15E9D', marginBottom: 2,fontFamily:fonts.bold }}>{item.title}</Text>
+
+        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2,fontFamily:fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Order Created :</Text> {createdOn}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+          <Text style={{ fontSize: 12, color: '#333', fontFamily: fonts.bold }}>Status: </Text>
+          <View style={{
+            backgroundColor: statusBgColor,
+            borderRadius: 15,
+            paddingHorizontal: 8,
+            paddingVertical: 1,
+            marginLeft: 4,
+          }}>
+            <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent:'space-between', marginBottom: 0 }}>
+        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2, fontFamily: fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Amount:</Text> ₹{item.paymentAmount ?? 'N/A'}</Text>
+        {/* View Button for OrderDetails */}
+        {item.masterId && (
+          <TouchableOpacity
+            style={{
+              marginTop: -8,
+              marginRight: 10,
+              alignSelf: 'flex-end',
+              backgroundColor: '#C15E9D',
+              borderRadius: 15,
+              paddingHorizontal: 16,
+              paddingVertical: 3,
+              paddingTop: 5,
+            }}
+            onPress={() => {
+              setSelectedOrderDetails(item);
+              setOrderDetailsModalVisible(true);
+            }}
+          >
+            <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 11 }}>View</Text>
+          </TouchableOpacity>
+        )}
+        </View>
+      </View>
+    );
+    // State for OrderDetails modal
+
+        
+  };
 
   useEffect(() => {
     async function fetchArticles() {
@@ -355,7 +511,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
+       <StatusBar
         style="light"
         animated
       />
@@ -378,11 +534,34 @@ export default function HomeScreen() {
           // You can add logic here to update the location state
         }}
       />
+     
+     
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {/* Orders Slider (Bottom) */}
+        {showOrderSlider && (
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <FlatList
+              data={orders}
+              renderItem={({ item, index }) => renderOrderCard({ item, index })}
+              keyExtractor={(item, idx) => item.orderNo + '-' + idx}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
+              style={{ maxHeight: 170 }}
+              onMomentumScrollEnd={e => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
+                setActiveOrderIndex(idx);
+              }}
+              initialScrollIndex={activeOrderIndex}
+              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
+            />
+          </View>
+        )}
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
@@ -638,6 +817,78 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
+ {/* Order Slider Fixed at Bottom */}
+      {showOrderSlider && orders.length > 0 && (
+        <View style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingVertical: 8,
+          // marginHorizontal: SCREEN_WIDTH * 0.075,
+          // borderTopLeftRadius: 18,
+          // borderTopRightRadius: 18,
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 8,
+          zIndex: 100,
+          backgroundColor: '#fff',
+        }}>
+          <FlatList
+            data={orders}
+            renderItem={renderOrderCard}
+            keyExtractor={(_, idx) => idx.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ alignItems: 'flex-start', paddingHorizontal: 10 }}
+            style={{ flexGrow: 0 }}
+            pagingEnabled
+            ref={flatListRef => {
+              // Store ref for programmatic scroll
+              if (flatListRef) {
+                (HomeScreen as any).flatListRef = flatListRef;
+              }
+            }}
+            onMomentumScrollEnd={e => {
+              const cardWidth = SCREEN_WIDTH * 0.15 + SCREEN_WIDTH * 0.075 * 2;
+              let index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+              if (orders.length > 1) {
+                if (index >= orders.length) {
+                  // If scrolled past last, jump to first
+                  index = 0;
+                  if ((HomeScreen as any).flatListRef) {
+                    (HomeScreen as any).flatListRef.scrollToIndex({ index: 0, animated: false });
+                  }
+                } else if (index < 0) {
+                  // If scrolled before first, jump to last
+                  index = orders.length - 1;
+                  if ((HomeScreen as any).flatListRef) {
+                    (HomeScreen as any).flatListRef.scrollToIndex({ index: orders.length - 1, animated: false });
+                  }
+                }
+              }
+              setActiveOrderIndex(index);
+            }}
+          />
+          {/* Carousel Dots */}
+          <View style={{ width: '80%', alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
+            {orders.map((_, idx) => (
+              <View
+                key={idx}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  marginHorizontal: 4,
+                  backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+      
       {/* Full Article View Modal */}
       <Modal
         visible={!!selectedArticle}
@@ -838,6 +1089,22 @@ export default function HomeScreen() {
         </SafeAreaView>
       </Modal>
       {/* </SafeAreaView> */}
+
+          <OrderDetails
+        visible={orderDetailsModalVisible}
+        order={selectedOrderDetails}
+        statusName={selectedOrderDetails?.statusName || ''}
+        onClose={() => setOrderDetailsModalVisible(false)}
+        refreshOrders={async () => {
+          if (userData?.e_id) {
+            const ordersData = await fetchAllOrders(userData.e_id, 0);
+            setOrders(ordersData);
+          }
+        } } />
+    
+  
+
+     
     </View>
   );
 }
