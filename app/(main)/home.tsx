@@ -40,7 +40,7 @@ import {
   getResponsiveSpacing,
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
- const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // FAQ data
 const faqs = [
@@ -73,25 +73,25 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
-  
+
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
 
- 
-// Fetch all orders for the user
-const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
-  try {
-    let query = `?patientId=${patientId}&statusId=${statusId}`;
-    const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
-    if (response.isSuccess && Array.isArray(response.data)) {
-      return response.data;
-    } else {
+
+  // Fetch all orders for the user
+  const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
+    try {
+      let query = `?patientId=${patientId}&statusId=${statusId}`;
+      const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
+      if (response.isSuccess && Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        return [];
+      }
+    } catch (error) {
       return [];
     }
-  } catch (error) {
-    return [];
-  }
-};
+  };
   const { userData } = useUser();
   const [orders, setOrders] = useState<any[]>([]);
   // Memoized sorted orders: always sort by createdOn descending before slicing
@@ -111,8 +111,8 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
       .slice(3);
   }, [orders]);
   const [showOrderSlider, setShowOrderSlider] = useState(false);
-    const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
-    const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
+  const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
   // Always fetch latest orders on mount and when page is focused
   useFocusEffect(
     useCallback(() => {
@@ -256,7 +256,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
             <Text
-              style={{ fontSize: 11, color: '#888', fontFamily: fonts.medium, marginRight: 6,lineHeight:15 }}
+              style={{ fontSize: 11, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
@@ -301,7 +301,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     );
     // State for OrderDetails modal
 
-        
+
   };
 
   useEffect(() => {
@@ -588,7 +588,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
 
   return (
     <View style={styles.container}>
-       <StatusBar
+      <StatusBar
         style="light"
         animated
       />
@@ -611,14 +611,14 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           // You can add logic here to update the location state
         }}
       />
-     
-     
+
+
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-       
+
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
@@ -874,7 +874,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
         </View>
       </ScrollView>
 
- {/* Order Slider Fixed at Bottom */}
+      {/* Order Slider Fixed at Bottom */}
       {showOrderSlider && orders.length > 0 && (
         <View style={{
           position: 'absolute',
@@ -893,28 +893,28 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           borderTopRightRadius: 15,
         }}>
           <FlatList
-                  data={latestOrders}
-                  renderItem={({ item, index }) => renderOrderCard({ item, index })}
-                  keyExtractor={(item, idx) => (item.orderNo ? item.orderNo : idx) + '-' + idx}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
-                   style={{ flexGrow: 0 }}
-                  onMomentumScrollEnd={e => {
-                    const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
-                    setActiveOrderIndex(idx);
-                  }}
-                  initialScrollIndex={
-                    latestOrders.length > 0 && activeOrderIndex < latestOrders.length
-                      ? activeOrderIndex
-                      : 0
-                  }
-                  getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
-                />
+            data={latestOrders}
+            renderItem={({ item, index }) => renderOrderCard({ item, index })}
+            keyExtractor={(item, idx) => (item.orderNo ? item.orderNo : idx) + '-' + idx}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
+            style={{ flexGrow: 0 }}
+            onMomentumScrollEnd={e => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
+              setActiveOrderIndex(idx);
+            }}
+            initialScrollIndex={
+              latestOrders.length > 0 && activeOrderIndex < latestOrders.length
+                ? activeOrderIndex
+                : 0
+            }
+            getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
+          />
         </View>
       )}
-      
+
       {/* Full Article View Modal */}
       <Modal
         visible={!!selectedArticle}
@@ -943,7 +943,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
                   />
                   {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
                   <View style={styles.articalcontentdata}>
-                  <Text style={styles.descriptiondata}>{selectedArticle.descriptionName}</Text>
+                    <Text style={styles.descriptiondata}>{selectedArticle.descriptionName}</Text>
                   </View>
                   {/* If you have more fields, render them here */}
                 </>
@@ -1116,7 +1116,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
       </Modal>
       {/* </SafeAreaView> */}
 
-          <OrderDetails
+      <OrderDetails
         visible={orderDetailsModalVisible}
         order={selectedOrderDetails}
         statusName={selectedOrderDetails?.statusName || ''}
@@ -1126,11 +1126,11 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
             const ordersData = await fetchAllOrders(userData.e_id, 0);
             setOrders(ordersData);
           }
-        } } />
-    
-  
+        }} />
 
-     
+
+
+
     </View>
   );
 }
@@ -1178,7 +1178,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     // backgroundColor: '#f5f5f5',
-    
+
   },
   transhead: {
     fontSize: 50,
@@ -1190,8 +1190,8 @@ const styles = StyleSheet.create({
   transinner: {
     fontSize: 50, fontWeight: 600, color: colors.white,
     fontFamily: fonts.bold,
-    lineHeight:70
-    
+    lineHeight: 70
+
   },
   curonhealth: {
     fontSize: 16, fontWeight: 400, color: colors.white,
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    
+
   },
   serviceCardWrapper: {
     // width: '48%',
@@ -1308,7 +1308,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#000000",
     marginBottom: 12,
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   featureButton: {
     alignSelf: "flex-start",
@@ -1351,7 +1351,7 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   ambulanceTitle: {
-     fontSize: 20,
+    fontSize: 20,
     color: "#000000",
     lineHeight: 24,
     marginBottom: 4,

@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   REGISTRATION_COMPLETED: 'registration_completed',
   USER_DATA: 'user_data',
   AUTH_TOKEN: 'auth_token',
+  CART_DATA: 'cart_data',
 } as const;
 
 // Registration status
@@ -63,6 +64,25 @@ export const getAuthToken = async (): Promise<string | null> => {
   }
 };
 
+// Cart data
+export const saveCartData = async (cartData: any[]) => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.CART_DATA, JSON.stringify(cartData));
+  } catch (error) {
+    console.error('Error saving cart data:', error);
+  }
+};
+
+export const getCartData = async (): Promise<any[]> => {
+  try {
+    const value = await AsyncStorage.getItem(STORAGE_KEYS.CART_DATA);
+    return value ? JSON.parse(value) : [];
+  } catch (error) {
+    console.error('Error reading cart data:', error);
+    return [];
+  }
+};
+
 // Clear all data (logout)
 export const clearAllData = async () => {
   try {
@@ -70,6 +90,7 @@ export const clearAllData = async () => {
       STORAGE_KEYS.REGISTRATION_COMPLETED,
       STORAGE_KEYS.USER_DATA,
       STORAGE_KEYS.AUTH_TOKEN,
+      STORAGE_KEYS.CART_DATA,
     ]);
   } catch (error) {
     console.error('Error clearing data:', error);

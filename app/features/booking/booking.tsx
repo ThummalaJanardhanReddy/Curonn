@@ -1,5 +1,6 @@
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { getResponsiveFontSize, getResponsiveSpacing } from "@/app/shared/utils/responsive";
+import CartItemsList from "@/app/shared/components/CartItemsList";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useState, useEffect, useMemo } from "react";
@@ -28,6 +29,7 @@ import {
 import LocationSelection from "../location/location-selection";
 import AddressSelection from "../address/address-selection";
 import { useUser } from "../../shared/context/UserContext";
+import { useCart } from "../../shared/context/CartContext";
 // import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
@@ -74,8 +76,7 @@ export default function BookingScreen({
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
   const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
-  const [incomingCartItems, setIncomingCartItems] = useState<Array<any>>([]);
-
+  const { cartItems, updateQuantity, removeItem } = useCart();
   // ─── Shared state ──────────────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -585,7 +586,7 @@ export default function BookingScreen({
                 it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
               medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
             }));
-            setIncomingCartItems(normalized);
+            // Since we use the global Cart Context, we do not need to populate incoming cart items.
           }
         } catch (e) {
           console.warn("Failed to parse cartItems from query params", e);
@@ -601,13 +602,6 @@ export default function BookingScreen({
     try {
       const g = (global as any).__BOOKING_CART;
       if (g && Array.isArray(g) && g.length > 0) {
-        const normalized = g.map((it: any) => ({
-          ...it,
-          medicineName:
-            it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
-          medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
-        }));
-        setIncomingCartItems(normalized);
         setIsFromMedicalFlag(true);
         try {
           (global as any).__BOOKING_CART = null;
@@ -620,12 +614,12 @@ export default function BookingScreen({
 
   // Medicine cart totals
   const itemsTotal = useMemo(() => {
-    return incomingCartItems.reduce((sum: number, it: any) => {
+    return cartItems.reduce((sum: number, it: any) => {
       const p = Number(it.price || 0);
       const q = Number(it.quantity || 1);
       return sum + p * q;
     }, 0);
-  }, [incomingCartItems]);
+  }, [cartItems]);
 
   const deliveryCharges = useMemo(() => {
     if (itemsTotal === 0) return 0;
@@ -638,22 +632,34 @@ export default function BookingScreen({
   );
 
   // Quantity handlers for medical cart items
-  const handleIncreaseQuantity = (index: number) => {
-    setIncomingCartItems((prev) => {
-      const copy = [...prev];
-      const current = Number(copy[index]?.quantity || 1);
-      copy[index] = { ...copy[index], quantity: current + 1 };
-      return copy;
-    });
+  const handleIncreaseQuantity = async (index: number) => {
+    const item = cartItems[index];
+    if (item && item.cartId) {
+      await updateQuantity(item.cartId, item.quantity + 1, item.id);
+    }
   };
 
-  const handleDecreaseQuantity = (index: number) => {
-    setIncomingCartItems((prev) => {
-      const copy = [...prev];
-      const current = Math.max(1, Number(copy[index]?.quantity || 1) - 1);
-      copy[index] = { ...copy[index], quantity: current };
-      return copy;
-    });
+  const handleDecreaseQuantity = async (index: number) => {
+    const item = cartItems[index];
+    if (!item) return;
+
+    const currentQty = Number(item.quantity || 1);
+
+    if (currentQty <= 1) {
+      if (item.cartId) {
+        await removeItem(item.cartId, item.id);
+        setToastMessageMed({
+          title: "Item Removed",
+          subtitle: "Medicine removed from cart.",
+          type: "success",
+        });
+        setShowToastMed(true);
+      }
+    } else {
+      if (item.cartId) {
+        await updateQuantity(item.cartId, currentQty - 1, item.id);
+      }
+    }
   };
 
   // Medicine: date format DD/MM/YYYY
@@ -702,12 +708,12 @@ export default function BookingScreen({
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
       paymentAmount: Number(displayedTotal.toFixed(2)),
-      cartItems: incomingCartItems.map((ci: any) => ({
+      cartItems: cartItems.map((ci: any) => ({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
         medicineId: ci.medicineId || 0,
         patientId: userData?.e_id || 0,
-        medicineName: ci.medicineName || "",
+        medicineName: ci.medicineName || ci.name || "",
         quantity: ci.quantity || 1,
         price: ci.price || 0,
         offer: ci.offer || 0,
@@ -729,7 +735,7 @@ export default function BookingScreen({
     }
     return payload;
   };
-console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+  console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -785,7 +791,7 @@ console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null
 
   // Medicine: handleBookNow (now like lab flow)
   const handleBookNowMed = async () => {
-    if (incomingCartItems.length === 0) {
+    if (cartItems.length === 0) {
       setToastMessageMed({
         title: "Cart Empty",
         subtitle: "No medicines selected",
@@ -895,89 +901,28 @@ console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null
             showsVerticalScrollIndicator={false}
           >
             {/* Medicine List */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Medicine List</Text>
-              <View style={styles.medicineListCard}>
-                {incomingCartItems.length === 0 ? (
-                  <Text style={styles.emptyText}>No medicines selected</Text>
-                ) : (
-                  incomingCartItems.map((ci, idx) => (
-                    <View key={`${ci.medicineId ?? idx}_${ci.cartId ?? 0}`}>
-                      <View style={styles.medicineItem}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.medicineName}>
-                            {ci.medicineName}
-                          </Text>
-                          {ci.pack && (
-                            <Text style={styles.medicinePack}>{ci.pack}</Text>
-                          )}
-                          {ci.description && (
-                            <Text style={styles.medicineDesc} numberOfLines={2}>
-                              {ci.description}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.medicineRight}>
-                          <Text style={styles.medicinePrice}>
-                            {"\u20B9"}
-                            {(
-                              Number(ci.price || 0) * Number(ci.quantity || 1)
-                            ).toFixed(0)}
-                          </Text>
-                          <View style={styles.qtyControl}>
-                            <TouchableOpacity
-                              style={styles.qtyButton}
-                              onPress={() => handleDecreaseQuantity(idx)}
-                            >
-                              <Text style={styles.qtyBtnText}>
-                                {"\u2212"}
-                              </Text>
-                            </TouchableOpacity>
-                            <Text style={styles.qtyText}>
-                              {ci.quantity || 1}
-                            </Text>
-                            <TouchableOpacity
-                              style={styles.qtyButton}
-                              onPress={() => handleIncreaseQuantity(idx)}
-                            >
-                              <Text style={styles.qtyBtnText}>+</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </View>
-                      {idx !== incomingCartItems.length - 1 && (
-                        <View style={styles.itemDivider} />
-                      )}
-                    </View>
-                  ))
-                )}
-              </View>
-
-              <View style={styles.deliveryCard}>
-                <View style={styles.deliveryRow}>
-                  <Text style={styles.deliveryLabel}>Item Price</Text>
-                  <Text style={styles.deliveryValue}>
-                    {"\u20B9"}
-                    {itemsTotal.toFixed(0)}
-                  </Text>
-                </View>
-                <View style={styles.deliveryRow}>
-                  <Text style={styles.deliveryLabel}>Delivery Charges</Text>
-                  <Text style={styles.deliveryValue}>
-                    {"\u20B9"}
-                    {deliveryCharges}
-                  </Text>
-                </View>
-                <View style={styles.lineSeparator} />
-                <View style={[styles.deliveryRow, { marginTop: 6 }]}>
-                  <Text style={styles.toPayLabel}>TO PAY</Text>
-                  <Text style={styles.toPayValue}>
-                    {"\u20B9"}
-                    {displayedTotal.toFixed(0)}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <CartItemsList
+              items={cartItems.map((it: any, idx: number) => ({
+                id: (it.medicineId ?? it.id ?? idx).toString(),
+                name: it.medicineName || it.name || "",
+                price: Number(it.price || 0),
+                quantity: Number(it.quantity || 1),
+                subtitle: it.pack || it.subtitle || "",
+                description: it.description || "",
+                cartId: it.cartId
+              }))}
+              onIncreaseQuantity={(id) => {
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                if (idx !== -1) handleIncreaseQuantity(idx);
+              }}
+              onDecreaseQuantity={(id) => {
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                if (idx !== -1) handleDecreaseQuantity(idx);
+              }}
+              itemsTotal={itemsTotal}
+              deliveryCharges={deliveryCharges}
+              displayedTotal={displayedTotal}
+            />
 
             {/* Service Address */}
             <View style={styles.section}>
@@ -1465,9 +1410,9 @@ console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null
                     >
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
-                    
+
                   </View>
-                   <Button
+                  <Button
                     style={{
                       borderRadius: 8,
                       width: "80%",
@@ -2378,97 +2323,5 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderRadius: 20,
     padding: 8,
-  },
-  // Medicine-specific styles
-  medicineListCard: {
-    padding: 12,
-
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#dbdbdb",
-    marginBottom: getResponsiveSpacing(15),
-
-  },
-  emptyText: {
-    color: "#666",
-    fontSize: 14,
-    fontFamily: fonts.regular,
-  },
-  medicineItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  medicineName: {
-     fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(14), fontWeight: '600', color: '#000',
-    marginBottom: 6,
-  },
-  medicinePack: {
-    fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#8A6F7F', 
-    marginBottom: 4,
-  },
-  medicineDesc: {
-     fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#000', 
-  },
-  medicineRight: {
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  medicinePrice: {
-    fontSize: getResponsiveFontSize(16), color: '#C15E9C', fontFamily:fonts.semiBold,fontWeight: '600',
-    marginBottom: 0,
-  },
-  qtyControl: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 1, borderColor: '#C15E9C',marginTop: getResponsiveSpacing(2)
-  },
-  qtyButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: "transparent",
-  },
-  qtyBtnText: {
-    fontSize: getResponsiveFontSize(14), fontFamily:fonts.semiBold,color: '#C15E9C', fontWeight: '700'
-  },
-  qtyText: {
-    paddingHorizontal: 8,
-    fontFamily:fonts.semiBold,marginHorizontal: getResponsiveSpacing(5),color: '#C15E9C', fontSize: getResponsiveFontSize(14), 
-  },
-  itemDivider: {
-    height: 1,
-    backgroundColor: "#F5F5F5",
-  },
-  deliveryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  deliveryLabel: {
-    fontSize: 16,
-    color: "#333",
-    fontFamily: fonts.regular
-  },
-  deliveryValue: {
-    fontSize: 16,
-    color: "#333",
-  },
-  lineSeparator: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginVertical: 8,
-  },
-  toPayLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-  },
-  toPayValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.primary,
   },
 });

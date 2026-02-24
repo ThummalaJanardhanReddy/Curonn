@@ -16,6 +16,7 @@ import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fonts } from '../../shared/styles/fonts';
+import { useCart } from '../context/CartContext';
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
@@ -56,6 +57,7 @@ export default function CommonHeader({
   });
   const { getCurrentAddress, address } = useLocation();
   const { userData } = useUser();
+  const { cartCount } = useCart();
   const patientId = userData?.e_id;
 
   React.useEffect(() => {
@@ -210,21 +212,21 @@ export default function CommonHeader({
       <View style={styles.defaultHeader}>
         <View style={styles.headerLeft}>
           {showProfile && (
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={handleProfilePress}
-          >
-            {profileForm?.image ? (
-              <Image
-                source={{ uri: profileForm.image }}
-                style={styles.profileIcon}
-              />
-            ) : profileForm?.gender === 'Female' ? (
-              <WomenIcon width={40} height={40} style={styles.profileIcon} />
-            ) : (
-              <MenIcon width={40} height={40} style={styles.profileIcon} />
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
+              {profileForm?.image ? (
+                <Image
+                  source={{ uri: profileForm.image }}
+                  style={styles.profileIcon}
+                />
+              ) : profileForm?.gender === 'Female' ? (
+                <WomenIcon width={40} height={40} style={styles.profileIcon} />
+              ) : (
+                <MenIcon width={40} height={40} style={styles.profileIcon} />
+              )}
+            </TouchableOpacity>
           )}
           {showLocation ? (
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
@@ -245,7 +247,11 @@ export default function CommonHeader({
             onPress={handleCartPress}
           >
             <CartIcon style={styles.cartIcon} width={15} height={15} />
-          
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -376,5 +382,22 @@ const styles = StyleSheet.create({
   },
   cartIcon: {
     ...getResponsiveImageSize(28, 28),
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: getResponsiveSpacing(-8),
+    right: getResponsiveSpacing(-2),
+    backgroundColor: '#FF4444',
+    borderRadius: getResponsiveSpacing(10),
+    minWidth: getResponsiveSpacing(20),
+    height: getResponsiveSpacing(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(4),
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(9),
+    fontFamily: fonts.bold,
   },
 });

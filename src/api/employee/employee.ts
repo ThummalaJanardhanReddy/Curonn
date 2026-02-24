@@ -115,8 +115,8 @@ export const LabOrdersApi = {
 
 export const MedicalOrdersApi = {
   getMedicalOrderById: (medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
-  
-  getMedicalOrderFullById: (medicineOrderId: string | number) =>`/medicine-orders/medicine-order/get-by-id/${medicineOrderId}`,
+
+  getMedicalOrderFullById: (medicineOrderId: string | number) => `/medicine-orders/medicine-order/get-by-id/${medicineOrderId}`,
   medicineCancel: '/medicine-orders/cancel',
   getDrugGroups: '/medicine-orders/drug-groups',
   getActiveCart: '/medicine-orders/GetActiveCart',
@@ -124,7 +124,7 @@ export const MedicalOrdersApi = {
   updateCartQuantity: (cartId: number | string, quantity: number) =>
     `/medicine-orders/cart/update-quantity?cartId=${cartId}&quantity=${quantity}`,
   updateCartQuantityBase: '/medicine-orders/cart/update-quantity',
-  deleteCartItem: '/medicine-orders/cart/delete',
+  deleteCartItem: '/medicine-orders/delete-cart-item',
   getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
     `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
   saveOrder: '/medicine-orders/save-order',

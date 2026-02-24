@@ -345,6 +345,18 @@ export default function BookingPayLaterScreen() {
     return 'image/jpeg';
   };
 
+  // ── Remove image ─────────────────────────────────────────────────────
+  const handleRemoveImage = (indexToRemove: number) => {
+    setPrescriptionImages((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      prescriptionStore.set({
+        ...prescriptionStore.get(),
+        images: updated,
+      });
+      return updated;
+    });
+  };
+
   // ── Confirm order ────────────────────────────────────────────────────
   const handleConfirmOrder = async () => {
     // Validate address
@@ -444,7 +456,7 @@ export default function BookingPayLaterScreen() {
           // idx,
           fileName: f.fileName,
           mimeType: f.mimeType,
-          fileBase64: f.fileBase64.length,
+          fileBase64: f.fileBase64,
           //prefix: f.fileBase64?.substring(0, 50),
           //suffix: f.fileBase64?.substring(f.fileBase64.length - 10),
         })),
@@ -517,11 +529,19 @@ export default function BookingPayLaterScreen() {
                 style={{ marginBottom: getResponsiveSpacing(8) }}
               >
                 {prescriptionImages.map((img, idx) => (
-                  <Image
-                    key={`prescImg-${idx}`}
-                    source={{ uri: img.uri }}
-                    style={styles.prescriptionThumb}
-                  />
+                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(10) }}>
+                    <Image
+                      source={{ uri: img.uri }}
+                      style={[styles.prescriptionThumb, { marginRight: 0 }]}
+                    />
+                    <TouchableOpacity
+                      style={styles.removeImageIcon}
+                      onPress={() => handleRemoveImage(idx)}
+                      activeOpacity={0.7}
+                    >
+                      <Image source={images.icons.close} style={{ width: 10, height: 10, tintColor: '#fff' }} />
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </ScrollView>
             ) : (
@@ -889,6 +909,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 10,
     resizeMode: 'cover',
+  },
+  removeImageIcon: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#ff4444',
+    borderRadius: 12,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    zIndex: 10,
   },
   notesText: {
     fontSize: 13,

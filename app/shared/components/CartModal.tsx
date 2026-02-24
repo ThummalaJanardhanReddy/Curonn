@@ -1,16 +1,22 @@
 import React, { useCallback, useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { images } from '../../../assets';
+import { useCart } from '../context/CartContext';
+import CartItemsList from './CartItemsList';
+import axiosClient from '@/src/api/axiosClient';
+import ApiRoutes from '@/src/api/employee/employee';
+import { colors } from '../styles/commonStyles';
+import { router } from 'expo-router';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,30 +52,25 @@ export default function CartModal({ visible, onClose }: CartModalProps) {
     }
   }, [visible, showModal]);
 
-  // Dummy cart data
-  const cartItems = [
-    {
-      id: '1',
-      name: 'Blood Test Package',
-      price: 299,
-      quantity: 1,
-      image: images.icons.bloodTest,
-    },
-    {
-      id: '2',
-      name: 'Vitamin D Test',
-      price: 199,
-      quantity: 1,
-      image: images.icons.vitaminD,
-    },
-    {
-      id: '3',
-      name: 'Thyroid Profile',
-      price: 399,
-      quantity: 1,
-      image: images.icons.thyroid,
-    },
-  ];
+  const { cartItems, cartCount, refreshCart, updateQuantity, removeItem } = useCart();
+
+  const handleDecreaseQuantity = async (id: string) => {
+    const item = cartItems.find(it => it.id === id);
+    if (!item || !item.cartId) return;
+
+    if (item.quantity > 1) {
+      await updateQuantity(item.cartId, item.quantity - 1, id);
+    } else {
+      await removeItem(item.cartId, id);
+    }
+  };
+
+  const handleIncreaseQuantity = async (id: string) => {
+    const item = cartItems.find(it => it.id === id);
+    if (item && item.cartId) {
+      await updateQuantity(item.cartId, item.quantity + 1, id);
+    }
+  };
 
   const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -110,24 +111,15 @@ export default function CartModal({ visible, onClose }: CartModalProps) {
 
           {/* Cart Items */}
           <ScrollView style={styles.cartItemsContainer} showsVerticalScrollIndicator={false}>
-            {cartItems.map((item) => (
-              <View key={item.id} style={styles.cartItem}>
-                <Image source={item.image} style={styles.itemImage} />
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>₹{item.price}</Text>
-                </View>
-                <View style={styles.quantityContainer}>
-                  <TouchableOpacity style={styles.quantityButton}>
-                    <Text style={styles.quantityButtonText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.quantityText}>{item.quantity}</Text>
-                  <TouchableOpacity style={styles.quantityButton}>
-                    <Text style={styles.quantityButtonText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+            <CartItemsList
+              items={cartItems}
+              onIncreaseQuantity={handleIncreaseQuantity}
+              onDecreaseQuantity={handleDecreaseQuantity}
+              itemsTotal={totalAmount}
+              deliveryCharges={0}
+              displayedTotal={totalAmount}
+              showPricingDetails={false}
+            />
           </ScrollView>
 
           {/* Footer */}
@@ -136,7 +128,13 @@ export default function CartModal({ visible, onClose }: CartModalProps) {
               <Text style={styles.totalLabel}>Total Amount</Text>
               <Text style={styles.totalAmount}>₹{totalAmount}</Text>
             </View>
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity
+              style={styles.checkoutButton}
+              onPress={() => {
+                hideModal();
+                router.push('/cart' as any);
+              }}
+            >
               <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
             </TouchableOpacity>
           </View>
