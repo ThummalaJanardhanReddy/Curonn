@@ -43,6 +43,28 @@ export default function VerifyDetailsScreen() {
   const { userData, setUserData } = useUser();
   const [employeeId, setEmployeeId] = useState(userData.employeeId || "");
   const [email, setEmail] = useState(userData.email || "");
+
+  // Clear all persisted login data and reset fields on mount (for logout)
+  React.useEffect(() => {
+    const clearLoginData = async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.clear();
+        try {
+          const SecureStore = await import('expo-secure-store');
+          if (SecureStore.deleteItemAsync) {
+            await SecureStore.deleteItemAsync('userToken');
+            await SecureStore.deleteItemAsync('userData');
+          }
+        } catch {}
+      } catch {}
+    };
+    clearLoginData();
+    setUserData({});
+    setEmployeeId("");
+    setEmail("");
+  }, []);
+
   const [employeeIdError, setEmployeeIdError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [commonError, setCommonError] = useState("");

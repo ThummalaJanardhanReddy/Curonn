@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import axiosClient from '../../../src/api/axiosClient';
+import { SafeAreaView } from "react-native-safe-area-context";
 import ApiRoutes from '../../../src/api/employee/employee';
 import {
   FlatList,
@@ -11,17 +12,25 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+    StatusBar as RNStatusBar,
+     StatusBar,
+     Platform
 } from 'react-native';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
-import { colors } from '../../shared/styles/commonStyles';
+import commonStyles, { colors } from '../../shared/styles/commonStyles';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from '../../shared/utils/responsive';
 import { useUser } from '../../shared/context/UserContext';
-
+import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
+import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
+import {fonts} from '@/app/shared/styles/fonts';
+import { LinearGradient } from "expo-linear-gradient";
+import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
+import { useFocusEffect } from "@react-navigation/native";
 interface Medicine {
   id: string;
   name: string;
@@ -39,9 +48,14 @@ interface Medicine {
   streepBoxPrice?: number;
   streepBoxQty?: string;
   totalPrice?: number;
+  drugGroup?: string;
 }
 
 export default function MedicineListScreen() {
+  // State for medicines fetched from API
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  // Get drugGroup from the first medicine (if available)
+  const drugGroup = (medicines?.length ?? 0) > 0 ? medicines[0]?.drugGroup ?? '' : '';
   const { userData } = useUser();
   const patientId = userData?.e_id ?? 0;
   const { category } = useLocalSearchParams();
@@ -51,6 +65,17 @@ export default function MedicineListScreen() {
   const [cartServerIds, setCartServerIds] = useState<{ [key: string]: number }>({});
   // Per-item loading state to prevent duplicate requests
   const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>({});
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        const timeout = setTimeout(() => {
+          // Use React Native StatusBar API to set background color on Android
+          RNStatusBar.setBackgroundColor("#ffffff", true);
+        }, 400); // Adjust timeout as needed
+        return () => clearTimeout(timeout);
+      }
+    }, [])
+  );
 
   // API payload and response types for clarity
   type SaveCartPayload = {
@@ -74,7 +99,7 @@ export default function MedicineListScreen() {
   };
 
   // State for medicines fetched from API
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -103,6 +128,7 @@ export default function MedicineListScreen() {
       streepBoxPrice: original,
       streepBoxQty: item.streepBoxQty ?? '',
       totalPrice: item.totalPrice ?? 0,
+      drugGroup: item.drugGroup ?? '',
     };
   };
 
@@ -372,7 +398,13 @@ export default function MedicineListScreen() {
   }, [cart]);
 
   return (
+     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
     <View style={styles.container}>
+      <StatusBar
+                barStyle="dark-content"
+                translucent={false}
+                backgroundColor="#ffffffff"
+              />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -385,7 +417,8 @@ export default function MedicineListScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
-            <Image source={images.icons.cart} style={styles.cartIcon} />
+            {/* <Image source={images.icons.cart} style={styles.cartIcon} /> */}
+             <CartIcon style={styles.cartIcon} width={15} height={15} />
             {getTotalCartItems() > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{getTotalCartItems()}</Text>
@@ -395,14 +428,26 @@ export default function MedicineListScreen() {
         </View>
       </View>
 
+<LinearGradient
+        colors={[
+          "rgba(255, 255, 255, 1)",
+          "rgba(247, 84, 10, 0.2)",
+        ]}
+        start={{ x: 0.1, y: 0.4 }}
+        end={{ x: 0.1, y: 0.1 }}
+        style={{
+          paddingHorizontal: 20, // ✅ works
+          paddingVertical: 5,
+        }}
+      >
       {/* Search Field */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Image source={images.icons.search} style={styles.searchIcon} />
+          <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for medicines"
-            placeholderTextColor="#999"
+            placeholder="Search for Medicines"
+            placeholderTextColor="#000"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -416,7 +461,13 @@ export default function MedicineListScreen() {
           )}
         </View>
       </View>
-
+      </LinearGradient>
+      <View style={styles.content}>
+          {/* Display drugGroup if available */}
+          {drugGroup ? (
+            <Text style={styles.dragtitle}>{drugGroup}</Text>
+          ) : null}
+          </View>
       {/* Medicines List */}
       <FlatList
         data={filteredMedicines}
@@ -433,20 +484,21 @@ export default function MedicineListScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.bg_primary,
+    ...commonStyles.containercontent_layout,
+    backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(50),
+   paddingTop: getResponsiveSpacing(0),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
   },
@@ -461,22 +513,26 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.text,
+      fontSize: 16,
+    color: "#202427",
+    fontFamily: fonts.semiBold
   },
   cartButton: {
-    position: 'relative',
-    padding: getResponsiveSpacing(8),
+    padding: getResponsiveSpacing(3),
+    backgroundColor: '#FED8EC',
+    width: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(30),
+    borderRadius: getResponsiveSpacing(15),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cartIcon: {
-    ...getResponsiveImageSize(24, 24),
-    tintColor: colors.primary,
+    ...getResponsiveImageSize(28, 28),
   },
   cartBadge: {
     position: 'absolute',
-    top: getResponsiveSpacing(2),
-    right: getResponsiveSpacing(2),
+    top: getResponsiveSpacing(-8),
+    right: getResponsiveSpacing(-2),
     backgroundColor: '#FF4444',
     borderRadius: getResponsiveSpacing(10),
     minWidth: getResponsiveSpacing(20),
@@ -487,23 +543,23 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     color: '#fff',
-    fontSize: getResponsiveFontSize(12),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(9),
+    fontFamily: fonts.bold,
   },
   searchContainer: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: '#fff',
+    marginBottom: 5,
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: getResponsiveSpacing(8),
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(8),
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    height: 40,
+    marginTop: 5
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
@@ -512,9 +568,17 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(16),
-    paddingVertical: getResponsiveSpacing(4),
-    color: '#333',
+    fontSize: 12,
+    paddingVertical: 4,
+    color: "#000",
+    paddingTop: 4,
+    fontFamily: fonts.regular,
+  },
+  content: {
+    marginHorizontal: getResponsiveSpacing(20),
+  },
+  dragtitle: {
+    fontFamily: fonts.medium,
   },
   clearButton: {
     padding: getResponsiveSpacing(4),
@@ -525,8 +589,9 @@ const styles = StyleSheet.create({
     tintColor: '#999',
   },
   medicinesList: {
-    padding: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(160),
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(2),
   },
   medicineCard: {
     backgroundColor: '#fff',
@@ -547,35 +612,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(14),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    paddingBottom: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(10),
+    borderWidth: 1,
+    borderColor: '#DBDBDB',
+    paddingTop:5,
+    // elevation: 2,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 6 },
+    // shadowOpacity: 0.06,
+    // shadowRadius: 10,
   },
   cardRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   cardImage: {
-    ...getResponsiveImageSize(64, 64),
+    //...getResponsiveImageSize(54, 54),
     borderRadius: getResponsiveSpacing(8),
     marginRight: getResponsiveSpacing(12),
     backgroundColor: '#fff',
+    height: getResponsiveSpacing(54),
+    minWidth: getResponsiveSpacing(54),
   },
   cardBody: {
     flex: 1,
+    alignSelf: 'flex-start',
   },
   cardTitle: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontSize: getResponsiveFontSize(13),
     color: '#3B2032',
-    marginBottom: getResponsiveSpacing(6),
+    marginBottom: getResponsiveSpacing(0),
+    fontFamily: fonts.semiBold
   },
   cardSubtitle: {
     fontSize: getResponsiveFontSize(12),
-    color: '#8A6F7F',
+    color: '#737274',
+    fontFamily: fonts.regular
   },
   cardBottomRow: {
     flexDirection: 'row',
@@ -598,7 +671,7 @@ const styles = StyleSheet.create({
     marginLeft: getResponsiveSpacing(12),
   },
   actionUnderSubtitle: {
-    marginTop: getResponsiveSpacing(10),
+    marginTop: getResponsiveSpacing(3),
     alignItems: 'flex-end',
   },
   imageColumn: {
@@ -613,14 +686,16 @@ const styles = StyleSheet.create({
   },
   imageOriginalPrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#999',
+    color: '#887f8b',     
     textDecorationLine: 'line-through',
+    textDecorationStyle: 'solid',
     marginRight: getResponsiveSpacing(6),
+    fontFamily: fonts.regular
   },
   imagePrice: {
-    fontSize: getResponsiveFontSize(14),
-    color: '#E04F85',
-    fontWeight: '700',
+    fontSize: getResponsiveFontSize(12),
+    color: '#C35E9C',
+    fontFamily: fonts.bold,
     marginLeft: getResponsiveSpacing(2),
   },
   quantityPill: {
@@ -628,30 +703,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: getResponsiveSpacing(20),
     borderWidth: 1,
-    borderColor: '#E04F85',
+    borderColor: '#C35E9C',
     paddingHorizontal: getResponsiveSpacing(10),
-    paddingVertical: getResponsiveSpacing(6),
+    paddingVertical: getResponsiveSpacing(3),
+    paddingBottom: getResponsiveSpacing(2),
   },
   quantitySign: {
-    color: '#E04F85',
-    fontSize: getResponsiveFontSize(18),
+    color: '#C35E9C',
+    fontSize: getResponsiveFontSize(15),
     paddingHorizontal: getResponsiveSpacing(8),
   },
   quantityNumber: {
     color: '#3B2032',
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '700',
+    fontWeight: '500',
+    fontFamily: fonts.regular
   },
   addPill: {
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(20),
     paddingHorizontal: getResponsiveSpacing(14),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(6),
+    paddingBottom: getResponsiveSpacing(5),
   },
   addPillText: {
     color: '#fff',
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: '700',
+    fontSize: getResponsiveFontSize(12),
+    fontWeight: '500',
+    fontFamily: fonts.regular
   },
   medicineInfo: {
     flexDirection: 'row',
@@ -844,14 +923,16 @@ const styles = StyleSheet.create({
     width: '90%',
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(30),
-    paddingVertical: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(10),
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    fontFamily: fonts.semiBold,
+     fontSize: getResponsiveFontSize(15),
+    // elevation: 4,
   },
   continueButtonText: {
     color: '#fff',
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(15),
   },
 });

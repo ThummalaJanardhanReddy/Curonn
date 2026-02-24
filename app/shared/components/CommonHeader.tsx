@@ -18,6 +18,8 @@ import ApiRoutes from "@/src/api/employee/employee";
 import { fonts } from '../../shared/styles/fonts';
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
+import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
+
 
 interface CommonHeaderProps {
   title?: string;
@@ -242,7 +244,8 @@ export default function CommonHeader({
             style={styles.cartButton}
             onPress={handleCartPress}
           >
-            <Image source={images.icons.cart} style={styles.cartIcon} />
+            <CartIcon style={styles.cartIcon} width={15} height={15} />
+          
           </TouchableOpacity>
         )}
       </View>
@@ -363,7 +366,13 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   cartButton: {
-    padding: getResponsiveSpacing(8),
+    padding: getResponsiveSpacing(3),
+    backgroundColor: '#FED8EC',
+    width: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(30),
+    borderRadius: getResponsiveSpacing(15),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cartIcon: {
     ...getResponsiveImageSize(28, 28),

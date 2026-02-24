@@ -108,7 +108,9 @@ export const LabOrdersApi = {
   saveUpdate: '/laborders/save-update',
   RazopayOrder: 'laborders/Razorpayment_Order_details',
   getLabOrderById: (labOrderId: string | number) => `/laborders/GetLabOrderById?labOrderId=${labOrderId}`,
-  cancelOrder: '/laborders/CancelOrder'
+  cancelOrder: '/laborders/CancelOrder',
+  GetLabReporsByPatientId: (patientId: string | number) => `/laborders/GetLabReporsByPatientId?patientId=${patientId}`,
+  GetReportsByLabOrderId: (labOrderId: string | number) => `/laborders/GetReportsByLabOrderId?labOrderId=${labOrderId}`,
 } as const;
 
 export const MedicalOrdersApi = {

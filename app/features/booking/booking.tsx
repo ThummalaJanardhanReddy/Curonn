@@ -1,5 +1,5 @@
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
-import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
+import { getResponsiveFontSize, getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useState, useEffect, useMemo } from "react";
@@ -2381,13 +2381,19 @@ const styles = StyleSheet.create({
   },
   // Medicine-specific styles
   medicineListCard: {
+    padding: 12,
+
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 12,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(15),
+
   },
   emptyText: {
     color: "#666",
     fontSize: 14,
+    fontFamily: fonts.regular,
   },
   medicineItem: {
     flexDirection: "row",
@@ -2395,51 +2401,42 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   medicineName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+     fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(14), fontWeight: '600', color: '#000',
     marginBottom: 6,
   },
   medicinePack: {
-    fontSize: 12,
-    color: "#777",
+    fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#8A6F7F', 
     marginBottom: 4,
   },
   medicineDesc: {
-    fontSize: 12,
-    color: "#666",
+     fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#000', 
   },
   medicineRight: {
     alignItems: "flex-end",
     justifyContent: "space-between",
   },
   medicinePrice: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 8,
+    fontSize: getResponsiveFontSize(16), color: '#C15E9C', fontFamily:fonts.semiBold,fontWeight: '600',
+    marginBottom: 0,
   },
   qtyControl: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#F1E6EE",
     borderRadius: 20,
     overflow: "hidden",
+    borderWidth: 1, borderColor: '#C15E9C',marginTop: getResponsiveSpacing(2)
   },
   qtyButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     backgroundColor: "transparent",
   },
   qtyBtnText: {
-    fontSize: 18,
-    color: colors.primary,
-    fontWeight: "600",
+    fontSize: getResponsiveFontSize(14), fontFamily:fonts.semiBold,color: '#C15E9C', fontWeight: '700'
   },
   qtyText: {
     paddingHorizontal: 8,
-    fontSize: 14,
-    color: "#333",
+    fontFamily:fonts.semiBold,marginHorizontal: getResponsiveSpacing(5),color: '#C15E9C', fontSize: getResponsiveFontSize(14), 
   },
   itemDivider: {
     height: 1,

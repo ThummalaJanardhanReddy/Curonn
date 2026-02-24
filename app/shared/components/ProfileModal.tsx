@@ -48,6 +48,8 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from 'expo-secure-store';
 const { height: screenHeight } = Dimensions.get("window");
 interface ProfileModalProps {
   visible: boolean;
@@ -329,14 +331,27 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     setLogoutConfirmVisible(true);
   };
 
-  const hideLogoutConfirmation = () => {
+  const hideLogoutConfirmation = async () => {
     setLogoutConfirmVisible(false);
+    try {
+      await AsyncStorage.clear();
+      if (typeof SecureStore !== 'undefined' && SecureStore.deleteItemAsync) {
+        await SecureStore.deleteItemAsync('userToken');
+        await SecureStore.deleteItemAsync('userData');
+      }
+    } catch (e) {
+      console.error('Error clearing user data:', e);
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.clear();
+    }
+    router.push("/verify-details");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Handle logout logic here
     console.log("User logged out");
-    hideLogoutConfirmation();
+    await hideLogoutConfirmation();
     onClose(); // Close the profile modal after logout
   };
 
@@ -940,7 +955,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         visible={logoutConfirmVisible}
         animationType="fade"
         transparent={true}
-        onRequestClose={hideLogoutConfirmation}
+          onRequestClose={hideLogoutConfirmation}
       >
         <View style={styles.logoutModalOverlay}>
           <TouchableOpacity
@@ -1731,6 +1746,7 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     marginBottom: 12,
     textAlign: "center",
+    fontFamily: fonts.regular,
   },
   logoutConfirmMessage: {
     fontSize: 16,
@@ -1738,6 +1754,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 32,
+     fontFamily: fonts.regular,
   },
   logoutConfirmButtons: {
     flexDirection: "row",
@@ -1758,6 +1775,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#374151",
+    fontFamily: fonts.medium,
   },
   logoutConfirmButton: {
     flex: 1,
@@ -1771,6 +1789,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+    fontFamily: fonts.medium,
   },
   logoutTextContainer: {
     flex: 1,

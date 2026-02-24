@@ -94,17 +94,50 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
 };
   const { userData } = useUser();
   const [orders, setOrders] = useState<any[]>([]);
+  // Memoized sorted orders: always sort by createdOn descending before slicing
+  const latestOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders
+      .slice()
+      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
+      .slice(0, 3);
+  }, [orders]);
+
+  const remainingOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders
+      .slice()
+      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
+      .slice(3);
+  }, [orders]);
   const [showOrderSlider, setShowOrderSlider] = useState(false);
     const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
     const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
-  useEffect(() => {
-    if (userData?.e_id) {
-      fetchAllOrders(userData.e_id, 0).then((data) => {
-        setOrders(data);
-        setShowOrderSlider(Array.isArray(data) && data.length > 0);
-      });
-    }
-  }, [userData?.e_id]);
+  // Always fetch latest orders on mount and when page is focused
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchOrders = async () => {
+        if (userData?.e_id) {
+          const data = await fetchAllOrders(userData.e_id, 0);
+          if (isActive) {
+            // Always sort by createdOn descending
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+              const dateA = new Date(a.createdOn).getTime();
+              const dateB = new Date(b.createdOn).getTime();
+              return dateB - dateA;
+            });
+            setOrders(sorted);
+            setShowOrderSlider(sorted.length > 0);
+          }
+        }
+      };
+      fetchOrders();
+      return () => {
+        isActive = false;
+      };
+    }, [userData?.e_id])
+  );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const handleCloseOrderCard = (index: number) => {
@@ -165,61 +198,105 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     const statusKey = item.statusName === 'Requested' ? 'Requested' : (item.statusName || '');
     const statusBgColor = statusColors[statusKey] || "#666";
     const statusTxtColor = statusTextColors[statusKey] || "#fff";
+
+    // Category and icon mapping
+    let category = '';
+    let iconSource = null;
+    switch (item.orderType) {
+      case "Single Test":
+        category = "Lab Test";
+        iconSource = images.labicon;
+        break;
+      case "Package":
+        category = "Health Check Up";
+        iconSource = images.labicon;
+        break;
+      case "Xray":
+        category = "Xray";
+        iconSource = images.labicon;
+        break;
+      case "Medicine":
+        category = "Medicine";
+        iconSource = images.medicalicon;
+        break;
+      case "Consultation":
+        category = "Consultation";
+        iconSource = images.consultationicon;
+        break;
+      default:
+        category = item.orderType || '';
+        iconSource = null;
+    }
+
     return (
       <View style={{
         width: SCREEN_WIDTH * 0.95,
         marginHorizontal: 10,
         borderRadius: 18,
-        padding: 5,
-        marginBottom: 10,
+        paddingLeft: 15,
+        paddingBottom: 0,
+        paddingTop: 10,
+        marginBottom: 0,
         position: 'relative',
         backgroundColor: 'transparent',
       }}>
         <TouchableOpacity
-          style={{ position: 'absolute', top: 10, right: 20, zIndex: 2 }}
+          style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}
           onPress={() => handleCloseOrderCard(index)}
         >
           <Image source={images.icons.close} style={{ width: 22, height: 22, tintColor: '#694664' }} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 14,  color: '#C15E9D', marginBottom: 2,fontFamily:fonts.bold }}>{item.title}</Text>
 
-        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2,fontFamily:fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Order Created :</Text> {createdOn}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-          <Text style={{ fontSize: 12, color: '#333', fontFamily: fonts.bold }}>Status: </Text>
-          <View style={{
-            backgroundColor: statusBgColor,
-            borderRadius: 15,
-            paddingHorizontal: 8,
-            paddingVertical: 1,
-            marginLeft: 4,
-          }}>
-            <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+        <TouchableOpacity onPress={() => {
+          setSelectedOrderDetails(item);
+          setOrderDetailsModalVisible(true);
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* {iconSource && (
+              <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
+            )} */}
+            <Text
+              style={{ fontSize: 11, color: '#888', fontFamily: fonts.medium, marginRight: 6,lineHeight:15 }}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {category}
+            </Text></View>
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}>
+            <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent:'space-between', marginBottom: 0 }}>
-        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2, fontFamily: fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Amount:</Text> ₹{item.paymentAmount ?? 'N/A'}</Text>
-        {/* View Button for OrderDetails */}
-        {item.masterId && (
-          <TouchableOpacity
-            style={{
-              marginTop: -8,
-              marginRight: 10,
-              alignSelf: 'flex-end',
-              backgroundColor: '#C15E9D',
+          <Text style={{ fontSize: 12, color: '#333', marginBottom: 2, fontFamily: fonts.medium }}>{createdOn}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0, justifyContent: 'space-between' }}>
+            {/* Status on the left */}
+            <View style={{
+              backgroundColor: statusBgColor,
               borderRadius: 15,
-              paddingHorizontal: 16,
-              paddingVertical: 3,
-              paddingTop: 5,
-            }}
-            onPress={() => {
-              setSelectedOrderDetails(item);
-              setOrderDetailsModalVisible(true);
-            }}
-          >
-            <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 11 }}>View</Text>
-          </TouchableOpacity>
-        )}
-        </View>
+              paddingHorizontal: 8,
+              paddingVertical: 0,
+              marginLeft: 4,
+              flexShrink: 0,
+            }}>
+              <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+            </View>
+            {/* Carousel Dots centered */}
+            {index < 3 && (
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
+                  <View
+                    key={idx}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      marginHorizontal: 2,
+                      backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
+                    }}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </View>
     );
     // State for OrderDetails modal
@@ -541,27 +618,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Orders Slider (Bottom) */}
-        {showOrderSlider && (
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 100 }}>
-            <FlatList
-              data={orders}
-              renderItem={({ item, index }) => renderOrderCard({ item, index })}
-              keyExtractor={(item, idx) => item.orderNo + '-' + idx}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
-              style={{ maxHeight: 170 }}
-              onMomentumScrollEnd={e => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
-                setActiveOrderIndex(idx);
-              }}
-              initialScrollIndex={activeOrderIndex}
-              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
-            />
-          </View>
-        )}
+       
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
@@ -824,7 +881,8 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           left: 0,
           right: 0,
           bottom: 0,
-          paddingVertical: 8,
+          paddingVertical: 5,
+          paddingTop:0,
           // marginHorizontal: SCREEN_WIDTH * 0.075,
           // borderTopLeftRadius: 18,
           // borderTopRightRadius: 18,
@@ -836,56 +894,25 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           backgroundColor: '#fff',
         }}>
           <FlatList
-            data={orders}
-            renderItem={renderOrderCard}
-            keyExtractor={(_, idx) => idx.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'flex-start', paddingHorizontal: 10 }}
-            style={{ flexGrow: 0 }}
-            pagingEnabled
-            ref={flatListRef => {
-              // Store ref for programmatic scroll
-              if (flatListRef) {
-                (HomeScreen as any).flatListRef = flatListRef;
-              }
-            }}
-            onMomentumScrollEnd={e => {
-              const cardWidth = SCREEN_WIDTH * 0.15 + SCREEN_WIDTH * 0.075 * 2;
-              let index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
-              if (orders.length > 1) {
-                if (index >= orders.length) {
-                  // If scrolled past last, jump to first
-                  index = 0;
-                  if ((HomeScreen as any).flatListRef) {
-                    (HomeScreen as any).flatListRef.scrollToIndex({ index: 0, animated: false });
+                  data={latestOrders}
+                  renderItem={({ item, index }) => renderOrderCard({ item, index })}
+                  keyExtractor={(item, idx) => (item.orderNo ? item.orderNo : idx) + '-' + idx}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
+                   style={{ flexGrow: 0 }}
+                  onMomentumScrollEnd={e => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
+                    setActiveOrderIndex(idx);
+                  }}
+                  initialScrollIndex={
+                    latestOrders.length > 0 && activeOrderIndex < latestOrders.length
+                      ? activeOrderIndex
+                      : 0
                   }
-                } else if (index < 0) {
-                  // If scrolled before first, jump to last
-                  index = orders.length - 1;
-                  if ((HomeScreen as any).flatListRef) {
-                    (HomeScreen as any).flatListRef.scrollToIndex({ index: orders.length - 1, animated: false });
-                  }
-                }
-              }
-              setActiveOrderIndex(index);
-            }}
-          />
-          {/* Carousel Dots */}
-          <View style={{ width: '80%', alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
-            {orders.map((_, idx) => (
-              <View
-                key={idx}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  marginHorizontal: 4,
-                  backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
-                }}
-              />
-            ))}
-          </View>
+                  getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
+                />
         </View>
       )}
       

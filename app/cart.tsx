@@ -2,6 +2,9 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import axiosClient from '../src/api/axiosClient';
 import ApiRoutes from '../src/api/employee/employee';
 import { useUser } from './shared/context/UserContext';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
+import {fonts} from '@/app/shared/styles/fonts';
 import {
   View,
   Text,
@@ -10,6 +13,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  StatusBar as RNStatusBar,
+     StatusBar,
+     Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import BackButton from './shared/components/BackButton';
@@ -39,7 +45,17 @@ export default function CartScreen() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        const timeout = setTimeout(() => {
+          // Use React Native StatusBar API to set background color on Android
+          RNStatusBar.setBackgroundColor("#ffffff", true);
+        }, 400); // Adjust timeout as needed
+        return () => clearTimeout(timeout);
+      }
+    }, [])
+  );
   // Load active cart from API on mount
   useEffect(() => {
     let mounted = true;
@@ -253,7 +269,13 @@ export default function CartScreen() {
   }, [items, patientId]);
 
   return (
+     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
     <View style={styles.container}>
+        <StatusBar
+                      barStyle="dark-content"
+                      translucent={false}
+                      backgroundColor="#ffffffff"
+                    />
       <View style={styles.headerRow}>
         <BackButton title="Items in Cart" onPress={() => router.back()} />
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
@@ -262,6 +284,7 @@ export default function CartScreen() {
       </View>
 
       <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(140) }}>
+        <View style={styles.fullpage}>
         {items.map((item, idx) => (
           // Use a composite key (id + server cartId or index) to avoid duplicate-key warnings
           <View key={`${item.id ?? 'item'}_${item.cartId ?? idx}`} style={styles.cartItem}>
@@ -284,6 +307,7 @@ export default function CartScreen() {
             </View>
           </View>
         ))}
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -317,6 +341,7 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </SafeAreaView>
   );
 }
 
@@ -327,19 +352,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(16),
-    paddingTop: getResponsiveSpacing(50),
+    paddingTop: getResponsiveSpacing(0),
     paddingBottom: getResponsiveSpacing(12),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   closeButton: { padding: 8 },
   closeIcon: { width: 24, height: 24, tintColor: '#666' },
-  list: { flex: 1 },
+  list: { flex: 1,backgroundColor: '#F5F4F9',paddingHorizontal: getResponsiveSpacing(16) },
+  fullpage: { flex: 1, marginTop: getResponsiveSpacing(15),backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(5), },
   cartItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(10),
     borderBottomWidth: 1,
     borderBottomColor: '#f5f5f5',
   },
@@ -349,21 +380,21 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(12),
   },
   itemDetails: { flex: 1 },
-  itemName: { fontSize: getResponsiveFontSize(16), fontWeight: '700', color: '#333' },
-  itemSubtitle: { fontSize: getResponsiveFontSize(12), color: '#8A6F7F', marginTop: getResponsiveSpacing(6) },
-  itemRight: { alignItems: 'flex-end' },
-  itemPrice: { fontSize: getResponsiveFontSize(16), color: '#C15E9C', fontWeight: '700' },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: getResponsiveSpacing(8) },
+  itemName: { fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(14), fontWeight: '600', color: '#000' },
+  itemSubtitle: { fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#8A6F7F', marginTop: getResponsiveSpacing(0) },
+  itemRight: { alignItems: 'flex-end', padding: getResponsiveSpacing(8), borderRadius: getResponsiveSpacing(8) },
+  itemPrice: { fontSize: getResponsiveFontSize(16), color: '#C15E9C', fontFamily:fonts.semiBold,fontWeight: '600' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center',borderWidth: 1, borderColor: '#C15E9C',borderRadius:20, marginTop: getResponsiveSpacing(2) },
   qtyBtn: {
-    width: getResponsiveSpacing(36),
-    height: getResponsiveSpacing(36),
+    width: getResponsiveSpacing(26),
+    height: getResponsiveSpacing(26),
     borderRadius: getResponsiveSpacing(18),
-    backgroundColor: '#f7f7f7',
+    //backgroundColor: '#f7f7f7',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  qtySign: { fontSize: getResponsiveFontSize(18), color: '#E04F85', fontWeight: '700' },
-  qtyText: { marginHorizontal: getResponsiveSpacing(10), fontSize: getResponsiveFontSize(14), fontWeight: '700' },
+  qtySign: { fontSize: getResponsiveFontSize(18), color: '#C15E9C', fontWeight: '700' },
+  qtyText: { fontFamily:fonts.semiBold,marginHorizontal: getResponsiveSpacing(10),color: '#C15E9C', fontSize: getResponsiveFontSize(14), fontWeight: '700' },
   footer: {
     position: 'absolute',
     left: 0,
@@ -374,9 +405,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f0f0',
     padding: getResponsiveSpacing(16),
   },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: getResponsiveSpacing(12) },
-  totalLabel: { fontSize: getResponsiveFontSize(16), fontWeight: '600', color: '#333' },
-  totalValue: { fontSize: getResponsiveFontSize(18), fontWeight: '700', color: '#C15E9C' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: getResponsiveSpacing(8) },
+  totalLabel: { fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(16), fontWeight: '600', color: '#000' },
+  totalValue: { fontSize: getResponsiveFontSize(18), fontWeight: '600',fontFamily:fonts.bold, color: '#C15E9C' },
   continueBtn: { backgroundColor: colors.primary, paddingVertical: getResponsiveSpacing(14), borderRadius: getResponsiveSpacing(30), alignItems: 'center' },
-  continueText: { color: '#fff', fontSize: getResponsiveFontSize(16), fontWeight: '700' },
+  continueText: { color: '#fff', fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(15), fontWeight: '500' },
 });
