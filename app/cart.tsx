@@ -4,7 +4,7 @@ import ApiRoutes from '../src/api/employee/employee';
 import { useUser } from './shared/context/UserContext';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import {fonts} from '@/app/shared/styles/fonts';
+import { fonts } from '@/app/shared/styles/fonts';
 import {
   View,
   Text,
@@ -14,8 +14,8 @@ import {
   ScrollView,
   Alert,
   StatusBar as RNStatusBar,
-     StatusBar,
-     Platform
+  StatusBar,
+  Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import BackButton from './shared/components/BackButton';
@@ -26,6 +26,7 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from './shared/utils/responsive';
+import CartItemsList from './shared/components/CartItemsList';
 
 interface CartItem {
   id: string;
@@ -71,15 +72,15 @@ export default function CartScreen() {
         return;
       }
       try {
-  setLoading(true);
-  setError(null);
-  // Call GetActiveCart - backend should return user's active cart
-  // Swagger shows this endpoint expects ?patientId=<int>
-  // Print request for debugging
-  console.log('GetActiveCart request', { url: ApiRoutes.MedicalOrders.getActiveCart, params: { patientId } });
-  const res: any = await axiosClient.get(ApiRoutes.MedicalOrders.getActiveCart, { params: { patientId } });
-  // Print raw response for debugging
-  console.log('GetActiveCart response', res);
+        setLoading(true);
+        setError(null);
+        // Call GetActiveCart - backend should return user's active cart
+        // Swagger shows this endpoint expects ?patientId=<int>
+        // Print request for debugging
+        console.log('GetActiveCart request', { url: ApiRoutes.MedicalOrders.getActiveCart, params: { patientId } });
+        const res: any = await axiosClient.get(ApiRoutes.MedicalOrders.getActiveCart, { params: { patientId } });
+        // Print raw response for debugging
+        console.log('GetActiveCart response', res);
         // res might be array or object with data
         const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.cartItems ?? [];
 
@@ -269,78 +270,63 @@ export default function CartScreen() {
   }, [items, patientId]);
 
   return (
-     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.container}>
         <StatusBar
-                      barStyle="dark-content"
-                      translucent={false}
-                      backgroundColor="#ffffffff"
-                    />
-      <View style={styles.headerRow}>
-        <BackButton title="Items in Cart" onPress={() => router.back()} />
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Image source={images.icons.close} style={styles.closeIcon} />
-        </TouchableOpacity>
-      </View>
+          barStyle="dark-content"
+          translucent={false}
+          backgroundColor="#ffffffff"
+        />
+        <View style={styles.headerRow}>
+          <BackButton title="Items in Cart" onPress={() => router.back()} />
+          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+            <Image source={images.icons.close} style={styles.closeIcon} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(140) }}>
-        <View style={styles.fullpage}>
-        {items.map((item, idx) => (
-          // Use a composite key (id + server cartId or index) to avoid duplicate-key warnings
-          <View key={`${item.id ?? 'item'}_${item.cartId ?? idx}`} style={styles.cartItem}>
-            {/* <Image source={item.image} style={styles.itemImage} /> */}
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              {item.subtitle ? <Text style={styles.itemSubtitle}>{item.subtitle}</Text> : null}
-            </View>
-            <View style={styles.itemRight}>
-              {item.price ? <Text style={styles.itemPrice}>₹{item.price}</Text> : null}
-              <View style={styles.qtyRow}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => changeQty(item.id, -1)}>
-                  <Text style={styles.qtySign}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.qtyText}>{item.quantity}</Text>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => changeQty(item.id, +1)}>
-                  <Text style={styles.qtySign}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(140) }}>
+          <CartItemsList
+            items={items}
+            onIncreaseQuantity={(id) => changeQty(id, 1)}
+            onDecreaseQuantity={(id) => changeQty(id, -1)}
+            itemsTotal={totalAmount}
+            deliveryCharges={0} // Default or from state
+            displayedTotal={totalAmount} // Adjust if there are delivery charges
+            showPricingDetails={false} // Price breakdown in footer as requested
+          />
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalValue}>₹{totalAmount}</Text>
           </View>
-        ))}
-        </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>₹{totalAmount}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.continueBtn}
-          onPress={() => {
-            try {
-            // Pass isFromMedical flag and selected cart items as a query param (stringified)
-            const qs = `?isFromMedical=true&cartItems=${encodeURIComponent(JSON.stringify(items))}`;
-              // Log the exact query being pushed so we can verify BookingScreen receives it
-              console.log('CartScreen - navigating to Booking with query:', `/features/booking/booking${qs}`);
-              // Temporary fallback: store items on global so BookingScreen can pick them up if search params parsing fails
+          <TouchableOpacity
+            style={styles.continueBtn}
+            onPress={() => {
               try {
-                (global as any).__BOOKING_CART = items;
+                // Pass isFromMedical flag and selected cart items as a query param (stringified)
+                const qs = `?isFromMedical=true&cartItems=${encodeURIComponent(JSON.stringify(items))}`;
+                // Log the exact query being pushed so we can verify BookingScreen receives it
+                console.log('CartScreen - navigating to Booking with query:', `/features/booking/booking${qs}`);
+                // Temporary fallback: store items on global so BookingScreen can pick them up if search params parsing fails
+                try {
+                  (global as any).__BOOKING_CART = items;
+                } catch (e) {
+                  // ignore
+                }
+                router.push((`/features/booking/booking${qs}`) as unknown as any);
               } catch (e) {
-                // ignore
+                console.error('Failed to navigate to checkout with cart items', e);
+                // Fallback navigation
+                router.push(('/features/booking/booking') as unknown as any);
               }
-              router.push((`/features/booking/booking${qs}`) as unknown as any);
-            } catch (e) {
-              console.error('Failed to navigate to checkout with cart items', e);
-              // Fallback navigation
-              router.push(('/features/booking/booking') as unknown as any);
-            }
-          }}
-        >
-          <Text style={styles.continueText}>Continue</Text>
-        </TouchableOpacity>
+            }}
+          >
+            <Text style={styles.continueText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
     </SafeAreaView>
   );
 }
@@ -359,42 +345,7 @@ const styles = StyleSheet.create({
   },
   closeButton: { padding: 8 },
   closeIcon: { width: 24, height: 24, tintColor: '#666' },
-  list: { flex: 1,backgroundColor: '#F5F4F9',paddingHorizontal: getResponsiveSpacing(16) },
-  fullpage: { flex: 1, marginTop: getResponsiveSpacing(15),backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#dbdbdb",
-    marginBottom: getResponsiveSpacing(5), },
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  itemImage: {
-    ...getResponsiveImageSize(50, 50),
-    borderRadius: 8,
-    marginRight: getResponsiveSpacing(12),
-  },
-  itemDetails: { flex: 1 },
-  itemName: { fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(14), fontWeight: '600', color: '#000' },
-  itemSubtitle: { fontFamily:fonts.regular,fontSize: getResponsiveFontSize(12), color: '#8A6F7F', marginTop: getResponsiveSpacing(0) },
-  itemRight: { alignItems: 'flex-end', padding: getResponsiveSpacing(8), borderRadius: getResponsiveSpacing(8) },
-  itemPrice: { fontSize: getResponsiveFontSize(16), color: '#C15E9C', fontFamily:fonts.semiBold,fontWeight: '600' },
-  qtyRow: { flexDirection: 'row', alignItems: 'center',borderWidth: 1, borderColor: '#C15E9C',borderRadius:20, marginTop: getResponsiveSpacing(2) },
-  qtyBtn: {
-    width: getResponsiveSpacing(26),
-    height: getResponsiveSpacing(26),
-    borderRadius: getResponsiveSpacing(18),
-    //backgroundColor: '#f7f7f7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  qtySign: { fontSize: getResponsiveFontSize(18), color: '#C15E9C', fontWeight: '700' },
-  qtyText: { fontFamily:fonts.semiBold,marginHorizontal: getResponsiveSpacing(10),color: '#C15E9C', fontSize: getResponsiveFontSize(14), fontWeight: '700' },
+  list: { flex: 1, backgroundColor: '#F5F4F9' },
   footer: {
     position: 'absolute',
     left: 0,
@@ -406,9 +357,11 @@ const styles = StyleSheet.create({
     padding: getResponsiveSpacing(16),
   },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: getResponsiveSpacing(8) },
-  totalLabel: { fontFamily:fonts.semiBold,fontSize: getResponsiveFontSize(16), fontWeight: '600', color: '#000' },
-  totalValue: { fontSize: getResponsiveFontSize(18), fontWeight: '600',fontFamily:fonts.bold, color: '#C15E9C' },
+  totalLabel: { fontFamily: fonts.semiBold, fontSize: getResponsiveFontSize(16), fontWeight: '600', color: '#000' },
+  totalValue: { fontSize: getResponsiveFontSize(18), fontWeight: '600', fontFamily: fonts.bold, color: '#C15E9C' },
   continueBtn: { backgroundColor: colors.primary, paddingVertical: getResponsiveSpacing(14), borderRadius: getResponsiveSpacing(30), alignItems: 'center' },
-  continueText: { color: '#fff', fontFamily: fonts.semiBold,
-    fontSize: getResponsiveFontSize(15), fontWeight: '500' },
+  continueText: {
+    color: '#fff', fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(15), fontWeight: '500'
+  },
 });

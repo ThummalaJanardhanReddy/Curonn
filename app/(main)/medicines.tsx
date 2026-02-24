@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(8),
   },
   categoryImage: {
-   // ...getResponsiveImageSize(30, 30),
+    // ...getResponsiveImageSize(30, 30),
     borderRadius: getResponsiveSpacing(4),
     height: getResponsiveSpacing(40),
     width: getResponsiveSpacing(40),
