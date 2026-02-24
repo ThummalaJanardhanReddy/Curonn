@@ -365,7 +365,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const handleAmbulance = () => {
-    setAmbulanceModalVisible(true);
+   // setAmbulanceModalVisible(true);
+   router.push("/features/ambulance/ambulanceservices");
   };
 
   const handleAbout = () => {

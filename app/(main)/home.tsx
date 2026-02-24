@@ -251,7 +251,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           setSelectedOrderDetails(item);
           setOrderDetailsModalVisible(true);
         }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 3 }}>
             {/* {iconSource && (
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
@@ -262,10 +262,10 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
             >
               {category}
             </Text></View>
-             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}>
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
             <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#333', marginBottom: 2, fontFamily: fonts.medium }}>{createdOn}</Text>
+          <Text style={{ fontSize: 12, color: '#333', marginBottom: 3, fontFamily: fonts.medium }}>{createdOn}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0, justifyContent: 'space-between' }}>
             {/* Status on the left */}
             <View style={{
@@ -883,15 +883,14 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           bottom: 0,
           paddingVertical: 5,
           paddingTop:0,
-          // marginHorizontal: SCREEN_WIDTH * 0.075,
-          // borderTopLeftRadius: 18,
-          // borderTopRightRadius: 18,
           shadowColor: '#000',
           shadowOpacity: 0.08,
           shadowRadius: 8,
           elevation: 8,
           zIndex: 100,
           backgroundColor: '#fff',
+          borderTopLeftRadius: 15,
+          borderTopRightRadius: 15,
         }}>
           <FlatList
                   data={latestOrders}

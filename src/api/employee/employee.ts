@@ -147,6 +147,12 @@ export const PrescriptionOrdersApi = {
   savePrescriptionOrder: '/medicine-orders/SavePrescriptionOrderAsync',
 } as const;
 
+export const AmbulanceApi = {
+  saveUpdate: '/Ambulances/SaveOrUpdate',
+  getAll: '/Ambulances/GetAll',
+  getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
+} as const;
+
 // ✅ Unified export for convenience
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -166,6 +172,7 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
+  Ambulance:AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
 } as const;
 

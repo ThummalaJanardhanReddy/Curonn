@@ -43,7 +43,7 @@ try {
   maybeUseSearchParams = null;
 }
 
-type ServiceType = "lab-test" | "health-checks" | "scans";
+type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance";
 
 interface BookingScreenProps {
   visible: boolean;
