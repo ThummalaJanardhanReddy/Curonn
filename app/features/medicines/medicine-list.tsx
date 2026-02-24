@@ -12,9 +12,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-    StatusBar as RNStatusBar,
-     StatusBar,
-     Platform
+  StatusBar as RNStatusBar,
+  StatusBar,
+  Platform
 } from 'react-native';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
@@ -25,9 +25,10 @@ import {
   getResponsiveSpacing,
 } from '../../shared/utils/responsive';
 import { useUser } from '../../shared/context/UserContext';
+import { useCart } from '../../shared/context/CartContext';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
-import {fonts} from '@/app/shared/styles/fonts';
+import { fonts } from '@/app/shared/styles/fonts';
 import { LinearGradient } from "expo-linear-gradient";
 import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 import { useFocusEffect } from "@react-navigation/native";
@@ -57,48 +58,25 @@ export default function MedicineListScreen() {
   // Get drugGroup from the first medicine (if available)
   const drugGroup = (medicines?.length ?? 0) > 0 ? medicines[0]?.drugGroup ?? '' : '';
   const { userData } = useUser();
+  const { refreshCart, cartCount, cartItems, addItem, updateQuantity, removeItem } = useCart();
   const patientId = userData?.e_id ?? 0;
   const { category } = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [cart, setCart] = useState<{ [key: string]: number }>({});
-  // Map local medicineId -> server cartId returned by save-cart-item
-  const [cartServerIds, setCartServerIds] = useState<{ [key: string]: number }>({});
-  // Per-item loading state to prevent duplicate requests
-  const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>({});
+
   useFocusEffect(
     useCallback(() => {
+      refreshCart();
       if (Platform.OS === 'android') {
         const timeout = setTimeout(() => {
-          // Use React Native StatusBar API to set background color on Android
           RNStatusBar.setBackgroundColor("#ffffff", true);
-        }, 400); // Adjust timeout as needed
+        }, 400);
         return () => clearTimeout(timeout);
       }
-    }, [])
+    }, [refreshCart])
   );
 
-  // API payload and response types for clarity
-  type SaveCartPayload = {
-    cartId: number;
-    medicineOrderId: number;
-    medicineId: string | number;
-    patientId: number;
-    medicineName: string;
-    quantity: number;
-    price: number;
-    offer: number;
-    discount: number;
-    totalPrice: number;
-    description?: string;
-  };
-
-  type SaveCartResponse = {
-    cartId?: number;
-    // other response fields may exist; keep flexible
-    [key: string]: any;
-  };
-
-  // State for medicines fetched from API
+  // Per-item loading state to prevent duplicate rapid clicks
+  const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>({});
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +117,6 @@ export default function MedicineListScreen() {
     }
 
     const groupName = group ?? ((): string => {
-      // derive pretty name from slug category if groupName not provided
       return (category ?? '').toString().replace(/-/g, ' ');
     })();
 
@@ -150,7 +127,6 @@ export default function MedicineListScreen() {
       setError(null);
       const url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize, searchQuery || undefined);
       const res: any = await axiosClient.get(url);
-      // axiosClient returns response.data already per interceptor; handle array or { data: [...] }
       const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? [];
       const mapped = list.map(mapApiToMedicine);
 
@@ -164,23 +140,19 @@ export default function MedicineListScreen() {
     }
   };
 
-  // load on mount and when category/group/search/page changes
   useEffect(() => {
-    // when category or group changes or searchQuery changes, reset to page 1
     setPage(1);
     loadMedicines({ reset: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, group, searchQuery]);
 
   useEffect(() => {
-    if (page === 1) return; // already loaded by reset
+    if (page === 1) return;
     loadMedicines();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   const filteredMedicines = useMemo(() => {
     if (!searchQuery) return medicines;
-    
+
     return medicines.filter(medicine =>
       medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       medicine.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -192,136 +164,47 @@ export default function MedicineListScreen() {
     router.back();
   }, []);
 
-  // helper: build save-cart payload consistently
-  const createSaveCartPayload = useCallback((medicine: Medicine, quantity: number): SaveCartPayload => {
-    const price = medicine.curonnPrice ?? medicine.totalPrice ?? 0;
-    return {
-      cartId: 0,
-      medicineOrderId: 0,
-      medicineId: medicine.id,
-      patientId: patientId,
-      medicineName: medicine.name,
-      quantity,
-      price,
-      offer: 0,
-      discount: 0,
-      totalPrice: price * quantity,
-      description: medicine.description ?? '',
-    };
-  }, [patientId]);
-
-  // Increment: POST for new item, PUT update for existing
   const handleIncrement = useCallback(async (medicine: Medicine) => {
     const medicineId = medicine.id;
-    if (cartLoading[medicineId]) return; // prevent duplicate requests
+    if (cartLoading[medicineId]) return;
 
     setCartLoading(prev => ({ ...prev, [medicineId]: true }));
     try {
-      const currentQty = cart[medicineId] || 0;
-      const nextQty = currentQty + 1;
-
-      if (currentQty === 0) {
-        // first-time add -> POST save-cart-item
-        const payload = createSaveCartPayload(medicine, nextQty);
-        console.log('[handleIncrement] POST ->', ApiRoutes.MedicalOrders.saveCartItem, payload);
-        const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
-        console.log('[handleIncrement] POST response ->', res);
-
-        // backend may return cartId in several shapes
-        // backend may return cart id in different shapes (camelCase or snake_case)
-        const returnedCartId =
-          res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? res?.data?.cart_id ?? 0;
-        if (returnedCartId) {
-          setCartServerIds(prev => ({ ...prev, [medicineId]: Number(returnedCartId) }));
+      const itemInCart = cartItems.find(i => i.id === medicineId);
+      if (itemInCart) {
+        if (itemInCart.cartId) {
+          await updateQuantity(itemInCart.cartId, itemInCart.quantity + 1, medicineId);
         } else {
-          console.warn('[handleIncrement] no cartId returned for', medicineId, res);
+          await addItem(medicine, 1);
         }
-
-        // update local cart only after server confirms
-        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
       } else {
-        // already in cart: update quantity on server
-        const cartId = cartServerIds[medicineId];
-        if (cartId) {
-          const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, nextQty);
-          console.log('[handleIncrement] PUT ->', url);
-          const res: any = await axiosClient.put(url);
-          console.log('[handleIncrement] PUT response ->', res);
-        } else {
-          // fallback to save endpoint if server id missing
-          const payload = createSaveCartPayload(medicine, nextQty);
-          console.log('[handleIncrement] fallback POST ->', ApiRoutes.MedicalOrders.saveCartItem, payload);
-          const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
-          console.log('[handleIncrement] fallback POST response ->', res);
-          const returnedCartId =
-            res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? res?.data?.cart_id ?? 0;
-          if (returnedCartId) {
-            setCartServerIds(prev => ({ ...prev, [medicineId]: Number(returnedCartId) }));
-          } else {
-            console.warn('[handleIncrement] fallback did not return cartId for', medicineId, res);
-          }
-        }
-        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
+        await addItem(medicine, 1);
       }
-    } catch (err: any) {
-      console.error('handleIncrement failed', medicineId, err);
-      Alert.alert('Could not update cart', err?.message ?? 'Please try again');
     } finally {
       setCartLoading(prev => ({ ...prev, [medicineId]: false }));
     }
-  }, [cart, cartLoading, cartServerIds, createSaveCartPayload]);
+  }, [cartItems, cartLoading, addItem, updateQuantity]);
 
-  // Decrement: PUT when >1, DELETE (server) when quantity goes from 1 -> 0
   const handleDecrement = useCallback(async (medicineId: string) => {
     if (cartLoading[medicineId]) return;
     setCartLoading(prev => ({ ...prev, [medicineId]: true }));
     try {
-      const currentQty = cart[medicineId] || 0;
-      if (currentQty <= 0) return;
+      const itemInCart = cartItems.find(i => i.id === medicineId);
+      if (!itemInCart) return;
 
-      if (currentQty === 1) {
-        // requirement: call DELETE endpoint only
-        const cartId = cartServerIds[medicineId];
-        if (cartId) {
-          // send both cartId and cart_id to be robust against backend param naming
-          console.log('[handleDecrement] DELETE ->', ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId } });
-          const res: any = await axiosClient.delete(ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId, cart_id: cartId } });
-          console.log('[handleDecrement] DELETE response ->', res);
-        } else {
-          // no server id available; cannot call DELETE - clear local state and log
-          console.warn('No server cart id for delete; clearing local entry', medicineId);
+      if (itemInCart.quantity > 1) {
+        if (itemInCart.cartId) {
+          await updateQuantity(itemInCart.cartId, itemInCart.quantity - 1, medicineId);
         }
-
-        setCart(prev => {
-          const next = { ...prev };
-          delete next[medicineId];
-          return next;
-        });
-        setCartServerIds(prev => {
-          const next = { ...prev };
-          delete next[medicineId];
-          return next;
-        });
       } else {
-        const nextQty = currentQty - 1;
-        const cartId = cartServerIds[medicineId];
-        if (cartId) {
-          const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, nextQty);
-          console.log('[handleDecrement] PUT ->', url);
-          const res: any = await axiosClient.put(url);
-          console.log('[handleDecrement] PUT response ->', res);
-        } else {
-          console.warn('No server cart id for decrement fallback for', medicineId);
+        if (itemInCart.cartId) {
+          await removeItem(itemInCart.cartId, medicineId);
         }
-        setCart(prev => ({ ...prev, [medicineId]: nextQty }));
       }
-    } catch (err: any) {
-      console.error('handleDecrement failed', medicineId, err);
-      Alert.alert('Could not update cart', err?.message ?? 'Please try again');
     } finally {
       setCartLoading(prev => ({ ...prev, [medicineId]: false }));
     }
-  }, [cart, cartLoading, cartServerIds]);
+  }, [cartItems, cartLoading, updateQuantity, removeItem]);
 
   const getCategoryTitle = useCallback(() => {
     switch (category) {
@@ -344,10 +227,10 @@ export default function MedicineListScreen() {
 
   const renderMedicineCard = useCallback(
     ({ item }: { item: Medicine }) => {
-      const quantity = cart[item.id] || 0;
+      const itemInCart = cartItems.find(i => i.id === item.id);
+      const quantity = itemInCart?.quantity || 0;
       const isInCart = quantity > 0;
 
-      // Determine displayed price values
       const displayPrice = item.curonnPrice ?? item.totalPrice ?? 0;
       const displayOriginal = item.streepBoxPrice ?? 0;
 
@@ -390,100 +273,98 @@ export default function MedicineListScreen() {
         </View>
       );
     },
-    [cart, handleIncrement, handleDecrement]
+    [cartItems, handleIncrement, handleDecrement]
   );
 
-  const getTotalCartItems = useCallback(() => {
-    return Object.values(cart).reduce((total, quantity) => total + quantity, 0);
-  }, [cart]);
+  // Removed redundant getTotalCartItems as we use cartCount from useCart()
 
   return (
-     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-    <View style={styles.container}>
-      <StatusBar
-                barStyle="dark-content"
-                translucent={false}
-                backgroundColor="#ffffffff"
-              />
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <BackButton
-            title={getCategoryTitle()}
-            onPress={handleBack}
-            style={styles.backButton}
-            textStyle={styles.headerTitle}
-          />
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
-            {/* <Image source={images.icons.cart} style={styles.cartIcon} /> */}
-             <CartIcon style={styles.cartIcon} width={15} height={15} />
-            {getTotalCartItems() > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{getTotalCartItems()}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-<LinearGradient
-        colors={[
-          "rgba(255, 255, 255, 1)",
-          "rgba(247, 84, 10, 0.2)",
-        ]}
-        start={{ x: 0.1, y: 0.4 }}
-        end={{ x: 0.1, y: 0.1 }}
-        style={{
-          paddingHorizontal: 20, // ✅ works
-          paddingVertical: 5,
-        }}
-      >
-      {/* Search Field */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for Medicines"
-            placeholderTextColor="#000"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => setSearchQuery('')}
-            >
-              <Image source={images.icons.close} style={styles.clearIcon} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          translucent={false}
+          backgroundColor="#ffffffff"
+        />
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <BackButton
+              title={getCategoryTitle()}
+              onPress={handleBack}
+              style={styles.backButton}
+              textStyle={styles.headerTitle}
+            />
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
+              {/* <Image source={images.icons.cart} style={styles.cartIcon} /> */}
+              <CartIcon style={styles.cartIcon} width={15} height={15} />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
-          )}
+          </View>
         </View>
-      </View>
-      </LinearGradient>
-      <View style={styles.content}>
+
+        <LinearGradient
+          colors={[
+            "rgba(255, 255, 255, 1)",
+            "rgba(247, 84, 10, 0.2)",
+          ]}
+          start={{ x: 0.1, y: 0.4 }}
+          end={{ x: 0.1, y: 0.1 }}
+          style={{
+            paddingHorizontal: 20, // ✅ works
+            paddingVertical: 5,
+          }}
+        >
+          {/* Search Field */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for Medicines"
+                placeholderTextColor="#000"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Image source={images.icons.close} style={styles.clearIcon} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </LinearGradient>
+        <View style={styles.content}>
           {/* Display drugGroup if available */}
           {drugGroup ? (
             <Text style={styles.dragtitle}>{drugGroup}</Text>
           ) : null}
-          </View>
-      {/* Medicines List */}
-      <FlatList
-        data={filteredMedicines}
-        renderItem={renderMedicineCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.medicinesList}
-        showsVerticalScrollIndicator={false}
-      />
+        </View>
+        {/* Medicines List */}
+        <FlatList
+          data={filteredMedicines}
+          renderItem={renderMedicineCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.medicinesList}
+          showsVerticalScrollIndicator={false}
+        />
 
-      {/* Continue button fixed at bottom */}
-      <View style={styles.continueContainer} pointerEvents="box-none">
-        <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/cart' as unknown as any)}>
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+        {/* Continue button fixed at bottom */}
+        <View style={styles.continueContainer} pointerEvents="box-none">
+          <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/cart' as unknown as any)}>
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
     </SafeAreaView>
   );
 }
@@ -498,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
-   paddingTop: getResponsiveSpacing(0),
+    paddingTop: getResponsiveSpacing(0),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
   },
@@ -513,7 +394,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   headerTitle: {
-      fontSize: 16,
+    fontSize: 16,
     color: "#202427",
     fontFamily: fonts.semiBold
   },
@@ -616,7 +497,7 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(10),
     borderWidth: 1,
     borderColor: '#DBDBDB',
-    paddingTop:5,
+    paddingTop: 5,
     // elevation: 2,
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 6 },
@@ -686,7 +567,7 @@ const styles = StyleSheet.create({
   },
   imageOriginalPrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#887f8b',     
+    color: '#887f8b',
     textDecorationLine: 'line-through',
     textDecorationStyle: 'solid',
     marginRight: getResponsiveSpacing(6),
@@ -927,7 +808,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     fontFamily: fonts.semiBold,
-     fontSize: getResponsiveFontSize(15),
+    fontSize: getResponsiveFontSize(15),
     // elevation: 4,
   },
   continueButtonText: {

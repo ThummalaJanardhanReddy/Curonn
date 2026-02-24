@@ -29,6 +29,7 @@ import {
 import LocationSelection from "../location/location-selection";
 import AddressSelection from "../address/address-selection";
 import { useUser } from "../../shared/context/UserContext";
+import { useCart } from "../../shared/context/CartContext";
 // import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
@@ -75,8 +76,7 @@ export default function BookingScreen({
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
   const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
-  const [incomingCartItems, setIncomingCartItems] = useState<Array<any>>([]);
-
+  const { cartItems, updateQuantity, removeItem } = useCart();
   // ─── Shared state ──────────────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -586,7 +586,7 @@ export default function BookingScreen({
                 it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
               medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
             }));
-            setIncomingCartItems(normalized);
+            // Since we use the global Cart Context, we do not need to populate incoming cart items.
           }
         } catch (e) {
           console.warn("Failed to parse cartItems from query params", e);
@@ -602,13 +602,6 @@ export default function BookingScreen({
     try {
       const g = (global as any).__BOOKING_CART;
       if (g && Array.isArray(g) && g.length > 0) {
-        const normalized = g.map((it: any) => ({
-          ...it,
-          medicineName:
-            it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
-          medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
-        }));
-        setIncomingCartItems(normalized);
         setIsFromMedicalFlag(true);
         try {
           (global as any).__BOOKING_CART = null;
@@ -621,12 +614,12 @@ export default function BookingScreen({
 
   // Medicine cart totals
   const itemsTotal = useMemo(() => {
-    return incomingCartItems.reduce((sum: number, it: any) => {
+    return cartItems.reduce((sum: number, it: any) => {
       const p = Number(it.price || 0);
       const q = Number(it.quantity || 1);
       return sum + p * q;
     }, 0);
-  }, [incomingCartItems]);
+  }, [cartItems]);
 
   const deliveryCharges = useMemo(() => {
     if (itemsTotal === 0) return 0;
@@ -639,22 +632,34 @@ export default function BookingScreen({
   );
 
   // Quantity handlers for medical cart items
-  const handleIncreaseQuantity = (index: number) => {
-    setIncomingCartItems((prev) => {
-      const copy = [...prev];
-      const current = Number(copy[index]?.quantity || 1);
-      copy[index] = { ...copy[index], quantity: current + 1 };
-      return copy;
-    });
+  const handleIncreaseQuantity = async (index: number) => {
+    const item = cartItems[index];
+    if (item && item.cartId) {
+      await updateQuantity(item.cartId, item.quantity + 1, item.id);
+    }
   };
 
-  const handleDecreaseQuantity = (index: number) => {
-    setIncomingCartItems((prev) => {
-      const copy = [...prev];
-      const current = Math.max(1, Number(copy[index]?.quantity || 1) - 1);
-      copy[index] = { ...copy[index], quantity: current };
-      return copy;
-    });
+  const handleDecreaseQuantity = async (index: number) => {
+    const item = cartItems[index];
+    if (!item) return;
+
+    const currentQty = Number(item.quantity || 1);
+
+    if (currentQty <= 1) {
+      if (item.cartId) {
+        await removeItem(item.cartId, item.id);
+        setToastMessageMed({
+          title: "Item Removed",
+          subtitle: "Medicine removed from cart.",
+          type: "success",
+        });
+        setShowToastMed(true);
+      }
+    } else {
+      if (item.cartId) {
+        await updateQuantity(item.cartId, currentQty - 1, item.id);
+      }
+    }
   };
 
   // Medicine: date format DD/MM/YYYY
@@ -703,12 +708,12 @@ export default function BookingScreen({
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
       paymentAmount: Number(displayedTotal.toFixed(2)),
-      cartItems: incomingCartItems.map((ci: any) => ({
+      cartItems: cartItems.map((ci: any) => ({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
         medicineId: ci.medicineId || 0,
         patientId: userData?.e_id || 0,
-        medicineName: ci.medicineName || "",
+        medicineName: ci.medicineName || ci.name || "",
         quantity: ci.quantity || 1,
         price: ci.price || 0,
         offer: ci.offer || 0,
@@ -786,7 +791,7 @@ export default function BookingScreen({
 
   // Medicine: handleBookNow (now like lab flow)
   const handleBookNowMed = async () => {
-    if (incomingCartItems.length === 0) {
+    if (cartItems.length === 0) {
       setToastMessageMed({
         title: "Cart Empty",
         subtitle: "No medicines selected",
@@ -897,7 +902,7 @@ export default function BookingScreen({
           >
             {/* Medicine List */}
             <CartItemsList
-              items={incomingCartItems.map((it: any, idx: number) => ({
+              items={cartItems.map((it: any, idx: number) => ({
                 id: (it.medicineId ?? it.id ?? idx).toString(),
                 name: it.medicineName || it.name || "",
                 price: Number(it.price || 0),
@@ -907,11 +912,11 @@ export default function BookingScreen({
                 cartId: it.cartId
               }))}
               onIncreaseQuantity={(id) => {
-                const idx = incomingCartItems.findIndex((it, i) => (it.medicineId ?? it.id ?? i).toString() === id);
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
                 if (idx !== -1) handleIncreaseQuantity(idx);
               }}
               onDecreaseQuantity={(id) => {
-                const idx = incomingCartItems.findIndex((it, i) => (it.medicineId ?? it.id ?? i).toString() === id);
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
                 if (idx !== -1) handleDecreaseQuantity(idx);
               }}
               itemsTotal={itemsTotal}

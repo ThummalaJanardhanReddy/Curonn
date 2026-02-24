@@ -1,7 +1,5 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import axiosClient from '../src/api/axiosClient';
-import ApiRoutes from '../src/api/employee/employee';
-import { useUser } from './shared/context/UserContext';
+import React, { useCallback, useMemo, useEffect } from 'react';
+import { useCart } from './shared/context/CartContext';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { fonts } from '@/app/shared/styles/fonts';
@@ -12,7 +10,6 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  Alert,
   StatusBar as RNStatusBar,
   StatusBar,
   Platform
@@ -23,251 +20,54 @@ import { images } from '../assets';
 import { colors } from './shared/styles/commonStyles';
 import {
   getResponsiveFontSize,
-  getResponsiveImageSize,
   getResponsiveSpacing,
 } from './shared/utils/responsive';
 import CartItemsList from './shared/components/CartItemsList';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: any;
-  subtitle?: string;
-  cartId?: number; // server cart id
-}
-
 export default function CartScreen() {
-  const { userData } = useUser();
-  // patientId is required by the GetActiveCart API (see Swagger). Keep undefined if missing so we don't call API with 0.
-  const patientId: number | undefined = userData?.e_id ?? undefined;
+  const { cartItems, loading, updateQuantity, removeItem, refreshCart } = useCart();
 
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   useFocusEffect(
     useCallback(() => {
+      refreshCart();
       if (Platform.OS === 'android') {
         const timeout = setTimeout(() => {
-          // Use React Native StatusBar API to set background color on Android
           RNStatusBar.setBackgroundColor("#ffffff", true);
-        }, 400); // Adjust timeout as needed
+        }, 400);
         return () => clearTimeout(timeout);
       }
-    }, [])
+    }, [refreshCart])
   );
-  // Load active cart from API on mount
-  useEffect(() => {
-    let mounted = true;
-    const loadCart = async () => {
-      // Debug: log patientId and userData so we can see why the API may not be called
-      console.log('CartScreen - loadCart, patientId:', patientId, 'userData from context:', userData);
-      if (!patientId) {
-        if (mounted) {
-          setError('No patient id available');
-          setItems([]);
-        }
-        // Early return to avoid calling the API with an invalid patientId (server expects a real id)
-        return;
-      }
-      try {
-        setLoading(true);
-        setError(null);
-        // Call GetActiveCart - backend should return user's active cart
-        // Swagger shows this endpoint expects ?patientId=<int>
-        // Print request for debugging
-        console.log('GetActiveCart request', { url: ApiRoutes.MedicalOrders.getActiveCart, params: { patientId } });
-        const res: any = await axiosClient.get(ApiRoutes.MedicalOrders.getActiveCart, { params: { patientId } });
-        // Print raw response for debugging
-        console.log('GetActiveCart response', res);
-        // res might be array or object with data
-        const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.cartItems ?? [];
 
-        const mapped: CartItem[] = list.map((it: any) => ({
-          id: (it.medicineId ?? it.medicineMasterId ?? it.medicine?.id ?? it.id ?? Math.random().toString()).toString(),
-          name: it.medicineName ?? it.name ?? it.drugName ?? it.medicine?.medicineName ?? 'Unknown',
-          price: Number(it.curonnPrice ?? it.price ?? it.totalPrice ?? it.mrp ?? 0),
-          quantity: Number(it.quantity ?? it.qty ?? 1),
-          image: it.imageUrl ? { uri: it.imageUrl } : images.icons.group9710,
-          subtitle: it.streepBoxQty ?? it.package ?? it.description ?? '',
-          cartId: it.cartId ?? it.id ?? it.cart_id ?? undefined,
-        }));
+  const totalAmount = useMemo(() =>
+    cartItems.reduce((s, it) => s + (Number(it.price) * it.quantity), 0),
+    [cartItems]
+  );
 
-        if (mounted) setItems(mapped);
-      } catch (err: any) {
-        console.error('Failed to load active cart', err);
-        if (mounted) setError(err?.message ?? 'Failed to load cart');
-        try {
-          const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to load cart';
-          // show a concise, user-friendly alert but keep the original error in console for debugging
-          Alert.alert('Could not load cart', msg.toString());
-        } catch (e) {
-          // ignore alert errors
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadCart();
-    return () => { mounted = false; };
-  }, [patientId]);
-
-  const totalAmount = useMemo(() => items.reduce((s, it) => s + it.price * it.quantity, 0), [items]);
-
-  // Helper: try multiple delete endpoints for cart item (some backends expect different routes)
-
-
-  const deleteCartItemOnServer = async (cartId: number | string) => {
-    // Primary deletion: try DELETE endpoints only (user requested delete-only on '-' tap)
-    const attempts: { desc: string; fn: () => Promise<any> }[] = [
-      {
-        desc: `DELETE ${ApiRoutes.MedicalOrders.deleteCartItem} with params { cartId }`,
-        fn: async () => {
-          console.log('Request DELETE (params) ->', ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId } });
-          const res = await axiosClient.delete(ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId } });
-          console.log('Response DELETE (params) <-', res);
-          return res;
-        },
-      },
-      {
-        desc: `DELETE ${ApiRoutes.MedicalOrders.deleteCartItem}/${cartId}`,
-        fn: async () => {
-          const path = `${ApiRoutes.MedicalOrders.deleteCartItem}/${cartId}`;
-          console.log('Request DELETE ->', path);
-          const res = await axiosClient.delete(path);
-          console.log('Response DELETE <-', res);
-          return res;
-        },
-      },
-      {
-        desc: `DELETE /medicine-orders/cart/${cartId}`,
-        fn: async () => {
-          const path = `/medicine-orders/cart/${cartId}`;
-          console.log('Request DELETE ->', path);
-          const res = await axiosClient.delete(path);
-          console.log('Response DELETE <-', res);
-          return res;
-        },
-      },
-    ];
-
-    for (const attempt of attempts) {
-      try {
-        console.log('Attempting delete fallback:', attempt.desc);
-        const res = await attempt.fn();
-        console.log('✅ Delete succeeded:', attempt.desc, 'response:', res);
-        return res;
-      } catch (err: any) {
-        try {
-          console.warn('Delete fallback attempt failed:', attempt.desc, err?.response?.status, err?.response?.data ?? err.message);
-        } catch (e) {
-          console.warn('Delete fallback attempt failed (no response available):', attempt.desc, err?.message ?? err);
-        }
-      }
+  const handleIncreaseQty = useCallback(async (medicineId: string) => {
+    const item = cartItems.find(i => i.id === medicineId);
+    if (item && item.cartId) {
+      await updateQuantity(item.cartId, item.quantity + 1, medicineId);
     }
+  }, [cartItems, updateQuantity]);
 
-    // If all DELETE attempts failed, as a last resort try update-quantity with quantity=0
-    try {
-      console.warn('All DELETE attempts failed for cartId', cartId, '-> trying update-quantity (quantity=0) as fallback');
-      const res = await updateCartQuantityOnServer(cartId, 0);
-      console.log('✅ Delete via update-quantity fallback succeeded for cartId', cartId, 'response:', res);
-      return res;
-    } catch (err: any) {
-      console.error('All delete attempts (DELETE + update-quantity) failed for cartId', cartId, err?.response?.status ?? err?.message);
-      throw new Error('All delete attempts failed');
-    }
-  };
-
-  const updateCartQuantityOnServer = async (cartId: number | string, quantity: number) => {
-    try {
-      // primary attempt: PUT /medicine-orders/cart/update-quantity with params
-      console.log('Request PUT ->', ApiRoutes.MedicalOrders.updateCartQuantityBase, { params: { cartId, quantity } });
-      const res = await axiosClient.put(ApiRoutes.MedicalOrders.updateCartQuantityBase, null, { params: { cartId, quantity } });
-      console.log('Response PUT <-', res);
-      console.log('✅ Update quantity succeeded:', { cartId, quantity });
-      return res;
-    } catch (err: any) {
-      console.warn('Primary update attempt failed:', err?.response?.status || err.message, err?.response?.data ?? '');
-      // fallback: try embedded-query path
-      try {
-        const path = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, quantity);
-        console.log('Request PUT (fallback) ->', path);
-        const res2 = await axiosClient.put(path);
-        console.log('Response PUT (fallback) <-', res2);
-        console.log('✅ Fallback update succeeded:', path);
-        return res2;
-      } catch (err2: any) {
-        console.warn('Fallback update attempt failed:', err2?.response?.status || err2.message, err2?.response?.data ?? '');
-        throw err2;
-      }
-    }
-  };
-
-  const changeQty = useCallback(async (id: string, delta: number) => {
-    const item = items.find(i => i.id === id);
+  const handleDecreaseQty = useCallback(async (medicineId: string) => {
+    const item = cartItems.find(i => i.id === medicineId);
     if (!item) return;
-    const nextQty = Math.max(0, item.quantity + delta);
-    try {
-      // If nextQty is zero, attempt to delete the cart item on server
-      if (nextQty === 0) {
-        if (item.cartId) {
-          try {
-            const delRes = await deleteCartItemOnServer(item.cartId);
-            console.log('✅ Deleted successfully - cartId:', item.cartId, 'response:', delRes);
-          } catch (e) {
-            console.warn('All delete attempts failed for cartId', item.cartId, e);
-          }
-        }
-        // remove locally
-        setItems(prev => prev.filter(it => it.id !== id));
-        return;
-      }
 
-      // If server cartId present, call update-quantity endpoint for non-zero quantity
+    if (item.quantity > 1) {
       if (item.cartId) {
-        try {
-          await updateCartQuantityOnServer(item.cartId, nextQty);
-        } catch (e) {
-          console.warn('Failed to update quantity on server for cartId', item.cartId, e);
-        }
-      } else {
-        // If no cartId, attempt to call save endpoint to create server item
-        const body = {
-          cartId: 0,
-          medicineOrderId: 0,
-          medicineId: item.id,
-          patientId: patientId,
-          medicineName: item.name,
-          quantity: nextQty,
-          price: item.price,
-          offer: 0,
-          discount: 0,
-          totalPrice: item.price * nextQty,
-          description: item.subtitle ?? '',
-        };
-        console.log('Request POST ->', ApiRoutes.MedicalOrders.saveCartItem, 'body:', body);
-        const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, body);
-        console.log('Response POST <-', res);
-        const returnedCartId = res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? undefined;
-        if (returnedCartId) {
-          // update item with server cartId
-          setItems(prev => prev.map(it => it.id === id ? { ...it, cartId: Number(returnedCartId) } : it));
-          console.log('✅ Added successfully - cartId:', returnedCartId, 'for item id:', id);
-        } else {
-          console.warn('Save response did not include cart id, will refetch active cart to sync');
-          // best-effort: trigger a reload by calling loadCart via changing patientId effect won't run here
-          // TODO: consider exposing a refetch function; for now, leave local state as-is
-        }
+        await updateQuantity(item.cartId, item.quantity - 1, medicineId);
       }
-
-      // update local qty after server success
-      setItems(prev => prev.map(it => it.id === id ? { ...it, quantity: nextQty } : it));
-    } catch (err) {
-      console.error('Failed to update cart quantity', err);
+    } else {
+      if (item.cartId) {
+        await removeItem(item.cartId, medicineId);
+      } else {
+        // Fallback for items without cartId
+        await refreshCart();
+      }
     }
-  }, [items, patientId]);
+  }, [cartItems, updateQuantity, removeItem, refreshCart]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
@@ -286,40 +86,33 @@ export default function CartScreen() {
 
         <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(140) }}>
           <CartItemsList
-            items={items}
-            onIncreaseQuantity={(id) => changeQty(id, 1)}
-            onDecreaseQuantity={(id) => changeQty(id, -1)}
+            items={cartItems}
+            onIncreaseQuantity={handleIncreaseQty}
+            onDecreaseQuantity={handleDecreaseQty}
             itemsTotal={totalAmount}
-            deliveryCharges={0} // Default or from state
-            displayedTotal={totalAmount} // Adjust if there are delivery charges
-            showPricingDetails={false} // Price breakdown in footer as requested
+            deliveryCharges={0}
+            displayedTotal={totalAmount}
+            showPricingDetails={false}
           />
         </ScrollView>
 
         <View style={styles.footer}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹{totalAmount}</Text>
+            <Text style={styles.totalValue}>₹{totalAmount.toFixed(0)}</Text>
           </View>
           <TouchableOpacity
             style={styles.continueBtn}
             onPress={() => {
               try {
-                // Pass isFromMedical flag and selected cart items as a query param (stringified)
-                const qs = `?isFromMedical=true&cartItems=${encodeURIComponent(JSON.stringify(items))}`;
-                // Log the exact query being pushed so we can verify BookingScreen receives it
-                console.log('CartScreen - navigating to Booking with query:', `/features/booking/booking${qs}`);
-                // Temporary fallback: store items on global so BookingScreen can pick them up if search params parsing fails
-                try {
-                  (global as any).__BOOKING_CART = items;
-                } catch (e) {
-                  // ignore
-                }
-                router.push((`/features/booking/booking${qs}`) as unknown as any);
+                const qs = `?isFromMedical=true&cartItems=${encodeURIComponent(JSON.stringify(cartItems))}`;
+                console.log('CartScreen - navigating to Booking with items:', cartItems.length);
+                // Temporary fallback for legacy code
+                (global as any).__BOOKING_CART = cartItems;
+                router.push((`/features/booking/booking${qs}`) as any);
               } catch (e) {
-                console.error('Failed to navigate to checkout with cart items', e);
-                // Fallback navigation
-                router.push(('/features/booking/booking') as unknown as any);
+                console.error('Failed to navigate to checkout', e);
+                router.push(('/features/booking/booking') as any);
               }
             }}
           >

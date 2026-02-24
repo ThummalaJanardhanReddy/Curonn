@@ -136,7 +136,15 @@ export default function MedicinesScreen() {
     // { id: 'curonn', title: 'Curonn Rx', icon: icons.pill ?? icons.calendar },
   ];
 
-  const pickFromGallery = useCallback(async () => {
+  const pickFromGallery = useCallback(async (clearFirst?: boolean | any) => {
+    const shouldClear = clearFirst === true;
+    if (shouldClear) {
+      setSelectedImages([]);
+      setInitialModalNotes('');
+      setInitialModalOption('all');
+      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
+    }
+
     try {
       const ImagePicker = await getImagePicker();
       if (!ImagePicker || typeof ImagePicker.launchImageLibraryAsync !== 'function') {
@@ -148,7 +156,8 @@ export default function MedicinesScreen() {
         Alert.alert('Permissions required', 'Please grant gallery permissions to select images.');
         return;
       }
-      const remaining = 3 - selectedImages.length;
+      const currentImages = shouldClear ? [] : selectedImages;
+      const remaining = 3 - currentImages.length;
       // if (remaining <= 0) {
       //   Alert.alert('Limit reached', 'You can select up to 3 images only.');
       //   return;
@@ -163,16 +172,24 @@ export default function MedicinesScreen() {
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...selectedImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked].slice(0, 3);
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
       console.error('Gallery pick failed', e);
       Alert.alert('Error', 'Failed to pick images from gallery');
     }
-  }, [selectedImages]);
+  }, [selectedImages, getImagePicker]);
 
-  const takePhoto = useCallback(async () => {
+  const takePhoto = useCallback(async (clearFirst?: boolean | any) => {
+    const shouldClear = clearFirst === true;
+    if (shouldClear) {
+      setSelectedImages([]);
+      setInitialModalNotes('');
+      setInitialModalOption('all');
+      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
+    }
+
     try {
       const ImagePicker = await getImagePicker();
       if (!ImagePicker || typeof ImagePicker.launchCameraAsync !== 'function') {
@@ -184,7 +201,8 @@ export default function MedicinesScreen() {
         Alert.alert('Permissions required', 'Please grant camera permissions to take photos.');
         return;
       }
-      const remaining = 3 - selectedImages.length;
+      const currentImages = shouldClear ? [] : selectedImages;
+      const remaining = 3 - currentImages.length;
       if (remaining <= 0) {
         Alert.alert('Limit reached', 'You can select up to 3 images only.');
         return;
@@ -198,14 +216,14 @@ export default function MedicinesScreen() {
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...selectedImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked].slice(0, 3);
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
       console.error('Camera failed', e);
       Alert.alert('Error', 'Failed to open camera');
     }
-  }, [selectedImages]);
+  }, [selectedImages, getImagePicker]);
 
   const removeSelectedImage = useCallback((index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
@@ -231,8 +249,8 @@ export default function MedicinesScreen() {
           index === 0 && { borderRightWidth: 1, borderColor: '#BABCBA' },
         ]}
         onPress={() => {
-          if (item.id === 'gallery') pickFromGallery();
-          else if (item.id === 'camera') takePhoto();
+          if (item.id === 'gallery') pickFromGallery(true);
+          else if (item.id === 'camera') takePhoto(true);
           else setUploadModalVisible(true);
         }}
       >
@@ -344,8 +362,8 @@ export default function MedicinesScreen() {
         }}
         selectedImages={selectedImages}
         onRemove={removeSelectedImage}
-        onUploadMoreGallery={pickFromGallery}
-        onTakePhoto={takePhoto}
+        onUploadMoreGallery={() => pickFromGallery(false)}
+        onTakePhoto={() => takePhoto(false)}
         onNext={handleConfirmNext}
         initialNotes={initialModalNotes}
         initialOption={initialModalOption}
