@@ -245,7 +245,7 @@ export default function FoodAllergiesModal({
             <SafeAreaView style={styles.modalContent}>
               {/* Modal Header */}
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add food allergy</Text>
+                <Text style={styles.modalTitle}>Add Food Allergy</Text>
                 <TouchableOpacity
                   onPress={handleCloseModal}
                   style={styles.modalCloseButton}
