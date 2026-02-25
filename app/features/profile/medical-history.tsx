@@ -29,9 +29,10 @@ interface MedicalCondition {
 
 interface MedicalHistoryScreenProps {
   onClose?: () => void;
+  showAddModal?: boolean;
 }
 
-export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenProps) {
+export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalHistoryScreenProps) {
   const [conditions, setConditions] = useState<MedicalCondition[]>([
     {
       id: '1',
@@ -52,6 +53,15 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
     condition: '',
     status: 'active' as 'active' | 'resolved' | 'chronic',
   });
+
+  React.useEffect(() => {
+    if (showAddModal) {
+      const timer = setTimeout(() => {
+        setModalVisible(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showAddModal]);
 
 
   const handleBack = () => {
@@ -117,11 +127,11 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
             <View
               style={[
                 styles.statusIndicator,
-                { 
-                  backgroundColor: 
+                {
+                  backgroundColor:
                     item.status === 'active' ? colors.error :
-                    item.status === 'resolved' ? colors.success : 
-                    colors.warning
+                      item.status === 'resolved' ? colors.success :
+                        colors.warning
                 },
               ]}
             />
@@ -223,7 +233,7 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
                     { value: 'resolved', label: 'Resolved' },
                     { value: 'chronic', label: 'Chronic' },
                   ].map((option) => (
-                  <TouchableOpacity
+                    <TouchableOpacity
                       key={option.value}
                       style={styles.radioOption}
                       onPress={() => setNewCondition({ ...newCondition, status: option.value as 'active' | 'resolved' | 'chronic' })}
@@ -260,49 +270,49 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
         onRequestClose={handleCloseSearchModal}
       >
         <SafeAreaView style={styles.searchModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Search Medical History</Text>
-              <TouchableOpacity
-                onPress={handleCloseSearchModal}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Search Medical History</Text>
+            <TouchableOpacity
+              onPress={handleCloseSearchModal}
+              style={styles.closeButton}
+            >
+              <Image source={images.icons.close} style={styles.closeIcon} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.searchModalBody}>
+            {/* Search Input */}
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search medical conditions..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                selectionColor="transparent"
+                underlineColorAndroid="transparent"
+              />
+              <Text style={styles.searchInputIcon}>🔍</Text>
             </View>
 
-            <View style={styles.searchModalBody}>
-              {/* Search Input */}
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search medical conditions..."
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                  selectionColor="transparent"
-                  underlineColorAndroid="transparent"
-                />
-                <Text style={styles.searchInputIcon}>🔍</Text>
-              </View>
-
-              {/* Search Results */}
-              <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
-                {filteredResults.map((condition, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.searchResultItem}
-                    onPress={() => handleSelectCondition(condition)}
-                  >
-                    <Text style={styles.searchResultText}>{condition}</Text>
-                  </TouchableOpacity>
-                ))}
-                {filteredResults.length === 0 && searchQuery && (
-                  <View style={styles.noResultsContainer}>
-                    <Text style={styles.noResultsText}>No conditions found</Text>
-                  </View>
-                )}
-              </ScrollView>
+            {/* Search Results */}
+            <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
+              {filteredResults.map((condition, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.searchResultItem}
+                  onPress={() => handleSelectCondition(condition)}
+                >
+                  <Text style={styles.searchResultText}>{condition}</Text>
+                </TouchableOpacity>
+              ))}
+              {filteredResults.length === 0 && searchQuery && (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>No conditions found</Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </SafeAreaView>
       </Modal>
@@ -314,7 +324,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg_primary,
-    
+
   },
   header: {
     flexDirection: 'row',

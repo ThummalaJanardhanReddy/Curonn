@@ -1008,29 +1008,6 @@ export default function BookingScreen({
             style={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            {/* Medicine List */}
-            <CartItemsList
-              items={cartItems.map((it: any, idx: number) => ({
-                id: (it.medicineId ?? it.id ?? idx).toString(),
-                name: it.medicineName || it.name || "",
-                price: Number(it.price || 0),
-                quantity: Number(it.quantity || 1),
-                subtitle: it.pack || it.subtitle || "",
-                description: it.description || "",
-                cartId: it.cartId
-              }))}
-              onIncreaseQuantity={(id) => {
-                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
-                if (idx !== -1) handleIncreaseQuantity(idx);
-              }}
-              onDecreaseQuantity={(id) => {
-                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
-                if (idx !== -1) handleDecreaseQuantity(idx);
-              }}
-              itemsTotal={itemsTotal}
-              deliveryCharges={deliveryCharges}
-              displayedTotal={displayedTotal}
-            />
 
             {/* Service Address */}
             <View style={styles.section}>
@@ -1205,7 +1182,33 @@ export default function BookingScreen({
               </View>
             </View>
 
+            {/* Medicine List */}
+            <CartItemsList
+              noPadding
+              items={cartItems.map((it: any, idx: number) => ({
+                id: (it.medicineId ?? it.id ?? idx).toString(),
+                name: it.medicineName || it.name || "",
+                price: Number(it.price || 0),
+                quantity: Number(it.quantity || 1),
+                subtitle: it.pack || it.subtitle || "",
+                description: it.description || "",
+                cartId: it.cartId
+              }))}
+              onIncreaseQuantity={(id) => {
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                if (idx !== -1) handleIncreaseQuantity(idx);
+              }}
+              onDecreaseQuantity={(id) => {
+                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                if (idx !== -1) handleDecreaseQuantity(idx);
+              }}
+              itemsTotal={itemsTotal}
+              deliveryCharges={deliveryCharges}
+              displayedTotal={displayedTotal}
+            />
+
             {/* Cancellation Policy */}
+
             <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
@@ -2438,5 +2441,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderRadius: 20,
     padding: 8,
+  },
+  contentt: {
+    flex: 1,
+    paddingHorizontal: getResponsiveSpacing(0),
   },
 });

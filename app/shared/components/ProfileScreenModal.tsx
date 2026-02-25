@@ -10,7 +10,7 @@ interface ProfileScreenModalProps {
 
 export default function ProfileScreenModal({ visible, onClose, children }: ProfileScreenModalProps) {
   // Clone the child component and pass the onClose function as a prop
-  const childWithProps = isValidElement(children) 
+  const childWithProps = isValidElement(children)
     ? cloneElement(children, { onClose })
     : children;
 
