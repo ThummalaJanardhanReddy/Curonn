@@ -539,7 +539,7 @@ export default function BookingPayLaterScreen() {
                       onPress={() => handleRemoveImage(idx)}
                       activeOpacity={0.7}
                     >
-                      <Image source={images.icons.close} style={{ width: 10, height: 10, tintColor: '#fff' }} />
+                      <Text style={styles.removeX}>✕</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -912,20 +912,20 @@ const styles = StyleSheet.create({
   },
   removeImageIcon: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#ff4444',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 12,
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
     zIndex: 10,
+  },
+  removeX: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 10,
   },
   notesText: {
     fontSize: 13,

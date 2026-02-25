@@ -129,7 +129,7 @@ export default function CommonHeader({
 
   const handleCartPress = () => {
     console.log('Cart button pressed');
-    setCartVisible(true);
+    // setCartVisible(true);
     if (onCartPress) {
       onCartPress();
     }

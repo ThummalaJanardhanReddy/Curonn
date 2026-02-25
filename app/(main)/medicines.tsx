@@ -157,11 +157,6 @@ export default function MedicinesScreen() {
         return;
       }
       const currentImages = shouldClear ? [] : selectedImages;
-      const remaining = 3 - currentImages.length;
-      // if (remaining <= 0) {
-      //   Alert.alert('Limit reached', 'You can select up to 3 images only.');
-      //   return;
-      // }
       const res: any = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -172,7 +167,7 @@ export default function MedicinesScreen() {
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...currentImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked];
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
@@ -202,11 +197,6 @@ export default function MedicinesScreen() {
         return;
       }
       const currentImages = shouldClear ? [] : selectedImages;
-      const remaining = 3 - currentImages.length;
-      if (remaining <= 0) {
-        Alert.alert('Limit reached', 'You can select up to 3 images only.');
-        return;
-      }
       const res: any = await ImagePicker.launchCameraAsync({
         mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
         quality: 0.8,
@@ -216,7 +206,7 @@ export default function MedicinesScreen() {
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...currentImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked];
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
@@ -508,7 +498,7 @@ const styles = StyleSheet.create({
     padding: getResponsiveSpacing(8),
   },
   categoryTitle: {
-    fontSize: getResponsiveFontSize(13),
+    fontSize: getResponsiveFontSize(12),
     fontWeight: '600',
     color: "#000000",
     flex: 1,

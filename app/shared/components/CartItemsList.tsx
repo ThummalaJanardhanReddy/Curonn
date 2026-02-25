@@ -23,6 +23,7 @@ interface CartItemsListProps {
     deliveryCharges?: number;
     displayedTotal: number;
     showPricingDetails?: boolean;
+    noPadding?: boolean;
 }
 
 const CartItemsList: React.FC<CartItemsListProps> = ({
@@ -33,9 +34,10 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
     deliveryCharges = 0,
     displayedTotal,
     showPricingDetails = true,
+    noPadding = false,
 }) => {
     return (
-        <View style={styles.section}>
+        <View style={[styles.section, noPadding && { paddingHorizontal: 0 }]}>
             <Text style={styles.sectionTitle}>Medicine List</Text>
             <View style={styles.medicineListCard}>
                 {items.length === 0 ? (
