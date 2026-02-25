@@ -46,11 +46,11 @@ export const HealthApi = {
   updateHealthData: '/Health/UpdateHealthData',
 } as const;
 
-export const NotificationApi = {
-  getAll: (userId: string | number) => `/Notification/GetAll/${userId}`,
-  markAsRead: (id: string | number) => `/Notification/MarkAsRead/${id}`,
-  delete: (id: string | number) => `/Notification/Delete/${id}`,
-} as const;
+// export const NotificationApi = {
+//   getAll: (userId: string | number) => `/Notification/GetAll/${userId}`,
+//   markAsRead: (id: string | number) => `/Notification/MarkAsRead/${id}`,
+//   delete: (id: string | number) => `/Notification/Delete/${id}`,
+// } as const;
 
 export const CommonApi = {
   getOrgList: '/Common/GetOrganizationList',
@@ -148,9 +148,15 @@ export const PrescriptionOrdersApi = {
 } as const;
 
 export const AmbulanceApi = {
-  saveUpdate: '/Ambulances/SaveOrUpdate',
+  saveUpdate: '/AmbulanceBooking/save',
   getAll: '/Ambulances/GetAll',
   getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
+} as const;
+
+export const NotificationApi = {
+  GetCount: (userId: string | number, userType: string | number) => `/notifications/count?userId=${userId}&userType=${userType}`,
+  GetList: (userId: string | number, userType: string | number) => `/notifications/list?userId=${userId}&userType=${userType}`,
+  readmark: (id: number) => `/notifications/mark-read/${id}`,
 } as const;
 
 // ✅ Unified export for convenience

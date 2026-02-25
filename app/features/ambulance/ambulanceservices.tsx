@@ -34,12 +34,14 @@ import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic
 
 type ServiceType = "ambulance";
 
+
 interface TestItem {
   id: string;
   name: string;
   price: string;
   ambulanceMasterId?: number;
   serviceId?: string;
+  reportTime?: string;
   // Only include fields that exist in ambulance API response
 }
 
@@ -50,17 +52,6 @@ interface ApiResponse<T> {
   data: T;
   error?: any;
 }
-
-interface LabTestItem {
-  labTestMasterId: number;
-  testId: string;
-  testName: string;
-  price: number;
-  curonnPrice?: number;
-  groupName: string;
-  groupImage: string;
-}
-
 
 
 interface HealthCheckItemApi {
@@ -73,12 +64,6 @@ interface HealthCheckItemApi {
 interface AmbulaceResponse {
   items: HealthCheckItemApi[];
   totalCount: number;
-}
-
-interface ScanItemApi {
-  xrayMasterId: number;
-  testName: string;
-  price: number;
 }
 
 
@@ -285,7 +270,7 @@ export default function AmbulanceScreen() {
               <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by service name"
+                placeholder="Search"
                 placeholderTextColor="#000"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -343,7 +328,8 @@ export default function AmbulanceScreen() {
             serviceName={selectedTest.name}
             servicePrice={Number(selectedTest.price)}
             masterId={selectedTest.ambulanceMasterId}
-            type={"ambulance" as ServiceType} isAtHome={false}    />
+            type={"ambulance" as ServiceType} isAtHome={true}    
+            reportTime={"10-12 hours"} />
         )}
       </View>
     </SafeAreaView>

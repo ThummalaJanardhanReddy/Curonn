@@ -675,7 +675,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
               {/* Tab Buttons */}
               <View style={styles.tabButtons}>
-                {/* <TouchableOpacity
+                <TouchableOpacity
                   style={[
                     styles.tabButton,
                     activeTab === 0 && styles.activeTabButton,
@@ -690,7 +690,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   >
                     Profile
                   </Text>
-                </TouchableOpacity> */}
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.tabButton,
@@ -754,8 +754,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
 
             {/* Tab Content */}
-            {/* {activeTab === 0 ? renderProfileTab() : renderSettingsTab()} */}
-            {renderSettingsTab()}
+            {activeTab === 0 ? renderProfileTab() : renderSettingsTab()}
+            {/* {renderSettingsTab()} */}
           </SafeAreaView>
           
         </View>

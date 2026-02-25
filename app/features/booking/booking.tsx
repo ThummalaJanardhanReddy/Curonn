@@ -59,6 +59,7 @@ interface BookingScreenProps {
   type?: ServiceType;
   /** Lab-test flow only */
   reportTime?: string;
+  serviceId?: number;
 }
 
 export default function BookingScreen({
@@ -70,6 +71,7 @@ export default function BookingScreen({
   masterId,
   type,
   reportTime,
+  serviceId,
 }: BookingScreenProps) {
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
@@ -155,6 +157,28 @@ export default function BookingScreen({
     "10:00 AM - 11:00 AM",
   ];
 
+  // Helper to get end time of slot
+  function getSlotEndTime(slot: string): Date {
+    const [, end] = slot.split("-");
+    const [endTime, endPeriod] = end.trim().split(" ");
+    let [hour, minute] = endTime.split(":");
+    hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
+    const now = new Date();
+    const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
+    return slotDate;
+  }
+
+  // Check if today is available
+  useEffect(() => {
+    const now = new Date();
+    // Find latest slot end time
+    const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
+      const end = getSlotEndTime(slot);
+      return end > latest ? end : latest;
+    }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
+    setIsTodayAvailable(now < latestSlotEnd);
+  }, []);
+
   // Medicine time slots
   const medTimeSlots = [
     "09:00 AM - 10:00 AM",
@@ -200,6 +224,13 @@ export default function BookingScreen({
               typeof res.discountScanXray === "number" &&
                 res.discountScanXray != null
                 ? res.discountScanXray
+                : 0;
+          }
+          else if (type === "ambulance") {
+            discount =
+              typeof res.discountAmbulanceService === "number" &&
+                res.discountAmbulanceService != null
+                ? res.discountAmbulanceService
                 : 0;
           }
           setDiscountPercent(discount);
@@ -397,6 +428,7 @@ export default function BookingScreen({
       payload.labPackageMasterId = 0;
       payload.xrayMasterId = masterId || 0;
     }
+
     return payload;
   };
 
@@ -448,6 +480,82 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
+
+
+   const saveAmbulanceOrder = async (paymentData: {
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    }) => {
+      // Build ambulance order payload (customize as needed)
+      const payload: any = {
+        ambulanceBookingId: 0,
+        patientId: userData?.e_id || 0,
+        serviceName: serviceName,
+        serviceId: masterId || 0,
+        address: selectedLocation?.address || "",
+        hNo: selectedLocation?.houseNumber || "",
+        landMark: selectedLocation?.landmark || "",
+        addressNickname: selectedLocation?.nickname
+          ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+          : "",
+        serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
+        timeSlot: selectedTimeSlot,
+        isSelfService: patientType === "self",
+        paymentDetails: String(totalAmount),
+        isPaymentDone: !!paymentData,
+        createdBy: userData?.e_id || 0,
+        statusId: statusId,
+        paymentAmount: totalAmount,
+        razorpayOrderId: paymentData?.razorpayOrderId || "",
+        razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+        razorpaySignature: paymentData?.razorpaySignature || "",
+        req: "web",
+      };
+      // Add relation info if for others
+      if (patientType === "others" && selectedRelation) {
+        payload.relationId = selectedRelation.masterDataId;
+        payload.relationName = fullName;
+        payload.relationAge = age ? Number(age) : 0;
+        payload.relationGender = gender;
+      }
+      try {
+        const response: any = await axiosClient.post(
+          ApiRoutes.Ambulance.saveUpdate,
+          payload
+        );
+        console.log("📥 Ambulance Save Order Response:", JSON.stringify(response, null, 2));
+        if (response && (response.success || response.isSuccess)) {
+          setToastMessageLab({
+            title: "Your ambulance booking has been completed successfully",
+            subtitle: response.message || "Your ambulance order was placed successfully!",
+            type: "success",
+          });
+          setShowToastLab(true);
+            setTimeout(() => {
+          setShowToastLab(false);
+          setShowPayment(false);
+          if (onClose) onClose();
+          router.replace("/(main)/orders");
+        }, 1500);
+        } else {
+          setToastMessageLab({
+            title: "Order Failed",
+            subtitle: response?.message || "Failed to place ambulance order.",
+            type: "error",
+          });
+          setShowToastLab(true);
+        }
+      } catch (error) {
+        console.error("[Booking] saveAmbulanceOrder error:", error);
+        setToastMessageLab({
+          title: "Order Error",
+          subtitle: "Something went wrong.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    };
 
   // Lab-test date format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
@@ -735,7 +843,7 @@ export default function BookingScreen({
     }
     return payload;
   };
-  console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+  //console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -743,7 +851,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+   // console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1823,6 +1931,13 @@ export default function BookingScreen({
                       razorpayPaymentId: data.razorpay_payment_id || "",
                       razorpaySignature: data.razorpay_signature || "",
                     });
+                  } else if (type === "ambulance") {
+                    saveAmbulanceOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
                   } else {
                     saveLabOrder({
                       razorpayOrderId:
@@ -1882,7 +1997,7 @@ export default function BookingScreen({
               mode="date"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={handleLabDateChange}
-              minimumDate={new Date()}
+              minimumDate={isTodayAvailable ? new Date() : (() => { let d = new Date(); d.setDate(d.getDate() + 1); return d; })()}
             />
           )}
 

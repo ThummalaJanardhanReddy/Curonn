@@ -76,8 +76,9 @@ export default function HomeScreen() {
 
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-
-
+  const [notifications, setNotifications] = useState<any>(null);
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     try {
@@ -92,7 +93,23 @@ export default function HomeScreen() {
       return [];
     }
   };
-  const { userData } = useUser();
+
+useEffect(() => {
+    if (!patientId) return;
+     const fetchNotifications = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log(" Notification  response:", data);
+        setNotifications(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
+    fetchNotifications();
+  }, [patientId]);
+
+
   const [orders, setOrders] = useState<any[]>([]);
   // Memoized sorted orders: always sort by createdOn descending before slicing
   const latestOrders = useMemo(() => {
@@ -304,6 +321,23 @@ export default function HomeScreen() {
 
   };
 
+    const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      // Replace with your actual API endpoint for marking as read
+      await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), { notificationId });
+      // Update local state to mark as read
+      setNotifications((prev: any) =>
+        Array.isArray(prev)
+          ? prev.map((n) =>
+              n.notificationId === notificationId ? { ...n, isRead: true } : n
+            )
+          : prev
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read', error);
+    }
+  };
+
   useEffect(() => {
     async function fetchArticles() {
       try {
@@ -353,6 +387,8 @@ export default function HomeScreen() {
     // }
   }, [notificationVisible]);
 
+  
+
   // Dummy services data (would come from API)
   const services = useMemo(
     () => [
@@ -397,40 +433,7 @@ export default function HomeScreen() {
     []
   );
 
-  // Dummy notifications
-  const notifications = useMemo(
-    () => [
-      {
-        id: 1,
-        title: "Appointment Reminder",
-        message: "Your doctor appointment is scheduled for tomorrow at 2:00 PM",
-        time: "2 hours ago",
-        type: "appointment",
-      },
-      {
-        id: 2,
-        title: "Medicine Delivery",
-        message: "Your medicine order has been delivered successfully",
-        time: "1 day ago",
-        type: "delivery",
-      },
-      {
-        id: 3,
-        title: "Health Tips",
-        message: "New health tips available for your wellness journey",
-        time: "2 days ago",
-        type: "tips",
-      },
-      {
-        id: 4,
-        title: "Lab Results Ready",
-        message: "Your recent lab test results are now available",
-        time: "3 days ago",
-        type: "results",
-      },
-    ],
-    []
-  );
+ 
 
   const showNotificationModal = useCallback(() => {
     setNotificationVisible(true);
@@ -561,28 +564,34 @@ export default function HomeScreen() {
     []
   );
 
+
+
   const renderNotification = useCallback(
-    ({ item }: { item: any }) => (
-      <View style={styles.notificationItem}>
-        <View style={styles.notificationItemIconContainer}>
-          <Image
-            source={images.notification}
-            style={styles.notificationItemIcon}
-            resizeMode="contain"
-          />
-          {/* <images.notificationIcon
-            width={32}
-            height={32}
-            // fill="#694664"
-          /> */}
-        </View>
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationMessage}>{item.message}</Text>
-          <Text style={styles.notificationTime}>{item.time}</Text>
-        </View>
-      </View>
-    ),
+    ({ item }: { item: any }) => {
+      const bgColor = item.isRead ? '#F6F6F6' : '#FFF3E0';
+      return (
+        <TouchableOpacity
+          style={[styles.notificationItem, { backgroundColor: bgColor }]}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (!item.isRead) markNotificationAsRead(item.notificationId);
+          }}
+        >
+          <View style={styles.notificationItemIconContainer}>
+            <Image
+              source={images.notification}
+              style={styles.notificationItemIcon}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationMessage}>{item.message}</Text>
+            {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
+          </View>
+        </TouchableOpacity>
+      );
+    },
     []
   );
 
@@ -796,7 +805,7 @@ export default function HomeScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                // onPress={() => router.push("/")}
+                 onPress={() => router.push("/features/ambulance/ambulanceservices")}
                 >
                   Book Now
                 </Button>
@@ -1104,7 +1113,7 @@ export default function HomeScreen() {
               <FlatList
                 data={notifications}
                 renderItem={renderNotification}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.notificationId.toString()}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.notificationList}
                 accessibilityRole="list"
@@ -1490,13 +1499,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 15,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#eee",
   },
   notificationModalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 16,
+    color: "#202427",
+    fontFamily: fonts.semiBold
   },
   notificationCloseButton: {
     padding: 4,
@@ -1515,7 +1524,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   notificationList: {
-    paddingVertical: 10,
+    paddingVertical: 0,
   },
   notificationItem: {
     flexDirection: "row",
@@ -1540,19 +1549,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+      fontSize: 15,
     color: "#000000",
+    flex: 1,
+    fontFamily: fonts.semiBold,
     marginBottom: 4,
   },
   notificationMessage: {
     fontSize: 14,
     color: "#666",
+    fontFamily: fonts.regular,
     lineHeight: 20,
     marginBottom: 4,
   },
   notificationTime: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "400",
+    fontFamily: fonts.regular,
     color: "#999",
   },
   articlesContainer: {

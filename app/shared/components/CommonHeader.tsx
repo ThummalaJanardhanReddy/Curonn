@@ -50,6 +50,8 @@ export default function CommonHeader({
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
+  const [count, setCount] = useState(0);
+  
   const [selectedLocation, setSelectedLocation] = useState(currentLocation);
   const [profileForm, setProfileForm] = useState({
     gender: "",
@@ -77,6 +79,18 @@ export default function CommonHeader({
       }
     };
     fetchProfile();
+
+     const fetchNotiCounts = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log("[CommonHeader] Notification count response:", response);
+        setCount(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
+    fetchNotiCounts();
   }, [patientId]);
 
   useEffect(() => {
@@ -181,6 +195,11 @@ export default function CommonHeader({
             onPress={handleNotificationPress}
           >
             <images.notification_bell_svg style={styles.notificationIcon} />
+             {count > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{count}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -398,6 +417,23 @@ const styles = StyleSheet.create({
   cartBadgeText: {
     color: '#fff',
     fontSize: getResponsiveFontSize(9),
+    fontFamily: fonts.bold,
+  },
+    notificationBadge: {
+    position: 'absolute',
+    borderRadius: getResponsiveSpacing(10),
+    top: getResponsiveSpacing(2),
+    right: getResponsiveSpacing(0),
+    backgroundColor: '#C35E9C',
+    minWidth: getResponsiveSpacing(20),
+    height: getResponsiveSpacing(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(2),
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(10),
     fontFamily: fonts.bold,
   },
 });
