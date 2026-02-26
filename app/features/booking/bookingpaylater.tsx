@@ -813,6 +813,9 @@ export default function BookingPayLaterScreen() {
             setLocationModalVisible(true);
           }}
           onClose={() => setAddressVisible(false)}
+          onAddressChanged={() => {
+            if (typeof fetchAddresses === "function") fetchAddresses();
+          }}
         />
       )}
 

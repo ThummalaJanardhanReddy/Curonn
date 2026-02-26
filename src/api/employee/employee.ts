@@ -64,7 +64,13 @@ export const FamilyHistoryApi = {
   save: '/Histories/SaveFamily',
   getById: (id: string | number) => `/Histories/GetFamilyById/${id}`,
   getAll: '/Histories/GetAllFamily',
-  delete: (id: string | number) => `/Histories/DeleteFamily/${id}`,
+  delete: (id: string | number, deletedBy: string | number) => `/Histories/DeleteFamily/${id}?deletedBy=${deletedBy}`,
+} as const;
+
+export const MedicalHistoryApi = {
+  getAll: '/Histories/GetAllMedical',
+  save: '/Histories/SaveMedical',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteMedical/${id}?deletedBy=${deletedBy}`,
 } as const;
 
 /* Lab Test APIs */
@@ -178,8 +184,9 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
-  Ambulance:AmbulanceApi,
+  Ambulance: AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
+  MedicalHistory: MedicalHistoryApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

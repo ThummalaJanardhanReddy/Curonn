@@ -1,5 +1,5 @@
 // import { router } from 'expo-router';
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Image,
   Modal,
@@ -9,12 +9,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -35,20 +38,12 @@ interface MenstrualHistoryScreenProps {
 export default function MenstrualHistoryScreen({
   onClose,
 }: MenstrualHistoryScreenProps) {
-  const [records, setRecords] = useState<MenstrualRecord[]>([
-    {
-      id: "1",
-      frequency: "regular",
-      menorrhagia: "no",
-      menopauseAge: "52",
-    },
-    {
-      id: "2",
-      frequency: "irregular",
-      menorrhagia: "yes",
-      menopauseAge: "48",
-    },
-  ]);
+  const [records, setRecords] = useState<MenstrualRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // fetch user id from context
+  const { userData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
@@ -89,6 +84,49 @@ export default function MenstrualHistoryScreen({
   const handleDeleteRecord = (id: string) => {
     setRecords((prev) => prev.filter((record) => record.id !== id));
   };
+
+  // Fetch menstrual history from API when screen opens / user is available
+  useEffect(() => {
+    let mounted = true;
+    const fetchHistory = async () => {
+      try {
+        if (!userData || !userData.e_id) return;
+        setLoading(true);
+        setError(null);
+  // axiosClient imported at top
+        const payload = {
+          pageNo: 0,
+          pageSize: 0,
+          search: "",
+          createdBy: userData.e_id,
+          patientId: userData.e_id,
+          fromDate: null,
+          toDate: null,
+          groupName: "",
+        };
+        const res: any = await axiosClient.post("/Histories/GetAllMenstral", payload);
+        const list = Array.isArray(res?.data) ? res.data : res?.data?.data ?? [];
+        if (!mounted) return;
+        const mapped: MenstrualRecord[] = (list || []).map((item: any, idx: number) => ({
+          id: String(item.historyId ?? item.id ?? idx),
+          frequency: (item.frequency || item.cycleFrequency || "regular").toString().toLowerCase().includes("irregular") ? "irregular" : "regular",
+          menorrhagia: (item.menorrhagia || item.heavyFlow || item.menorrhagiaFlag) ? (String(item.menorrhagia).toLowerCase() === "yes" || item.menorrhagia === true ? "yes" : "no") : "no",
+          menopauseAge: String(item.menopauseAge ?? item.menopauseAgeYears ?? item.age ?? ""),
+        }));
+        setRecords(mapped);
+      } catch (err: any) {
+        console.error("Failed to fetch menstrual history:", err);
+        if (mounted) setError("Failed to load menstrual history");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchHistory();
+    return () => {
+      mounted = false;
+    };
+  }, [/* run once on mount or when userData changes */ userData?.e_id]);
 
   const renderRecordCard = useCallback(
     ({ item }: { item: MenstrualRecord }) => (
@@ -144,6 +182,15 @@ export default function MenstrualHistoryScreen({
       {/* Records List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.recordsContainer}>
+          {loading ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" />
+            </View>
+          ) : error ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: colors.error }}>{error}</Text>
+            </View>
+          ) : null}
           {records.map((record) => (
             <View key={record.id} style={styles.recordCardWrapper}>
               {renderRecordCard({ item: record })}

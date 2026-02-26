@@ -3,7 +3,7 @@ import { getResponsiveFontSize, getResponsiveSpacing } from "@/app/shared/utils/
 import CartItemsList from "@/app/shared/components/CartItemsList";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Image,
   Modal,
@@ -309,6 +309,13 @@ export default function BookingScreen({
     }
   }, [userData?.e_id]);
 
+
+  useCallback(() => {
+    if (userData?.e_id) {
+      fetchAddresses();
+    }
+  }, [userData?.e_id])
+
   const fetchAddresses = async () => {
     try {
       setLoading(true);
@@ -482,80 +489,80 @@ export default function BookingScreen({
   };
 
 
-   const saveAmbulanceOrder = async (paymentData: {
-      razorpayOrderId: string;
-      razorpayPaymentId: string;
-      razorpaySignature: string;
-    }) => {
-      // Build ambulance order payload (customize as needed)
-      const payload: any = {
-        ambulanceBookingId: 0,
-        patientId: userData?.e_id || 0,
-        serviceName: serviceName,
-        serviceId: masterId || 0,
-        address: selectedLocation?.address || "",
-        hNo: selectedLocation?.houseNumber || "",
-        landMark: selectedLocation?.landmark || "",
-        addressNickname: selectedLocation?.nickname
-          ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
-          : "",
-        serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
-        timeSlot: selectedTimeSlot,
-        isSelfService: patientType === "self",
-        paymentDetails: String(totalAmount),
-        isPaymentDone: !!paymentData,
-        createdBy: userData?.e_id || 0,
-        statusId: statusId,
-        paymentAmount: totalAmount,
-        razorpayOrderId: paymentData?.razorpayOrderId || "",
-        razorpayPaymentId: paymentData?.razorpayPaymentId || "",
-        razorpaySignature: paymentData?.razorpaySignature || "",
-        req: "web",
-      };
-      // Add relation info if for others
-      if (patientType === "others" && selectedRelation) {
-        payload.relationId = selectedRelation.masterDataId;
-        payload.relationName = fullName;
-        payload.relationAge = age ? Number(age) : 0;
-        payload.relationGender = gender;
-      }
-      try {
-        const response: any = await axiosClient.post(
-          ApiRoutes.Ambulance.saveUpdate,
-          payload
-        );
-        console.log("📥 Ambulance Save Order Response:", JSON.stringify(response, null, 2));
-        if (response && (response.success || response.isSuccess)) {
-          setToastMessageLab({
-            title: "Your ambulance booking has been completed successfully",
-            subtitle: response.message || "Your ambulance order was placed successfully!",
-            type: "success",
-          });
-          setShowToastLab(true);
-            setTimeout(() => {
+  const saveAmbulanceOrder = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    // Build ambulance order payload (customize as needed)
+    const payload: any = {
+      ambulanceBookingId: 0,
+      patientId: userData?.e_id || 0,
+      serviceName: serviceName,
+      serviceId: masterId || 0,
+      address: selectedLocation?.address || "",
+      hNo: selectedLocation?.houseNumber || "",
+      landMark: selectedLocation?.landmark || "",
+      addressNickname: selectedLocation?.nickname
+        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+        : "",
+      serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
+      timeSlot: selectedTimeSlot,
+      isSelfService: patientType === "self",
+      paymentDetails: String(totalAmount),
+      isPaymentDone: !!paymentData,
+      createdBy: userData?.e_id || 0,
+      statusId: statusId,
+      paymentAmount: totalAmount,
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
+      req: "web",
+    };
+    // Add relation info if for others
+    if (patientType === "others" && selectedRelation) {
+      payload.relationId = selectedRelation.masterDataId;
+      payload.relationName = fullName;
+      payload.relationAge = age ? Number(age) : 0;
+      payload.relationGender = gender;
+    }
+    try {
+      const response: any = await axiosClient.post(
+        ApiRoutes.Ambulance.saveUpdate,
+        payload
+      );
+      console.log("📥 Ambulance Save Order Response:", JSON.stringify(response, null, 2));
+      if (response && (response.success || response.isSuccess)) {
+        setToastMessageLab({
+          title: "Your ambulance booking has been completed successfully",
+          subtitle: response.message || "Your ambulance order was placed successfully!",
+          type: "success",
+        });
+        setShowToastLab(true);
+        setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
           if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
-        } else {
-          setToastMessageLab({
-            title: "Order Failed",
-            subtitle: response?.message || "Failed to place ambulance order.",
-            type: "error",
-          });
-          setShowToastLab(true);
-        }
-      } catch (error) {
-        console.error("[Booking] saveAmbulanceOrder error:", error);
+      } else {
         setToastMessageLab({
-          title: "Order Error",
-          subtitle: "Something went wrong.",
+          title: "Order Failed",
+          subtitle: response?.message || "Failed to place ambulance order.",
           type: "error",
         });
         setShowToastLab(true);
       }
-    };
+    } catch (error) {
+      console.error("[Booking] saveAmbulanceOrder error:", error);
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
 
   // Lab-test date format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
@@ -851,7 +858,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-   // console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    // console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1012,7 +1019,8 @@ export default function BookingScreen({
             {/* Service Address */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Service Address</Text>
-              {selectedLocation && (
+
+              {selectedLocation ? (
                 <View style={styles.addressCard}>
                   <View style={styles.addressHeader}>
                     <View style={styles.addressInfo}>
@@ -1037,6 +1045,7 @@ export default function BookingScreen({
                     >
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
+
                   </View>
                   <Button
                     style={{
@@ -1050,26 +1059,29 @@ export default function BookingScreen({
                     labelStyle={{ color: "#0580FA" }}
                     onPress={handleViewAddress}
                   >
-                    + Add your service address
+                    +  Add New Address
                   </Button>
+                </View>
+              ) : (
+                <View style={styles.addressCard}>
+                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
+                    No address found. Please add a new address.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.addnewaddressButton}
+                    onPress={handleViewAddress}
+                  >
+                    <Text style={styles.AddressText}>+ Add New Address</Text>
+                  </TouchableOpacity>
                 </View>
               )}
               {errors === "Please select or add new address" && (
                 <Text
-                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
                 >
                   {errors}
                 </Text>
               )}
-              <View
-                style={{
-                  backgroundColor: "#FBFBFB",
-                  borderRadius: 8,
-                  padding: 10,
-                  alignItems: "center",
-                  marginTop: selectedLocation ? 12 : 0,
-                }}
-              />
             </View>
 
 
@@ -1387,6 +1399,10 @@ export default function BookingScreen({
                 setLocationModalVisible(true);
               }}
               onClose={() => setAddressVisible(false)}
+              onAddressChanged={() => {
+                // Refresh addresses in Booking screen when changed from AddressSelection
+                if (typeof fetchAddresses === "function") fetchAddresses();
+              }}
             />
           )}
 
@@ -2026,6 +2042,9 @@ export default function BookingScreen({
                 setLocationModalVisible(true);
               }}
               onClose={() => setAddressVisible(false)}
+              onAddressChanged={() => {
+                if (typeof fetchAddresses === "function") fetchAddresses();
+              }}
             />
           )}
 

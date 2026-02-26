@@ -1,5 +1,4 @@
-// import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   Modal,
@@ -9,6 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
@@ -20,11 +20,15 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing
 } from '../../shared/utils/responsive';
+import { useUser } from '../../shared/context/UserContext';
+import axiosClient from '@/src/api/axiosClient';
+import ApiRoutes from '@/src/api/employee/employee';
 
 interface MedicalCondition {
-  id: string;
-  condition: string;
-  status: 'active' | 'resolved' | 'chronic';
+  medicalHistoryId: number;
+  historyName: string;
+  status: string;
+  conditionType: string;
 }
 
 interface MedicalHistoryScreenProps {
@@ -33,28 +37,62 @@ interface MedicalHistoryScreenProps {
 }
 
 export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalHistoryScreenProps) {
-  const [conditions, setConditions] = useState<MedicalCondition[]>([
-    {
-      id: '1',
-      condition: 'Hypertension',
-      status: 'active',
-    },
-    {
-      id: '2',
-      condition: 'Diabetes Type 2',
-      status: 'active',
-    },
-  ]);
+  const { userData } = useUser();
+  const [conditions, setConditions] = useState<MedicalCondition[]>([]);
+  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [newCondition, setNewCondition] = useState({
     condition: '',
-    status: 'active' as 'active' | 'resolved' | 'chronic',
+    status: 'active',
   });
+  const [saveLoading, setSaveLoading] = useState(false);
 
-  React.useEffect(() => {
+  const fetchMedicalHistory = useCallback(async () => {
+    if (!userData?.e_id) return;
+    setLoading(true);
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        patientId: userData.e_id,
+        fromDate: "1900-01-01", // Long range by default
+        toDate: formattedDate,
+        groupName: ""
+      };
+
+      console.log('📤 Medical History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.getAll, payload);
+      console.log('📥 Medical History Response:', JSON.stringify(response, null, 2));
+
+      if (response?.items && Array.isArray(response.items)) {
+        setConditions(response.items);
+      } else if (response?.isSuccess && Array.isArray(response.data)) {
+        setConditions(response.data);
+      } else if (Array.isArray(response)) {
+        setConditions(response);
+      }
+    } catch (error) {
+      console.error('Fetch medical history error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.e_id]);
+
+  useEffect(() => {
+    fetchMedicalHistory();
+  }, [fetchMedicalHistory]);
+
+  useEffect(() => {
     if (showAddModal) {
       const timer = setTimeout(() => {
         setModalVisible(true);
@@ -102,35 +140,80 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
     });
   };
 
-  const handleSaveCondition = () => {
-    if (newCondition.condition.trim()) {
-      const condition: MedicalCondition = {
-        id: Date.now().toString(),
-        condition: newCondition.condition.trim(),
+  const handleSaveCondition = async () => {
+    if (!newCondition.condition.trim() || !userData?.e_id) return;
+
+    setSaveLoading(true);
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        medicalHistoryId: 0,
+        patientId: userData.e_id,
+        historyName: newCondition.condition.trim(),
+        reactions: "",
         status: newCondition.status,
+        onsetDate: formattedDate,
+        durationValue: 0,
+        duration: "",
+        notes: "",
+        appointmentId: 0,
+        isActive: true,
+        conditionType: "Chronic",
+        createdBy: userData.e_id,
+        createdOn: formattedDate,
+        totalCount: 0
       };
-      setConditions((prev) => [...prev, condition]);
-      handleCloseModal();
+
+      console.log('📤 Save Medical History Request:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.save, payload);
+      console.log('📥 Save Medical History Response:', JSON.stringify(response, null, 2));
+
+      if (response) {
+        handleCloseModal();
+        await fetchMedicalHistory();
+      }
+    } catch (error) {
+      console.error('Save medical history error:', error);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
-  const handleDeleteCondition = (id: string) => {
-    setConditions((prev) => prev.filter((condition) => condition.id !== id));
+  const handleDeleteCondition = async (id: number) => {
+    if (!userData?.e_id) return;
+
+    try {
+      console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id}`);
+      const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id));
+      console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
+
+      // Always fetch after delete attempt if it didn't throw, but check for generic success
+      if (response || response === "OK") {
+        await fetchMedicalHistory();
+      }
+    } catch (error) {
+      console.error('Delete medical history error:', error);
+    }
   };
 
   const renderConditionCard = useCallback(
     ({ item }: { item: MedicalCondition }) => (
       <View style={styles.conditionCard}>
         <View style={styles.conditionContent}>
-          <Text style={styles.conditionName}>{item.condition}</Text>
+          <Text style={styles.conditionName}>{item.historyName}</Text>
           <View style={styles.statusContainer}>
             <View
               style={[
                 styles.statusIndicator,
                 {
                   backgroundColor:
-                    item.status === 'active' ? colors.error :
-                      item.status === 'resolved' ? colors.success :
+                    item.status.toLowerCase() === 'active' ? colors.error :
+                      item.status.toLowerCase() === 'resolved' ? colors.success :
                         colors.warning
                 },
               ]}
@@ -142,7 +225,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteCondition(item.id)}
+          onPress={() => handleDeleteCondition(item.medicalHistoryId)}
         >
           <Image source={images.icons.close} style={styles.deleteIcon} />
         </TouchableOpacity>
@@ -177,13 +260,25 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
 
       {/* Conditions List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.conditionsContainer}>
-          {conditions.map((condition) => (
-            <View key={condition.id} style={styles.conditionCardWrapper}>
-              {renderConditionCard({ item: condition })}
-            </View>
-          ))}
-        </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <View style={styles.conditionsContainer}>
+            {conditions.length > 0 ? (
+              conditions.map((condition) => (
+                <View key={condition.medicalHistoryId} style={styles.conditionCardWrapper}>
+                  {renderConditionCard({ item: condition })}
+                </View>
+              ))
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>No medical history found.</Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Add Condition Modal */}
@@ -213,15 +308,20 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
               {/* Condition Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Medical Condition</Text>
-                <TouchableOpacity
-                  style={styles.conditionInputContainer}
-                  onPress={handleOpenSearchModal}
-                >
-                  <Text style={[styles.conditionInputText, newCondition.condition ? styles.conditionInputTextFilled : styles.conditionInputTextPlaceholder]}>
-                    {newCondition.condition || 'e.g., Hypertension, Diabetes'}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                </TouchableOpacity>
+                <View style={styles.conditionInputContainer}>
+                  <TextInput
+                    style={styles.conditionInputText}
+                    placeholder="e.g., Hypertension, Diabetes"
+                    placeholderTextColor="#999"
+                    value={newCondition.condition}
+                    onChangeText={(text) => setNewCondition({ ...newCondition, condition: text })}
+                    selectionColor="transparent"
+                    underlineColorAndroid="transparent"
+                  />
+                  <TouchableOpacity onPress={handleOpenSearchModal}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Status Radio Buttons */}
@@ -253,10 +353,10 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
             {/* Save Button */}
             <View style={styles.modalFooter}>
               <PrimaryButton
-                title="Save"
+                title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveCondition}
                 style={styles.saveButton}
-                disabled={!newCondition.condition.trim()}
+                disabled={!newCondition.condition.trim() || saveLoading}
               />
             </View>
           </SafeAreaView>
@@ -607,5 +707,11 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(6),
     height: getResponsiveSpacing(45),
     width: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: getResponsiveSpacing(40),
   },
 });
