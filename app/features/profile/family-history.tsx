@@ -22,11 +22,13 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
+import { useUser } from "../../shared/context/UserContext";
 
 interface FamilyMember {
-  id: string;
+  familyHistoryId: number;
   relationship: string;
-  condition: string;
+  historyName: string;
+  status: string;
 }
 
 interface FamilyHistoryScreenProps {
@@ -50,6 +52,7 @@ interface FamilyMemberData {
 export default function FamilyHistoryScreen({
   onClose,
 }: FamilyHistoryScreenProps) {
+  const { userData } = useUser();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -157,17 +160,42 @@ export default function FamilyHistoryScreen({
 
   // API Functions
   const fetchAllFamilyMembers = async () => {
+    if (!userData?.e_id) return;
     try {
       setIsLoading(true);
       setError("");
-      const response = (await axiosClient.get(
-        ApiRoutes.FamilyHistory.getAll
-      )) as FamilyHistoryResponse;
 
-      if (response?.isSuccess && response?.data) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        patientId: userData.e_id,
+        fromDate: "1900-01-01",
+        toDate: formattedDate,
+        groupName: ""
+      };
+
+      console.log('📤 Family History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.FamilyHistory.getAll,
+        payload
+      );
+      console.log('📥 Family History Response:', JSON.stringify(response, null, 2));
+
+      if (response?.items && Array.isArray(response.items)) {
+        setFamilyMembers(response.items);
+      } else if (response?.isSuccess && Array.isArray(response.data)) {
         setFamilyMembers(response.data);
+      } else if (Array.isArray(response)) {
+        setFamilyMembers(response);
       } else {
-        setError(response?.message || "Failed to fetch family history");
+        setError("Failed to fetch family history");
       }
     } catch (error: any) {
       console.error("Error fetching family members:", error);
@@ -178,20 +206,48 @@ export default function FamilyHistoryScreen({
   };
 
   const saveFamilyMember = async (memberData: FamilyMemberData) => {
+    if (!userData?.e_id) return;
     try {
       setIsSaving(true);
       setError("");
-      const response = (await axiosClient.post(
-        ApiRoutes.FamilyHistory.save,
-        memberData
-      )) as FamilyHistoryResponse;
 
-      if (response?.isSuccess) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        familyHistoryId: 0,
+        patientId: userData.e_id,
+        historyName: memberData.condition,
+        relationId: 0,
+        onsetDate: formattedDate,
+        appointmentId: 0,
+        isActive: true,
+        createdOn: formattedDate,
+        createdBy: userData.e_id,
+        deletedOn: formattedDate,
+        deletedBy: 0,
+        modifiedOn: formattedDate,
+        modifiedBy: 0,
+        relationName: memberData.relationship,
+        totalCount: 0
+      };
+
+      console.log('📤 Save Family History Request:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.FamilyHistory.save,
+        payload
+      );
+      console.log('📥 Save Family History Response:', JSON.stringify(response, null, 2));
+
+      if (response) {
         // Refresh the list after successful save
         await fetchAllFamilyMembers();
         return true;
       } else {
-        setError(response?.message || "Failed to save family member");
+        setError("Failed to save family member");
         return false;
       }
     } catch (error: any) {
@@ -204,18 +260,21 @@ export default function FamilyHistoryScreen({
   };
 
   const deleteFamilyMember = async (id: string) => {
+    if (!userData?.e_id) return;
     try {
       setError("");
-      const response = (await axiosClient.delete(
-        ApiRoutes.FamilyHistory.delete(id)
-      )) as FamilyHistoryResponse;
+      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${userData.e_id}`);
+      const response: any = await axiosClient.delete(
+        ApiRoutes.FamilyHistory.delete(id, userData.e_id)
+      );
+      console.log('📥 Delete Family History Response:', JSON.stringify(response, null, 2));
 
-      if (response?.isSuccess) {
-        // Remove from local state
-        setFamilyMembers((prev) => prev.filter((member) => member.id !== id));
+      if (response || response === "OK") {
+        // Refresh the list after successful delete
+        await fetchAllFamilyMembers();
         return true;
       } else {
-        setError(response?.message || "Failed to delete family member");
+        setError("Failed to delete family member");
         return false;
       }
     } catch (error: any) {
@@ -235,11 +294,11 @@ export default function FamilyHistoryScreen({
       <View style={styles.memberCard}>
         <View style={styles.memberContent}>
           <Text style={styles.relationship}>{item.relationship}</Text>
-          <Text style={styles.condition}>{item.condition}</Text>
+          <Text style={styles.condition}>{item.historyName}</Text>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteMember(item.id)}
+          onPress={() => handleDeleteMember(String(item.familyHistoryId))}
         >
           <Image source={images.icons.close} style={styles.deleteIcon} />
         </TouchableOpacity>
@@ -301,7 +360,7 @@ export default function FamilyHistoryScreen({
             </View>
           ) : (
             familyMembers.map((member) => (
-              <View key={member.id} style={styles.memberCardWrapper}>
+              <View key={member.familyHistoryId} style={styles.memberCardWrapper}>
                 {renderMemberCard({ item: member })}
               </View>
             ))
@@ -384,23 +443,20 @@ export default function FamilyHistoryScreen({
               {/* Condition Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Medical Condition</Text>
-                <TouchableOpacity
-                  style={styles.conditionInputContainer}
-                  onPress={handleOpenSearchModal}
-                >
-                  <Text
-                    style={[
-                      styles.conditionInputText,
-                      newMember.condition
-                        ? styles.conditionInputTextFilled
-                        : styles.conditionInputTextPlaceholder,
-                    ]}
-                  >
-                    {newMember.condition ||
-                      "e.g., Heart Disease, Diabetes, Cancer"}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                </TouchableOpacity>
+                <View style={styles.conditionInputContainer}>
+                  <TextInput
+                    style={styles.conditionInputText}
+                    placeholder="e.g., Heart Disease, Diabetes, Cancer"
+                    placeholderTextColor="#999"
+                    value={newMember.condition}
+                    onChangeText={(text) => setNewMember({ ...newMember, condition: text })}
+                    selectionColor="transparent"
+                    underlineColorAndroid="transparent"
+                  />
+                  <TouchableOpacity onPress={handleOpenSearchModal}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 

@@ -38,6 +38,8 @@ interface AddressSelectionProps {
   onAddNew: () => void;
   onEdit: (addressId: number) => void;
   onClose: () => void;
+  /** Called when addresses change (delete/default/add/edit) so parent can refresh */
+  onAddressChanged?: () => void;
 }
 
 export default function AddressSelection({
@@ -46,8 +48,8 @@ export default function AddressSelection({
   onSelect,
   onAddNew,
   onEdit,
-  onDelete,
   onClose,
+  onAddressChanged,
 }: AddressSelectionProps) {
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +108,7 @@ export default function AddressSelection({
   return (
     <Modal visible={visible} animationType="slide">
       <SafeAreaView style={{ flex: 1 }}>
+
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>All Address</Text>
@@ -158,6 +161,10 @@ export default function AddressSelection({
                                     color: "#4BB543",
                                   });
                                   setShowToast(true);
+                                  // Notify parent (Booking screen) to refresh addresses
+                                  if (typeof onAddressChanged === "function") {
+                                    onAddressChanged();
+                                  }
                                 }
                               } catch (error) {
                                 setToastMessage({
@@ -186,53 +193,57 @@ export default function AddressSelection({
                   </View>
                   {/* Select Address button */}
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 7, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 }}>
-                   <View style={{ flexDirection: "row", gap: 10 }}>
-                    <TouchableOpacity style={styles.editbutton}
-                      onPress={() => onEdit(item.addressId)}>
-                      <Text style={{ color: "#C35E9C",paddingTop:3, fontSize:11,fontFamily:fonts.regular }}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deletebutton}
-                      onPress={async () => {
-                        try {
-                          // Use query params as per Swagger
-                          const url = `${ApiRoutes.Address.deleteaddress}?addressId=${item.addressId}&patientId=${item.patientId}`;
-                          console.log("Delete address URL:", url);
-                          const response: any = await axiosClient.post(url, {});
-                          console.log("Delete address response:", response);
-                          if (response.isSuccess === true) {
-                            setAddresses(prev => prev.filter(addr => addr.addressId !== item.addressId));
-                            setToastMessage({
-                              title: "Success",
-                              subtitle: response.message || "Address deleted successfully.",
-                              color: "#4BB543",
-                            });
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                          } else {
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      <TouchableOpacity style={styles.editbutton}
+                        onPress={() => onEdit(item.addressId)}>
+                        <Text style={{ color: "#C35E9C", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.deletebutton}
+                        onPress={async () => {
+                          try {
+                            // Use query params as per Swagger
+                            const url = `${ApiRoutes.Address.deleteaddress}?addressId=${item.addressId}&patientId=${item.patientId}`;
+                            console.log("Delete address URL:", url);
+                            const response: any = await axiosClient.post(url, {});
+                            console.log("Delete address response:", response);
+                            if (response.isSuccess === true) {
+                              setAddresses(prev => prev.filter(addr => addr.addressId !== item.addressId));
+                              setToastMessage({
+                                title: "Success",
+                                subtitle: response.message || "Address deleted successfully.",
+                                color: "#4BB543",
+                              });
+                              setShowToast(true);
+                              // Notify parent to refresh addresses (e.g. Booking screen)
+                              if (typeof onAddressChanged === "function") {
+                                onAddressChanged();
+                              }
+                              setTimeout(() => setShowToast(false), 2000);
+                            } else {
+                              setToastMessage({
+                                title: "Error",
+                                subtitle: response.message || "Failed to delete address.",
+                                color: "#FF3333",
+                              });
+                              setShowToast(true);
+                              setTimeout(() => setShowToast(false), 2000);
+                            }
+                          } catch (error) {
                             setToastMessage({
                               title: "Error",
-                              subtitle: response.message || "Failed to delete address.",
+                              subtitle: "Failed to delete address.",
                               color: "#FF3333",
                             });
                             setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
                           }
-                        } catch (error) {
-                          setToastMessage({
-                            title: "Error",
-                            subtitle: "Failed to delete address.",
-                            color: "#FF3333",
-                          });
-                          setShowToast(true);
-                        }
-                      }}>
-                      <Text style={{ color: "#ff0000",paddingTop:3, fontSize:11,fontFamily:fonts.regular }}>Delete</Text>
-                    </TouchableOpacity>
+                        }}>
+                        <Text style={{ color: "#ff0000", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Delete</Text>
+                      </TouchableOpacity>
                     </View>
-                    
 
-                      <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
-                           <Text style={{ color: "#fff",paddingTop:3, fontSize:11,fontFamily:fonts.regular }}>Select this address</Text>
+
+                    <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
+                      <Text style={{ color: "#fff", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Select this address</Text>
                     </TouchableOpacity>
 
                     {/* <PrimaryButton
@@ -345,7 +356,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     height: 30,
   },
-    deletebutton: {
+  deletebutton: {
     borderWidth: 1,
     borderColor: "#ff0000",
     paddingHorizontal: 12,
@@ -356,7 +367,7 @@ const styles = StyleSheet.create({
   selectbutton: {
     borderWidth: 1,
     borderColor: "#C35E9C",
-    backgroundColor:"#C35E9C",
+    backgroundColor: "#C35E9C",
     paddingHorizontal: 12,
     borderRadius: 20,
     paddingVertical: 3,
