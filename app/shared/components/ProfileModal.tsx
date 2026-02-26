@@ -1463,6 +1463,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
+    lineHeight: 22,
     alignItems: "center",
     elevation: 2,
     height: 68,
@@ -1481,14 +1482,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileItemTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
     color: colors.black,
-    marginBottom: 4,
+    marginBottom: 0,
+    fontFamily: fonts.semiBold
   },
   profileItemSubtext: {
-    fontSize: 14,
-    color: "#00000080",
+    fontSize: 12,
+    color: "#000000",
+    fontFamily: fonts.regular
   },
   addButton: {
     padding: 8,

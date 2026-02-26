@@ -159,6 +159,17 @@ export const NotificationApi = {
   readmark: (id: number) => `/notifications/mark-read/${id}`,
 } as const;
 
+export const FoodAllergiesApi = {
+  saveUpdate: '/Allergies/SaveFoodAllergy',
+  getAll: '/Allergies/GetAllFoodAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteFoodAllergy/${id}`,
+} as const;
+
+export const DrugAllergiesApi = {
+  saveUpdate: '/Allergies/SaveDrugAllergy',
+  getAll: '/Allergies/GetAllDrugAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteDrugAllergy/${id}`,
+} as const;
 // ✅ Unified export for convenience
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -180,6 +191,8 @@ export const ApiRoutes = {
   ArticlesData: ArticlesApi,
   Ambulance:AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
+  FoodAllergies: FoodAllergiesApi,
+  DrugAllergies: DrugAllergiesApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;
