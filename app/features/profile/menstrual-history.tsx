@@ -41,10 +41,11 @@ export default function MenstrualHistoryScreen({
   const [records, setRecords] = useState<MenstrualRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // fetch user id from context
   const { userData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
     menorrhagia: "no" as "yes" | "no",
@@ -70,15 +71,69 @@ export default function MenstrualHistoryScreen({
     });
   };
 
-  const handleSaveRecord = () => {
-    const record: MenstrualRecord = {
-      id: Date.now().toString(),
-      frequency: newRecord.frequency,
-      menorrhagia: newRecord.menorrhagia,
-      menopauseAge: newRecord.menopauseAge.trim(),
-    };
-    setRecords((prev) => [...prev, record]);
-    handleCloseModal();
+  const fetchHistory = useCallback(async () => {
+    try {
+      if (!userData || !userData.e_id) return;
+      setLoading(true);
+      setError(null);
+      const payload = {
+        pageNo: 0,
+        pageSize: 0,
+        search: "",
+        createdBy: userData.e_id,
+        patientId: userData.e_id,
+        fromDate: "2026-02-26",
+        toDate: "2026-02-26",
+        groupName: "",
+      };
+      const res: any = await axiosClient.post("/Histories/GetAllMenstral", payload);
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : res?.data?.data ?? [];
+      const mapped: MenstrualRecord[] = (list || []).map((item: any, idx: number) => ({
+        id: String(item.menstralId ?? item.historyId ?? item.id ?? idx),
+        frequency: (item.frequencyId === 1 || String(item.frequency || "").toLowerCase().includes("regular")) ? "regular" : "irregular",
+        menorrhagia: item.isMenorrhagia === true || String(item.menorrhagia).toLowerCase() === "yes" ? "yes" : "no",
+        menopauseAge: String(item.menorrhagiaAge ?? item.menopauseAge ?? ""),
+        menstrualId: item.menstrualId,
+      }));
+      setRecords(mapped);
+    } catch (err: any) {
+      console.error("Failed to fetch menstrual history:", err);
+      setError("Failed to load menstrual history");
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.e_id]);
+
+  const handleSaveRecord = async () => {
+    if (!userData?.e_id) return;
+    setSaveLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const payload = {
+        menstralId: 0,
+        patientId: userData.e_id,
+        frequencyId: newRecord.frequency === "regular" ? 1 : 2,
+        isMenorrhagia: newRecord.menorrhagia === "yes",
+        menorrhagiaAge: newRecord.menopauseAge ? Number(newRecord.menopauseAge) : 0,
+        appointmentId: 0,
+        createdOn: now,
+        createdBy: userData.e_id,
+        totalCount: 0,
+      };
+
+      console.log('📤 Save Menstrual History Request:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post("/Histories/SaveMenstral", payload);
+      console.log('📥 Save Menstrual History Response:', JSON.stringify(response, null, 2));
+
+      if (response) {
+        handleCloseModal();
+        await fetchHistory();
+      }
+    } catch (error) {
+      console.error('Save menstrual history error:', error);
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleDeleteRecord = (id: string) => {
@@ -87,46 +142,8 @@ export default function MenstrualHistoryScreen({
 
   // Fetch menstrual history from API when screen opens / user is available
   useEffect(() => {
-    let mounted = true;
-    const fetchHistory = async () => {
-      try {
-        if (!userData || !userData.e_id) return;
-        setLoading(true);
-        setError(null);
-  // axiosClient imported at top
-        const payload = {
-          pageNo: 0,
-          pageSize: 0,
-          search: "",
-          createdBy: userData.e_id,
-          patientId: userData.e_id,
-          fromDate: null,
-          toDate: null,
-          groupName: "",
-        };
-        const res: any = await axiosClient.post("/Histories/GetAllMenstral", payload);
-        const list = Array.isArray(res?.data) ? res.data : res?.data?.data ?? [];
-        if (!mounted) return;
-        const mapped: MenstrualRecord[] = (list || []).map((item: any, idx: number) => ({
-          id: String(item.historyId ?? item.id ?? idx),
-          frequency: (item.frequency || item.cycleFrequency || "regular").toString().toLowerCase().includes("irregular") ? "irregular" : "regular",
-          menorrhagia: (item.menorrhagia || item.heavyFlow || item.menorrhagiaFlag) ? (String(item.menorrhagia).toLowerCase() === "yes" || item.menorrhagia === true ? "yes" : "no") : "no",
-          menopauseAge: String(item.menopauseAge ?? item.menopauseAgeYears ?? item.age ?? ""),
-        }));
-        setRecords(mapped);
-      } catch (err: any) {
-        console.error("Failed to fetch menstrual history:", err);
-        if (mounted) setError("Failed to load menstrual history");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
     fetchHistory();
-    return () => {
-      mounted = false;
-    };
-  }, [/* run once on mount or when userData changes */ userData?.e_id]);
+  }, [fetchHistory]);
 
   const renderRecordCard = useCallback(
     ({ item }: { item: MenstrualRecord }) => (
@@ -310,10 +327,10 @@ export default function MenstrualHistoryScreen({
             {/* Save Button */}
             <View style={styles.modalFooter}>
               <PrimaryButton
-                title="Save"
+                title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveRecord}
                 style={styles.saveButton}
-                disabled={false}
+                disabled={saveLoading}
               />
             </View>
           </SafeAreaView>
