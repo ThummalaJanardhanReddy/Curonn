@@ -26,6 +26,7 @@ import {
 import { useUser } from '../../shared/context/UserContext';
 import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
+import Toast from '@/app/shared/components/Toast';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,8 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'smoking' | 'alcohol'>('smoking');
   const [saveLoading, setSaveLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   // Form state – mirrors SaveSocial payload fields
   const [smokingStatus, setSmokingStatus] = useState<number>(3);
@@ -128,7 +131,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
         pageNo: 1,
         pageSize: 100,
         search: '',
-        createdBy: 0,
+        createdBy: userData.e_id,
         patientId: userData.e_id,
         fromDate: '1900-01-01',
         toDate: formattedDate,
@@ -217,11 +220,23 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
       console.log('📥 SaveSocial Response:', JSON.stringify(response, null, 2));
 
       if (response !== undefined && response !== null) {
+        setToastMessage({
+          title: "Habit Saved Successfully",
+          subtitle: response?.data?.message || "Saved successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         handleCloseModal();
         await fetchHabits();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('SaveSocial error:', error);
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
     } finally {
       setSaveLoading(false);
     }
@@ -235,9 +250,21 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
         ApiRoutes.SocialHistory.delete(id, userData.e_id)
       );
       console.log('📥 DeleteSocial Response:', JSON.stringify(response, null, 2));
+      setToastMessage({
+        title: "Habit Deleted Successfully",
+        subtitle: "Deleted successfully!",
+        type: "success"
+      });
+      setShowToast(true);
       await fetchHabits();
-    } catch (error) {
+    } catch (error: any) {
       console.error('DeleteSocial error:', error);
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
     }
   };
 
@@ -307,7 +334,8 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
           style={styles.deleteButton}
           onPress={() => handleDelete(item.socialHistoryId)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     );
@@ -595,6 +623,14 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
           </SafeAreaView>
         </View>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -749,7 +785,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
-    maxHeight: '85%',
+    height: '85%',
+    width: '100%',
     overflow: 'hidden',
   },
   modalHeader: {
@@ -967,5 +1004,10 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: '700',
     color: '#fff',
+  },
+  deleteButtonText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.error,
+    fontWeight: "500",
   },
 });

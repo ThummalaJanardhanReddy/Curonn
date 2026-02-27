@@ -214,6 +214,7 @@ export const ApiRoutes = {
   EnvAllergies: EnvAllergiesApi,
   MedicalHistory: MedicalHistoryApi,
   SocialHistory: SocialHistoryApi,
+  MenstrualHistory: MenstrualHistoryApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

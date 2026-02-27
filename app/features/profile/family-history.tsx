@@ -24,6 +24,7 @@ import {
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
 import { useUser } from "../../shared/context/UserContext";
+import Toast from '@/app/shared/components/Toast';
 
 interface FamilyMember {
   familyHistoryId: number;
@@ -72,6 +73,8 @@ export default function FamilyHistoryScreen({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   const relationshipOptions = [
     "Father",
@@ -277,15 +280,33 @@ export default function FamilyHistoryScreen({
       console.log('📥 Save Family History Response:', JSON.stringify(response, null, 2));
 
       if (response) {
+        setToastMessage({
+          title: "Family Member Saved",
+          subtitle: response?.message || "Saved successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         // Refresh the list after successful save
         await fetchAllFamilyMembers();
         return true;
       } else {
+        setToastMessage({
+          title: "Save Failed",
+          subtitle: "Failed to save family member",
+          type: "error"
+        });
+        setShowToast(true);
         setError("Failed to save family member");
         return false;
       }
     } catch (error: any) {
       console.error("Error saving family member:", error);
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
       setError("Network error. Please try again.");
       return false;
     } finally {
@@ -304,15 +325,33 @@ export default function FamilyHistoryScreen({
       console.log('📥 Delete Family History Response:', JSON.stringify(response, null, 2));
 
       if (response || response === "OK") {
+        setToastMessage({
+          title: "Family Member Deleted",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         // Refresh the list after successful delete
         await fetchAllFamilyMembers();
         return true;
       } else {
+        setToastMessage({
+          title: "Delete Failed",
+          subtitle: "Failed to delete family member",
+          type: "error"
+        });
+        setShowToast(true);
         setError("Failed to delete family member");
         return false;
       }
     } catch (error: any) {
       console.error("Error deleting family member:", error);
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
       setError("Network error. Please try again.");
       return false;
     }
@@ -617,6 +656,14 @@ export default function FamilyHistoryScreen({
           </View>
         </SafeAreaView>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }

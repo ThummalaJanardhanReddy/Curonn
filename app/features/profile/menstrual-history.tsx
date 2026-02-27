@@ -23,6 +23,8 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from '@/app/shared/components/Toast';
 
 interface MenstrualRecord {
   id: string;
@@ -41,16 +43,18 @@ export default function MenstrualHistoryScreen({
   const [records, setRecords] = useState<MenstrualRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
   // fetch user id from context
   const { userData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
     menorrhagia: "no" as "yes" | "no",
     menopauseAge: "",
   });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   const handleBack = () => {
     if (onClose) {
@@ -71,30 +75,102 @@ export default function MenstrualHistoryScreen({
     });
   };
 
+  const handleSaveRecord = async () => {
+    if (!userData || !userData.e_id) return;
+    setSaveLoading(true);
+    try {
+      const payload = {
+        menstralId: 0,
+        patientId: userData.e_id,
+        frequencyId: newRecord.frequency === "regular" ? 1 : 2,
+        isMenorrhagia: newRecord.menorrhagia === "yes",
+        menorrhagiaAge: parseInt(newRecord.menopauseAge) || 0,
+        createdBy: userData.e_id,
+        appointmentId: 0,
+      };
+
+      console.log("📤 SaveMenstral Request:", JSON.stringify(payload, null, 2));
+      const res: any = await axiosClient.post(ApiRoutes.MenstrualHistory.save, payload);
+      console.log("📥 SaveMenstral Response:", JSON.stringify(res, null, 2));
+
+      setToastMessage({
+        title: "Record Saved Successfully",
+        subtitle: res?.data?.message || "Saved successfully!",
+        type: "success"
+      });
+      setShowToast(true);
+      await fetchHistory();
+      handleCloseModal();
+    } catch (err: any) {
+      console.error("Failed to save menstrual history:", err);
+      // setError("Failed to save menstrual record");
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleDeleteRecord = async (id: string) => {
+    if (!userData || !userData.e_id) return;
+    try {
+      console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
+      const res: any = await axiosClient.delete(
+        ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id)
+      );
+      console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
+      setToastMessage({
+        title: "Record Deleted Successfully",
+        subtitle: "Deleted successfully!",
+        type: "success"
+      });
+      setShowToast(true);
+      await fetchHistory();
+    } catch (err: any) {
+      console.error("Failed to delete menstrual history:", err);
+      // setError("Failed to delete menstrual record");
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    }
+  };
+
   const fetchHistory = useCallback(async () => {
+    let mounted = true;
     try {
       if (!userData || !userData.e_id) return;
       setLoading(true);
       setError(null);
       const payload = {
-        pageNo: 0,
-        pageSize: 0,
+        pageNo: 1,
+        pageSize: 100,
         search: "",
         createdBy: userData.e_id,
         patientId: userData.e_id,
-        fromDate: "2026-02-26",
-        toDate: "2026-02-26",
+        fromDate: null,
+        toDate: null,
         groupName: "",
       };
-      const res: any = await axiosClient.post("/Histories/GetAllMenstral", payload);
-      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : res?.data?.data ?? [];
-      const mapped: MenstrualRecord[] = (list || []).map((item: any, idx: number) => ({
-        id: String(item.menstralId ?? item.historyId ?? item.id ?? idx),
-        frequency: (item.frequencyId === 1 || String(item.frequency || "").toLowerCase().includes("regular")) ? "regular" : "irregular",
-        menorrhagia: item.isMenorrhagia === true || String(item.menorrhagia).toLowerCase() === "yes" ? "yes" : "no",
-        menopauseAge: String(item.menorrhagiaAge ?? item.menopauseAge ?? ""),
-        menstrualId: item.menstrualId,
+      console.log("📤 GetAllMenstral Request:", JSON.stringify(payload, null, 2));
+      const res: any = await axiosClient.post(ApiRoutes.MenstrualHistory.getAll, payload);
+      console.log("📥 GetAllMenstral Response:", JSON.stringify(res, null, 2));
+
+      const list = res?.items && Array.isArray(res.items) ? res.items : [];
+
+      const mapped: MenstrualRecord[] = list.map((item: any) => ({
+        id: String(item.menstralId),
+        frequency: item.frequencyId === 1 ? "regular" : "irregular",
+        menorrhagia: item.isMenorrhagia ? "yes" : "no",
+        menopauseAge: String(item.menorrhagiaAge || ""),
       }));
+
       setRecords(mapped);
     } catch (err: any) {
       console.error("Failed to fetch menstrual history:", err);
@@ -104,43 +180,6 @@ export default function MenstrualHistoryScreen({
     }
   }, [userData?.e_id]);
 
-  const handleSaveRecord = async () => {
-    if (!userData?.e_id) return;
-    setSaveLoading(true);
-    try {
-      const now = new Date().toISOString();
-      const payload = {
-        menstralId: 0,
-        patientId: userData.e_id,
-        frequencyId: newRecord.frequency === "regular" ? 1 : 2,
-        isMenorrhagia: newRecord.menorrhagia === "yes",
-        menorrhagiaAge: newRecord.menopauseAge ? Number(newRecord.menopauseAge) : 0,
-        appointmentId: 0,
-        createdOn: now,
-        createdBy: userData.e_id,
-        totalCount: 0,
-      };
-
-      console.log('📤 Save Menstrual History Request:', JSON.stringify(payload, null, 2));
-      const response: any = await axiosClient.post("/Histories/SaveMenstral", payload);
-      console.log('📥 Save Menstrual History Response:', JSON.stringify(response, null, 2));
-
-      if (response) {
-        handleCloseModal();
-        await fetchHistory();
-      }
-    } catch (error) {
-      console.error('Save menstrual history error:', error);
-    } finally {
-      setSaveLoading(false);
-    }
-  };
-
-  const handleDeleteRecord = (id: string) => {
-    setRecords((prev) => prev.filter((record) => record.id !== id));
-  };
-
-  // Fetch menstrual history from API when screen opens / user is available
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
@@ -169,7 +208,8 @@ export default function MenstrualHistoryScreen({
           style={styles.deleteButton}
           onPress={() => handleDeleteRecord(item.id)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -336,6 +376,14 @@ export default function MenstrualHistoryScreen({
           </SafeAreaView>
         </View>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -646,5 +694,10 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+  },
+  deleteButtonText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.error,
+    fontWeight: "500",
   },
 });

@@ -23,6 +23,7 @@ import {
 import { useUser } from '../../shared/context/UserContext';
 import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
+import Toast from '@/app/shared/components/Toast';
 
 interface MedicalCondition {
   medicalHistoryId: number;
@@ -47,6 +48,9 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
     condition: '',
     status: 'active',
   });
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [showToast, setShowToast] = useState(false);
+
   // Dropdown for master data (categoryId=13)
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
@@ -232,10 +236,22 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
 
       if (response) {
         handleCloseModal();
+        setToastMessage({
+          title: "Condition Saved Successfully",
+          subtitle: response?.data?.message || "Saved successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         await fetchMedicalHistory();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save medical history error:', error);
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
     } finally {
       setSaveLoading(false);
     }
@@ -250,10 +266,22 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
       console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
 
       if (response || response === "OK") {
+        setToastMessage({
+          title: "Condition Deleted Successfully",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         await fetchMedicalHistory();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Delete medical history error:', error);
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
     }
   };
 
@@ -525,6 +553,14 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
           </View>
         </SafeAreaView>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
