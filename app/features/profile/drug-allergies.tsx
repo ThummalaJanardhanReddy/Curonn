@@ -6,6 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Platform,
+  StatusBar as RNStatusBar,
+    StatusBar,
   TextInput,
   TouchableOpacity,
   View,
@@ -15,9 +18,9 @@ import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
 import { colors } from '../../shared/styles/commonStyles';
-import { StatusBar } from "expo-status-bar";
 import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import { useUser } from "../../shared/context/UserContext";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -57,6 +60,18 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
   const [showToast, setShowToast] = useState(false);
   const { userData } = useUser();
   const patientId = userData?.e_id;
+
+   useFocusEffect(
+      useCallback(() => {
+        if (Platform.OS === 'android') {
+          const timeout = setTimeout(() => {
+            // Use React Native StatusBar API to set background color on Android
+            RNStatusBar.setBackgroundColor("#ffffff", true);
+          }, 400); // Adjust timeout as needed
+          return () => clearTimeout(timeout);
+        }
+      }, [])
+    );
 
   const fetchallallergies = async () => {
       try {
@@ -281,8 +296,13 @@ const payload = {
   );
 
   return (<>
-    <StatusBar style="dark" backgroundColor="#fff" animated />
-    <SafeAreaView style={styles.container}>
+    <StatusBar
+              barStyle="dark-content"
+              translucent={false}
+              backgroundColor="#ffffff"
+            />
+    <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+             <View  style={styles.container}>
       
       {/* Header */}
       <View style={styles.header}>
@@ -508,14 +528,14 @@ const payload = {
                     onHide={() => setShowToast(false)}
                     duration={3000}
                   />
+                  </View>
     </SafeAreaView>
  </>);
 }
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      backgroundColor: '#fff',
+      flex: 1
     },
   header: {
     flexDirection: 'row',

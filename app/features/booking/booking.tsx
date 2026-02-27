@@ -60,6 +60,9 @@ interface BookingScreenProps {
   /** Lab-test flow only */
   reportTime?: string;
   serviceId?: number;
+
+  selectedDiagCenter?: any;
+
 }
 
 export default function BookingScreen({
@@ -71,8 +74,12 @@ export default function BookingScreen({
   masterId,
   type,
   reportTime,
+  selectedDiagCenter,
   serviceId,
 }: BookingScreenProps) {
+  if (type === "scans") {
+    console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
+  }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
 
@@ -639,6 +646,117 @@ export default function BookingScreen({
       setToastMessageLab({
         title: "Order Error",
         subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+
+
+  const handleBookNowScan = async () => {
+    // Validate address, date, timeSlot as string errors
+    if (!selectedLocation) {
+      setErrors("Please select or add new address");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      return;
+    }
+    if (!selectedDate || !formatDateLab(selectedDate).trim()) {
+      setErrors("Please select service start date");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      return;
+    }
+    if (!selectedTimeSlot.trim()) {
+      setErrors("Please select time slot");
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      return;
+    }
+    // Validate only relation, fullName, age, gender as field errors
+    if (patientType === "others") {
+      let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
+      let hasError = false;
+      if (!selectedRelation) {
+        newFieldErrors.relation = "Please select relation type";
+        hasError = true;
+      }
+      if (!fullName.trim()) {
+        newFieldErrors.fullName = "Please enter full name";
+        hasError = true;
+      }
+      if (!age.trim()) {
+        newFieldErrors.age = "Please enter age";
+        hasError = true;
+      }
+      if (!gender.trim()) {
+        newFieldErrors.gender = "Please select gender";
+        hasError = true;
+      }
+      setFieldErrors(newFieldErrors);
+      setErrors("");
+      if (hasError) return;
+    } else {
+      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+      setErrors("");
+    }
+    
+       const payload: any = {
+        
+  labOrderId: 0,
+        testName: serviceName,
+        patientId: userData?.e_id || 0,
+      address: selectedLocation?.address || "",
+      hNo: selectedLocation?.houseNumber || "",
+      landMark: selectedLocation?.landmark || "",
+      addressNickname: selectedLocation?.nickname
+        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+        : "",
+      serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
+      timeSlot: selectedTimeSlot,
+      isSelfService: patientType === "self",
+      createdBy: userData?.e_id || 0,
+      xrayMasterId: masterId || 0,
+      testType: "Xray",
+      diagnosisCenter: selectedDiagCenter.centerName || "",
+      statusId: statusId,
+      req: "web",
+      };
+      if (patientType === "others" && selectedRelation) {
+      payload.relationId = selectedRelation.masterDataId;
+      payload.relationName = fullName;
+      payload.relationAge = age ? Number(age) : 0;
+      payload.relationGender = gender;
+    }
+  try {
+      const response: any = await axiosClient.post(
+        ApiRoutes.DiagCenter.saveUpdate,
+        payload
+      );
+      console.log("📥 Xray Save Order Response:", JSON.stringify(response, null, 2));
+      if (response && (response.success || response.isSuccess)) {
+        setToastMessageLab({
+          title: "Your scan booking has been completed successfully",
+          subtitle: response.message || "Your scan order was placed successfully!",
+          type: "success",
+        });
+        setShowToastLab(true);
+        setTimeout(() => {
+          setShowToastLab(false);
+          setShowPayment(false);
+          if (onClose) onClose();
+          router.replace("/(main)/orders");
+        }, 1500);
+      } else {
+        setToastMessageLab({
+          title: "Order Failed",
+          subtitle: response?.message || "Failed to place ambulance order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (error) {
+      console.error("[Booking] savescanbookin error:", error);
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
         type: "error",
       });
       setShowToastLab(true);
@@ -1488,17 +1606,36 @@ export default function BookingScreen({
                 <View style={styles.serviceDivider} />
 
                 <View style={styles.serviceFooter}>
+                    {(type === "scans") && selectedDiagCenter && (<>
+                    <View style={{  alignItems: 'flex-start', marginBottom: 8 }}>
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={styles.serviceCenter}>{selectedDiagCenter.centerName}</Text>
+                        <Text style={styles.centerAddress}>{selectedDiagCenter.address}</Text>
+                        <Text style={styles.centerDistance}>{selectedDiagCenter.distanceKm?.toFixed(2)} km away</Text>
+                      </View>
+
+                       <TouchableOpacity
+                    style={styles.editAddressButton1}
+                    onPress={handleEdit}
+                  >
+                    <Text style={styles.editAddressText}>Edit</Text>
+                  </TouchableOpacity>
+                  </View>
+
+                   </>)}
+                  {(type !== "scans") && (<>
                   <Text style={styles.servicePrice}>
                     {"\u20B9"}
                     {servicePrice}
                   </Text>
+                 
                   <TouchableOpacity
                     style={styles.editAddressButton1}
                     onPress={handleEdit}
                   >
                     <Text style={styles.editAddressText}>Edit</Text>
                   </TouchableOpacity>
-
+ </>)}
                   {/* <SecondaryButton
                     title="Edit"
                     onPress={handleEdit}
@@ -1510,6 +1647,7 @@ export default function BookingScreen({
             </View>
 
             {/* Service Address */}
+             {(type !== "scans") && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Service Address</Text>
               {selectedLocation ? (
@@ -1575,6 +1713,8 @@ export default function BookingScreen({
                 </Text>
               )}
             </View>
+             )}
+
 
             {/* Sample Pickup Date & Time */}
             <View style={styles.section}>
@@ -1755,6 +1895,7 @@ export default function BookingScreen({
             </View>
 
             {/* Order Summary */}
+           
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Order Summary</Text>
               <View style={styles.deliveryCard}>
@@ -1819,8 +1960,9 @@ export default function BookingScreen({
                 </View>
               </View>
             </View>
+            
 
-            {/* Cancellation Policy */}
+            
             <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
@@ -1834,9 +1976,11 @@ export default function BookingScreen({
                 </TouchableOpacity>
               </View>
             </View>
+         
           </ScrollView>
 
           {/* Book Now Button */}
+           {(type !== "scans") ? (
           <View style={styles.footer}>
             <PrimaryButton
               title={`Confirm &  Pay \u20B9${totalAmount}`}
@@ -1844,6 +1988,17 @@ export default function BookingScreen({
               style={{ width: "100%" }}
             />
           </View>
+           ) : (
+            <View style={styles.footer}>
+            <PrimaryButton
+              title={`Confirm &  Book Now`}
+              onPress={handleBookNowScan}
+              style={{ width: "100%" }}
+            />
+            </View>
+            )}
+            
+
 
           {/* Relation Type Dropdown Modal */}
           <Modal
@@ -2167,6 +2322,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.primary,
     fontFamily: fonts.semiBold
+  },
+  serviceCenter:{
+fontSize: 15,
+    color: colors.primary,
+    fontFamily: fonts.semiBold
+  },
+  centerAddress:{
+    fontSize: 12,
+    color: '#555',
+    marginTop: 2,
+    fontFamily: fonts.regular,
+  },
+  centerDistance:{
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+    fontFamily: fonts.regular,
   },
   dateTimeCard: {
     backgroundColor: "#fff",

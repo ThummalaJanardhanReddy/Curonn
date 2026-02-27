@@ -507,7 +507,7 @@ export default function BookingPayLaterScreen() {
     <SafeAreaView style={styles.screen}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Order Info1</Text>
+        <Text style={styles.headerTitle}>Order Info</Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}

@@ -117,15 +117,35 @@ export default function MedicinesScreen() {
 
   // List of background colors for categories
   const categoryColors = ['#f4ab9b', '#A4AAD8', '#7DA4DB', '#8E9867', '#BEC8F9', '#D6C57B', '#C9E0DD', '#F0E4DC'];
+  // Helper to convert Google Drive share links to direct image links
+  const getDirectImageUrl = (url: string) => {
+  if (!url) return url;
+
+  const match = url.match(/\/file\/d\/([^/]+)/);
+  if (match && match[1]) {
+    const fileId = match[1];
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+
+  return url;
+};
+
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
-      return drugGroups.map((g: any, idx: number) => ({
-        id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-        title: g.drugGroup ?? g.name ?? 'Untitled',
-        image: g.imageUrl,
-        backgroundColor: categoryColors[idx % categoryColors.length],
-      }));
+      const mapped = drugGroups.map((g: any, idx: number) => {
+        const imgUrl = getDirectImageUrl(g.imageUrl);
+        // Debug: log each image URL transformation
+        console.log('Category:', g.drugGroup ?? g.name, 'Original:', g.imageUrl, 'Transformed:', imgUrl);
+        return {
+          id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+          title: g.drugGroup ?? g.name ?? 'Untitled',
+          image: imgUrl,
+          backgroundColor: categoryColors[idx % categoryColors.length],
+        };
+      });
+      return mapped;
     }
+    console.warn('No drug groups available to create categories');
     return [];
   }, [drugGroups]);
 

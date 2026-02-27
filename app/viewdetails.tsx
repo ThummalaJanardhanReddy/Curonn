@@ -45,9 +45,11 @@ export default function ViewDetailsScreen() {
 
       let response: any;
       if (type === "lab-test") {
-        response = await axiosClient.get(
+       const response = await axiosClient.get(
           ApiRoutes.LabTests.getById(id)
         );
+        setDetails(response.data);
+      
       }
       else{
       if (type === "health-checks") {
@@ -164,16 +166,17 @@ export default function ViewDetailsScreen() {
         {/* Price */}
         <View style={styles.footer}>
           {type === "ambulance" ? (
-          
-           <View style={styles.priceContainer}>
-            <Text style={styles.finalPrice}>₹ {details.price}</Text>
-          </View>
+            <View style={styles.priceContainer}>
+              <Text style={styles.finalPrice}>₹ {details.price}</Text>
+            </View>
           ) : (
-          <View style={styles.priceContainer}>
-            <Text style={styles.originalPrice}>₹ {details.price}</Text>
-            <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
-          </View>
-)}
+            type !== "scans" && (
+              <View style={styles.priceContainer}>
+                <Text style={styles.originalPrice}>₹ {details.price}</Text>
+                <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
+              </View>
+            )
+          )}
           
 
 

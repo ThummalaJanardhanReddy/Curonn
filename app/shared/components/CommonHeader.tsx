@@ -20,6 +20,7 @@ import { useCart } from '../context/CartContext';
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 interface CommonHeaderProps {
@@ -106,6 +107,19 @@ export default function CommonHeader({
     }
     fetchAddress();
   }, []);
+      const [latLng, setLatLng] = useState<{ latitude: string; longitude: string } | null>(null);
+
+      // Fetch lat/lng from AsyncStorage
+      useEffect(() => {
+        const getLatLng = async () => {
+          const stored = await AsyncStorage.getItem('userLocationLatLng');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setLatLng(parsed);
+          }
+        };
+        getLatLng();
+      }, [selectedLocation]);
 
   useEffect(() => {
     setSelectedLocation(address);
@@ -224,6 +238,12 @@ export default function CommonHeader({
       </>
     );
   }
+                    {/* Show lat/lng below address */}
+                    {latLng && (
+                      <Text style={{ color: 'white', fontSize: 12 }}>
+                        Lat: {latLng.latitude} | Lng: {latLng.longitude}
+                      </Text>
+                    )}
 
   // Default style for other pages (like lab-tests)
   return (

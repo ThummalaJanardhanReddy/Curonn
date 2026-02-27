@@ -189,6 +189,20 @@ export const EnvAllergiesApi = {
   getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
 } as const;
 // ✅ Unified export for convenience
+export const DiagApi = {
+  Diagsticcenter: '/DiagnosticCenters/nearby-centers',
+  saveUpdate: '/laborders/save-update-scan-order',
+  //getAll: '/Allergies/GetAllEnvironmentAllergies',
+ // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
+} as const;
+
+export const MenstrualHistoryApi = {
+  getAll: '/Histories/GetAllMenstral',
+  save: '/Histories/SaveMenstral',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteMenstral/${id}?deletedBy=${deletedBy}`,
+} as const;
+ 
+
 export const ApiRoutes = {
   Employee: EmployeeApi,
   Auth: AuthApi,
@@ -214,6 +228,7 @@ export const ApiRoutes = {
   EnvAllergies: EnvAllergiesApi,
   MedicalHistory: MedicalHistoryApi,
   SocialHistory: SocialHistoryApi,
+  DiagCenter: DiagApi,
   MenstrualHistory: MenstrualHistoryApi,
 } as const;
 

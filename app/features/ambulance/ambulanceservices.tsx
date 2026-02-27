@@ -233,14 +233,15 @@ export default function AmbulanceScreen() {
   );
 
  
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.container}>
-        <StatusBar
+  return (<>
+         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffffff"
+          backgroundColor="#ffffff"
         />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.container}>
+   
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -333,12 +334,11 @@ export default function AmbulanceScreen() {
         )}
       </View>
     </SafeAreaView>
-  );
+  </>);
 }
 
 const styles = StyleSheet.create({
       container: {
-    ...commonStyles.containercontent_layout,
     backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingBottom: 0,
@@ -369,7 +369,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
   },
   containercontent: {
-    ...commonStyles.containercontent_layout,
     backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works

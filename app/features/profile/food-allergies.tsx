@@ -287,12 +287,9 @@ const payload = {
       onRequestClose={onClose}
     >
       <>
-       <StatusBar
-              style="light"
-              animated
-            />
-       
-        <SafeAreaView style={styles.container}>
+      
+         <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+          <View  style={styles.container}>
         {/* Header - Food Allergies Screen */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -547,6 +544,7 @@ const payload = {
             </SafeAreaView>
           </View>
         </Modal>
+        </View>
         </SafeAreaView>
       </>
          <Toast
@@ -558,20 +556,20 @@ const payload = {
               duration={3000}
             />
     </Modal>
+    
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(15),
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
   },

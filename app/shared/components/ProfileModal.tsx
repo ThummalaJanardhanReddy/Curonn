@@ -663,13 +663,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   return (
     <Modal
-      visible={visible}
+       visible={visible}
       animationType="slide"
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={{ flex: 1, backgroundColor: "#f5f4f9" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor:  colors.bg_secondary }}>
+        <View style={styles.container}>
         <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.modalContent}>
+          <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.modalHeaderContainer}>
               <View style={styles.modalHeader}>
@@ -746,8 +748,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
             {/* Tab Content */}
             {activeTab === 0 ? renderProfileTab() : renderSettingsTab()}
-          </SafeAreaView>
-        </View>
+          </View>
+          </View>
+       
 
         {/* Edit Profile Modal */}
         <Modal
@@ -1318,12 +1321,16 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </SafeAreaView>
           </View>
         </Modal>
-      </View>
+        </View>
+       </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+    container: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "#f5f4f9",
