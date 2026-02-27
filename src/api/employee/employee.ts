@@ -73,6 +73,12 @@ export const MedicalHistoryApi = {
   delete: (id: number, deletedBy: number) => `/Histories/DeleteMedical/${id}?deletedBy=${deletedBy}`,
 } as const;
 
+export const SocialHistoryApi = {
+  getAll: '/Histories/GetAllSocial',
+  save: '/Histories/SaveSocial',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteSocial/${id}?deletedBy=${deletedBy}`,
+} as const;
+
 /* Lab Test APIs */
 export const LabTestsApi = {
   getGroups: '/LabTests/labtests/groups',
@@ -207,6 +213,7 @@ export const ApiRoutes = {
   DrugAllergies: DrugAllergiesApi,
   EnvAllergies: EnvAllergiesApi,
   MedicalHistory: MedicalHistoryApi,
+  SocialHistory: SocialHistoryApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

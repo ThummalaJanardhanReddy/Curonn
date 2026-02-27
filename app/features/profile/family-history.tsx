@@ -3,6 +3,7 @@ import axiosClient from "@/src/api/axiosClient";
 import { ApiRoutes } from "@/src/api/employee/employee";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -58,12 +59,16 @@ export default function FamilyHistoryScreen({
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<string[]>([]);
+  // Master data options for conditions (categoryId=13)
+  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
   const [newMember, setNewMember] = useState({
     relationship: "",
     condition: "",
   });
   const [showRelationshipDropdown, setShowRelationshipDropdown] =
     useState(false);
+  const [showConditionDropdown, setShowConditionDropdown] = useState(false);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -91,29 +96,40 @@ export default function FamilyHistoryScreen({
 
   const handleAddMember = () => {
     setModalVisible(true);
+    fetchMasterOptions('');
   };
 
   const handleOpenSearchModal = () => {
+    console.log('[FamilyHistory] Opening search modal - prefetch master options');
     setSearchModalVisible(true);
-    // Simulate API call to fetch medical conditions
-    setSearchResults([
-      "Diabetes",
-      "Thyroid",
-      "Hypertension",
-      "Asthma",
-      "Arthritis",
-      "Migraine",
-      "Depression",
-      "Anxiety",
-      "Heart Disease",
-      "Cancer",
-      "Stroke",
-      "Kidney Disease",
-      "Liver Disease",
-      "Lung Disease",
-      "Alzheimer's",
-      "Parkinson's",
-    ]);
+    fetchMasterOptions('');
+  };
+
+  const fetchMasterOptions = async (q: string = '') => {
+    try {
+      setDropdownLoading(true);
+      console.log('[FamilyHistory] fetchMasterOptions q=', q);
+      const url = `${ApiRoutes.Master.getmasterdata(13)}&search=${encodeURIComponent(q || '')}`;
+      const response: any = await axiosClient.get(url);
+      console.log('[FamilyHistory] master options response:', response);
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (Array.isArray(response?.items)) items = response.items;
+      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+
+      const mapped = (items || []).map((it: any) => ({ id: it.masterDataId ?? it.id ?? it.value ?? Math.random(), name: it.name ?? it.displayName ?? String(it) }));
+      setMasterOptions(mapped);
+      // Initialize searchResults as names for immediate display
+      setSearchResults(mapped.map(m => m.name));
+    } catch (err) {
+      console.error('Failed to fetch master options for family history:', err);
+      // fallback to empty
+      setMasterOptions([]);
+      setSearchResults([]);
+    } finally {
+      setDropdownLoading(false);
+    }
   };
 
   const handleCloseSearchModal = () => {
@@ -121,18 +137,36 @@ export default function FamilyHistoryScreen({
     setSearchQuery("");
   };
 
-  const handleSelectCondition = (condition: string) => {
-    setNewMember({ ...newMember, condition });
+  const handleSelectCondition = (item: { id: any; name: string; status?: string }) => {
+    setNewMember({ ...newMember, condition: item.name });
     handleCloseSearchModal();
   };
 
-  const filteredResults = searchResults.filter((result) =>
-    result.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Merge master options and existing family members to include status when applicable
+  const suggestions = React.useMemo(() => {
+    const fromMaster = masterOptions.map(m => ({ id: m.id, name: m.name, status: undefined as string | undefined }));
+    const fromFamily = (familyMembers || []).map(fm => ({ id: `f-${fm.familyHistoryId}`, name: fm.historyName, status: fm.status }));
+    const map = new Map<string, { id: any; name: string; status?: string }>();
+    [...fromMaster, ...fromFamily].forEach(it => {
+      const key = (it.name || '').toLowerCase().trim();
+      if (!map.has(key)) map.set(key, it);
+      else {
+        const prev = map.get(key)!;
+        if (!prev.status && it.status) map.set(key, it);
+      }
+    });
+    const arr = Array.from(map.values());
+    const q = (searchQuery || '').toLowerCase();
+    if (!q) return arr;
+    return arr.filter(it => it.name.toLowerCase().includes(q));
+  }, [masterOptions, familyMembers, searchQuery]);
+
+  const filteredResults = suggestions;
 
   const handleCloseModal = () => {
     setModalVisible(false);
     setShowRelationshipDropdown(false);
+    setShowConditionDropdown(false);
     setNewMember({
       relationship: "",
       condition: "",
@@ -300,7 +334,8 @@ export default function FamilyHistoryScreen({
           style={styles.deleteButton}
           onPress={() => handleDeleteMember(String(item.familyHistoryId))}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -400,6 +435,7 @@ export default function FamilyHistoryScreen({
                     style={styles.dropdownButton}
                     onPress={() => {
                       setShowRelationshipDropdown(!showRelationshipDropdown);
+                      setShowConditionDropdown(false);
                     }}
                   >
                     <Text style={styles.dropdownText}>
@@ -440,22 +476,62 @@ export default function FamilyHistoryScreen({
                 </View>
               </View>
 
-              {/* Condition Input */}
+              {/* Medical Condition Dropdown */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Medical Condition</Text>
-                <View style={styles.conditionInputContainer}>
-                  <TextInput
-                    style={styles.conditionInputText}
-                    placeholder="e.g., Heart Disease, Diabetes, Cancer"
-                    placeholderTextColor="#999"
-                    value={newMember.condition}
-                    onChangeText={(text) => setNewMember({ ...newMember, condition: text })}
-                    selectionColor="transparent"
-                    underlineColorAndroid="transparent"
-                  />
-                  <TouchableOpacity onPress={handleOpenSearchModal}>
-                    <Text style={styles.searchIcon}>🔍</Text>
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setShowConditionDropdown(!showConditionDropdown);
+                      setShowRelationshipDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>
+                      {newMember.condition || "Select medical condition"}
+                    </Text>
+                    <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>
+
+                  {/* Dropdown Options */}
+                  {showConditionDropdown && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.dropdownBackdrop}
+                        onPress={() => setShowConditionDropdown(false)}
+                        activeOpacity={1}
+                      />
+                      <View style={styles.dropdownOptions}>
+                        {dropdownLoading ? (
+                          <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          </View>
+                        ) : masterOptions && masterOptions.length > 0 ? (
+                          masterOptions.map((item) => (
+                            <TouchableOpacity
+                              key={String(item.id)}
+                              style={styles.dropdownOption}
+                              onPress={() => {
+                                setNewMember({
+                                  ...newMember,
+                                  condition: item.name,
+                                });
+                                setShowConditionDropdown(false);
+                              }}
+                            >
+                              <Text style={styles.dropdownOptionText}>
+                                {item.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
+                          <View style={styles.noResultsContainer}>
+                            <Text style={styles.noResultsText}>No options</Text>
+                          </View>
+                        )}
+                      </View>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -515,13 +591,21 @@ export default function FamilyHistoryScreen({
               style={styles.searchResultsContainer}
               showsVerticalScrollIndicator={false}
             >
-              {filteredResults.map((condition, index) => (
+              {filteredResults.map((item, index) => (
                 <TouchableOpacity
-                  key={index}
+                  key={String(item.id) + '-' + index}
                   style={styles.searchResultItem}
-                  onPress={() => handleSelectCondition(condition)}
+                  onPress={() => handleSelectCondition(item)}
                 >
-                  <Text style={styles.searchResultText}>{condition}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.searchResultText}>{item.name}</Text>
+                    {item.status ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={[styles.statusIndicator, { width: 10, height: 10, borderRadius: 5, marginRight: 8, backgroundColor: item.status.toLowerCase() === 'active' ? colors.error : item.status.toLowerCase() === 'resolved' ? colors.success : colors.warning }]} />
+                        <Text style={{ color: '#666', fontSize: getResponsiveFontSize(12) }}>{item.status}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </TouchableOpacity>
               ))}
               {filteredResults.length === 0 && searchQuery && (
@@ -906,5 +990,16 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  statusIndicator: {
+    width: getResponsiveSpacing(10),
+    height: getResponsiveSpacing(10),
+    borderRadius: getResponsiveSpacing(5),
+    marginRight: getResponsiveSpacing(6),
+  },
+  deleteButtonText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.error,
+    fontWeight: "500",
   },
 });

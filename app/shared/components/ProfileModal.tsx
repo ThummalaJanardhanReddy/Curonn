@@ -254,7 +254,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   // Add Menstrual History only for female users
   const profileItems: ProfileItem[] =
-    profileForm.gender === "Female"
+    profileForm.gender?.toLowerCase() === "male"
       ? [
         ...baseProfileItems,
         {
