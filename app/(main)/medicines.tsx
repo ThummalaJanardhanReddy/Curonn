@@ -11,7 +11,9 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../assets';
 import CommonHeader from '../shared/components/CommonHeader';
 import PrescriptionUploadModal from '../shared/components/PrescriptionUploadModal';
@@ -160,7 +162,6 @@ export default function MedicinesScreen() {
       const res: any = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
       } as any);
       if (res.canceled === true || res.cancelled === true) return;
       const assets: any[] = res.assets ?? [];
@@ -268,7 +269,8 @@ export default function MedicinesScreen() {
   ), []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <View style={styles.defaultHeader}>
         <CommonHeader
           currentLocation={currentLocation}
@@ -357,43 +359,43 @@ export default function MedicinesScreen() {
         initialNotes={initialModalNotes}
         initialOption={initialModalOption}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.containercontent_layout,
+    flex: 1,
     backgroundColor: colors.white,
   },
   defaultHeader: {
-    paddingHorizontal: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(10),
+    // Remove extra top padding as SafeAreaView handles it
+    marginTop: Platform.OS === 'android' ? getResponsiveSpacing(10) : 0,
   },
   containercontent: {
-    ...commonStyles.containercontent_layout,
-    backgroundColor: colors.white, // colors.bg_secondary,
-    // backgroundColor: colors.bg_primary,
-    paddingHorizontal: 20, // ✅ works
+    flex: 1,
+    backgroundColor: colors.white,
+    paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: 0,
-    paddingVertical: 7,
   },
   content: {
     flex: 1,
   },
   searchContainer: {
-    marginBottom: 10,
+    marginBottom: getResponsiveSpacing(10),
   },
   searchInputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
+    borderRadius: getResponsiveSpacing(8),
     backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    height: 40,
-    marginTop: 5
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(4),
+    height: getResponsiveSpacing(40),
+    marginTop: getResponsiveSpacing(5)
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
@@ -402,10 +404,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 12,
-    paddingVertical: 4,
+    fontSize: getResponsiveFontSize(12),
+    paddingVertical: getResponsiveSpacing(4),
     color: "#000",
-    paddingTop: 4,
+    paddingTop: getResponsiveSpacing(4),
     fontFamily: fonts.regular,
   },
   clearButton: {

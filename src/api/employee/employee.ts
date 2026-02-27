@@ -188,6 +188,12 @@ export const EnvAllergiesApi = {
   getAll: '/Allergies/GetAllEnvironmentAllergies',
   getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
 } as const;
+
+export const MenstrualHistoryApi = {
+  getAll: '/Histories/GetAllMenstral',
+  save: '/Histories/SaveMenstral',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteMenstral/${id}?deletedBy=${deletedBy}`,
+} as const;
 // ✅ Unified export for convenience
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -215,6 +221,7 @@ export const ApiRoutes = {
   MedicalHistory: MedicalHistoryApi,
   SocialHistory: SocialHistoryApi,
   MenstrualHistory: MenstrualHistoryApi,
+
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

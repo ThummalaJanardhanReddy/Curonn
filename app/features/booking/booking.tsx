@@ -1001,7 +1001,7 @@ export default function BookingScreen({
   if (isFromMedicalFlag) {
     // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
     const content = (
-       <SafeAreaView style={{ flex: 1,backgroundColor: '#fff' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -1662,6 +1662,7 @@ export default function BookingScreen({
                       status={patientType === "self" ? "checked" : "unchecked"}
                       onPress={() => setPatientType("self")}
                       color="#C15E9C"
+
                     />
                     <Text style={styles.radioLabel}>Self Service</Text>
                   </View>
@@ -2285,6 +2286,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 8,
     width: "49%",
+
   },
   radioLabel: {
     fontSize: 13,
