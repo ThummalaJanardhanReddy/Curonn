@@ -62,6 +62,14 @@ export default function FamilyHistoryScreen({
   const [searchResults, setSearchResults] = useState<string[]>([]);
   // Master data options for conditions (categoryId=13)
   const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
   const [newMember, setNewMember] = useState({
     relationship: "",
     condition: "",
@@ -174,6 +182,7 @@ export default function FamilyHistoryScreen({
       relationship: "",
       condition: "",
     });
+    setDropdownSearch('');
   };
 
   const handleSaveMember = async () => {
@@ -541,33 +550,43 @@ export default function FamilyHistoryScreen({
                         activeOpacity={1}
                       />
                       <View style={styles.dropdownOptions}>
-                        {dropdownLoading ? (
-                          <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                          </View>
-                        ) : masterOptions && masterOptions.length > 0 ? (
-                          masterOptions.map((item) => (
-                            <TouchableOpacity
-                              key={String(item.id)}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setNewMember({
-                                  ...newMember,
-                                  condition: item.name,
-                                });
-                                setShowConditionDropdown(false);
-                              }}
-                            >
-                              <Text style={styles.dropdownOptionText}>
-                                {item.name}
-                              </Text>
-                            </TouchableOpacity>
-                          ))
-                        ) : (
-                          <View style={styles.noResultsContainer}>
-                            <Text style={styles.noResultsText}>No options</Text>
-                          </View>
-                        )}
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search condition..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={setDropdownSearch}
+                        />
+                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                          {dropdownLoading ? (
+                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                            filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  setNewMember({
+                                    ...newMember,
+                                    condition: item.name,
+                                  });
+                                  setShowConditionDropdown(false);
+                                  setDropdownSearch('');
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>
+                                  {item.name}
+                                </Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>No options</Text>
+                            </View>
+                          )}
+                        </ScrollView>
                       </View>
                     </>
                   )}
@@ -885,6 +904,14 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     marginBottom: getResponsiveSpacing(2),
     flexDirection: "column-reverse",
+  },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    color: colors.text,
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),

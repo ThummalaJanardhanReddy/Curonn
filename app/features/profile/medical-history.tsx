@@ -15,6 +15,7 @@ import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
 import { colors } from '../../shared/styles/commonStyles';
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -56,6 +57,14 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
 
   const fetchMedicalHistory = useCallback(async () => {
     if (!userData?.e_id) return;
@@ -195,6 +204,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
     setModalVisible(false);
     setDropdownVisible(false);
     setSearchQuery('');
+    setDropdownSearch('');
     setNewCondition({
       condition: '',
       status: 'active',
@@ -418,28 +428,38 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
                         activeOpacity={1}
                       />
                       <View style={styles.dropdownOptions}>
-                        {dropdownLoading ? (
-                          <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                          </View>
-                        ) : masterOptions && masterOptions.length > 0 ? (
-                          masterOptions.map((item) => (
-                            <TouchableOpacity
-                              key={String(item.id)}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setNewCondition({ ...newCondition, condition: item.name });
-                                setDropdownVisible(false);
-                              }}
-                            >
-                              <Text style={styles.dropdownOptionText}>{item.name}</Text>
-                            </TouchableOpacity>
-                          ))
-                        ) : (
-                          <View style={styles.noResultsContainer}>
-                            <Text style={styles.noResultsText}>No options</Text>
-                          </View>
-                        )}
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search condition..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={setDropdownSearch}
+                        />
+                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                          {dropdownLoading ? (
+                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                            filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  setNewCondition({ ...newCondition, condition: item.name });
+                                  setDropdownVisible(false);
+                                  setDropdownSearch('');
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>No options</Text>
+                            </View>
+                          )}
+                        </ScrollView>
                       </View>
                     </>
                   )}
@@ -568,7 +588,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -576,17 +596,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    ...fontStyles.headercontent,
     color: colors.black,
   },
   addButton: {
@@ -599,6 +620,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: '#fff',
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -639,6 +661,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -654,9 +677,15 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   deleteButton: {
     padding: getResponsiveSpacing(8),
+  },
+  deleteButtonText: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
+    color: colors.error,
   },
   deleteIcon: {
     ...getResponsiveImageSize(18, 18),
@@ -692,9 +721,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -716,6 +746,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium,
   },
   // Dropdown styles — matching FamilyHistoryScreen pattern
   dropdownContainer: {
@@ -739,6 +770,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular,
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -774,6 +806,15 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(2),
     flexDirection: 'column-reverse',
   },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    color: colors.text,
+  },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
@@ -785,6 +826,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.semiBold,
   },
   // Radio button styles
   radioContainer: {
@@ -816,7 +858,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   // Footer
   modalFooter: {
@@ -844,11 +886,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '600',
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.regular,
   },
   emptySubtext: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     textAlign: 'center',
+    fontFamily: fonts.regular,
   },
   // Search modal styles
   searchModalContent: {
@@ -875,6 +919,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
   },
   searchInputIcon: {
     fontSize: getResponsiveFontSize(16),
@@ -895,6 +940,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   noResultsContainer: {
     padding: getResponsiveSpacing(20),
@@ -904,10 +950,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     fontStyle: 'italic',
-  },
-  deleteButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.error,
-    fontWeight: "500",
+    fontFamily: fonts.regular,
   },
 });

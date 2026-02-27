@@ -16,6 +16,7 @@ import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import {
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(50),
+    paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
   },
@@ -411,8 +412,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    ...fontStyles.headercontent,
     color: colors.black,
     marginLeft: getResponsiveSpacing(12),
   },
@@ -426,6 +426,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     fontWeight: "600",
     color: "#fff",
+    fontFamily: fonts.semiBold
   },
   divider: {
     height: 1,
@@ -539,9 +540,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: "600",
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -561,6 +563,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
@@ -571,6 +574,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: "#fff",
+    fontFamily: fonts.regular
   },
   notesInput: {
     height: getResponsiveSpacing(80),
@@ -592,6 +596,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -645,6 +650,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
+    fontFamily: fonts.semiBold
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -660,11 +666,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.bold
   },
   recordDetails: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.regular
   },
   radioGroup: {
     flexDirection: "row",
@@ -694,8 +702,10 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular
   },
   deleteButtonText: {
+    fontFamily: fonts.regular,
     fontSize: getResponsiveFontSize(14),
     color: colors.error,
     fontWeight: "500",

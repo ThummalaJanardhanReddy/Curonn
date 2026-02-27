@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import { colors } from '../../shared/styles/commonStyles';
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -659,8 +660,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    ...fontStyles.headercontent,
     color: colors.black,
     marginLeft: getResponsiveSpacing(12),
   },
@@ -674,6 +674,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: '#fff',
+    fontFamily: fonts.semiBold
   },
   divider: {
     height: 1,
@@ -707,6 +708,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     fontStyle: 'italic',
+    fontFamily: fonts.regular
   },
   // Habit card (list view)
   habitCard: {
@@ -742,12 +744,14 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: 'bold',
     color: colors.text,
+    fontFamily: fonts.bold
   },
   habitDetail: {
     fontSize: getResponsiveFontSize(13),
     color: colors.textSecondary,
     marginBottom: getResponsiveSpacing(2),
     marginLeft: getResponsiveSpacing(4),
+    fontFamily: fonts.regular
   },
   placeholderIcon: {
     width: getResponsiveSpacing(30),
@@ -799,9 +803,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -850,6 +855,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     textAlign: 'center',
+    fontFamily: fonts.medium
   },
   tabTextSelected: {
     color: '#fff',
@@ -878,6 +884,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(12),
+    fontFamily: fonts.medium
   },
   radioOption: {
     flexDirection: 'row',
@@ -904,6 +911,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.regular
   },
   conditionalFields: {
     marginTop: getResponsiveSpacing(16),
@@ -919,6 +927,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
@@ -929,6 +938,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: '#fff',
+    fontFamily: fonts.regular
   },
   dropdownContainer: {
     position: 'relative',
@@ -951,6 +961,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -989,6 +1000,7 @@ const styles = StyleSheet.create({
   dropdownOptionText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular
   },
   saveButton: {
     backgroundColor: colors.primary,
@@ -1004,8 +1016,10 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: '700',
     color: '#fff',
+    fontFamily: fonts.regular
   },
   deleteButtonText: {
+    fontFamily: fonts.regular,
     fontSize: getResponsiveFontSize(14),
     color: colors.error,
     fontWeight: "500",

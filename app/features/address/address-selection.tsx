@@ -8,6 +8,8 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  Platform,
+  StatusBar,
 } from "react-native";
 import { Button } from "react-native-paper";
 import ApiRoutes from "@/src/api/employee/employee";
@@ -106,8 +108,8 @@ export default function AddressSelection({
 
 
   return (
-    <Modal visible={visible} animationType="slide">
-      <SafeAreaView style={{ flex: 1 }}>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
 
         <View style={styles.container}>
           <View style={styles.header}>
@@ -287,6 +289,10 @@ export default function AddressSelection({
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
   container: { flex: 1, backgroundColor: "#f5f5f9" },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
   footer: {
