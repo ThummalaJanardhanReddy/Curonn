@@ -176,6 +176,12 @@ export const DrugAllergiesApi = {
   getAll: '/Allergies/GetAllDrugAllergies',
   getdeleteById: (id: string | number) => `/Allergies/DeleteDrugAllergy/${id}`,
 } as const;
+
+export const EnvAllergiesApi = {
+  saveUpdate: '/Allergies/SaveEnvironmentAllergy',
+  getAll: '/Allergies/GetAllEnvironmentAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
+} as const;
 // ✅ Unified export for convenience
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -199,6 +205,7 @@ export const ApiRoutes = {
   PrescriptionOrders: PrescriptionOrdersApi,
   FoodAllergies: FoodAllergiesApi,
   DrugAllergies: DrugAllergiesApi,
+  EnvAllergies: EnvAllergiesApi,
   MedicalHistory: MedicalHistoryApi,
 } as const;
 

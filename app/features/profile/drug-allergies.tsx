@@ -50,8 +50,9 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
     status: 'active' as 'active' | 'inactive',
   });
   const [showReactionDropdown, setShowReactionDropdown] = useState(false);
+  const [drugSearchOptions, setdrugSearchOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   const { userData } = useUser();
@@ -98,38 +99,42 @@ const payload = {
           console.log('DEBUG: New reactionc:', filteredreactions);
         }
       } catch (error) {
-        console.error("Failed to fetch relation types", error);
+        console.error("Failed to fetch reactions", error);
       }
     };
     fetchreactions();
     fetchallallergies();
   }, []);
+    React.useEffect(() => {
     
+    const fetchDrugallergies = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(11)
+        );
+        console.log('DEBUG: fetchDrugAllergies response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filtered = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setdrugSearchOptions(filtered);
+          console.log('DEBUG: New Drug Allergies:', filtered);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filtered = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setdrugSearchOptions(filtered);
+          console.log('DEBUG: Drug Allergies:', filtered);
+        }
+      } catch (error) {
+        console.error("Failed to fetch Drug Alergies", error);
+      }
+    };
+    fetchDrugallergies();
+  }, []);
 
-
-
-  const drugSearchOptions = [
-    'Penicillin',
-    'Aspirin',
-    'Ibuprofen',
-    'Acetaminophen',
-    'Morphine',
-    'Codeine',
-    'Sulfonamides',
-    'Cephalexin',
-    'Amoxicillin',
-    'Vancomycin',
-    'Insulin',
-    'Heparin',
-    'Warfarin',
-    'Digoxin',
-    'Furosemide',
-    'Metformin',
-    'Lisinopril',
-    'Atorvastatin',
-    'Omeprazole',
-    'Prednisone',
-  ];
 
   const handleBack = () => {
     if (onClose) {
@@ -157,7 +162,7 @@ const payload = {
     setSearchQuery(query);
     if (query.trim()) {
       const filtered = drugSearchOptions.filter(drug =>
-        drug.toLowerCase().includes(query.toLowerCase())
+        drug.name.toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(filtered);
     } else {
@@ -193,7 +198,7 @@ const payload = {
       axiosClient.post(ApiRoutes.DrugAllergies.saveUpdate, payload)
       .then(async response => {
         setToastMessage({
-          title: "Allergy Saved Successfully",
+          title: "Drug Allergy Saved Successfully",
           subtitle: response?.data?.message || "Saved successfully!",
           type: "success"
         });
@@ -275,12 +280,10 @@ const payload = {
     []
   );
 
-  return (
+  return (<>
+    <StatusBar style="dark" backgroundColor="#fff" animated />
     <SafeAreaView style={styles.container}>
-       <StatusBar
-                    style="light"
-                    animated
-                  />
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -307,11 +310,17 @@ const payload = {
       {/* Allergies List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.allergiesContainer}>
-          {allergies.map((allergy) => (
-            <View key={allergy.id} style={styles.allergyCardWrapper}>
-              {renderAllergyCard({ item: allergy })}
-            </View>
-          ))}
+          {allergies.length === 0 ? (
+            <Text style={{ fontFamily:fonts.regular,textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+              No Data Available
+            </Text>
+          ) : (
+            allergies.map((allergy, index) => (
+              <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                {renderAllergyCard({ item: allergy })}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -397,7 +406,7 @@ const payload = {
               </View>
 
               {/* Status Radio Buttons */}
-              <View style={styles.inputGroup}>
+              <View style={styles.inputGroup1}>
                 <Text style={styles.inputLabel}>Status</Text>
                 <View style={styles.radioGroup}>
                   <TouchableOpacity
@@ -459,7 +468,7 @@ const payload = {
               <View style={styles.searchInputContainer}>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search for drug names..."
+                  placeholder="Search"
                   placeholderTextColor="#999"
                   value={searchQuery}
                   onChangeText={handleSearchQueryChange}
@@ -479,11 +488,11 @@ const payload = {
               <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
               {searchResults.map((drug, index) => (
                 <TouchableOpacity
-                  key={index}
+                 key={drug.masterDataId || index}
                   style={styles.searchResultItem}
-                  onPress={() => handleSelectDrug(drug)}
+                  onPress={() => handleSelectDrug(drug.name)}
                 >
-                  <Text style={styles.searchResultText}>{drug}</Text>
+                  <Text style={styles.searchResultText}>{drug.name}</Text>
                 </TouchableOpacity>
               ))}
               </ScrollView>
@@ -500,14 +509,14 @@ const payload = {
                     duration={3000}
                   />
     </SafeAreaView>
-  );
+ </>);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-     backgroundColor: colors.white,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: '#fff',
+    },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -646,9 +655,10 @@ color: "#000",
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+      fontSize: getResponsiveFontSize(15),
+    fontWeight: "600",
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -661,13 +671,18 @@ color: "#000",
     padding: getResponsiveSpacing(20),
   },
   inputGroup: {
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(10),
   },
+    inputGroup1: {
+    marginTop: getResponsiveSpacing(20),
+  },
+
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
-    marginBottom: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(3),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
@@ -678,27 +693,30 @@ color: "#000",
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: '#fff',
+    height: getResponsiveSpacing(48),
   },
   notesInput: {
     height: getResponsiveSpacing(80),
     textAlignVertical: 'top',
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
-    minHeight: getResponsiveSpacing(48),
+    paddingVertical: getResponsiveSpacing(6),
+    backgroundColor: "#fff",
+    height: getResponsiveSpacing(40),
   },
   dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
     flex: 1,
+    paddingTop:3
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -728,39 +746,42 @@ color: "#000",
     borderBottomWidth: 0,
     borderTopLeftRadius: getResponsiveSpacing(8),
     borderTopRightRadius: getResponsiveSpacing(8),
-    maxHeight: getResponsiveSpacing(150),
-    zIndex: 10001,
-    elevation: 20,
+    //maxHeight: getResponsiveSpacing(150),
+    zIndex: 100001,
+    elevation: 10,
     shadowColor: '#000',
     shadowOffset: {
-      width: 0,
-      height: -4,
+      width: 1,
+      height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity:0.2,
     shadowRadius: 6,
     marginBottom: getResponsiveSpacing(2),
     flexDirection: 'column-reverse',
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(8),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     backgroundColor: '#fff',
   },
   dropdownOptionText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
-    width: '100%',
+    borderRadius: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(40),
+    width: "80%",
+    marginLeft: "10%",
+    marginRight: "10%",
   },
   radioGroup: {
     flexDirection: 'row',
@@ -787,13 +808,17 @@ color: "#000",
     backgroundColor: colors.primary,
   },
   radioLabel: {
-    fontSize: getResponsiveFontSize(14),
+      fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   // Search input styles
   searchInputText: {
-    fontSize: getResponsiveFontSize(14),
+        fontSize: getResponsiveFontSize(13),
     flex: 1,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   searchInputTextSelected: {
     color: colors.text,
@@ -831,9 +856,8 @@ color: "#000",
     borderBottomColor: '#eee',
   },
   searchModalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.text,
+color: colors.text,
+    ...fontStyles.headercontent,
   },
   searchModalCloseButton: {
     padding: getResponsiveSpacing(4),
@@ -843,23 +867,26 @@ color: "#000",
     tintColor: colors.textSecondary,
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(6),
-    backgroundColor: '#fff',
-    marginBottom: getResponsiveSpacing(16),
+    paddingVertical: getResponsiveSpacing(0),
+    backgroundColor: "#fff",
+    marginBottom: getResponsiveSpacing(15),
+    height: getResponsiveSpacing(40),
+    justifyContent: "center",
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: colors.text,
-    borderWidth: 0,
+    fontFamily: fonts.regular,
     // outline: 'none',
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
+    paddingBottom: 5,
   },
   searchInputIcon: {
     fontSize: getResponsiveFontSize(16),
@@ -872,10 +899,11 @@ color: "#000",
   searchResultItem: {
     paddingVertical: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
   },
 });

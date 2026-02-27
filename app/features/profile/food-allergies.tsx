@@ -26,7 +26,6 @@ import {
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from '@/app/shared/components/Toast';
-
 interface FoodAllergy {
   id: string;
   foodId: string;
@@ -319,11 +318,18 @@ const payload = {
         {/* Allergies List */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.allergiesContainer}>
-            {allergies.map((allergy) => (
-              <View key={allergy.id} style={styles.allergyCardWrapper}>
-                {renderAllergyCard({ item: allergy })}
-              </View>
-            ))}
+             {allergies.length === 0 ? (
+                        <Text style={{ fontFamily:fonts.regular,textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+                          No Data Available
+                        </Text>
+                      ) :
+
+            (allergies.map((allergy, index) => (
+                          <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                            {renderAllergyCard({ item: allergy })}
+                          </View>
+                        ))
+          )}
           </View>
         </ScrollView>
 
@@ -759,6 +765,7 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
     flex: 1,
   },
   dropdownIcon: {
@@ -804,7 +811,7 @@ const styles = StyleSheet.create({
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(8),
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     backgroundColor: "#fff",
@@ -813,6 +820,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
+     fontFamily: fonts.regular,
   },
   radioGroup: {
     flexDirection: "row",

@@ -269,7 +269,6 @@ export default function MedicinesScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" translucent={false} backgroundColor="#ffffff" />
       <View style={styles.defaultHeader}>
         <CommonHeader
           currentLocation={currentLocation}

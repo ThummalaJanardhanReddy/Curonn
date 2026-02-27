@@ -1001,7 +1001,7 @@ export default function BookingScreen({
   if (isFromMedicalFlag) {
     // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
     const content = (
-      <SafeAreaView style={{ flex: 1 }}>
+       <SafeAreaView style={{ flex: 1,backgroundColor: '#fff' }}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -1439,7 +1439,7 @@ export default function BookingScreen({
         <Modal
           visible={visible}
           animationType="slide"
-          presentationStyle="pageSheet"
+          presentationStyle="fullScreen"
           onRequestClose={closeHandler}
         >
           {content}
@@ -1461,7 +1461,7 @@ export default function BookingScreen({
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Order Info</Text>
+            <Text style={styles.headerTitle}>Order Info </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
             </TouchableOpacity>
@@ -2081,7 +2081,7 @@ export default function BookingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.white,
   },
   header: {
     ...commonStyles.container_header,
@@ -2105,6 +2105,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: colors.bg_primary,
   },
   section: {
     marginTop: getResponsiveSpacing(10),

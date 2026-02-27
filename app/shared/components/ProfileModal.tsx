@@ -149,6 +149,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       setStatusBarBackgroundColor('#7E6781');
     }
   }, [visible]);
+
+//   useEffect(() => {
+//   if (Platform.OS !== "android") return;
+
+//   if (visible) {
+//     setStatusBarBackgroundColor(colors.bg_secondary, true);
+//     setStatusBarStyle("light", true);
+//   } else {
+//     setStatusBarBackgroundColor("#ffffff", true);
+//     setStatusBarStyle("dark", true);
+//   }
+// }, [visible]);
   const editProfileSlideAnim = useRef(new Animated.Value(screenWidth)).current;
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const [familyMembersModalVisible, setFamilyMembersModalVisible] =
@@ -653,10 +665,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+      <View style={{ flex: 1, backgroundColor: "#f5f4f9" }}>
         <View style={styles.modalOverlay}>
           <SafeAreaView style={styles.modalContent}>
             {/* Header */}
@@ -1307,7 +1318,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </SafeAreaView>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
