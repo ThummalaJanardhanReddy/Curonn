@@ -23,6 +23,7 @@ export interface ServiceAddress {
 }
 
 export interface Order {
+  createdOn: string | number | Date;
   orderNo: string;
   id: string;
   orderNumber: string;

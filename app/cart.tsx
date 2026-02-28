@@ -32,7 +32,7 @@ export default function CartScreen() {
       refreshCart();
       if (Platform.OS === 'android') {
         const timeout = setTimeout(() => {
-          RNStatusBar.setBackgroundColor("#ffffff", true);
+          RNStatusBar.setBackgroundColor("#F5F4F9", true);
         }, 400);
         return () => clearTimeout(timeout);
       }
@@ -70,12 +70,12 @@ export default function CartScreen() {
   }, [cartItems, updateQuantity, removeItem, refreshCart]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <View style={styles.container}>
         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffffff"
+          backgroundColor="#fff"
         />
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Items in Cart</Text>
@@ -121,7 +121,7 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#F5F4F9' },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,28 +131,33 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(15),
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    backgroundColor: '#fff',
   },
   headerTitle: {
-    fontFamily: fonts.bold,
-    fontSize: getResponsiveFontSize(20),
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
     color: '#202427',
   },
+  // closeButton: {
+  //   width: 36,
+  //   height: 36,
+  //   borderRadius: 18,
+  //   backgroundColor: '#E0E0E0',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
+
   closeIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#000',
+    width: 28,
+    height: 28,
+    tintColor: "black",
   },
   list: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F4F9',
   },
   footer: {
     backgroundColor: '#fff',
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
   },
   continueBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(10),
     borderRadius: getResponsiveSpacing(30),
     alignItems: 'center',
     justifyContent: 'center',

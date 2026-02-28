@@ -48,6 +48,7 @@ interface SubTestType {
 }
 
 interface TestItem {
+  selectedDiagCenter?: any;
   id: string;
   name: string;
   price: string;
@@ -62,6 +63,8 @@ interface TestItem {
   labTestMasterId?: number;
   labPackageMasterId?: number;
   xrayMasterId?: number;
+  selectedDate?: Date;
+  selectedTimeSlot?: string;
 }
 
 interface ApiResponse<T> {
@@ -105,6 +108,7 @@ interface ScanItemApi {
   xrayMasterId: number;
   testName: string;
   price: number;
+  selectedDiagCenterId?: number;
 }
 
 interface ScansResponse {
@@ -123,7 +127,7 @@ export default function LabTestsScreen() {
   const [bookingVisible, setBookingVisible] = useState(false);
   const [diagsticVisible, setdiagsticVisible] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
-  const [diagCenters, setDiagCenters] = useState([]);
+  const [diagCenters, setDiagCenters] = useState<any[]>([]);
   const [diagLoading, setDiagLoading] = useState(false);
    const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<number | null>(null);
   // Lab Test Groups
@@ -164,6 +168,8 @@ export default function LabTestsScreen() {
         }, 400); // Adjust timeout as needed
         return () => clearTimeout(timeout);
       }
+      // Always reset diagsticVisible when leaving LabTestsScreen
+      
     }, [])
   );
 
@@ -257,6 +263,7 @@ export default function LabTestsScreen() {
 
 
   useEffect(() => {
+     
     const delayDebounce = setTimeout(() => {
       if (searchQuery.trim().length > 2) {
         fetchGlobalSearch(searchQuery);
@@ -510,7 +517,7 @@ export default function LabTestsScreen() {
       setShowDatePicker(Platform.OS === "ios");
       if (selectedDate) {
         setSelectedDate(selectedDate);
-        if (errors === "Please select delivery date") setErrors("");
+        if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
       }
     };
   // Fetch Scans
@@ -598,20 +605,7 @@ export default function LabTestsScreen() {
     setTestItems([]);
   };
 
-  // const handleBookTest = (id: string) => {
-  //   const testItem =
-  //     selectedCategory === "lab-test"
-  //       ? testItems.find((item) => item.id === testId)
-  //       : selectedCategory === "health-checks"
-  //         ? healthCheckItems.find((item) => item.id === testId)
-  //         : scanItems.find((item) => item.id === testId);
-
-  //   if (testItem) {
-  //     console.log("Selected test for booking:", testItem);
-  //     setSelectedTest(testItem);
-  //     setBookingVisible(true);
-  //   }
-  // };
+  
 
   const handleBookTest = (id: string) => {
     const testItem = getDisplayedData().find(
@@ -620,6 +614,35 @@ export default function LabTestsScreen() {
     console.log("Selected test for booking:", testItem);
     if (testItem) {
       setSelectedTest(testItem);
+      setBookingVisible(true);
+    }
+  };
+
+   const handleBookscanTest = (testId: string, centerId: string) => {
+    if (!selectedTest) {
+      setErrors("No scan selected. Please select a scan before booking.");
+      return;
+    }
+    if (!selectedDate) {
+      setErrors("Please select service start date");
+      return;
+    }
+    if (!selectedTimeSlot) {
+      setErrors("Please select time slot");
+      return;
+    }
+    const testItem = getDisplayedData().find(
+      (item) => item.id === testId
+    );
+    const center = diagCenters.find((c: any) => c.id === centerId);
+    console.log("Selected test for booking:", testItem);
+    if (testItem && center) {
+      setSelectedTest({
+        ...testItem,
+        selectedDate,
+        selectedTimeSlot,
+        selectedDiagCenter: center,
+      });
       setBookingVisible(true);
     }
   };
@@ -1095,7 +1118,12 @@ export default function LabTestsScreen() {
             visible={bookingVisible}
             onClose={() => {
               setBookingVisible(false);
-              setSelectedTest(null);
+              setdiagsticVisible(true);
+            }}
+            onSuccess={() => {
+              setdiagsticVisible(false);
+              setSelectedDate(null);
+              setSelectedTimeSlot("");
             }}
             serviceName={selectedTest.name}
             servicePrice={Number(selectedTest.curonnPrice)}
@@ -1108,6 +1136,8 @@ export default function LabTestsScreen() {
             }
             type={selectedCategory as ServiceType}
             selectedDiagCenter={selectedTest.selectedDiagCenter}
+            selectedDate={selectedTest.selectedDate}
+            selectedTimeSlot={selectedTest.selectedTimeSlot}
           />
         )}
 
@@ -1116,7 +1146,12 @@ export default function LabTestsScreen() {
           visible={diagsticVisible}
           animationType="slide"
            presentationStyle="pageSheet"
-          onRequestClose={() => setdiagsticVisible(false)}
+          onRequestClose={() => {
+            setdiagsticVisible(false);
+            setSelectedDate(null);
+            setSelectedTimeSlot("");
+            setErrors("");
+          }}
         >
            <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
                     
@@ -1126,15 +1161,20 @@ export default function LabTestsScreen() {
             onProfilePress={() => console.log("Profile pressed")}
             showCart={false}
           />
-          <TouchableOpacity onPress={() => setdiagsticVisible(false)} style={styles.closeButton}>
+          <TouchableOpacity onPress={() => {
+            setdiagsticVisible(false);
+            setSelectedDate(null);
+            setSelectedTimeSlot("");
+            setErrors("");
+          }} style={styles.closeButton}>
             <Image source={images.icons.close} style={styles.closeIcon} />
           </TouchableOpacity>
         </View>
-          <TouchableWithoutFeedback onPress={() => setdiagsticVisible(false)}>
-            <View style={styles.modalOverlay} />
-          </TouchableWithoutFeedback>
+       
          
-          <View style={styles.content}>
+         
+             <ScrollView  style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
+               <View style={styles.content}>
               {/* Sample Pickup Date & Time */}
                          <View style={styles.section}>
                            <Text style={styles.sectionTitle}>
@@ -1162,13 +1202,14 @@ export default function LabTestsScreen() {
                                    style={styles.calendarIcon}
                                  />
                                </TouchableOpacity>
-                               {errors === "Please select service start date" && (
+                               {(!selectedDate && errors === "Please select service start date") && (
                                  <Text
                                    style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
                                  >
                                    {errors}
                                  </Text>
                                )}
+                              
                              </View>
              
                              <View style={styles.timeSection}>
@@ -1222,47 +1263,115 @@ export default function LabTestsScreen() {
                   <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
                 ) : (
                   <>
-                    <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={true}>
+                   
                       {diagCenters.map((center: any) => (
-                        <TouchableOpacity
+                        <LinearGradient
                           key={center.id}
-                          style={styles.centerRow}
-                          onPress={() => setSelectedDiagCenterId(center.id)}
-                          activeOpacity={0.7}
+                          colors={['#fff', '#D5CDDA']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.testCard}
                         >
-                          <View style={styles.radioOuter}>
-                            {selectedDiagCenterId === center.id && <View style={styles.radioInner} />}
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.centerName}>{center.centerName}</Text>
-                            <Text style={styles.centerAddress}>{center.address}</Text>
-                            <Text style={styles.centerDistance}>{center.distanceKm.toFixed(2)} km away</Text>
-                          </View>
-                        </TouchableOpacity>
+                         
+                            {/* <View style={styles.radioOuter}>
+                              {selectedDiagCenterId === center.id && <View style={styles.radioInner} />}
+                            </View> */}
+                            <View style={styles.cardContainer}>
+                               <View style={styles.testCard1}>
+              <View style={styles.testInfo}>
+                <Text style={styles.testName}>{center.centerName}</Text>
+               
+
+              
+                  <Text style={styles.testReportTime}>
+                    {center.address}
+                  </Text>
+
+
+              </View>
+             
+              <View style={styles.healthprice}>
+                <Text style={styles.priceRow}>
+                  <Text style={styles.originalPrice}>
+                    ₹{selectedTest?.price}
+                  </Text>
+                  {' '}
+                  <Text style={styles.finalPrice1}>
+                    ₹{selectedTest?.curonnPrice}
+                  </Text>
+                  {/* <Text style={styles.finalPrice1}>
+                     ₹{selectedTest?.curonnPrice || center.price}
+                  </Text> */}
+                </Text>
+              </View>
+              </View>
+              
+           <View style={styles.testActioncard}>
+            <Button
+              mode="outlined"
+              style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
+              contentStyle={{
+                height: 40,
+                paddingVertical: 0,
+                justifyContent: 'center',
+              }}
+              textColor="#000000"
+              onPress={() =>
+                router.push({
+                  pathname: "/viewdetails",
+                  params: {
+                    id: center.id,
+                    type: 'diagncenter',
+                  },
+                })
+              }
+            >
+              View Details
+            </Button>
+              <PrimaryButton
+                title="Book Now"
+                onPress={() => {
+                  if (!selectedTest) {
+                    setErrors("No scan selected. Please select a scan before booking.");
+                    return;
+                  }
+                  handleBookscanTest(selectedTest.id, center.id);
+                }}
+                style={styles.bookButton}
+                //disabled={!selectedTest}
+              />
+              {!selectedTest && errors === "No scan selected. Please select a scan before booking." && (
+                <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
+              )}
+
+          </View>
+                            </View>
+                         
+                        </LinearGradient>
                       ))}
-                    </ScrollView>
-                    <PrimaryButton
+                      
+                   
+                    {/* <PrimaryButton
                       title="Next"
                       style={styles.nextButton}
                       disabled={selectedDiagCenterId === null}
                       onPress={() => {
                         const selectedCenter = diagCenters.find((c: any) => c.id === selectedDiagCenterId);
                         if (selectedCenter && selectedTest) {
-                          // Pass selectedCenter to booking logic or next step
-                          console.log('Selected Diagnostic Center:', selectedCenter);
-                          setdiagsticVisible(false);
-                          // Example: Pass selectedCenter to BookingScreen via selectedTest
+                          // Update selectedTest with new diagnostic center
                           setSelectedTest({ ...selectedTest, selectedDiagCenter: selectedCenter });
+                          setdiagsticVisible(false);
                           setBookingVisible(true);
                         }
                       }}
-                    />
+                    /> */}
                   </>
                 )}
               </View>
             )}
-           
-          </View>
+            </View>
+            </ScrollView>
+          
            </SafeAreaView>
         </Modal>
          {/* Date Picker */}
@@ -1408,7 +1517,6 @@ const styles = StyleSheet.create({
   },
   modalScrollableContent: {
     flexGrow: 1,
-    maxHeight: 450,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1477,6 +1585,8 @@ const styles = StyleSheet.create({
 
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
+     borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   containercontent: {
     ...commonStyles.containercontent_layout,

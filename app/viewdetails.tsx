@@ -19,12 +19,12 @@ import commonStyles, { colors } from "./shared/styles/commonStyles";
 import { getResponsiveSpacing } from "./shared/utils/responsive";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { fontStyles } from "./shared/styles/fonts";
+import { fontStyles, fonts } from "./shared/styles/fonts";
 
 
 interface RouteParams {
   id: string;
-  type: "lab-test" | "health-checks" | "scans" | "ambulance";
+  type: "lab-test" | "health-checks" | "scans" | "ambulance" | "diagncenter";
 }
 
 export default function ViewDetailsScreen() {
@@ -45,34 +45,41 @@ export default function ViewDetailsScreen() {
 
       let response: any;
       if (type === "lab-test") {
-       const response = await axiosClient.get(
+        const response = await axiosClient.get(
           ApiRoutes.LabTests.getById(id)
         );
         setDetails(response.data);
-      
-      }
-      else{
-      if (type === "health-checks") {
-        response = await axiosClient.get(
-          ApiRoutes.LabPackages.getById(id)
-        );
-      } else {
-        if (type === "scans") {
-        response = await axiosClient.get(
-          ApiRoutes.Xray.getById(id)
-        );
-      } else if (type === "ambulance") {
-        response = await axiosClient.get(
-          ApiRoutes.Ambulance.getdataById(id)
-        );
-      }
-      }
 
-      if (response?.isSuccess) {
-        console.log("Details fetched:", response.data);
-        setDetails(response.data);
       }
-    }
+      else {
+        if (type === "health-checks") {
+          response = await axiosClient.get(
+            ApiRoutes.LabPackages.getById(id)
+          );
+        } else {
+          if (type === "scans") {
+            response = await axiosClient.get(
+              ApiRoutes.Xray.getById(id)
+            );
+          } else if (type === "ambulance") {
+            response = await axiosClient.get(
+              ApiRoutes.Ambulance.getdataById(id)
+            );
+          }
+          else if (type === "diagncenter") {
+            response = await axiosClient.get(
+              ApiRoutes.DiagCenter.GetById(id)
+
+            );
+            setDetails(response.data);
+          }
+        }
+
+        if (response?.isSuccess) {
+          console.log("Details fetched:", response.data);
+          setDetails(response.data);
+        }
+      }
     } catch (error) {
       console.log("Details fetch error:", error);
     } finally {
@@ -120,9 +127,13 @@ export default function ViewDetailsScreen() {
           >
             <Ionicons name="arrow-back" size={24} color="#694664" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {type === "ambulance" ? details.packageName : details.testName}
-          </Text>
+          {type === "diagncenter" ? (
+            <Text style={styles.headerTitle}>{details.centerName}</Text>
+          ) : (
+            <Text style={styles.headerTitle}>
+              {type === "ambulance" ? details.packageName : details.testName}
+            </Text>
+          )}
 
         </View>
         <ScrollView
@@ -137,8 +148,22 @@ export default function ViewDetailsScreen() {
           />
 
           {/* Test Name */}
-          <Text style={styles.title}>
-            {type === "ambulance" ? details.packageName : details.testName}</Text>
+          {type === "diagncenter" ? (
+            <Text style={styles.title}>{details.centerName}</Text>
+          ) : (
+            <Text style={styles.title}>
+              {type === "ambulance" ? details.packageName : details.testName}
+            </Text>
+          )}
+
+          {type === "diagncenter" && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Address</Text>
+              <Text style={styles.address}>{details.address}, {details.locality}</Text>
+              <Text style={styles.address}>{details.city},{details.state},{details.country},{details.pincode}</Text>
+              <Text style={styles.phonenum}>{details.phoneNo}</Text>
+            </View>
+          )}
 
           {/* Tests List (only for health checks) */}
           {type === "health-checks" && details.testsList && (
@@ -169,23 +194,23 @@ export default function ViewDetailsScreen() {
             <View style={styles.priceContainer}>
               <Text style={styles.finalPrice}>₹ {details.price}</Text>
             </View>
-          ) : (
-            type !== "scans" && (
-              <View style={styles.priceContainer}>
-                <Text style={styles.originalPrice}>₹ {details.price}</Text>
-                <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
-              </View>
-            )
-          )}
-          
+          ) : type !== "scans" && type !== "diagncenter" ? (
+            <View style={styles.priceContainer}>
+              <Text style={styles.originalPrice}>₹ {details.price}</Text>
+              <Text style={styles.finalPrice}>
+                ₹ {details.curonnprice || details.curonnPrice}
+              </Text>
+            </View>
+          ) : null}
+
 
 
           {/* Book Now */}
-          <PrimaryButton
+          {type !== "diagncenter" && ( <PrimaryButton
             title="Book Now"
             onPress={() => console.log("Book Now Pressed")}
             style={styles.bookButton}
-          />
+          />)}
         </View>
 
       </View>
@@ -253,12 +278,21 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     ...fontStyles.button,
-    fontWeight: "bold",
+    fontWeight: "600",
     marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0, 0, 0, 0.1)",
     paddingBottom: 5,
-
+    fontFamily: fonts.semiBold,
+  },
+  address: {
+    fontFamily: fonts.medium,
+    color: "#555",
+    marginBottom: 0,
+  },
+  phonenum: {
+    fontFamily: fonts.medium,
+    color: "#555",
   },
   testsList: {
     ...fontStyles.bodySmall,
@@ -272,31 +306,31 @@ const styles = StyleSheet.create({
     color: "#C35E9C",
     marginTop: 10,
   },
-footer: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingVertical: 15,
-  paddingHorizontal: getResponsiveSpacing(20),
-},
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 15,
+    paddingHorizontal: getResponsiveSpacing(20),
+  },
 
-priceContainer: {
-  flexDirection: "row",
-  alignItems: "center",
-},
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
 
-originalPrice: {
-  fontSize: 14,
-  color: "#B0B0B0",
-  textDecorationLine: "line-through",
-  marginRight: 8,
-},
+  originalPrice: {
+    fontSize: 14,
+    color: "#B0B0B0",
+    textDecorationLine: "line-through",
+    marginRight: 8,
+  },
 
-finalPrice: {
-  fontSize: 16,
-  fontWeight: "bold",
-  color: "#C35E9C",
-},
+  finalPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#C35E9C",
+  },
   bookButton: {
     ...fontStyles.headercontent,
     marginBottom: 4,

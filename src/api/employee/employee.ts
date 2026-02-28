@@ -16,6 +16,7 @@ export const EmployeeApi = {
   saveandupdaterelative: '/Employee/SaveOrUpdatePatientRelation',
   GetPatientRelations: (patientId: string | number) => `/Employee/GetPatientRelations?patientId=${patientId}`,
   GetByPatientRelationAsync: (relationId: string | number, patientId: string | number) => `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
+  getRelation: (relationId: string | number, patientId: string | number) => `/Employee/get-relation?relationId=${relationId}&patientId=${patientId}`,
   deletefamilymember: '/Employee/DeletePatientRelation'
 
 } as const;
@@ -137,6 +138,8 @@ export const MedicalOrdersApi = {
   deleteCartItem: '/medicine-orders/delete-cart-item',
   getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
     `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+  getAllMedicines: (pageNo: number = 1, pageSize: number = 10, search?: string, createdBy: number = 1) =>
+    `/Medicines/GetAll?pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}&createdBy=${createdBy}`,
   saveOrder: '/medicine-orders/save-order',
 } as const;
 
@@ -161,6 +164,7 @@ export const AmbulanceApi = {
   saveUpdate: '/AmbulanceBooking/save',
   getAll: '/Ambulances/GetAll',
   getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
+  getbookingId: (bookingId: string | number) => `/AmbulanceBooking/get-by-id/${bookingId}`
 } as const;
 
 export const NotificationApi = {
@@ -196,8 +200,9 @@ export const DepartmentsApi = {
 export const DiagApi = {
   Diagsticcenter: '/DiagnosticCenters/nearby-centers',
   saveUpdate: '/laborders/save-update-scan-order',
+  GetById: (centerId: string | number) => `/DiagnosticCenters/GetById/${centerId}`,
   //getAll: '/Allergies/GetAllEnvironmentAllergies',
- // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
+  // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
 } as const;
 
 export const MenstrualHistoryApi = {
@@ -205,7 +210,7 @@ export const MenstrualHistoryApi = {
   save: '/Histories/SaveMenstral',
   delete: (id: number, deletedBy: number) => `/Histories/DeleteMenstral/${id}?deletedBy=${deletedBy}`,
 } as const;
- 
+
 
 export const ApiRoutes = {
   Employee: EmployeeApi,

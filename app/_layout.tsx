@@ -26,7 +26,14 @@ export default function RootLayout() {
                   headerShown: false,
                   animation: "slide_from_right",
                 }}
-              />
+            >
+              <Stack.Screen
+                name="features/medicines/medicine-list"
+                options={{
+                  animation: 'none'
+                }}
+                />
+            </Stack>
             </KeyboardProvider>
         </PaperProvider>
         </CartProvider>
