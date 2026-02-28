@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, TouchableWithoutFeedback } from "react-native
 import { AntDesign } from '@expo/vector-icons';
  
 import { Button } from "react-native-paper";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
 import { getResponsiveFontSize, getResponsiveSpacing } from '../../shared/utils/responsive';
@@ -150,7 +151,10 @@ export default function LabTestsScreen() {
 
   const [searchResults, setSearchResults] = useState<TestItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
+    const [errors, setErrors] = useState("");
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS === 'android') {
@@ -178,6 +182,13 @@ export default function LabTestsScreen() {
     { id: "scans", name: "Scans", selected: selectedCategory === "scans" },
   ];
 
+  // Lab-test time slots
+  const labTimeSlots = [
+    "07:00 AM - 08:00 AM",
+    "08:00 AM - 09:00 AM",
+    "09:00 AM - 10:00 AM",
+    "10:00 AM - 11:00 AM",
+  ];
 
   const fetchGlobalSearch = async (search: string) => {
     try {
@@ -488,6 +499,20 @@ export default function LabTestsScreen() {
     setLoadingTests(false);
   };
 
+    const formatDateLab = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
+
+    const handleMedDateChange = (event: any, selectedDate?: Date) => {
+      setShowDatePicker(Platform.OS === "ios");
+      if (selectedDate) {
+        setSelectedDate(selectedDate);
+        if (errors === "Please select delivery date") setErrors("");
+      }
+    };
   // Fetch Scans
   const fetchScans = async (
     pageNo = 1,
@@ -815,7 +840,7 @@ export default function LabTestsScreen() {
 
 
               </View>
-              { selectedCategory !== 'scans' &&(
+             
               <View style={styles.healthprice}>
                 <Text style={styles.priceRow}>
                   <Text style={styles.originalPrice}>
@@ -827,7 +852,7 @@ export default function LabTestsScreen() {
                   </Text>
                 </Text>
               </View>
-              )}
+              
             </View>
 
             <View style={styles.testActioncard}>
@@ -900,7 +925,7 @@ export default function LabTestsScreen() {
             "rgba(255, 255, 255, 1)",
             "rgba(247, 84, 10, 0.2)",
           ]}
-          start={{ x: 0.1, y: 0.4 }}
+          start={{ x: 0.3, y: 0.6 }}
           end={{ x: 0.1, y: 0.1 }}
           style={{
             paddingHorizontal: 20, // ✅ works
@@ -1090,21 +1115,102 @@ export default function LabTestsScreen() {
         <Modal
           visible={diagsticVisible}
           animationType="slide"
-          transparent
+           presentationStyle="pageSheet"
           onRequestClose={() => setdiagsticVisible(false)}
         >
-          
+           <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+                    
+        <View style={[styles.defaultHeader, { flexDirection: 'row',position:'relative', alignItems: 'center', justifyContent: 'space-between' }]}> 
+          <CommonHeader
+            currentLocation={currentLocation}
+            onProfilePress={() => console.log("Profile pressed")}
+            showCart={false}
+          />
+          <TouchableOpacity onPress={() => setdiagsticVisible(false)} style={styles.closeButton}>
+            <Image source={images.icons.close} style={styles.closeIcon} />
+          </TouchableOpacity>
+        </View>
           <TouchableWithoutFeedback onPress={() => setdiagsticVisible(false)}>
             <View style={styles.modalOverlay} />
           </TouchableWithoutFeedback>
          
-          <View style={styles.bottomSheet}>
-             <SafeAreaView style={{ flex: 1}} >
+          <View style={styles.content}>
+              {/* Sample Pickup Date & Time */}
+                         <View style={styles.section}>
+                           <Text style={styles.sectionTitle}>
+                            Date & Time
+                           </Text>
+                           <View style={styles.dateTimeCard}>
+                             <View style={styles.dateSection}>
+                               <Text style={styles.fieldLabel}>Service Start Date</Text>
+                               <TouchableOpacity
+                                 style={styles.dateInput}
+                                 onPress={() => setShowDatePicker(true)}
+                               >
+                                 <Text
+                                   style={[
+                                     styles.dateText,
+                                     !selectedDate && styles.placeholderText,
+                                   ]}
+                                 >
+                                   {selectedDate
+                                     ? formatDateLab(selectedDate)
+                                     : "dd/mm/yyyy"}
+                                 </Text>
+                                 <Image
+                                   source={images.icons.calendar}
+                                   style={styles.calendarIcon}
+                                 />
+                               </TouchableOpacity>
+                               {errors === "Please select service start date" && (
+                                 <Text
+                                   style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                                 >
+                                   {errors}
+                                 </Text>
+                               )}
+                             </View>
+             
+                             <View style={styles.timeSection}>
+                               <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                               <View style={styles.timeSlotsContainer}>
+                                 {labTimeSlots.map((slot, index) => (
+                                   <TouchableOpacity
+                                     key={index}
+                                     style={[
+                                       styles.timeSlot,
+                                       selectedTimeSlot === slot && styles.selectedTimeSlot,
+                                     ]}
+                                     onPress={() => {
+                                       setSelectedTimeSlot(slot);
+                                       if (errors === "Please select time slot")
+                                         setErrors("");
+                                     }}
+                                   >
+                                     <Text
+                                       style={[
+                                         styles.timeSlotText,
+                                         selectedTimeSlot === slot &&
+                                         styles.selectedTimeSlotText,
+                                       ]}
+                                     >
+                                       {slot}
+                                     </Text>
+                                   </TouchableOpacity>
+                                 ))}
+                               </View>
+                               {errors === "Please select time slot" && (
+                                 <Text
+                                   style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                                 >
+                                   {errors}
+                                 </Text>
+                               )}
+                             </View>
+                           </View>
+                         </View>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Diagnostic Center</Text>
-              <TouchableOpacity onPress={() => setdiagsticVisible(false)}>
-                <AntDesign name="close" size={24} color="#694664" />
-              </TouchableOpacity>
+             
             </View>
             {diagLoading ? (
               <View style={{ alignItems: 'center', padding: 20 }}>
@@ -1155,10 +1261,20 @@ export default function LabTestsScreen() {
                 )}
               </View>
             )}
-            </SafeAreaView>
+           
           </View>
+           </SafeAreaView>
         </Modal>
-
+         {/* Date Picker */}
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate || new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleMedDateChange}
+              minimumDate={new Date()}
+            />
+          )}
       </View>
     </>);
 }
@@ -1168,11 +1284,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  bottomSheet: {
+    closeButton: {
+    padding: 8,
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    right: 20,
+    top: 20,
+     zIndex: 1,
+  },
+  closeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#000000",
+  },
+    content: {
+    flex: 1,
+    paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: colors.bg_primary,
+  },
+  bottomSheet: {
+    // position: 'absolute',
+    // left: 0,
+    // right: 0,
+    // bottom: 0,
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -1183,7 +1316,95 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
     minHeight: 200,
-    maxHeight: 550,
+  },
+    section: {
+    marginTop: getResponsiveSpacing(10),
+  },
+    sectionTitle: {
+    fontSize: 13,
+    color: "#000000",
+    marginBottom: getResponsiveSpacing(2),
+    fontFamily: fonts.semiBold
+  },
+  dateTimeCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(5),
+    // shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 3,
+  },
+  dateSection: {
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#333",
+    marginBottom: 3,
+    fontFamily: fonts.medium
+  },
+  dateInput: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  dateText: {
+    fontSize: 13,
+    color: "#333",
+    fontFamily: fonts.regular
+  },
+  placeholderText: {
+    color: "#999",
+  },
+  calendarIcon: {
+    width: 20,
+    height: 20,
+    tintColor: "#666",
+  },
+  timeSection: {
+    marginTop: 6,
+  },
+  timeSlotsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  timeSlot: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    color: "#333",
+    fontFamily: fonts.regular
+  },
+  selectedTimeSlot: {
+    backgroundColor: "#C15E9C",
+    borderColor: "#C15E9C",
+  },
+  timeSlotText: {
+    fontSize: 11,
+    color: "#333",
+    fontFamily: fonts.regular
+  },
+  selectedTimeSlotText: {
+    color: "#fff",
   },
   modalScrollableContent: {
     flexGrow: 1,
@@ -1265,12 +1486,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingVertical: 7,
   },
-  content: {
-    flex: 1,
-    // ...commonStyles.container_layout,
-    paddingTop: 10,
-    // backgroundColor: colors.bg_primary,
-  },
+  
   searchContainer: {
     marginBottom: 20,
   },
@@ -1341,7 +1557,7 @@ const styles = StyleSheet.create({
 
   },
   subTestTypesContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   subTestTypesList: {
     gap: 3,

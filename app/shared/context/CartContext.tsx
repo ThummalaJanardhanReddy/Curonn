@@ -1,32 +1,47 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import { useUser } from './UserContext';
-import { saveCartData, getCartData } from '../utils/storage';
+import { getCartData, saveCartData } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface CartItem {
     id: string;
     name: string;
     price: number;
+    originalPrice?: number;
     quantity: number;
     subtitle?: string;
     description?: string;
+    medicineId?: number;
     cartId?: number;
+    image?: string;
 }
 
 interface CartContextType {
-    cartCount: number;
     cartItems: CartItem[];
+    cartCount: number;
     loading: boolean;
-    refreshCart: () => Promise<void>;
     addItem: (medicine: any, quantity: number) => Promise<void>;
-    updateQuantity: (cartId: number, nextQty: number, medicineId: string) => Promise<void>;
+    updateQuantity: (cartId: number, quantity: number, medicineId: string) => Promise<void>;
     removeItem: (cartId: number, medicineId: string) => Promise<void>;
-    clearCart: () => void;
+    refreshCart: () => Promise<void>;
+    clearCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+const IMG_CACHE_KEY = 'medicine_image_cache';
+
+const transformDriveUrl = (url: string) => {
+    if (!url || !url.includes('drive.google.com')) return url;
+    const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+        // Thumbnail is the most robust direct-link format for Drive images in RN
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+    }
+    return url;
+};
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -34,52 +49,73 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { userData } = useUser();
     const patientId = userData?.e_id;
 
-    // 1. Load from storage on mount
+    // Helper to save image to cache
+    const saveImageToCache = async (medId: string | number, url: string) => {
+        if (!url) return;
+        try {
+            const cacheRaw = await AsyncStorage.getItem(IMG_CACHE_KEY);
+            const cache = cacheRaw ? JSON.parse(cacheRaw) : {};
+            cache[medId.toString()] = url;
+            await AsyncStorage.setItem(IMG_CACHE_KEY, JSON.stringify(cache));
+        } catch (e) { /* ignore */ }
+    };
+
     useEffect(() => {
         const loadInitialCart = async () => {
             const stored = await getCartData();
             if (stored && stored.length > 0) {
-                console.log('[CartContext] Loaded items from storage:', stored.length);
-                setCartItems(stored);
+                const transformed = stored.map(it => ({
+                    ...it,
+                    image: transformDriveUrl(it.image || '')
+                }));
+                setCartItems(transformed);
             }
         };
         loadInitialCart();
     }, []);
 
-    // 2. Save to storage whenever items change
-    useEffect(() => {
-        saveCartData(cartItems);
-    }, [cartItems]);
-
     const refreshCart = useCallback(async () => {
-        console.log('[CartContext] refreshCart triggered, patientId:', patientId);
-        if (!patientId) {
-            console.log('[CartContext] patientId is missing, keeping local items for now');
-            return;
-        }
+        if (!patientId) return;
+
         try {
             setLoading(true);
             const res: any = await axiosClient.get(ApiRoutes.MedicalOrders.getActiveCart, { params: { patientId } });
-            const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.cartItems ?? [];
+            // API might return data directly or in .data/.items
+            const list: any[] = Array.isArray(res) ? res : (res as any)?.items ?? (res as any)?.data ?? [];
+
+            const cacheRaw = await AsyncStorage.getItem(IMG_CACHE_KEY);
+            const cache = cacheRaw ? JSON.parse(cacheRaw) : {};
 
             const mapped: CartItem[] = list.map((it: any) => {
-                const id = (it.medicineId ?? it.medicineMasterId ?? it.medicine?.id ?? it.id ?? `rand_${Math.random()}`).toString();
+                const medId = it.medicineId ?? it.medicineMasterId ?? it.medicine?.id ?? it.id;
+                const id = (medId ?? it.cartId ?? `rand_${Math.random()}`).toString();
+
+                // Try multiple possible paths for the image
+                let imgUrl = it.imageUrl ?? it.image ?? it.medicineImageUrl ?? it.medicine?.imageUrl ?? it.medicine?.image ?? '';
+
+                // If missing from API, look in our local cache
+                if (!imgUrl && medId) {
+                    imgUrl = cache[medId.toString()] || '';
+                }
+
                 return {
                     id,
-                    name: it.medicineName ?? it.name ?? it.drugName ?? it.medicine?.medicineName ?? 'Unknown',
+                    medicineId: medId,
+                    name: it.medicineName ?? it.name ?? it.medicine?.medicineName ?? 'Unknown',
                     price: Number(it.curonnPrice ?? it.price ?? it.totalPrice ?? it.mrp ?? 0),
+                    originalPrice: Number(it.streepBoxPrice ?? it.mrp ?? it.originalPrice ?? 0),
                     quantity: Number(it.quantity ?? it.qty ?? 1),
                     subtitle: it.streepBoxQty ?? it.package ?? it.description ?? '',
                     description: it.description ?? '',
                     cartId: it.cartId ?? it.id ?? it.cart_id,
+                    image: transformDriveUrl(imgUrl),
                 };
             });
 
-            console.log('[CartContext] Successfully refreshed', mapped.length, 'items from server');
             setCartItems(mapped);
-        } catch (error) {
-            console.error('[CartContext] Failed to refresh cart:', error);
-            // On failure, we keep the local state (it might be from storage)
+            await saveCartData(mapped);
+        } catch (err) {
+            console.error('[CartContext] Error refreshing cart:', err);
         } finally {
             setLoading(false);
         }
@@ -91,129 +127,110 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [patientId, refreshCart]);
 
-    const addItem = useCallback(async (medicine: any, quantity: number) => {
-        if (!patientId) {
-            Alert.alert('Error', 'User profile not loaded. Please try again.');
-            return;
-        }
-
-        const price = medicine.curonnPrice ?? medicine.totalPrice ?? medicine.price ?? 0;
-        const payload = {
-            cartId: 0,
-            medicineOrderId: 0,
-            medicineId: medicine.id,
-            patientId: patientId,
-            medicineName: medicine.name,
-            quantity,
-            price,
-            offer: 0,
-            discount: 0,
-            totalPrice: Number(price) * quantity,
-            description: medicine.description ?? medicine.subtitle ?? '',
-        };
-
+    const addItem = async (medicine: any, quantity: number) => {
+        if (!patientId) return;
         try {
-            setLoading(true);
-            const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
-            const newCartId = res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id ?? res?.data?.cart_id;
+            const existingItem = cartItems.find(it => it.id === medicine.id.toString());
+            const price = (medicine.curonnPrice ?? medicine.price ?? '0').toString().replace(/[^0-9.]/g, '');
 
-            // Optimistic update or wait for refresh? Let's do both for maximum snappiness
+            const payload = {
+                patientId,
+                medicineId: Number(medicine.id),
+                quantity: (existingItem?.quantity ?? 0) + quantity,
+                cartId: existingItem?.cartId ?? 0,
+                price: Number(price),
+                totalPrice: Number(price) * ((existingItem?.quantity ?? 0) + quantity),
+            };
+
+            const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
+            const newCartId = res?.cartId ?? res?.data?.cartId ?? res?.id ?? res?.cart_id;
+
+            // Extract and cache image URL from the medicine being added
+            const rawImg = medicine.image ?? medicine.imageUrl ?? '';
+            if (rawImg) {
+                await saveImageToCache(medicine.id, rawImg);
+            }
+
             const newItem: CartItem = {
                 id: medicine.id.toString(),
+                medicineId: Number(medicine.id),
                 name: medicine.name,
                 price: Number(price),
-                quantity,
+                originalPrice: Number(medicine.streepBoxPrice ?? medicine.originalPrice ?? 0),
+                quantity: (existingItem?.quantity ?? 0) + quantity,
                 subtitle: medicine.subtitle ?? medicine.streepBoxQty ?? '',
                 description: medicine.description ?? '',
                 cartId: newCartId ? Number(newCartId) : undefined,
+                image: transformDriveUrl(rawImg),
             };
 
             setCartItems(prev => {
-                const existingIndex = prev.findIndex(item => item.id === newItem.id);
-                if (existingIndex > -1) {
-                    const next = [...prev];
-                    next[existingIndex] = { ...next[existingIndex], quantity: next[existingIndex].quantity + quantity, cartId: newCartId || next[existingIndex].cartId };
-                    return next;
-                }
-                return [...prev, newItem];
+                const filtered = prev.filter(it => it.id !== newItem.id);
+                return [...filtered, newItem];
             });
 
-            await refreshCart(); // Ensure server sync
-        } catch (error) {
-            console.error('[CartContext] addItem failed:', error);
-            Alert.alert('Error', 'Failed to add item to cart');
-        } finally {
-            setLoading(false);
-        }
-    }, [patientId, refreshCart]);
-
-    const updateQuantity = useCallback(async (cartId: number, nextQty: number, medicineId: string) => {
-        if (!cartId) {
-            console.warn('[CartContext] Cannot update quantity without cartId, refreshing...');
             await refreshCart();
-            return;
+        } catch (err) {
+            console.error('[CartContext] Error adding item:', err);
+            throw err;
         }
-        try {
-            setLoading(true);
-            const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, nextQty);
-            await axiosClient.put(url);
+    };
 
-            setCartItems(prev => prev.map(item =>
-                item.id === medicineId ? { ...item, quantity: nextQty } : item
+    const updateQuantity = async (cartId: number, quantity: number, medicineId: string) => {
+        try {
+            const item = cartItems.find(it => it.id === medicineId);
+            if (!item) return;
+
+            // Use the parameterized route function
+            const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, quantity);
+
+            const payload = {
+                cartId,
+                quantity,
+                patientId,
+                medicineId: Number(item.medicineId || medicineId),
+                price: item.price,
+                totalPrice: item.price * quantity,
+            };
+
+            await axiosClient.post(url, payload);
+
+            setCartItems(prev => prev.map(it =>
+                it.id === medicineId ? { ...it, quantity } : it
             ));
 
             await refreshCart();
-        } catch (error) {
-            console.error('[CartContext] updateQuantity failed:', error);
-            Alert.alert('Error', 'Failed to update quantity');
-        } finally {
-            setLoading(false);
+        } catch (err) {
+            console.error('[CartContext] Error updating quantity:', err);
         }
-    }, [refreshCart]);
+    };
 
-    const removeItem = useCallback(async (cartId: number, medicineId: string) => {
-        if (!cartId) {
-            console.warn('[CartContext] Cannot remove item without cartId, refreshing...');
-            setCartItems(prev => prev.filter(item => item.id !== medicineId));
-            return;
-        }
+    const removeItem = async (cartId: number, medicineId: string) => {
         try {
-            setLoading(true);
-            try {
-                // Primary approach: cartItemId query parameter
-                await axiosClient.delete(`${ApiRoutes.MedicalOrders.deleteCartItem}?cartItemId=${cartId}`);
-            } catch (err1) {
-                console.warn('[CartContext] Primary delete failed, trying fallback path...', err1);
-                try {
-                    // Fallback 1: path parameter
-                    await axiosClient.delete(`${ApiRoutes.MedicalOrders.deleteCartItem}/${cartId}`);
-                } catch (err2) {
-                    console.warn('[CartContext] Fallback 1 failed, trying fallback 2...', err2);
-                    // Fallback 2: cartId query parameter
-                    await axiosClient.delete(ApiRoutes.MedicalOrders.deleteCartItem, { params: { cartId } });
-                }
-            }
-
-            setCartItems(prev => prev.filter(item => item.id !== medicineId));
+            await axiosClient.get(`${ApiRoutes.MedicalOrders.deleteCartItem}?cartId=${cartId}`);
+            setCartItems(prev => prev.filter(it => it.id !== medicineId));
             await refreshCart();
-        } catch (error) {
-            console.error('[CartContext] removeItem failed:', error);
-            Alert.alert('Error', 'Failed to remove item');
-        } finally {
-            setLoading(false);
+        } catch (err) {
+            console.error('[CartContext] Error removing item:', err);
         }
-    }, [refreshCart]);
+    };
 
-    const clearCart = useCallback(() => {
-        console.log('[CartContext] Clearing cart globally');
+    const clearCart = async () => {
         setCartItems([]);
-        saveCartData([]);
-    }, []);
-
-    const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+        await saveCartData([]);
+    };
 
     return (
-        <CartContext.Provider value={{ cartCount, cartItems, loading, refreshCart, addItem, updateQuantity, removeItem, clearCart }}>
+        <CartContext.Provider value={{
+            cartItems,
+            cartCount: cartItems.length,
+            loading,
+            addItem,
+            updateQuantity,
+            removeItem,
+            refreshCart,
+            clearCart,
+        }}>
             {children}
         </CartContext.Provider>
     );
@@ -221,7 +238,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useCart = () => {
     const context = useContext(CartContext);
-    if (context === undefined) {
+    if (!context) {
         throw new Error('useCart must be used within a CartProvider');
     }
     return context;

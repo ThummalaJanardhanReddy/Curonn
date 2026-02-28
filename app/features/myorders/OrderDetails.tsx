@@ -9,8 +9,8 @@ import { images } from "../../../assets";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
-import PrimaryButton from "@/app/shared/components/PrimaryButton";
 import { Button } from "react-native-paper";
+import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import Toast from "../../shared/components/Toast";
 interface OrderDetailsProps {
     visible: boolean;
@@ -411,7 +411,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             transparent={false}
             onRequestClose={onClose}
         >
-            <SafeAreaView style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
                 <View style={styles.container}>
                     {/* Header */}
                     <View style={styles.header}>
@@ -540,7 +540,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         <View key={med.cartId || idx} style={{ marginBottom: 0, borderBottomWidth: idx !== orderDetails.data.length - 1 ? 1 : 0, borderColor: '#eee', paddingVertical: 8, paddingHorizontal: 20 }}>
                                                             <Text style={{ fontFamily: fonts.semiBold, fontSize: 12, color: '#333' }}>{med.medicineName}</Text>
                                                             <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: '#555' }}>
-                                                                Qty: {med.quantity},  {med.description}
+                                                                Qty: {med.quantity}  {med.description}
                                                             </Text>
                                                         </View>
                                                     ))
@@ -753,20 +753,20 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
                             </TouchableOpacity>
                         </View>
-                         {pdfLoading && (
+                        {pdfLoading && (
                             <View style={{ padding: 20, alignItems: 'center' }}>
                                 <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 14 }}>Loading report...</Text>
                             </View>
                         )}
                         {selectedPdfUrl && (
-                        <WebView
-                            source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
-                            style={{ flex: 1 }}
-                            onLoadEnd={() => setPdfLoading(false)}
-                            onError={() => setPdfLoading(true)}
-                        />
+                            <WebView
+                                source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
+                                style={{ flex: 1 }}
+                                onLoadEnd={() => setPdfLoading(false)}
+                                onError={() => setPdfLoading(true)}
+                            />
                         )}
-                       
+
                     </SafeAreaView>
                 </Modal>
             </SafeAreaView>
@@ -785,6 +785,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingTop: 16,
         backgroundColor: "#fff",
     },
 
@@ -908,9 +909,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 15,
+        paddingHorizontal: getResponsiveSpacing(20),
+        paddingTop: getResponsiveSpacing(10),
+        paddingBottom: getResponsiveSpacing(15),
         backgroundColor: "#fff",
         borderBottomWidth: 1,
         borderBottomColor: "#eee",
@@ -1049,7 +1050,7 @@ const styles = StyleSheet.create({
         width: 40,
     },
     scrollContent: {
-        flex: 1,
+        flexGrow: 1,
     },
     label: {
         marginTop: 5,
