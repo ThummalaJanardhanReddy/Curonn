@@ -540,7 +540,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         <View key={med.cartId || idx} style={{ marginBottom: 0, borderBottomWidth: idx !== orderDetails.data.length - 1 ? 1 : 0, borderColor: '#eee', paddingVertical: 8, paddingHorizontal: 20 }}>
                                                             <Text style={{ fontFamily: fonts.semiBold, fontSize: 12, color: '#333' }}>{med.medicineName}</Text>
                                                             <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: '#555' }}>
-                                                                Qty: {med.quantity},  {med.description}
+                                                                Qty: {med.quantity}  {med.description}
                                                             </Text>
                                                         </View>
                                                     ))

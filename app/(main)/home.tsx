@@ -78,6 +78,7 @@ export default function HomeScreen() {
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<any>(null);
   const { userData } = useUser();
+  const [closedOrderIds, setClosedOrderIds] = useState<string[]>([]);
   const patientId = userData?.e_id;
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
@@ -111,14 +112,49 @@ useEffect(() => {
 
 
   const [orders, setOrders] = useState<any[]>([]);
-  // Memoized sorted orders: always sort by createdOn descending before slicing
+  // Lock the visible set of 3 orders per session
+  const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
+  // On mount/focus, lock the latest 3 Requested/Completed order IDs
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchOrders = async () => {
+        if (userData?.e_id) {
+          const data = await fetchAllOrders(userData.e_id, 0);
+          if (isActive) {
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+              const dateA = new Date(a.createdOn).getTime();
+              const dateB = new Date(b.createdOn).getTime();
+              return dateB - dateA;
+            });
+            setOrders(sorted);
+            // Lock the first 3 Requested/Completed order IDs
+            const locked = sorted.filter(
+              (o) => o.statusName === 'Requested' || o.statusName === 'Completed'
+            ).slice(0, 3).map(
+              (o) => o.orderNo?.toString?.() || o.id?.toString?.() || ''
+            );
+            setLockedOrderIds(locked);
+            setClosedOrderIds([]); // Reset closed orders when user returns to page
+            setShowOrderSlider(locked.length > 0);
+          }
+        }
+      };
+      fetchOrders();
+      return () => {
+        isActive = false;
+      };
+    }, [userData?.e_id])
+);
+  // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
-    return orders
-      .slice()
-      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
-      .slice(0, 3);
-  }, [orders]);
+    const filtered = orders.filter(
+      (o) => lockedOrderIds.includes(o.orderNo?.toString?.() || o.id?.toString?.() || '') &&
+        !closedOrderIds.includes(o.orderNo?.toString?.() || o.id?.toString?.() || '')
+    );
+    return filtered;
+  }, [orders, lockedOrderIds, closedOrderIds]);
 
   const remainingOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -131,40 +167,42 @@ useEffect(() => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
   // Always fetch latest orders on mount and when page is focused
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-      const fetchOrders = async () => {
-        if (userData?.e_id) {
-          const data = await fetchAllOrders(userData.e_id, 0);
-          if (isActive) {
-            // Always sort by createdOn descending
-            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
-              const dateA = new Date(a.createdOn).getTime();
-              const dateB = new Date(b.createdOn).getTime();
-              return dateB - dateA;
-            });
-            setOrders(sorted);
-            setShowOrderSlider(sorted.length > 0);
-          }
+ useFocusEffect(
+  useCallback(() => {
+    let isActive = true;
+    const fetchOrders = async () => {
+      if (userData?.e_id) {
+        const data = await fetchAllOrders(userData.e_id, 0);
+        if (isActive) {
+          const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+            const dateA = new Date(a.createdOn).getTime();
+            const dateB = new Date(b.createdOn).getTime();
+            return dateB - dateA;
+          });
+          setOrders(sorted);
+          setShowOrderSlider(sorted.length > 0);
+          setClosedOrderIds([]); // Reset closed orders when user returns to page
         }
-      };
-      fetchOrders();
-      return () => {
-        isActive = false;
-      };
-    }, [userData?.e_id])
-  );
+      }
+    };
+    fetchOrders();
+    return () => {
+      isActive = false;
+    };
+  }, [userData?.e_id])
+);
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
-  const handleCloseOrderCard = (index: number) => {
-    const newOrders = orders.filter((_, i) => i !== index);
-    setOrders(newOrders);
-    if (activeOrderIndex >= newOrders.length) {
-      setActiveOrderIndex(Math.max(0, newOrders.length - 1));
-    }
-    if (newOrders.length === 0) setShowOrderSlider(false);
-  };
+const handleCloseOrderCard = (index: number) => {
+  // Remove the order from the visible list for this session only
+  const order = latestOrders[index];
+  const orderId = order?.orderNo?.toString?.() || order?.id?.toString?.() || '';
+  setClosedOrderIds((prev) => [...prev, orderId]);
+  if (activeOrderIndex >= latestOrders.length - 1) {
+    setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
+  }
+  if (latestOrders.length - 1 === 0) setShowOrderSlider(false);
+};
 
   // Format date as 'Feb 20th, 2026, 12:14 PM'
   const formatDate = (isoDate: string) => {
@@ -273,23 +311,23 @@ useEffect(() => {
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
             <Text
-              style={{ fontSize: 11, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
+              style={{ fontSize: 10, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
               {category}
             </Text></View>
-             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
             <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#333', marginBottom: 3, fontFamily: fonts.medium }}>{createdOn}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0, justifyContent: 'space-between' }}>
-            {/* Status on the left */}
+          <Text style={{ fontSize: 12, color: '#333', marginBottom: 4, fontFamily: fonts.medium }}>{createdOn}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 0, justifyContent: 'space-between' }}>
+            {/* Status on the left */}f
             <View style={{
               backgroundColor: statusBgColor,
               borderRadius: 15,
               paddingHorizontal: 8,
-              paddingVertical: 0,
+              paddingVertical: 2,
               marginLeft: 4,
               flexShrink: 0,
             }}>
@@ -297,7 +335,7 @@ useEffect(() => {
             </View>
             {/* Carousel Dots centered */}
             {index < 3 && (
-              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',marginRight: 10 }}>
                 {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
                   <View
                     key={idx}
@@ -305,7 +343,7 @@ useEffect(() => {
                       width: 8,
                       height: 8,
                       borderRadius: 4,
-                      marginHorizontal: 2,
+                      marginHorizontal: 3,
                       backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
                     }}
                   />
