@@ -151,7 +151,7 @@ export default function OrdersScreen() {
     });
   }, [selectedFilter, statusIdMap, userData?.e_id, searchQuery]);
 
-  const filteredOrders = orders;
+  const filteredOrders = [...orders].sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
 
 
   const fetchAllOrders = async (patientId: number, statusId: number = 0, searchorderno?: string) => {
@@ -175,32 +175,36 @@ export default function OrdersScreen() {
   };
 
 
-  const formatDate = (isoDate: string) => {
-  const date = new Date(isoDate);
+    const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
+      const date = new Date(isoDate);
 
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
+      // Add extra hours and minutes
+      date.setHours(date.getUTCHours() + extraHours);
+      date.setMinutes(date.getUTCMinutes() + extraMinutes);
 
-  const getOrdinal = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
+      const months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
 
-  const month = months[date.getMonth()];
-  const day = getOrdinal(date.getDate());
-  const year = date.getFullYear();
+      const getOrdinal = (n: number) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
 
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
+      const month = months[date.getMonth()];
+      const day = getOrdinal(date.getDate());
+      const year = date.getFullYear();
 
-  const ampm = hours >= 12 ? "pm" : "am";
-  hours = hours % 12 || 12;
+      let hours = date.getUTCHours(); // Use UTC hours
+      const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
 
-  return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
-};
+      const ampm = hours >= 12 ? "pm" : "am";
+      hours = hours % 12 || 12;
+
+      return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+    };
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -245,7 +249,7 @@ export default function OrdersScreen() {
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? formatDate(item.createdOn): "";
+      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4): "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",

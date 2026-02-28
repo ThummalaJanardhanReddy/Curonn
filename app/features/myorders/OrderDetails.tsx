@@ -431,7 +431,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             transparent={false}
             onRequestClose={onClose}
         >
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top','bottom']}>
                 <View style={styles.container}>
                     {/* Header */}
                     <View style={styles.header}>
@@ -479,6 +479,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 </Text>
                                             </View>
                                         </View>
+
+                                        {order.orderType === "Xray" && (<>
+                                                <Text style={styles.sectionTitle}>Diagstic Center Details</Text>
+                                                 <View style={styles.databox}>
+                                            <View style={styles.diagsticdetails}>
+                                                <Text style={styles.diagname}>{orderDetails.data.diagnosiscenter || "N/A"}</Text>
+                                                
+                                            </View>
+                                            {/* <View style={styles.addressection}>
+                                                <Text style={styles.value}>
+                                                    {[
+                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                        orderDetails.data.address ? orderDetails.data.address : null,
+                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                    ].filter(Boolean).join(', ') || 'N/A'}
+                                                </Text>
+                                            </View> */}
+                                        </View>
+                                        </>)}
 
                                         {/* Patient Details */}
                                         <Text style={styles.sectionTitle}>Address Info</Text>
@@ -1121,9 +1140,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginTop: 5,
     },
+     databox2: {
+        borderWidth: 1,
+        borderColor: "rgba(212,212,212,1)",
+        borderRadius: 20,
+        backgroundColor: "#fff",
+        marginBottom: 20,
+        paddingHorizontal: 20,
+        marginTop: 5,
+    },
     patiendetails: {
         borderBottomWidth: 1,
         borderBottomColor: "rgba(212,212,212,1)",
+        paddingBottom: 6,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+
+    diagsticdetails: {
+       
         paddingBottom: 6,
         paddingHorizontal: 20,
         paddingTop: 10,
@@ -1234,6 +1269,12 @@ const styles = StyleSheet.create({
         fontSize: 15
     },
     patientname: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+        fontFamily: fonts.semiBold,
+    },
+      diagname: {
         fontSize: 15,
         fontWeight: '600',
         color: '#333',

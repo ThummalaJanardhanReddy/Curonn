@@ -50,6 +50,7 @@ type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance";
 interface BookingScreenProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   serviceName: string;
   servicePrice: number;
   isAtHome: boolean;
@@ -62,12 +63,15 @@ interface BookingScreenProps {
   serviceId?: number;
 
   selectedDiagCenter?: any;
+  selectedDate?: Date;
+  selectedTimeSlot?: string;
 
 }
 
 export default function BookingScreen({
   visible,
   onClose,
+  onSuccess,
   serviceName,
   servicePrice,
   isAtHome,
@@ -76,6 +80,8 @@ export default function BookingScreen({
   reportTime,
   selectedDiagCenter,
   serviceId,
+  selectedDate: propSelectedDate,
+  selectedTimeSlot: propSelectedTimeSlot,
 }: BookingScreenProps) {
   if (type === "scans") {
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
@@ -87,9 +93,17 @@ export default function BookingScreen({
   const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
   const { cartItems, updateQuantity, removeItem } = useCart();
   // ─── Shared state ──────────────────────────────────────────────────
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(propSelectedDate || null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
+
+  // Sync state with props when modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedDate(propSelectedDate || null);
+      setSelectedTimeSlot(propSelectedTimeSlot || "");
+    }
+  }, [visible, propSelectedDate, propSelectedTimeSlot]);
   const [patientType, setPatientType] = useState("self");
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState("");
@@ -703,12 +717,10 @@ export default function BookingScreen({
   labOrderId: 0,
         testName: serviceName,
         patientId: userData?.e_id || 0,
-      address: selectedLocation?.address || "",
-      hNo: selectedLocation?.houseNumber || "",
-      landMark: selectedLocation?.landmark || "",
-      addressNickname: selectedLocation?.nickname
-        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
-        : "",
+      address: "",
+      hNo: "",
+      landMark:  "",
+      addressNickname: "",
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
       isSelfService: patientType === "self",
@@ -717,6 +729,7 @@ export default function BookingScreen({
       testType: "Xray",
       diagnosisCenter: selectedDiagCenter.centerName || "",
       statusId: statusId,
+      paymentDetails: String(totalAmount),
       req: "web",
       };
       if (patientType === "others" && selectedRelation) {
@@ -742,6 +755,7 @@ export default function BookingScreen({
           setShowToastLab(false);
           setShowPayment(false);
           if (onClose) onClose();
+          if (onSuccess) onSuccess();
           router.replace("/(main)/orders");
         }, 1500);
       } else {
@@ -1133,7 +1147,6 @@ export default function BookingScreen({
             style={styles.content}
             showsVerticalScrollIndicator={false}
           >
-
 
             {/* Patient Details */}
             <View style={styles.section}>
@@ -1615,12 +1628,7 @@ export default function BookingScreen({
                         <Text style={styles.centerDistance}>{selectedDiagCenter.distanceKm?.toFixed(2)} km away</Text>
                       </View>
 
-                       <TouchableOpacity
-                    style={styles.editAddressButton1}
-                    onPress={handleEdit}
-                  >
-                    <Text style={styles.editAddressText}>Edit</Text>
-                  </TouchableOpacity>
+                     
                   </View>
 
                    </>)}
@@ -1772,11 +1780,10 @@ export default function BookingScreen({
                         <Text
                           style={[
                             styles.timeSlotText,
-                            selectedTimeSlot === slot &&
-                            styles.selectedTimeSlotText,
+                            selectedTimeSlot === slot && styles.selectedTimeSlotText,
                           ]}
                         >
-                          {slot}
+                          {selectedTimeSlot === slot ? `${slot}` : slot}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1961,6 +1968,11 @@ export default function BookingScreen({
                   </Text>
                 </View>
               </View>
+                {(type === "scans") && (
+                <View style={styles.paydiacontainer}>
+                    <Text style={styles.paytext}>Pay at Diagnstic Center</Text>
+                  </View>
+                )}
             </View>
             
 
@@ -2278,6 +2290,14 @@ const styles = StyleSheet.create({
   section: {
     marginTop: getResponsiveSpacing(10),
   },
+  paydiacontainer:{
+ marginTop: getResponsiveSpacing(2),
+  },
+  paytext:{
+    fontSize: 11,
+    color: '#C15E9C',
+     fontFamily: fonts.medium
+  },
   cancellsection: {
     marginTop: getResponsiveSpacing(10),
     marginBottom: getResponsiveSpacing(10),
@@ -2285,8 +2305,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     color: "#000000",
-    marginBottom: getResponsiveSpacing(8),
-    marginTop: getResponsiveSpacing(15),
+    marginBottom: getResponsiveSpacing(5),
+    marginTop: getResponsiveSpacing(10),
     fontFamily: fonts.semiBold
   },
   serviceCard: {
@@ -2468,7 +2488,7 @@ fontSize: 15,
     borderColor: "#D9DEE6",
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     width: "48%",
   },
