@@ -48,6 +48,7 @@ interface SubTestType {
 }
 
 interface TestItem {
+  selectedDiagCenter: string;
   id: string;
   name: string;
   price: string;
@@ -105,6 +106,7 @@ interface ScanItemApi {
   xrayMasterId: number;
   testName: string;
   price: number;
+  selectedDiagCenterId?: number;
 }
 
 interface ScansResponse {
@@ -1130,9 +1132,7 @@ export default function LabTestsScreen() {
             <Image source={images.icons.close} style={styles.closeIcon} />
           </TouchableOpacity>
         </View>
-          <TouchableWithoutFeedback onPress={() => setdiagsticVisible(false)}>
-            <View style={styles.modalOverlay} />
-          </TouchableWithoutFeedback>
+       
          
           <View style={styles.content}>
               {/* Sample Pickup Date & Time */}

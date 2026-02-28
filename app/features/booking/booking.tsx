@@ -2263,6 +2263,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
+    
   },
   closeIcon: {
     width: 16,

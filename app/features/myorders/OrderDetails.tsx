@@ -26,6 +26,7 @@ interface LabOrderDetails {
         age: number;
         patientName: string;
         labOrderId: number;
+        bookingId: number;
         testName: string;
         patientId: number;
         address: string;
@@ -174,7 +175,16 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 setOrderDetails({ type: "consultation", data: data.data || data || {} });
                 setLoading(false);
             });
-        } else {
+        }
+        else if (order.orderType === "Ambulance") {
+            console.log("Fetching ambulance booking details for masterId:", order.masterId);
+            fetchAmulanceOrderById(order.masterId).then((data) => {
+                console.log("Ambulance Booking Details:", data);
+                setOrderDetails({ type: "ambulance", data: data.data || data || {} });
+                setLoading(false);
+            });
+        }
+        else {
             setOrderDetails(null);
             setLoading(false);
         }
@@ -231,6 +241,16 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         try {
             const response = await axiosClient.get(ApiRoutes.ConsultationsData.getappointmentById(appointmentId));
             console.log("Consultation Details:", response);
+            return response;
+        } catch (error) {
+            return { success: false, data: {} };
+        }
+    }
+
+    async function fetchAmulanceOrderById(bookingId: number): Promise<any> {
+        try {
+            const response = await axiosClient.get(ApiRoutes.Ambulance.getbookingId(bookingId));
+            console.log("Ambulance Order Details:", response);
             return response;
         } catch (error) {
             return { success: false, data: {} };
@@ -467,12 +487,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
                                                 <Text style={styles.value}>
                                                     {orderDetails.data.isSelfService
-                                                        ? `${orderDetails.data.age ? orderDetails.data.age + ' yrs' : 'N/A'}, ${orderDetails.data.gender || 'N/A'}`
-                                                        : `${orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : 'N/A'}, ${orderDetails.data.relationGender || 'N/A'}`}
+                                                        ? [
+                                                            orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
+                                                            orderDetails.data.gender ? orderDetails.data.gender : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'
+                                                        : [
+                                                            orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
+                                                            orderDetails.data.relationGender ? orderDetails.data.relationGender : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'
+                                                    }
                                                 </Text>
                                             </View>
                                             <View style={styles.addressection}>
-                                                <Text style={styles.value}>{orderDetails.data.hNo || "N/A"}, {orderDetails.data.address || "N/A"}, {orderDetails.data.landMark || "N/A"}</Text>
+                                                <Text style={styles.value}>
+                                                    {[
+                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                        orderDetails.data.address ? orderDetails.data.address : null,
+                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                    ].filter(Boolean).join(', ') || 'N/A'}
+                                                </Text>
                                             </View>
                                         </View>
 
@@ -484,7 +517,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
                                                 return (
                                                     <View style={styles.reportspage}>
-                                                        <Text style={styles.sectionTitle}>Reports2</Text>
+                                                        <Text style={styles.sectionTitle}>Reports</Text>
                                                         <View style={styles.databoxreports}>
                                                             {labReports.map((report: any, idx: number) => {
                                                                 const { category, iconSource } = getCategoryAndIcon(report.orderType);
@@ -593,7 +626,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
                                         </View>
                                         {/* Patient Details */}
-                                        <Text style={styles.sectionTitle}>Address Info1</Text>
+                                        <Text style={styles.sectionTitle}>Address Info</Text>
                                         <View style={styles.databox}>
                                             <View style={styles.patiendetails}>
                                                 <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
@@ -601,9 +634,16 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     {orderDetails.data.age ? orderDetails.data.age + ' yrs' : 'N/A'}, {orderDetails.data.gender || 'N/A'}`
                                                 </Text>
                                             </View>
+                                            
                                             <View style={styles.addressection}>
-                                                <Text style={styles.value}>{orderDetails.data.hNo || "N/A"}, {orderDetails.data.address || "N/A"}, {orderDetails.data.landMark || "N/A"}</Text>
-                                            </View>
+                                                 <Text style={styles.value}>
+                                                    {[
+                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                        orderDetails.data.address ? orderDetails.data.address : null,
+                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                    ].filter(Boolean).join(', ') || 'N/A'}
+                                                </Text>
+                                                 </View>
                                         </View>
 
                                     </View>
@@ -676,12 +716,133 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         <View style={styles.databox}>
                                             <View style={styles.labelheaderdatabox2}>
                                                 <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
-                                                <Text style={styles.value}>Gender: {orderDetails.data.patientGender || "N/A"}, Age: {orderDetails.data.patientAge || "N/A"}
-
+                                                <Text style={styles.value}>
+                                                    {[
+                                                         orderDetails.data.age ? `${orderDetails.data.age} yrs ` : null,
+                                                        orderDetails.data.gender ? `${orderDetails.data.gender}` : null
+                                                    ].filter(Boolean).join(', ') || 'N/A'}
                                                 </Text>
                                             </View>
 
                                         </View>
+                                    </View>
+                                )}
+                                {orderDetails.type === "ambulance" && (
+                                    <View style={styles.servicepage}>
+                                        {/* Service Information */}
+                                        <Text style={styles.sectionTitle}>Service Information</Text>
+                                        <View style={styles.databox}>
+                                            <View style={styles.labelheaderdatabox}>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Text style={styles.labelheader}>{orderDetails.data.serviceName}</Text>
+                                                    <Text style={styles.labelinner}>
+                                                        AT Home
+                                                    </Text>
+                                                </View>
+                                                <Text style={styles.labelinner}>
+                                                    Report within 10-12 hours
+                                                </Text>
+                                            </View>
+                                            <View style={styles.datesection}>
+                                                <Text style={styles.label}>Booking Date & Time</Text>
+                                                <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
+                                            </View>
+                                            <View style={styles.paymentsection}>
+                                                <Text style={styles.paidlabel}>Paid Amount</Text>
+                                                <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
+                                            </View>
+                                            <View style={styles.servicesection}>
+                                                <Text style={styles.label}>Service Status:</Text>
+                                                <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+                                                    {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                        ? "In Progress"
+                                                        : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Patient Details */}
+                                        <Text style={styles.sectionTitle}>Address Info</Text>
+                                        <View style={styles.databox}>
+                                            <View style={styles.patiendetails}>
+                                                <Text style={styles.patientname}>{orderDetails.data.personName || "N/A"}</Text>
+                                                
+                                                <Text style={styles.value}>
+                                                    {orderDetails.data.isSelfService
+                                                        ? [
+                                                            orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
+                                                            orderDetails.data.gender ? orderDetails.data.gender : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'
+                                                        : [
+                                                            orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
+                                                            orderDetails.data.relationGender ? orderDetails.data.relationGender : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'
+                                                    }
+                                                </Text>
+                                            </View>
+                                            <View style={styles.addressection}>
+                                                  <Text style={styles.value}>
+                                                    {[
+                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                        orderDetails.data.address ? orderDetails.data.address : null,
+                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                    ].filter(Boolean).join(', ') || 'N/A'}
+                                                </Text>
+                                                
+                                            </View>
+                                        </View>
+
+                                        {/* Reports Section (Lab)*/}
+                                        {(() => {
+                                            // Debug logs to help diagnose why Reports section is not displaying
+                                            console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
+                                            console.log('DEBUG: labReports:', labReports);
+                                            if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
+                                                return (
+                                                    <View style={styles.reportspage}>
+                                                        <Text style={styles.sectionTitle}>Reports</Text>
+                                                        <View style={styles.databoxreports}>
+                                                            {labReports.map((report: any, idx: number) => {
+                                                                const { category, iconSource } = getCategoryAndIcon(report.orderType);
+                                                                return (
+                                                                    <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
+                                                                        {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                        <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                            {report.reportname}
+                                                                        </Text>
+                                                                        {/* <Text>
+                                                                              {report.reportinfo} || 'fdgnfdgbbn'
+                                                                        </Text> */}
+                                                                        <TouchableOpacity
+                                                                            style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                            onPress={() => {
+                                                                                console.log('Preview pressed:', report.url);
+                                                                                setPdfLoading(true);
+                                                                                setSelectedPdfUrl(report.url);
+                                                                                // Encode the file name part of the URL
+                                                                                try {
+                                                                                    const url = report.url;
+                                                                                    const lastSlash = url.lastIndexOf('/');
+                                                                                    const base = url.substring(0, lastSlash + 1);
+                                                                                    const file = url.substring(lastSlash + 1);
+                                                                                    const encodedUrl = base + encodeURIComponent(file);
+                                                                                    setEncodedPdfUrl(encodedUrl);
+                                                                                } catch (e) {
+                                                                                    setEncodedPdfUrl(report.url);
+                                                                                }
+                                                                                setPdfModalVisible(true);
+                                                                            }}
+                                                                        >
+                                                                            <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                );
+                                                            })}
+                                                        </View></View>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </View>
                                 )}
                             </>

@@ -163,6 +163,7 @@ export const AmbulanceApi = {
   saveUpdate: '/AmbulanceBooking/save',
   getAll: '/Ambulances/GetAll',
   getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
+  getbookingId:(bookingId: string | number) =>  `/AmbulanceBooking/get-by-id/${bookingId}`
 } as const;
 
 export const NotificationApi = {
