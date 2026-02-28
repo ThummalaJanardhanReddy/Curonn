@@ -95,9 +95,9 @@ export default function HomeScreen() {
     }
   };
 
-useEffect(() => {
+  useEffect(() => {
     if (!patientId) return;
-     const fetchNotifications = async () => {
+    const fetchNotifications = async () => {
       try {
         const response = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, 'patient'));
         const data = response?.data ?? response;
@@ -145,7 +145,7 @@ useEffect(() => {
         isActive = false;
       };
     }, [userData?.e_id])
-);
+  );
   // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -167,42 +167,42 @@ useEffect(() => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
   // Always fetch latest orders on mount and when page is focused
- useFocusEffect(
-  useCallback(() => {
-    let isActive = true;
-    const fetchOrders = async () => {
-      if (userData?.e_id) {
-        const data = await fetchAllOrders(userData.e_id, 0);
-        if (isActive) {
-          const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
-            const dateA = new Date(a.createdOn).getTime();
-            const dateB = new Date(b.createdOn).getTime();
-            return dateB - dateA;
-          });
-          setOrders(sorted);
-          setShowOrderSlider(sorted.length > 0);
-          setClosedOrderIds([]); // Reset closed orders when user returns to page
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchOrders = async () => {
+        if (userData?.e_id) {
+          const data = await fetchAllOrders(userData.e_id, 0);
+          if (isActive) {
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+              const dateA = new Date(a.createdOn).getTime();
+              const dateB = new Date(b.createdOn).getTime();
+              return dateB - dateA;
+            });
+            setOrders(sorted);
+            setShowOrderSlider(sorted.length > 0);
+            setClosedOrderIds([]); // Reset closed orders when user returns to page
+          }
         }
-      }
-    };
-    fetchOrders();
-    return () => {
-      isActive = false;
-    };
-  }, [userData?.e_id])
-);
+      };
+      fetchOrders();
+      return () => {
+        isActive = false;
+      };
+    }, [userData?.e_id])
+  );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
-const handleCloseOrderCard = (index: number) => {
-  // Remove the order from the visible list for this session only
-  const order = latestOrders[index];
-  const orderId = order?.orderNo?.toString?.() || order?.id?.toString?.() || '';
-  setClosedOrderIds((prev) => [...prev, orderId]);
-  if (activeOrderIndex >= latestOrders.length - 1) {
-    setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
-  }
-  if (latestOrders.length - 1 === 0) setShowOrderSlider(false);
-};
+  const handleCloseOrderCard = (index: number) => {
+    // Remove the order from the visible list for this session only
+    const order = latestOrders[index];
+    const orderId = order?.orderNo?.toString?.() || order?.id?.toString?.() || '';
+    setClosedOrderIds((prev) => [...prev, orderId]);
+    if (activeOrderIndex >= latestOrders.length - 1) {
+      setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
+    }
+    if (latestOrders.length - 1 === 0) setShowOrderSlider(false);
+  };
 
   // Format date as 'Feb 20th, 2026, 12:14 PM'
   const formatDate = (isoDate: string) => {
@@ -306,19 +306,20 @@ const handleCloseOrderCard = (index: number) => {
           setSelectedOrderDetails(item);
           setOrderDetailsModalVisible(true);
         }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 3 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
             {/* {iconSource && (
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
-            <Text
+            {/* <Text
               style={{ fontSize: 10, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
               {category}
-            </Text></View>
-             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
+            </Text> */}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={{ fontSize: 14, lineHeight: 19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
           <Text style={{ fontSize: 12, color: '#333', marginBottom: 4, fontFamily: fonts.medium }}>{createdOn}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 0, justifyContent: 'space-between' }}>
@@ -335,7 +336,7 @@ const handleCloseOrderCard = (index: number) => {
             </View>
             {/* Carousel Dots centered */}
             {index < 3 && (
-              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',marginRight: 10 }}>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginRight: 10 }}>
                 {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
                   <View
                     key={idx}
@@ -359,7 +360,7 @@ const handleCloseOrderCard = (index: number) => {
 
   };
 
-    const markNotificationAsRead = async (notificationId: number) => {
+  const markNotificationAsRead = async (notificationId: number) => {
     try {
       // Replace with your actual API endpoint for marking as read
       await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), { notificationId });
@@ -367,8 +368,8 @@ const handleCloseOrderCard = (index: number) => {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n
-            )
+            n.notificationId === notificationId ? { ...n, isRead: true } : n
+          )
           : prev
       );
     } catch (error) {
@@ -425,7 +426,7 @@ const handleCloseOrderCard = (index: number) => {
     // }
   }, [notificationVisible]);
 
-  
+
 
   // Dummy services data (would come from API)
   const services = useMemo(
@@ -471,7 +472,7 @@ const handleCloseOrderCard = (index: number) => {
     []
   );
 
- 
+
 
   const showNotificationModal = useCallback(() => {
     setNotificationVisible(true);
@@ -843,7 +844,7 @@ const handleCloseOrderCard = (index: number) => {
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                 onPress={() => router.push("/features/ambulance/ambulanceservices")}
+                  onPress={() => router.push("/features/ambulance/ambulanceservices")}
                 >
                   Book Now
                 </Button>
@@ -929,7 +930,7 @@ const handleCloseOrderCard = (index: number) => {
           right: 0,
           bottom: 0,
           paddingVertical: 5,
-          paddingTop:0,
+          paddingTop: 0,
           shadowColor: '#000',
           shadowOpacity: 0.08,
           shadowRadius: 8,
@@ -1232,7 +1233,7 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     color: colors.white,
     fontFamily: fonts.bold,
-    lineHeight: 50,
+    lineHeight: 70,
   },
   transinner: {
     fontSize: 50, fontWeight: 600, color: colors.white,
@@ -1587,7 +1588,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
-      fontSize: 15,
+    fontSize: 15,
     color: "#000000",
     flex: 1,
     fontFamily: fonts.semiBold,

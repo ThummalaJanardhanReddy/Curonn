@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { View, ActivityIndicator, BackHandler } from "react-native";
+import { View, ActivityIndicator, BackHandler, StatusBar, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
@@ -42,7 +43,7 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   const htmlContent = `
     <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       </head>
       <body>
@@ -94,36 +95,39 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   `;
 
   return (
-    <View style={{ flex: 1 }}>
-      <WebView
-        originWhitelist={['*']}
-        source={{ html: htmlContent }}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={true}
+    <View style={{ flex: 1, backgroundColor: "#C15E9C" }}>
+      <StatusBar barStyle="light-content" backgroundColor="#C15E9C" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: htmlContent }}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
 
-        onMessage={(event) => {
-          console.log("RAW MESSAGE:", event.nativeEvent.data);
+          onMessage={(event) => {
+            console.log("RAW MESSAGE:", event.nativeEvent.data);
 
-          try {
-            const data = JSON.parse(event.nativeEvent.data);
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
 
-            if (data.success) {
-              onSuccess(data);
-            } else {
-              onFailure(data);
+              if (data.success) {
+                onSuccess(data);
+              } else {
+                onFailure(data);
+              }
+            } catch (error) {
+              console.log("Message parse error:", error);
             }
-          } catch (error) {
-            console.log("Message parse error:", error);
-          }
-        }}
+          }}
 
-        onNavigationStateChange={(navState) => {
-          if (!navState.loading && navState.canGoBack) {
-            // block internal navigation
-          }
-        }}
-      />
+          onNavigationStateChange={(navState) => {
+            if (!navState.loading && navState.canGoBack) {
+              // block internal navigation
+            }
+          }}
+        />
+      </SafeAreaView>
     </View>
   );
 };

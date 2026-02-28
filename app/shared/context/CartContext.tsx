@@ -102,15 +102,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     id,
                     medicineId: medId,
                     name: it.medicineName ?? it.name ?? it.medicine?.medicineName ?? 'Unknown',
-                    price: Number(it.curonnPrice ?? it.price ?? it.totalPrice ?? it.mrp ?? 0),
-                    originalPrice: Number(it.streepBoxPrice ?? it.mrp ?? it.originalPrice ?? 0),
-                    quantity: Number(it.quantity ?? it.qty ?? 1),
+                    price: Number((it.curonnPrice ?? it.price ?? it.totalPrice ?? it.mrp ?? '0').toString().replace(/[^0-9.]/g, '')),
+                    originalPrice: Number((it.streepBoxPrice ?? it.mrp ?? it.originalPrice ?? '0').toString().replace(/[^0-9.]/g, '')),
+                    quantity: Number(it.quantity ?? it.qty ?? 0), // Use 0 as default if missing
                     subtitle: it.streepBoxQty ?? it.package ?? it.description ?? '',
                     description: it.description ?? '',
                     cartId: it.cartId ?? it.id ?? it.cart_id,
                     image: transformDriveUrl(imgUrl),
                 };
-            });
+            }).filter(item => item.quantity > 0); // 🔥 Filter out deleted items (quantity: 0)
 
             setCartItems(mapped);
             await saveCartData(mapped);
@@ -133,13 +133,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const existingItem = cartItems.find(it => it.id === medicine.id.toString());
             const price = (medicine.curonnPrice ?? medicine.price ?? '0').toString().replace(/[^0-9.]/g, '');
 
+            const cleanedMRP = (medicine.streepBoxPrice ?? medicine.originalPrice ?? '0').toString().replace(/[^0-9.]/g, '');
             const payload = {
-                patientId,
-                medicineId: Number(medicine.id),
-                quantity: (existingItem?.quantity ?? 0) + quantity,
-                cartId: existingItem?.cartId ?? 0,
-                price: Number(price),
-                totalPrice: Number(price) * ((existingItem?.quantity ?? 0) + quantity),
+                PatientId: patientId,
+                MedicineId: Number(medicine.id),
+                Quantity: (existingItem?.quantity ?? 0) + quantity,
+                CartId: existingItem?.cartId ?? 0,
+                Price: Number(price),
+                TotalPrice: Number(price) * ((existingItem?.quantity ?? 0) + quantity),
+                MedicineName: medicine.name,
+                MRP: Number(cleanedMRP),
+                Description: medicine.description || medicine.subtitle || 'N/A',
             };
 
             const res: any = await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
@@ -151,12 +155,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await saveImageToCache(medicine.id, rawImg);
             }
 
+            const originalPriceStr = (medicine.streepBoxPrice ?? medicine.originalPrice ?? '0').toString().replace(/[^0-9.]/g, '');
             const newItem: CartItem = {
                 id: medicine.id.toString(),
                 medicineId: Number(medicine.id),
                 name: medicine.name,
                 price: Number(price),
-                originalPrice: Number(medicine.streepBoxPrice ?? medicine.originalPrice ?? 0),
+                originalPrice: Number(originalPriceStr),
                 quantity: (existingItem?.quantity ?? 0) + quantity,
                 subtitle: medicine.subtitle ?? medicine.streepBoxQty ?? '',
                 description: medicine.description ?? '',
@@ -181,19 +186,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const item = cartItems.find(it => it.id === medicineId);
             if (!item) return;
 
-            // Use the parameterized route function
-            const url = ApiRoutes.MedicalOrders.updateCartQuantity(cartId, quantity);
-
             const payload = {
-                cartId,
-                quantity,
-                patientId,
-                medicineId: Number(item.medicineId || medicineId),
-                price: item.price,
-                totalPrice: item.price * quantity,
+                CartId: cartId,
+                Quantity: quantity,
+                PatientId: patientId,
+                MedicineId: Number(item.medicineId || medicineId),
+                Price: item.price,
+                MRP: Number(item.originalPrice ?? 0),
+                TotalPrice: item.price * quantity,
+                MedicineName: item.name,
+                Description: item.description || item.subtitle || 'N/A',
             };
 
-            await axiosClient.post(url, payload);
+            // Use save-cart-item for updates as it supports updates with cartId
+            await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
 
             setCartItems(prev => prev.map(it =>
                 it.id === medicineId ? { ...it, quantity } : it
@@ -207,7 +213,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const removeItem = async (cartId: number, medicineId: string) => {
         try {
-            await axiosClient.get(`${ApiRoutes.MedicalOrders.deleteCartItem}?cartId=${cartId}`);
+            const item = cartItems.find(it => it.id === medicineId);
+
+            // Revert to using save-cart-item with Quantity: 0 as it's the verified working endpoint
+            const payload = {
+                CartId: cartId,
+                Quantity: 0,
+                PatientId: patientId,
+                MedicineId: Number(item?.medicineId || medicineId),
+                Price: item?.price || 0,
+                TotalPrice: 0,
+                MRP: Number(item?.originalPrice ?? 0),
+                MedicineName: item?.name || 'N/A',
+                Description: item?.description || item?.subtitle || 'N/A',
+            };
+
+            await axiosClient.post(ApiRoutes.MedicalOrders.saveCartItem, payload);
+
             setCartItems(prev => prev.filter(it => it.id !== medicineId));
             await refreshCart();
         } catch (err) {

@@ -83,11 +83,14 @@ export default function BookingScreen({
   selectedDate: propSelectedDate,
   selectedTimeSlot: propSelectedTimeSlot,
 }: BookingScreenProps) {
+  console.log("🚀 BookingScreen Rendered - visible:", visible, "type:", type, "service:", serviceName);
   if (type === "scans") {
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
+  console.log("👤 User Data ID:", userData?.e_id);
+
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
   const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
@@ -265,7 +268,6 @@ export default function BookingScreen({
 
   // Fetch statusId for 'Requested' from MasterData API (categoryId=7)
   useEffect(() => {
-    if (isFromMedicalFlag) return;
     const fetchStatusId = async () => {
       try {
         const response: any = await axiosClient.get(
@@ -293,7 +295,6 @@ export default function BookingScreen({
 
   // Fetch relationship types from MasterData API (categoryId=5)
   useEffect(() => {
-    if (isFromMedicalFlag) return;
     const fetchRelationTypes = async () => {
       try {
         const response: any = await axiosClient.get(
@@ -393,6 +394,43 @@ export default function BookingScreen({
       }
     } catch (error) {
       console.error("Fetch address by ID error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRelationDetails = async (relationId: number) => {
+    try {
+      setLoading(true);
+      const patientId = userData?.e_id;
+      if (!patientId) return;
+      const response: any = await axiosClient.get(
+        ApiRoutes.Employee.getRelation(relationId, patientId)
+      );
+
+      // Handle both wrapped response { isSuccess: true, data: {...} } and raw response {...}
+      const detail =
+        response && response.isSuccess && response.data
+          ? response.data
+          : response;
+
+      if (detail && (detail.relationName || detail.fullName)) {
+        setFullName(detail.relationName || detail.fullName || "");
+        setAge(detail.age ? detail.age.toString() : "");
+        // Capitalize gender if it's 'male'/'female'
+        const g = detail.gender || "";
+        setGender(g.charAt(0).toUpperCase() + g.slice(1).toLowerCase());
+      } else {
+        // Clear fields if no detail found for this relation type
+        setFullName("");
+        setAge("");
+        setGender("");
+      }
+    } catch (error) {
+      // console.error('Fetch relation details error:', error);
+      setFullName("");
+      setAge("");
+      setGender("");
     } finally {
       setLoading(false);
     }
@@ -731,14 +769,14 @@ export default function BookingScreen({
       statusId: statusId,
       paymentDetails: String(totalAmount),
       req: "web",
-      };
-      if (patientType === "others" && selectedRelation) {
+    };
+    if (patientType === "others" && selectedRelation) {
       payload.relationId = selectedRelation.masterDataId;
       payload.relationName = fullName;
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
-  try {
+    try {
       const response: any = await axiosClient.post(
         ApiRoutes.DiagCenter.saveUpdate,
         payload
@@ -816,11 +854,12 @@ export default function BookingScreen({
   useEffect(() => {
     try {
       const sp = searchParams;
-      if (!sp) return;
+      console.log("🔍 Search Params received:", JSON.stringify(sp));
       const flag =
         sp.isFromMedical === "true" ||
         sp.isFromMedical === true ||
         sp.isFromMedical === "1";
+      console.log("🚩 Setting isFromMedicalFlag to:", !!flag);
       setIsFromMedicalFlag(!!flag);
       if (sp.cartItems) {
         try {
@@ -924,6 +963,7 @@ export default function BookingScreen({
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => {
+    console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
     const isSelfService = patientType === "self";
 
     // Get current date in yyyy-mm-dd format
@@ -982,7 +1022,7 @@ export default function BookingScreen({
     }
     return payload;
   };
-  //console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+  console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -990,13 +1030,13 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    // console.log("📤 Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
         payload
       );
-      console.log("📥 Medicine Save Order Response:", JSON.stringify(response, null, 2));
+      console.log("Medicine Save Order Response:", JSON.stringify(response, null, 2));
       if (response && (response.isSuccess || response.success)) {
         console.log("✅ Medicine Order Success. Showing toast and starting timeout...");
         setToastMessageMed({
@@ -1337,7 +1377,7 @@ export default function BookingScreen({
 
             {/* Delivery Charges */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Delivery Charges</Text>
+              <Text style={styles.sectionTitle}>Pricing Info</Text>
               <View style={styles.deliveryCardNew}>
                 <View style={styles.chargeRow}>
                   <Text style={styles.chargeLabel}>Delivery Charges</Text>
@@ -1392,7 +1432,7 @@ export default function BookingScreen({
               setShowToastMed(true);
             }}
           >
-            <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
                 amount={Math.round(displayedTotal * 100)}
@@ -1431,7 +1471,7 @@ export default function BookingScreen({
                   }, 300);
                 }}
               />
-            </SafeAreaView>
+            </View>
           </Modal>
 
           {/* Relation Type Dropdown Modal */}
@@ -1455,6 +1495,7 @@ export default function BookingScreen({
                       if (fieldErrors && typeof setFieldErrors === 'function') {
                         setFieldErrors((prev) => ({ ...prev, relation: "" }));
                       }
+                      fetchRelationDetails(relation.masterDataId);
                       setShowRelationDropdown(false);
                     }}
                   >
@@ -1620,8 +1661,8 @@ export default function BookingScreen({
                 <View style={styles.serviceDivider} />
 
                 <View style={styles.serviceFooter}>
-                    {(type === "scans") && selectedDiagCenter && (<>
-                    <View style={{  alignItems: 'flex-start', marginBottom: 8 }}>
+                  {(type === "scans") && selectedDiagCenter && (<>
+                    <View style={{ alignItems: 'flex-start', marginBottom: 8 }}>
                       <View style={{ marginBottom: 8 }}>
                         <Text style={styles.serviceCenter}>{selectedDiagCenter.centerName}</Text>
                         <Text style={styles.centerAddress}>{selectedDiagCenter.address}</Text>
@@ -1631,20 +1672,20 @@ export default function BookingScreen({
                      
                   </View>
 
-                   </>)}
+                  </>)}
                   {(type !== "scans") && (<>
-                  <Text style={styles.servicePrice}>
-                    {"\u20B9"}
-                    {servicePrice}
-                  </Text>
-                 
-                  <TouchableOpacity
-                    style={styles.editAddressButton1}
-                    onPress={handleEdit}
-                  >
-                    <Text style={styles.editAddressText}>Edit</Text>
-                  </TouchableOpacity>
- </>)}
+                    <Text style={styles.servicePrice}>
+                      {"\u20B9"}
+                      {servicePrice}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.editAddressButton1}
+                      onPress={handleEdit}
+                    >
+                      <Text style={styles.editAddressText}>Edit</Text>
+                    </TouchableOpacity>
+                  </>)}
                   {/* <SecondaryButton
                     title="Edit"
                     onPress={handleEdit}
@@ -1656,73 +1697,73 @@ export default function BookingScreen({
             </View>
 
             {/* Service Address */}
-             {(type !== "scans") && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Service Address</Text>
-              {selectedLocation ? (
-                <View style={styles.addressCard}>
-                  <View style={styles.addressHeader}>
-                    <View style={styles.addressInfo}>
-                      <Text style={styles.addressNickname}>
-                        {selectedLocation.nickname.charAt(0).toUpperCase() +
-                          selectedLocation.nickname.slice(1)}
-                      </Text>
-                      <Text style={styles.addressText}>
-                        {selectedLocation.houseNumber &&
-                          `${selectedLocation.houseNumber}, `}
-                        {selectedLocation.address}
-                      </Text>
-                      {selectedLocation.landmark && (
-                        <Text style={styles.landmarkText}>
-                          Near {selectedLocation.landmark}
+            {(type !== "scans") && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Service Address</Text>
+                {selectedLocation ? (
+                  <View style={styles.addressCard}>
+                    <View style={styles.addressHeader}>
+                      <View style={styles.addressInfo}>
+                        <Text style={styles.addressNickname}>
+                          {selectedLocation.nickname.charAt(0).toUpperCase() +
+                            selectedLocation.nickname.slice(1)}
                         </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={styles.editAddressButton}
-                      onPress={handleEditAddress}
-                    >
-                      <Text style={styles.editAddressText}>Edit</Text>
-                    </TouchableOpacity>
+                        <Text style={styles.addressText}>
+                          {selectedLocation.houseNumber &&
+                            `${selectedLocation.houseNumber}, `}
+                          {selectedLocation.address}
+                        </Text>
+                        {selectedLocation.landmark && (
+                          <Text style={styles.landmarkText}>
+                            Near {selectedLocation.landmark}
+                          </Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.editAddressButton}
+                        onPress={handleEditAddress}
+                      >
+                        <Text style={styles.editAddressText}>Edit</Text>
+                      </TouchableOpacity>
 
+                    </View>
+                    <Button
+                      style={{
+                        borderRadius: 8,
+                        width: "80%",
+                        borderColor: "#0580FA",
+                        borderStyle: "solid",
+                        borderWidth: 1,
+                        marginTop: 12,
+                      }}
+                      labelStyle={{ color: "#0580FA" }}
+                      onPress={handleViewAddress}
+                    >
+                      +  Add New Address
+                    </Button>
                   </View>
-                  <Button
-                    style={{
-                      borderRadius: 8,
-                      width: "80%",
-                      borderColor: "#0580FA",
-                      borderStyle: "solid",
-                      borderWidth: 1,
-                      marginTop: 12,
-                    }}
-                    labelStyle={{ color: "#0580FA" }}
-                    onPress={handleViewAddress}
+                ) : (
+                  <View style={styles.addressCard}>
+                    <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
+                      No address found. Please add a new address.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.addnewaddressButton}
+                      onPress={handleViewAddress}
+                    >
+                      <Text style={styles.AddressText}>+ Add New Address</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {errors === "Please select or add new address" && (
+                  <Text
+                    style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
                   >
-                    +  Add New Address
-                  </Button>
-                </View>
-              ) : (
-                <View style={styles.addressCard}>
-                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
-                    No address found. Please add a new address.
+                    {errors}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.addnewaddressButton}
-                    onPress={handleViewAddress}
-                  >
-                    <Text style={styles.AddressText}>+ Add New Address</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {errors === "Please select or add new address" && (
-                <Text
-                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                >
-                  {errors}
-                </Text>
-              )}
-            </View>
-             )}
+                )}
+              </View>
+            )}
 
 
             {/* Sample Pickup Date & Time */}
@@ -1904,7 +1945,7 @@ export default function BookingScreen({
             </View>
 
             {/* Order Summary */}
-           
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Order Summary</Text>
               <View style={styles.deliveryCard}>
@@ -1974,9 +2015,9 @@ export default function BookingScreen({
                   </View>
                 )}
             </View>
-            
 
-            
+
+
             <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
@@ -1990,28 +2031,28 @@ export default function BookingScreen({
                 </TouchableOpacity>
               </View>
             </View>
-         
+
           </ScrollView>
 
           {/* Book Now Button */}
-           {(type !== "scans") ? (
-          <View style={styles.footer}>
-            <PrimaryButton
-              title={`Confirm &  Pay \u20B9${totalAmount}`}
-              onPress={handleBookNowLab}
-              style={{ width: "100%" }}
-            />
-          </View>
-           ) : (
+          {(type !== "scans") ? (
             <View style={styles.footer}>
-            <PrimaryButton
-              title={`Confirm &  Book Now`}
-              onPress={handleBookNowScan}
-              style={{ width: "100%" }}
-            />
+              <PrimaryButton
+                title={`Confirm &  Pay \u20B9${totalAmount}`}
+                onPress={handleBookNowLab}
+                style={{ width: "100%" }}
+              />
             </View>
-            )}
-            
+          ) : (
+            <View style={styles.footer}>
+              <PrimaryButton
+                title={`Confirm &  Book Now`}
+                onPress={handleBookNowScan}
+                style={{ width: "100%" }}
+              />
+            </View>
+          )}
+
 
 
           {/* Relation Type Dropdown Modal */}
@@ -2035,6 +2076,7 @@ export default function BookingScreen({
                       if (fieldErrors && typeof setFieldErrors === 'function') {
                         setFieldErrors((prev) => ({ ...prev, relation: "" }));
                       }
+                      fetchRelationDetails(relation.masterDataId);
                       setShowRelationDropdown(false);
                     }}
                   >
@@ -2264,31 +2306,26 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontFamily: fonts.bold,
-    fontSize: getResponsiveFontSize(20),
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
     color: '#202427',
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    
+    padding: 4,
   },
+
   closeIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#000',
+    width: 28,
+    height: 28,
+    tintColor: "black",
   },
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: '#F5F5F9',
+    backgroundColor: '#fff',
   },
   section: {
-    marginTop: getResponsiveSpacing(10),
+    marginTop: getResponsiveSpacing(0),
   },
   paydiacontainer:{
  marginTop: getResponsiveSpacing(2),
@@ -2298,6 +2335,7 @@ const styles = StyleSheet.create({
     color: '#C15E9C',
      fontFamily: fonts.medium
   },
+
   cancellsection: {
     marginTop: getResponsiveSpacing(10),
     marginBottom: getResponsiveSpacing(10),
@@ -2357,18 +2395,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontFamily: fonts.semiBold
   },
-  serviceCenter:{
-fontSize: 15,
+  serviceCenter: {
+    fontSize: 15,
     color: colors.primary,
     fontFamily: fonts.semiBold
   },
-  centerAddress:{
+  centerAddress: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
     fontFamily: fonts.regular,
   },
-  centerDistance:{
+  centerDistance: {
     fontSize: 11,
     color: '#888',
     marginTop: 2,
@@ -2584,7 +2622,7 @@ fontSize: 15,
   },
   addressTextNew: {
     fontSize: 13,
-    color: '#737274',
+    color: '#000',
     lineHeight: 18,
     fontFamily: fonts.regular,
     marginBottom: 12,

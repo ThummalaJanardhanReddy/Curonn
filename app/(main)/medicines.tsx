@@ -13,7 +13,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../assets';
 import CommonHeader from '../shared/components/CommonHeader';
 import PrescriptionUploadModal from '../shared/components/PrescriptionUploadModal';
@@ -52,6 +52,16 @@ export default function MedicinesScreen() {
   // State for edit back-flow: pre-fill modal with previously entered data
   const [initialModalNotes, setInitialModalNotes] = useState('');
   const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
+
+  useEffect(() => {
+    if (searchQuery.trim().length >= 3) {
+      router.push({
+        pathname: '/features/medicines/medicine-list',
+        params: { search: searchQuery.trim() }
+      } as any);
+      setSearchQuery('');
+    }
+  }, [searchQuery]);
 
   // Helper: dynamic import so the app doesn't crash at module-evaluation time when the
   // native module is missing. Returns null when import fails.
@@ -118,28 +128,28 @@ export default function MedicinesScreen() {
   }, [patientId]);
 
   // List of background colors for categories
-  const categoryColors = ['#f4ab9b', '#A4AAD8', '#7DA4DB', '#8E9867', '#BEC8F9', '#D6C57B', '#C9E0DD', '#F0E4DC'];
+  const categoryColors = ['#F1C8BE', '#D7D9ED', '#C5D5EC', '#B4BB9A', '#E4D9A8', '#E2E7FC', '#C9E0DD', '#F0E4DC'];
   // Helper to convert Google Drive share links to direct image links
   const getDirectImageUrl = (url: string) => {
-  if (!url) return url;
+    if (!url) return url;
 
-  const match = url.match(/\/file\/d\/([^/]+)/);
-  if (match && match[1]) {
-    const fileId = match[1];
-    return `https://drive.google.com/uc?export=download&id=${fileId}`;
-  }
+    const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      const fileId = match[1];
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    }
 
-  return url;
-};
+    return url;
+  };
 
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
       return drugGroups.map((g: any, idx: number) => {
-        let imgUrl = g.imageUrl || '';
+        let imgUrl = g.imageUrl ?? g.image ?? '';
         if (imgUrl.includes('drive.google.com')) {
-          const match = imgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          const match = imgUrl.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
           if (match && match[1]) {
-            imgUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            imgUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
           }
         }
         const category = {
@@ -298,7 +308,7 @@ export default function MedicinesScreen() {
   ), []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <View style={styles.container} >
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <View style={styles.defaultHeader}>
         <CommonHeader
@@ -388,7 +398,7 @@ export default function MedicinesScreen() {
         initialNotes={initialModalNotes}
         initialOption={initialModalOption}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -396,11 +406,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
+    paddingTop: Platform.OS === 'android' ? getResponsiveSpacing(20) : 27,
   },
   defaultHeader: {
-    paddingHorizontal: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(20),
     // Remove extra top padding as SafeAreaView handles it
-    marginTop: Platform.OS === 'android' ? getResponsiveSpacing(10) : 0,
+    marginTop: Platform.OS === 'android' ? getResponsiveSpacing(0) : 0,
   },
   containercontent: {
     flex: 1,
