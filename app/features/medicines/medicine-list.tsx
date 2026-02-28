@@ -90,6 +90,16 @@ export default function MedicineListScreen() {
   const mapApiToMedicine = (item: any): Medicine => {
     const curPrice = item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0;
     const original = item.streepBoxPrice ?? item.originalPrice ?? 0;
+
+    // Handle Google Drive links to make them direct image URLs
+    let imgUrl = item.imageUrl ?? item.image ?? '';
+    if (imgUrl.includes('drive.google.com')) {
+      const match = imgUrl.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        imgUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+      }
+    }
+
     return {
       id: (item.id ?? item.medicineMasterId ?? item.medicineId ?? Math.random().toString()).toString(),
       name: item.medicineName ?? item.name ?? item.drugName ?? 'Unknown',
@@ -97,7 +107,7 @@ export default function MedicineListScreen() {
       price: `₹${curPrice}`,
       originalPrice: original ? `₹${original}` : '',
       discount: item.discount ?? item.discountText ?? '',
-      image: item.imageUrl ?? item.image ?? '',
+      image: imgUrl,
       inStock: item.instock ?? item.inStock ?? item.available ?? true,
       description: item.streepBoxQty ?? item.shortDescription ?? item.streepBoxQty ?? '',
       rating: item.rating ?? 0,
@@ -238,7 +248,11 @@ export default function MedicineListScreen() {
         <View style={styles.medicineCardLarge}>
           <View style={styles.cardRow}>
             <View style={styles.imageColumn}>
-              <Image source={{ uri: item.image }} style={styles.cardImage} />
+              {item.image ? (
+                <Image source={{ uri: item.image }} style={styles.cardImage} />
+              ) : (
+                <View style={[styles.cardImage, { backgroundColor: '#f5f5f5' }]} />
+              )}
               <View style={styles.imagePriceContainer}>
                 {displayOriginal ? (
                   <Text style={styles.imageOriginalPrice}>₹{displayOriginal}</Text>
@@ -317,8 +331,8 @@ export default function MedicineListScreen() {
           start={{ x: 0.1, y: 0.4 }}
           end={{ x: 0.1, y: 0.1 }}
           style={{
-            paddingHorizontal: 20, // ✅ works
-            paddingVertical: 5,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
           }}
         >
           {/* Search Field */}
@@ -327,8 +341,8 @@ export default function MedicineListScreen() {
               <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search for Medicines"
-                placeholderTextColor="#000"
+                placeholder="Search for Medicine"
+                placeholderTextColor="#A0A0A0"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -342,13 +356,12 @@ export default function MedicineListScreen() {
               )}
             </View>
           </View>
-        </LinearGradient>
-        <View style={styles.content}>
+
           {/* Display drugGroup if available */}
           {drugGroup ? (
             <Text style={styles.dragtitle}>{drugGroup}</Text>
           ) : null}
-        </View>
+        </LinearGradient>
         {/* Medicines List */}
         <FlatList
           data={filteredMedicines}
@@ -359,7 +372,7 @@ export default function MedicineListScreen() {
         />
 
         {/* Continue button fixed at bottom */}
-        <View style={styles.continueContainer} pointerEvents="box-none">
+        <View style={styles.continueContainer}>
           <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/cart' as unknown as any)}>
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
@@ -459,7 +472,11 @@ const styles = StyleSheet.create({
     marginHorizontal: getResponsiveSpacing(20),
   },
   dragtitle: {
-    fontFamily: fonts.medium,
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
+    color: '#3B2032',
+    marginTop: getResponsiveSpacing(15),
+    marginBottom: getResponsiveSpacing(5),
   },
   clearButton: {
     padding: getResponsiveSpacing(4),
@@ -552,8 +569,8 @@ const styles = StyleSheet.create({
     marginLeft: getResponsiveSpacing(12),
   },
   actionUnderSubtitle: {
-    marginTop: getResponsiveSpacing(3),
-    alignItems: 'flex-end',
+    marginTop: getResponsiveSpacing(12),
+    alignItems: 'flex-start',
   },
   imageColumn: {
     width: getResponsiveSpacing(80),
@@ -797,7 +814,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 20,
+    bottom: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingTop: getResponsiveSpacing(15),
+    paddingBottom: Platform.OS === 'ios' ? 25 : 15,
     alignItems: 'center',
   },
   continueButton: {

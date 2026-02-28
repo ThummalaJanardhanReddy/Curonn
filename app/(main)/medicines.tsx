@@ -121,12 +121,23 @@ export default function MedicinesScreen() {
   const categoryColors = ['#f4ab9b', '#A4AAD8', '#7DA4DB', '#8E9867', '#BEC8F9', '#D6C57B', '#C9E0DD', '#F0E4DC'];
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
-      return drugGroups.map((g: any, idx: number) => ({
-        id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-        title: g.drugGroup ?? g.name ?? 'Untitled',
-        image: g.imageUrl,
-        backgroundColor: categoryColors[idx % categoryColors.length],
-      }));
+      return drugGroups.map((g: any, idx: number) => {
+        let imgUrl = g.imageUrl || '';
+        if (imgUrl.includes('drive.google.com')) {
+          const match = imgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            imgUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+          }
+        }
+        const category = {
+          id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+          title: g.drugGroup ?? g.name ?? 'Untitled',
+          image: imgUrl,
+          backgroundColor: categoryColors[idx % categoryColors.length],
+        };
+        console.log(`[MedicinesScreen] Category ${idx}:`, category);
+        return category;
+      });
     }
     return [];
   }, [drugGroups]);
@@ -263,7 +274,11 @@ export default function MedicinesScreen() {
     >
       <View style={styles.categoryContent}>
         <Text style={styles.categoryTitle}>{item.title}</Text>
-        <Image source={{ uri: item.image }} style={styles.categoryImage} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.categoryImage} />
+        ) : (
+          <View style={[styles.categoryImage, { backgroundColor: 'rgba(0,0,0,0.05)' }]} />
+        )}
       </View>
     </TouchableOpacity>
   ), []);

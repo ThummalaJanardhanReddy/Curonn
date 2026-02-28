@@ -1004,7 +1004,7 @@ export default function BookingScreen({
       <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -1016,100 +1016,30 @@ export default function BookingScreen({
             showsVerticalScrollIndicator={false}
           >
 
-            {/* Service Address */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Service Address</Text>
-
-              {selectedLocation ? (
-                <View style={styles.addressCard}>
-                  <View style={styles.addressHeader}>
-                    <View style={styles.addressInfo}>
-                      <Text style={styles.addressNickname}>
-                        {selectedLocation.nickname.charAt(0).toUpperCase() +
-                          selectedLocation.nickname.slice(1)}
-                      </Text>
-                      <Text style={styles.addressText}>
-                        {selectedLocation.houseNumber &&
-                          `${selectedLocation.houseNumber}, `}
-                        {selectedLocation.address}
-                      </Text>
-                      {selectedLocation.landmark && (
-                        <Text style={styles.landmarkText}>
-                          Near {selectedLocation.landmark}
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={styles.editAddressButton}
-                      onPress={handleEditAddress}
-                    >
-                      <Text style={styles.editAddressText}>Edit</Text>
-                    </TouchableOpacity>
-
-                  </View>
-                  <Button
-                    style={{
-                      borderRadius: 8,
-                      width: "80%",
-                      borderColor: "#0580FA",
-                      borderStyle: "solid",
-                      borderWidth: 1,
-                      marginTop: 12,
-                    }}
-                    labelStyle={{ color: "#0580FA" }}
-                    onPress={handleViewAddress}
-                  >
-                    +  Add New Address
-                  </Button>
-                </View>
-              ) : (
-                <View style={styles.addressCard}>
-                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
-                    No address found. Please add a new address.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.addnewaddressButton}
-                    onPress={handleViewAddress}
-                  >
-                    <Text style={styles.AddressText}>+ Add New Address</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {errors === "Please select or add new address" && (
-                <Text
-                  style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                >
-                  {errors}
-                </Text>
-              )}
-            </View>
-
 
             {/* Patient Details */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Patient Details</Text>
               <View style={styles.patientCard}>
                 <View style={styles.radioGroup}>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="self"
-                      status={patientType === "self" ? "checked" : "unchecked"}
-                      onPress={() => setPatientType("self")}
-                      color="#C15E9C"
-                    />
-                    <Text style={styles.radioLabel}>Self Service</Text>
-                  </View>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="others"
-                      status={
-                        patientType === "others" ? "checked" : "unchecked"
-                      }
-                      onPress={() => setPatientType("others")}
-                      color="#C15E9C"
-                    />
-                    <Text style={styles.radioLabel}>For Others</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={[styles.radioOption, patientType === "self" && styles.selectedRadioOption]}
+                    onPress={() => setPatientType("self")}
+                  >
+                    <View style={[styles.customRadio, patientType === "self" && styles.customRadioSelected]}>
+                      {patientType === "self" && <View style={styles.customRadioInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, patientType === "self" && styles.selectedRadioLabel]}>Self Service</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.radioOption, patientType === "others" && styles.selectedRadioOption]}
+                    onPress={() => setPatientType("others")}
+                  >
+                    <View style={[styles.customRadio, patientType === "others" && styles.customRadioSelected]}>
+                      {patientType === "others" && <View style={styles.customRadioInner} />}
+                    </View>
+                    <Text style={[styles.radioLabel, patientType === "others" && styles.selectedRadioLabel]}>For Others</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {patientType === "others" && (
@@ -1194,30 +1124,101 @@ export default function BookingScreen({
               </View>
             </View>
 
+
+            {/* Service Address */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Service Address</Text>
+
+              {selectedLocation ? (
+                <View style={styles.addressCard}>
+                  <View style={styles.addressInfoNew}>
+                    <Text style={styles.addressNameBold}>
+                      {userData?.fullName || "Patient Name"}
+                    </Text>
+                    <Text style={styles.addressTextNew}>
+                      {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
+                      {selectedLocation.address}
+                      {selectedLocation.landmark && `, Near ${selectedLocation.landmark}`}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.editAddressButtonNew}
+                      onPress={handleViewAddress}
+                    >
+                      <Text style={styles.editAddressTextNew}>Edit Address</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.addressCard}>
+                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 10, fontFamily: fonts.regular }}>
+                    No address found. Please add a new address.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.addnewaddressButton}
+                    onPress={handleViewAddress}
+                  >
+                    <Text style={styles.AddressText}>+ Add New Address</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {errors === "Please select or add new address" && (
+                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                  {errors}
+                </Text>
+              )}
+            </View>
+
+
+
+
             {/* Medicine List */}
-            <CartItemsList
-              noPadding
-              items={cartItems.map((it: any, idx: number) => ({
-                id: (it.medicineId ?? it.id ?? idx).toString(),
-                name: it.medicineName || it.name || "",
-                price: Number(it.price || 0),
-                quantity: Number(it.quantity || 1),
-                subtitle: it.pack || it.subtitle || "",
-                description: it.description || "",
-                cartId: it.cartId
-              }))}
-              onIncreaseQuantity={(id) => {
-                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
-                if (idx !== -1) handleIncreaseQuantity(idx);
-              }}
-              onDecreaseQuantity={(id) => {
-                const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
-                if (idx !== -1) handleDecreaseQuantity(idx);
-              }}
-              itemsTotal={itemsTotal}
-              deliveryCharges={deliveryCharges}
-              displayedTotal={displayedTotal}
-            />
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Medicine List</Text>
+              <View style={styles.medicineListCard}>
+                <CartItemsList
+                  noPadding
+                  showPricingDetails={false}
+                  items={cartItems.map((it: any, idx: number) => ({
+                    id: (it.medicineId ?? it.id ?? idx).toString(),
+                    name: it.medicineName || it.name || "",
+                    price: Number(it.price || 0),
+                    originalPrice: it.originalPrice,
+                    quantity: Number(it.quantity || 1),
+                    subtitle: it.pack || it.subtitle || "",
+                    description: it.description || "",
+                    cartId: it.cartId
+                  }))}
+                  onIncreaseQuantity={(id) => {
+                    const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                    if (idx !== -1) handleIncreaseQuantity(idx);
+                  }}
+                  onDecreaseQuantity={(id) => {
+                    const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                    if (idx !== -1) handleDecreaseQuantity(idx);
+                  }}
+                  itemsTotal={itemsTotal}
+                  deliveryCharges={deliveryCharges}
+                  displayedTotal={displayedTotal}
+                />
+              </View>
+            </View>
+
+            {/* Delivery Charges */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Delivery Charges</Text>
+              <View style={styles.deliveryCardNew}>
+                <View style={styles.chargeRow}>
+                  <Text style={styles.chargeLabel}>Delivery Charges</Text>
+                  <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
+                </View>
+                <View style={styles.dividerSolid} />
+                <View style={[styles.chargeRow, { marginTop: 10 }]}>
+                  <Text style={styles.totalLabelNew}>TO PAY</Text>
+                  <Text style={styles.totalValueNew}>₹{displayedTotal.toFixed(0)}</Text>
+                </View>
+              </View>
+            </View>
 
             {/* Cancellation Policy */}
 
@@ -1460,7 +1461,7 @@ export default function BookingScreen({
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Order Info </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -2084,29 +2085,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  header: {
-    ...commonStyles.container_header,
-    backgroundColor: "#ffffff",
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(10),
+    paddingBottom: getResponsiveSpacing(15),
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontSize: 16,
-    color: "#202427",
-    fontFamily: fonts.semiBold
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(20),
+    color: '#202427',
   },
   closeButton: {
-    padding: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#000000",
+    width: 16,
+    height: 16,
+    tintColor: '#000',
   },
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: '#F5F5F9',
   },
   section: {
     marginTop: getResponsiveSpacing(10),
@@ -2116,9 +2127,10 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(10),
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#000000",
-    marginBottom: getResponsiveSpacing(2),
+    marginBottom: getResponsiveSpacing(8),
+    marginTop: getResponsiveSpacing(15),
     fontFamily: fonts.semiBold
   },
   serviceCard: {
@@ -2283,10 +2295,28 @@ const styles = StyleSheet.create({
     borderColor: "#D9DEE6",
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    width: "49%",
-
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    width: "48%",
+  },
+  customRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D9DEE6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  customRadioSelected: {
+    borderColor: '#C15E9C',
+  },
+  customRadioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#C15E9C',
   },
   radioLabel: {
     fontSize: 13,
@@ -2298,6 +2328,86 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
+  },
+  selectedRadioOption: {
+    borderColor: '#C15E9C',
+  },
+  selectedRadioLabel: {
+    fontFamily: fonts.semiBold,
+  },
+  medicineListCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    overflow: 'hidden',
+  },
+  deliveryCardNew: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(5),
+  },
+  chargeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chargeLabel: {
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(14),
+    color: '#3B2032',
+  },
+  chargeValue: {
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(14),
+    color: '#000',
+  },
+  dividerSolid: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 12,
+  },
+  totalLabelNew: {
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(14),
+    color: '#000',
+  },
+  totalValueNew: {
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(18),
+    color: '#C15E9C',
+  },
+  addressInfoNew: {
+    flex: 1,
+  },
+  addressNameBold: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: '#3B2032',
+    marginBottom: 6,
+  },
+  addressTextNew: {
+    fontSize: 13,
+    color: '#737274',
+    lineHeight: 18,
+    fontFamily: fonts.regular,
+    marginBottom: 12,
+  },
+  editAddressButtonNew: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C15E9C',
+  },
+  editAddressTextNew: {
+    fontSize: 13,
+    color: '#C15E9C',
+    fontFamily: fonts.medium,
   },
   formField: {
     marginBottom: 16,

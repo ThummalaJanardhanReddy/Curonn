@@ -78,13 +78,13 @@ export default function CartScreen() {
           backgroundColor="#ffffffff"
         />
         <View style={styles.headerRow}>
-          <BackButton title="Items in Cart" onPress={() => router.back()} />
+          <Text style={styles.headerTitle}>Items in Cart</Text>
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
             <Image source={images.icons.close} style={styles.closeIcon} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(140) }}>
+        <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(100) }}>
           <CartItemsList
             items={cartItems}
             onIncreaseQuantity={handleIncreaseQty}
@@ -97,10 +97,6 @@ export default function CartScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹{totalAmount.toFixed(0)}</Text>
-          </View>
           <TouchableOpacity
             style={styles.continueBtn}
             onPress={() => {
@@ -130,31 +126,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingTop: getResponsiveSpacing(0),
-    paddingBottom: getResponsiveSpacing(12),
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(10),
+    paddingBottom: getResponsiveSpacing(15),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#E0E0E0',
   },
-  closeButton: { padding: 8 },
-  closeIcon: { width: 24, height: 24, tintColor: '#666' },
-  list: { flex: 1, backgroundColor: '#F5F4F9' },
+  headerTitle: {
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(20),
+    color: '#202427',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeIcon: {
+    width: 16,
+    height: 16,
+    tintColor: '#000',
+  },
+  list: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    padding: getResponsiveSpacing(16),
+    borderTopColor: '#E0E0E0',
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(15),
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
   },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: getResponsiveSpacing(8) },
-  totalLabel: { fontFamily: fonts.semiBold, fontSize: getResponsiveFontSize(16), fontWeight: '600', color: '#000' },
-  totalValue: { fontSize: getResponsiveFontSize(18), fontWeight: '600', fontFamily: fonts.bold, color: '#C15E9C' },
-  continueBtn: { backgroundColor: colors.primary, paddingVertical: getResponsiveSpacing(14), borderRadius: getResponsiveSpacing(30), alignItems: 'center' },
+  continueBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: getResponsiveSpacing(14),
+    borderRadius: getResponsiveSpacing(30),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   continueText: {
-    color: '#fff', fontFamily: fonts.semiBold,
-    fontSize: getResponsiveFontSize(15), fontWeight: '500'
+    color: '#fff',
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
   },
 });
