@@ -749,15 +749,15 @@ export default function BookingScreen({
       setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       setErrors("");
     }
-    
-       const payload: any = {
-        
-  labOrderId: 0,
-        testName: serviceName,
-        patientId: userData?.e_id || 0,
+
+    const payload: any = {
+
+      labOrderId: 0,
+      testName: serviceName,
+      patientId: userData?.e_id || 0,
       address: "",
       hNo: "",
-      landMark:  "",
+      landMark: "",
       addressNickname: "",
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
@@ -1650,13 +1650,17 @@ export default function BookingScreen({
               <View style={styles.serviceCard}>
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
-                  <Text style={styles.serviceLocation}>
-                    {isAtHome ? "AT HOME" : "AT Lab"}
-                  </Text>
+                  {(type !== "ambulance") && (
+                    <Text style={styles.serviceLocation}>
+                      {isAtHome ? "AT HOME" : "AT Lab"}
+                    </Text>
+                  )}
                 </View>
+                 {(type !== "ambulance") && (
                 <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
                   Report within {reportTime}
                 </Text>
+                 )}
 
                 <View style={styles.serviceDivider} />
 
@@ -1669,8 +1673,8 @@ export default function BookingScreen({
                         <Text style={styles.centerDistance}>{selectedDiagCenter.distanceKm?.toFixed(2)} km away</Text>
                       </View>
 
-                     
-                  </View>
+
+                    </View>
 
                   </>)}
                   {(type !== "scans") && (<>
@@ -2009,11 +2013,11 @@ export default function BookingScreen({
                   </Text>
                 </View>
               </View>
-                {(type === "scans") && (
+              {(type === "scans") && (
                 <View style={styles.paydiacontainer}>
-                    <Text style={styles.paytext}>Pay at Diagnstic Center</Text>
-                  </View>
-                )}
+                  <Text style={styles.paytext}>Pay at Diagnstic Center</Text>
+                </View>
+              )}
             </View>
 
 
@@ -2327,13 +2331,13 @@ const styles = StyleSheet.create({
   section: {
     marginTop: getResponsiveSpacing(0),
   },
-  paydiacontainer:{
- marginTop: getResponsiveSpacing(2),
+  paydiacontainer: {
+    marginTop: getResponsiveSpacing(2),
   },
-  paytext:{
+  paytext: {
     fontSize: 11,
     color: '#C15E9C',
-     fontFamily: fonts.medium
+    fontFamily: fonts.medium
   },
 
   cancellsection: {

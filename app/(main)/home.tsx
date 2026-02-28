@@ -607,7 +607,7 @@ export default function HomeScreen() {
 
   const renderNotification = useCallback(
     ({ item }: { item: any }) => {
-      const bgColor = item.isRead ? '#F6F6F6' : '#FFF3E0';
+      const bgColor = item.isRead ? '#F6F6F6' : '#F4E6EE';
       return (
         <TouchableOpacity
           style={[styles.notificationItem, { backgroundColor: bgColor }]}
@@ -1119,10 +1119,10 @@ export default function HomeScreen() {
       <Modal
         visible={notificationVisible}
         animationType="slide"
-        transparent={true}
+        presentationStyle="pageSheet"
         onRequestClose={hideNotificationModal}
       >
-        <SafeAreaView style={styles.notificationModalOverlay}>
+        <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
           <TouchableOpacity
             style={styles.notificationModalBackdrop}
             onPress={hideNotificationModal}
@@ -1529,7 +1529,7 @@ const styles = StyleSheet.create({
     // right: 0,
     width: SCREEN_WIDTH,
     height: "100%",
-    backgroundColor: "#ffffffff",
+   // backgroundColor: "#ffffffff",
   },
   notificationModalHeader: {
     flexDirection: "row",
@@ -1556,7 +1556,7 @@ const styles = StyleSheet.create({
   },
   notificationModalBody: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    //backgroundColor: colors.bg_primary,
   },
   emptyNotificationText: {
     fontSize: 16,

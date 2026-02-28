@@ -198,6 +198,7 @@ export const EnvAllergiesApi = {
 export const DiagApi = {
   Diagsticcenter: '/DiagnosticCenters/nearby-centers',
   saveUpdate: '/laborders/save-update-scan-order',
+  GetById: (centerId: string | number) => `/DiagnosticCenters/GetById/${centerId}`,
   //getAll: '/Allergies/GetAllEnvironmentAllergies',
   // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
 } as const;

@@ -1172,7 +1172,9 @@ export default function LabTestsScreen() {
         </View>
        
          
-          <View style={styles.content}>
+         
+             <ScrollView  style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
+               <View style={styles.content}>
               {/* Sample Pickup Date & Time */}
                          <View style={styles.section}>
                            <Text style={styles.sectionTitle}>
@@ -1261,7 +1263,7 @@ export default function LabTestsScreen() {
                   <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
                 ) : (
                   <>
-                    <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={true}>
+                   
                       {diagCenters.map((center: any) => (
                         <LinearGradient
                           key={center.id}
@@ -1348,7 +1350,7 @@ export default function LabTestsScreen() {
                         </LinearGradient>
                       ))}
                       
-                    </ScrollView>
+                   
                     {/* <PrimaryButton
                       title="Next"
                       style={styles.nextButton}
@@ -1367,8 +1369,9 @@ export default function LabTestsScreen() {
                 )}
               </View>
             )}
-           
-          </View>
+            </View>
+            </ScrollView>
+          
            </SafeAreaView>
         </Modal>
          {/* Date Picker */}
@@ -1514,7 +1517,6 @@ const styles = StyleSheet.create({
   },
   modalScrollableContent: {
     flexGrow: 1,
-    maxHeight: 450,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1583,6 +1585,8 @@ const styles = StyleSheet.create({
 
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
+     borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   containercontent: {
     ...commonStyles.containercontent_layout,

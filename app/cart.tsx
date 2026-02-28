@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   },
   continueBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(10),
     borderRadius: getResponsiveSpacing(30),
     alignItems: 'center',
     justifyContent: 'center',

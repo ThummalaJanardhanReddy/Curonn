@@ -470,7 +470,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             animationType="slide"
             transparent={false}
             onRequestClose={onClose}
-        >
+        > <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
             <View style={{ flex: 1, backgroundColor: '#fff' }}>
                 <StatusBar barStyle="dark-content" />
                 {/* Header Section with safe area support for iOS */}
@@ -774,13 +774,13 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             <View style={styles.labelheaderdatabox}>
                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <Text style={styles.labelheader}>{orderDetails.data.serviceName}</Text>
-                                                    <Text style={styles.labelinner}>
+                                                    {/* <Text style={styles.labelinner}>
                                                         AT Home
-                                                    </Text>
+                                                    </Text> */}
                                                 </View>
-                                                <Text style={styles.labelinner}>
+                                                {/* <Text style={styles.labelinner}>
                                                     Report within 10-12 hours
-                                                </Text>
+                                                </Text> */}
                                             </View>
                                             <View style={styles.datesection}>
                                                 <Text style={styles.label}>Booking Date & Time</Text>
@@ -970,7 +970,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                     </SafeAreaView>
                 </Modal>
             </View>
-
+ </SafeAreaView>
             {/* Toast Notification */}
             <Toast
                 visible={showToast}
@@ -1155,13 +1155,13 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         backgroundColor: "#fff",
         borderBottomWidth: 1,
-        borderBottomColor: "#eee",
+    borderBottomColor: '#E0E0E0',
     },
     headerTitle: {
         fontSize: 20,
         color: '#000',
         fontFamily: fonts.bold,
-        fontWeight: '700',
+        fontWeight: '600',
     },
     servicepage: {
         flex: 1,

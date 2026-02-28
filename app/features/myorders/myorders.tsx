@@ -355,7 +355,9 @@ export default function OrdersScreen() {
           style={{
             paddingHorizontal: 0,
             paddingVertical: 5,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
           }}
         >
           <View style={styles.searchContainer}>
