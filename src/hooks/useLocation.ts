@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useLocation = () => {
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
@@ -30,6 +30,14 @@ export const useLocation = () => {
         });
   
         setCurrentLocation(location);
+        
+        // Save lat/lng to AsyncStorage for use in other pages
+        try {
+          await AsyncStorage.setItem('userLocationLatLng', JSON.stringify({ latitude: location.coords.latitude, longitude: location.coords.longitude }));
+          console.log('Saved lat/lng to AsyncStorage:', { latitude: location.coords.latitude, longitude: location.coords.longitude });
+        } catch (storageError) {
+          console.error('Failed to save lat/lng to AsyncStorage:', storageError);
+        }
   
         try {
           const addressResult = await Location.reverseGeocodeAsync({
@@ -126,6 +134,14 @@ export const useLocation = () => {
         ])) as Location.LocationObject;
   
         setCurrentLocation(location);
+        
+        // Save lat/lng to AsyncStorage for use in other pages
+        try {
+          await AsyncStorage.setItem('userLocationLatLng', JSON.stringify({ latitude: location.coords.latitude, longitude: location.coords.longitude }));
+          console.log('Saved lat/lng to AsyncStorage:', { latitude: location.coords.latitude, longitude: location.coords.longitude });
+        } catch (storageError) {
+          console.error('Failed to save lat/lng to AsyncStorage:', storageError);
+        }
   
         // Try to get address from coordinates with timeout
         try {

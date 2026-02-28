@@ -1,5 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
 import {
   Image,
   ScrollView,
@@ -10,7 +11,9 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../assets';
 import CommonHeader from '../shared/components/CommonHeader';
 import PrescriptionUploadModal from '../shared/components/PrescriptionUploadModal';
@@ -29,6 +32,9 @@ import { useUser } from '../shared/context/UserContext';
 import { fontStyles, fonts } from "../shared/styles/fonts";
 import { prescriptionStore } from '../shared/utils/prescriptionStore';
 import type { PrescriptionImage } from '../shared/utils/prescriptionStore';
+import SeacrchIcon from '../../assets/AppIcons/Curonn_icons/search.svg';
+import GalleryIcon from '../../assets/AppIcons/Curonn_icons/gallery.svg';
+import CameraIcon from '../../assets/AppIcons/Curonn_icons/camera.svg';
 
 export default function MedicinesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,26 +117,56 @@ export default function MedicinesScreen() {
     loadGroups();
   }, [patientId]);
 
+  // List of background colors for categories
+  const categoryColors = ['#f4ab9b', '#A4AAD8', '#7DA4DB', '#8E9867', '#BEC8F9', '#D6C57B', '#C9E0DD', '#F0E4DC'];
+  // Helper to convert Google Drive share links to direct image links
+  const getDirectImageUrl = (url: string) => {
+  if (!url) return url;
+
+  const match = url.match(/\/file\/d\/([^/]+)/);
+  if (match && match[1]) {
+    const fileId = match[1];
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+
+  return url;
+};
+
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
-      return drugGroups.map((g: any) => ({
-        id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-        title: g.drugGroup ?? g.name ?? 'Untitled',
-        image: g.imageUrl,
-        backgroundColor: '#F5F5F5',
-      }));
+      const mapped = drugGroups.map((g: any, idx: number) => {
+        const imgUrl = getDirectImageUrl(g.imageUrl);
+        // Debug: log each image URL transformation
+        console.log('Category:', g.drugGroup ?? g.name, 'Original:', g.imageUrl, 'Transformed:', imgUrl);
+        return {
+          id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+          title: g.drugGroup ?? g.name ?? 'Untitled',
+          image: imgUrl,
+          backgroundColor: categoryColors[idx % categoryColors.length],
+        };
+      });
+      return mapped;
     }
+    console.warn('No drug groups available to create categories');
     return [];
   }, [drugGroups]);
 
-  const icons = images.icons as any;
+  // Use imported SVG icons for prescription options
   const prescriptionOptions = [
-    { id: 'gallery', title: 'Gallery', icon: icons.gallery ?? icons.calendar },
-    { id: 'camera', title: 'Take a Photo', icon: icons.camera ?? icons.calendar },
+    { id: 'gallery', title: 'Gallery', icon: GalleryIcon },
+    { id: 'camera', title: 'Take a Photo', icon: CameraIcon },
     // { id: 'curonn', title: 'Curonn Rx', icon: icons.pill ?? icons.calendar },
   ];
 
-  const pickFromGallery = useCallback(async () => {
+  const pickFromGallery = useCallback(async (clearFirst?: boolean | any) => {
+    const shouldClear = clearFirst === true;
+    if (shouldClear) {
+      setSelectedImages([]);
+      setInitialModalNotes('');
+      setInitialModalOption('all');
+      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
+    }
+
     try {
       const ImagePicker = await getImagePicker();
       if (!ImagePicker || typeof ImagePicker.launchImageLibraryAsync !== 'function') {
@@ -142,31 +178,34 @@ export default function MedicinesScreen() {
         Alert.alert('Permissions required', 'Please grant gallery permissions to select images.');
         return;
       }
-      const remaining = 3 - selectedImages.length;
-      // if (remaining <= 0) {
-      //   Alert.alert('Limit reached', 'You can select up to 3 images only.');
-      //   return;
-      // }
+      const currentImages = shouldClear ? [] : selectedImages;
       const res: any = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
       } as any);
       if (res.canceled === true || res.cancelled === true) return;
       const assets: any[] = res.assets ?? [];
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...selectedImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked];
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
       console.error('Gallery pick failed', e);
       Alert.alert('Error', 'Failed to pick images from gallery');
     }
-  }, [selectedImages]);
+  }, [selectedImages, getImagePicker]);
 
-  const takePhoto = useCallback(async () => {
+  const takePhoto = useCallback(async (clearFirst?: boolean | any) => {
+    const shouldClear = clearFirst === true;
+    if (shouldClear) {
+      setSelectedImages([]);
+      setInitialModalNotes('');
+      setInitialModalOption('all');
+      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
+    }
+
     try {
       const ImagePicker = await getImagePicker();
       if (!ImagePicker || typeof ImagePicker.launchCameraAsync !== 'function') {
@@ -178,11 +217,7 @@ export default function MedicinesScreen() {
         Alert.alert('Permissions required', 'Please grant camera permissions to take photos.');
         return;
       }
-      const remaining = 3 - selectedImages.length;
-      if (remaining <= 0) {
-        Alert.alert('Limit reached', 'You can select up to 3 images only.');
-        return;
-      }
+      const currentImages = shouldClear ? [] : selectedImages;
       const res: any = await ImagePicker.launchCameraAsync({
         mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
         quality: 0.8,
@@ -192,14 +227,14 @@ export default function MedicinesScreen() {
       if (!assets.length && res.uri) assets.push({ uri: res.uri });
       if (!assets.length) return;
       const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...selectedImages, ...picked].slice(0, 3);
+      const combined = [...currentImages, ...picked];
       setSelectedImages(combined);
       setConfirmModalVisible(true);
     } catch (e) {
       console.error('Camera failed', e);
       Alert.alert('Error', 'Failed to open camera');
     }
-  }, [selectedImages]);
+  }, [selectedImages, getImagePicker]);
 
   const removeSelectedImage = useCallback((index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
@@ -218,16 +253,19 @@ export default function MedicinesScreen() {
   }, [selectedImages]);
 
   const renderPrescriptionCard = useCallback(
-    ({ item }: { item: { id: string; title: string; icon: any } }) => (
+    ({ item, index }: { item: { id: string; title: string; icon: any }, index: number }) => (
       <TouchableOpacity
-        style={styles.prescriptionCard}
+        style={[
+          styles.prescriptionCard,
+          index === 0 && { borderRightWidth: 1, borderColor: '#BABCBA' },
+        ]}
         onPress={() => {
-          if (item.id === 'gallery') pickFromGallery();
-          else if (item.id === 'camera') takePhoto();
+          if (item.id === 'gallery') pickFromGallery(true);
+          else if (item.id === 'camera') takePhoto(true);
           else setUploadModalVisible(true);
         }}
       >
-        <Image source={item.icon} style={styles.prescriptionIcon} />
+        <item.icon width={32} height={32} style={styles.prescriptionIcon} />
         <Text style={styles.prescriptionText}>{item.title}</Text>
       </TouchableOpacity>
     ),
@@ -251,55 +289,79 @@ export default function MedicinesScreen() {
   ), []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" translucent={false} backgroundColor="#ffffffff" />
-      <CommonHeader
-        currentLocation={currentLocation}
-        onProfilePress={() => console.log('Profile pressed')}
-        onCartPress={() => router.push('/cart' as any)}
-      />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <View style={styles.defaultHeader}>
+        <CommonHeader
+          currentLocation={currentLocation}
+          onProfilePress={() => console.log('Profile pressed')}
+          onCartPress={() => router.push('/cart' as any)}
+        />
+      </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+
+      <LinearGradient
+        colors={[
+          "rgba(255, 255, 255, 1)",
+          "rgba(247, 84, 10, 0.2)",
+        ]}
+        start={{ x: 0.1, y: 0.4 }}
+        end={{ x: 0.1, y: 0.1 }}
+        style={{
+          paddingHorizontal: 20, // ✅ works
+          paddingVertical: 5,
+        }}
+      >
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <Image source={icons.search} style={styles.searchIcon} />
+            <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for medicines"
-              placeholderTextColor="#999"
+              placeholder="Search for Medicines"
+              placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity style={styles.clearButton} onPress={() => setSearchQuery('')}>
-                <Image source={icons.close} style={styles.clearIcon} />
+
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => setSearchQuery("")}
+              >
+                <Image source={images.icons.close} style={styles.clearIcon} />
               </TouchableOpacity>
+
+
             )}
           </View>
         </View>
+      </LinearGradient>
+      <View style={styles.containercontent}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        <View style={styles.prescriptionSection}>
-          <Text style={styles.prescriptionTitle}>Upload a prescription and get a medicine</Text>
-          <View style={styles.prescriptionCardsContainer}>
-            {prescriptionOptions.map(option => (
-              <View key={option.id} style={styles.prescriptionCardWrapper}>
-                {renderPrescriptionCard({ item: option })}
-              </View>
-            ))}
+          <View style={styles.prescriptionSection}>
+            <Text style={styles.prescriptionTitle}>Upload a prescription and get a medicine</Text>
+            <View style={styles.prescriptionCardsContainer}>
+              {prescriptionOptions.map((option, idx) => (
+                <View key={option.id} style={styles.prescriptionCardWrapper}>
+                  {renderPrescriptionCard({ item: option, index: idx })}
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.categoriesSection}>
-          <Text style={styles.categoriesTitle}>Popular Categories</Text>
-          <View style={styles.categoriesGrid}>
-            {categories.map(category => (
-              <View key={category.id} style={styles.categoryCardWrapper}>
-                {renderCategoryCard({ item: category })}
-              </View>
-            ))}
+          <View style={styles.categoriesSection}>
+            <Text style={styles.categoriesTitle}>Popular Categories</Text>
+            <View style={styles.categoriesGrid}>
+              {categories.map(category => (
+                <View key={category.id} style={styles.categoryCardWrapper}>
+                  {renderCategoryCard({ item: category })}
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       <PrescriptionUploadModal
         visible={confirmModalVisible}
@@ -311,37 +373,49 @@ export default function MedicinesScreen() {
         }}
         selectedImages={selectedImages}
         onRemove={removeSelectedImage}
-        onUploadMoreGallery={pickFromGallery}
-        onTakePhoto={takePhoto}
+        onUploadMoreGallery={() => pickFromGallery(false)}
+        onTakePhoto={() => takePhoto(false)}
         onNext={handleConfirmNext}
         initialNotes={initialModalNotes}
         initialOption={initialModalOption}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.container_layout,
+    flex: 1,
     backgroundColor: colors.white,
+  },
+  defaultHeader: {
+    paddingHorizontal: getResponsiveSpacing(10),
+    // Remove extra top padding as SafeAreaView handles it
+    marginTop: Platform.OS === 'android' ? getResponsiveSpacing(10) : 0,
+  },
+  containercontent: {
+    flex: 1,
+    backgroundColor: colors.white,
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: 0,
   },
   content: {
     flex: 1,
   },
   searchContainer: {
-    paddingTop: getResponsiveSpacing(10),
-    paddingBottom: getResponsiveSpacing(15),
+    marginBottom: getResponsiveSpacing(10),
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#fff",
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(4),
+    height: getResponsiveSpacing(40),
+    marginTop: getResponsiveSpacing(5)
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
@@ -350,9 +424,11 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(12),
     paddingVertical: getResponsiveSpacing(4),
-    color: '#333',
+    color: "#000",
+    paddingTop: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
   },
   clearButton: {
     padding: getResponsiveSpacing(4),
@@ -363,50 +439,55 @@ const styles = StyleSheet.create({
     tintColor: '#999',
   },
   prescriptionSection: {
-    paddingBottom: getResponsiveSpacing(30),
+    paddingBottom: getResponsiveSpacing(20),
   },
   prescriptionTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(13),
     color: colors.primary,
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(5),
     textAlign: 'center',
+    fontFamily: fonts.semiBold,
   },
   prescriptionCardsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    backgroundColor: '#F6F1F1',
+    padding: getResponsiveSpacing(0),
+    borderRadius: getResponsiveSpacing(12),
+    borderWidth: 1,
+    borderColor: '#BABCBA',
   },
   prescriptionCardWrapper: {
     flex: 1,
     marginHorizontal: getResponsiveSpacing(4),
   },
   prescriptionCard: {
-    backgroundColor: '#f1f3f1ff',
-    borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: getResponsiveSpacing(100),
+    // minHeight: getResponsiveSpacing(100),
+    // borderRightWidth and borderColor applied conditionally in render
   },
   prescriptionIcon: {
     ...getResponsiveImageSize(32, 32),
     marginBottom: getResponsiveSpacing(8),
-    tintColor: '#333',
+    tintColor: '#000',
   },
   prescriptionText: {
-    fontSize: getResponsiveFontSize(12),
-    color: '#333',
+    fontSize: getResponsiveFontSize(10),
+    color: '#000',
     fontWeight: '500',
     textAlign: 'center',
+    fontFamily: fonts.medium,
   },
   categoriesSection: {
-    paddingBottom: getResponsiveSpacing(30),
+    paddingBottom: getResponsiveSpacing(20),
   },
   categoriesTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(15),
     color: '#4B334E',
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(6),
+    fontFamily: fonts.medium,
   },
   categoriesGrid: {
     flexDirection: 'row',
@@ -421,33 +502,36 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(8),
     minHeight: getResponsiveSpacing(60),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    // elevation: 2,
+    // shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
   },
   categoryContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: getResponsiveSpacing(8),
   },
   categoryTitle: {
     fontSize: getResponsiveFontSize(12),
     fontWeight: '600',
     color: "#000000",
     flex: 1,
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
 
     marginRight: getResponsiveSpacing(8),
   },
   categoryImage: {
-    ...getResponsiveImageSize(60, 60),
-    borderRadius: getResponsiveSpacing(8),
+    // ...getResponsiveImageSize(30, 30),
+    borderRadius: getResponsiveSpacing(4),
+    height: getResponsiveSpacing(40),
+    width: getResponsiveSpacing(40),
   },
   groupsSection: {
     paddingBottom: getResponsiveSpacing(20),

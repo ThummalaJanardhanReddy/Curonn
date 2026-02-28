@@ -1,5 +1,5 @@
 // import { router } from 'expo-router';
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Image,
   Modal,
@@ -9,17 +9,23 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from '@/app/shared/components/Toast';
 
 interface MenstrualRecord {
   id: string;
@@ -35,26 +41,21 @@ interface MenstrualHistoryScreenProps {
 export default function MenstrualHistoryScreen({
   onClose,
 }: MenstrualHistoryScreenProps) {
-  const [records, setRecords] = useState<MenstrualRecord[]>([
-    {
-      id: "1",
-      frequency: "regular",
-      menorrhagia: "no",
-      menopauseAge: "52",
-    },
-    {
-      id: "2",
-      frequency: "irregular",
-      menorrhagia: "yes",
-      menopauseAge: "48",
-    },
-  ]);
+  const [records, setRecords] = useState<MenstrualRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
+  // fetch user id from context
+  const { userData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
     menorrhagia: "no" as "yes" | "no",
     menopauseAge: "",
   });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   const handleBack = () => {
     if (onClose) {
@@ -75,20 +76,114 @@ export default function MenstrualHistoryScreen({
     });
   };
 
-  const handleSaveRecord = () => {
-    const record: MenstrualRecord = {
-      id: Date.now().toString(),
-      frequency: newRecord.frequency,
-      menorrhagia: newRecord.menorrhagia,
-      menopauseAge: newRecord.menopauseAge.trim(),
-    };
-    setRecords((prev) => [...prev, record]);
-    handleCloseModal();
+  const handleSaveRecord = async () => {
+    if (!userData || !userData.e_id) return;
+    setSaveLoading(true);
+    try {
+      const payload = {
+        menstralId: 0,
+        patientId: userData.e_id,
+        frequencyId: newRecord.frequency === "regular" ? 1 : 2,
+        isMenorrhagia: newRecord.menorrhagia === "yes",
+        menorrhagiaAge: parseInt(newRecord.menopauseAge) || 0,
+        createdBy: userData.e_id,
+        appointmentId: 0,
+      };
+
+      console.log("📤 SaveMenstral Request:", JSON.stringify(payload, null, 2));
+      const res: any = await axiosClient.post(ApiRoutes.MenstrualHistory.save, payload);
+      console.log("📥 SaveMenstral Response:", JSON.stringify(res, null, 2));
+
+      setToastMessage({
+        title: "Record Saved Successfully",
+        subtitle: res?.data?.message || "Saved successfully!",
+        type: "success"
+      });
+      setShowToast(true);
+      await fetchHistory();
+      handleCloseModal();
+    } catch (err: any) {
+      console.error("Failed to save menstrual history:", err);
+      // setError("Failed to save menstrual record");
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
-  const handleDeleteRecord = (id: string) => {
-    setRecords((prev) => prev.filter((record) => record.id !== id));
+  const handleDeleteRecord = async (id: string) => {
+    if (!userData || !userData.e_id) return;
+    try {
+      console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
+      const res: any = await axiosClient.delete(
+        ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id)
+      );
+      console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
+      setToastMessage({
+        title: "Record Deleted Successfully",
+        subtitle: "Deleted successfully!",
+        type: "success"
+      });
+      setShowToast(true);
+      await fetchHistory();
+    } catch (err: any) {
+      console.error("Failed to delete menstrual history:", err);
+      // setError("Failed to delete menstrual record");
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    }
   };
+
+  const fetchHistory = useCallback(async () => {
+    let mounted = true;
+    try {
+      if (!userData || !userData.e_id) return;
+      setLoading(true);
+      setError(null);
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        createdBy: userData.e_id,
+        patientId: userData.e_id,
+        fromDate: null,
+        toDate: null,
+        groupName: "",
+      };
+      console.log("📤 GetAllMenstral Request:", JSON.stringify(payload, null, 2));
+      const res: any = await axiosClient.post(ApiRoutes.MenstrualHistory.getAll, payload);
+      console.log("📥 GetAllMenstral Response:", JSON.stringify(res, null, 2));
+
+      const list = res?.items && Array.isArray(res.items) ? res.items : [];
+
+      const mapped: MenstrualRecord[] = list.map((item: any) => ({
+        id: String(item.menstralId),
+        frequency: item.frequencyId === 1 ? "regular" : "irregular",
+        menorrhagia: item.isMenorrhagia ? "yes" : "no",
+        menopauseAge: String(item.menorrhagiaAge || ""),
+      }));
+
+      setRecords(mapped);
+    } catch (err: any) {
+      console.error("Failed to fetch menstrual history:", err);
+      setError("Failed to load menstrual history");
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.e_id]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   const renderRecordCard = useCallback(
     ({ item }: { item: MenstrualRecord }) => (
@@ -114,7 +209,8 @@ export default function MenstrualHistoryScreen({
           style={styles.deleteButton}
           onPress={() => handleDeleteRecord(item.id)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -144,6 +240,15 @@ export default function MenstrualHistoryScreen({
       {/* Records List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.recordsContainer}>
+          {loading ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" />
+            </View>
+          ) : error ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: colors.error }}>{error}</Text>
+            </View>
+          ) : null}
           {records.map((record) => (
             <View key={record.id} style={styles.recordCardWrapper}>
               {renderRecordCard({ item: record })}
@@ -263,15 +368,23 @@ export default function MenstrualHistoryScreen({
             {/* Save Button */}
             <View style={styles.modalFooter}>
               <PrimaryButton
-                title="Save"
+                title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveRecord}
                 style={styles.saveButton}
-                disabled={false}
+                disabled={saveLoading}
               />
             </View>
           </SafeAreaView>
         </View>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -286,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(50),
+    paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
   },
@@ -299,8 +412,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    ...fontStyles.headercontent,
     color: colors.black,
     marginLeft: getResponsiveSpacing(12),
   },
@@ -314,6 +426,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     fontWeight: "600",
     color: "#fff",
+    fontFamily: fonts.semiBold
   },
   divider: {
     height: 1,
@@ -427,9 +540,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: "600",
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -449,6 +563,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
@@ -459,6 +574,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: "#fff",
+    fontFamily: fonts.regular
   },
   notesInput: {
     height: getResponsiveSpacing(80),
@@ -480,6 +596,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -533,6 +650,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
+    fontFamily: fonts.semiBold
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -548,11 +666,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.bold
   },
   recordDetails: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.regular
   },
   radioGroup: {
     flexDirection: "row",
@@ -582,5 +702,12 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular
+  },
+  deleteButtonText: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(14),
+    color: colors.error,
+    fontWeight: "500",
   },
 });

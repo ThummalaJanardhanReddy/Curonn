@@ -1,11 +1,14 @@
 // import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   Image,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  Platform,
+  StatusBar as RNStatusBar,
+    StatusBar,
   TextInput,
   TouchableOpacity,
   View,
@@ -15,16 +18,23 @@ import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
 import { colors } from '../../shared/styles/commonStyles';
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
+import { useUser } from "../../shared/context/UserContext";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing
 } from '../../shared/utils/responsive';
+import axiosClient from '@/src/api/axiosClient';
+import ApiRoutes from '@/src/api/employee/employee';
+import Toast from '@/app/shared/components/Toast';
 
 interface DrugAllergy {
   id: string;
-  drugName: string;
-  reaction: string;
+  drugId: string;
+  allergen: string;
+  reactions: string;
   status: 'active' | 'inactive';
 }
 
@@ -33,66 +43,113 @@ interface DrugAllergiesScreenProps {
 }
 
 export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProps) {
-  const [allergies, setAllergies] = useState<DrugAllergy[]>([
-    {
-      id: '1',
-      drugName: 'Penicillin',
-      reaction: 'Skin rash and hives',
-      status: 'active',
-    },
-    {
-      id: '2',
-      drugName: 'Aspirin',
-      reaction: 'Stomach irritation',
-      status: 'active',
-    },
-  ]);
+  const [allergies, setAllergies] = useState<DrugAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+    const [reactionOptions, setreactionOptions] = useState<any[]>([]);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [newAllergy, setNewAllergy] = useState({
-    drugName: '',
-    reaction: '',
+    allergen: '',
+    reactions: '',
     status: 'active' as 'active' | 'inactive',
   });
   const [showReactionDropdown, setShowReactionDropdown] = useState(false);
+  const [drugSearchOptions, setdrugSearchOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [showToast, setShowToast] = useState(false);
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
 
-  const reactionOptions = [
-    'Skin rash',
-    'Hives',
-    'Itching',
-    'Swelling',
-    'Difficulty breathing',
-    'Nausea and vomiting',
-    'Dizziness',
-    'Anaphylaxis',
-    'Other',
-  ];
+   useFocusEffect(
+      useCallback(() => {
+        if (Platform.OS === 'android') {
+          const timeout = setTimeout(() => {
+            // Use React Native StatusBar API to set background color on Android
+            RNStatusBar.setBackgroundColor("#ffffff", true);
+          }, 400); // Adjust timeout as needed
+          return () => clearTimeout(timeout);
+        }
+      }, [])
+    );
+
+  const fetchallallergies = async () => {
+      try {
+        
+const payload = {
+        patientId: patientId
+      };
+        const response: any = await axiosClient.post(
+          ApiRoutes.DrugAllergies.getAll,payload
+        );
+        console.log('DEBUG: fetch All Drug Allergies response:', response);
+        // If response is an array, use it directly
+        setAllergies(Array.isArray(response) ? response : response.items|| []);
+      } catch (error) {
+        console.error("Failed to fetch relation types", error);
+      }
+    };
 
 
-  const drugSearchOptions = [
-    'Penicillin',
-    'Aspirin',
-    'Ibuprofen',
-    'Acetaminophen',
-    'Morphine',
-    'Codeine',
-    'Sulfonamides',
-    'Cephalexin',
-    'Amoxicillin',
-    'Vancomycin',
-    'Insulin',
-    'Heparin',
-    'Warfarin',
-    'Digoxin',
-    'Furosemide',
-    'Metformin',
-    'Lisinopril',
-    'Atorvastatin',
-    'Omeprazole',
-    'Prednisone',
-  ];
+    React.useEffect(() => {
+    const fetchreactions = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(9)
+        );
+        console.log('DEBUG: fetchreactionss response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filteredreactions = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setreactionOptions(filteredreactions);
+          console.log('DEBUG: New reactionc:', filteredreactions);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filteredreactions = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setreactionOptions(filteredreactions);
+          console.log('DEBUG: New reactionc:', filteredreactions);
+        }
+      } catch (error) {
+        console.error("Failed to fetch reactions", error);
+      }
+    };
+    fetchreactions();
+    fetchallallergies();
+  }, []);
+    React.useEffect(() => {
+    
+    const fetchDrugallergies = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(11)
+        );
+        console.log('DEBUG: fetchDrugAllergies response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filtered = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setdrugSearchOptions(filtered);
+          console.log('DEBUG: New Drug Allergies:', filtered);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filtered = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setdrugSearchOptions(filtered);
+          console.log('DEBUG: Drug Allergies:', filtered);
+        }
+      } catch (error) {
+        console.error("Failed to fetch Drug Alergies", error);
+      }
+    };
+    fetchDrugallergies();
+  }, []);
+
 
   const handleBack = () => {
     if (onClose) {
@@ -120,7 +177,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
     setSearchQuery(query);
     if (query.trim()) {
       const filtered = drugSearchOptions.filter(drug =>
-        drug.toLowerCase().includes(query.toLowerCase())
+        drug.name.toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(filtered);
     } else {
@@ -129,7 +186,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
   };
 
   const handleSelectDrug = (drug: string) => {
-    setNewAllergy({ ...newAllergy, drugName: drug });
+    setNewAllergy({ ...newAllergy, allergen: drug });
     handleCloseSearchModal();
   };
 
@@ -137,60 +194,116 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
     setModalVisible(false);
     setShowReactionDropdown(false);
     setNewAllergy({
-      drugName: '',
-      reaction: '',
+      allergen: '',
+      reactions: '',
       status: 'active',
     });
   };
 
-  const handleSaveAllergy = () => {
-    if (newAllergy.drugName.trim() && newAllergy.reaction.trim()) {
-      const allergy: DrugAllergy = {
-        id: Date.now().toString(),
-        drugName: newAllergy.drugName.trim(),
-        reaction: newAllergy.reaction.trim(),
+ const handleSaveAllergy = () => {
+    if (newAllergy.allergen.trim() && newAllergy.reactions.trim()) {
+      const payload = {
+        drugId: 0,
+        patientId: patientId,
+        allergen: newAllergy.allergen.trim(),
+        reactions: newAllergy.reactions.trim(),
         status: newAllergy.status,
       };
-      setAllergies((prev) => [...prev, allergy]);
+      console.log("Saving allergy with payload:", payload);
+      axiosClient.post(ApiRoutes.DrugAllergies.saveUpdate, payload)
+      .then(async response => {
+        setToastMessage({
+          title: "Drug Allergy Saved Successfully",
+          subtitle: response?.data?.message || "Saved successfully!",
+          type: "success"
+        });
+        
+        setShowToast(true);
+        fetchallallergies();
+      })
+      .catch(error => {
+        let errorMsg = 'Something went wrong';
+        if (error && typeof error === 'object') {
+          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if ('message' in error) {
+            errorMsg = error.message;
+          }
+        }
+        setToastMessage({
+          title: "Save Failed",
+          subtitle: errorMsg,
+          type: "error"
+        });
+        setShowToast(true);
+      });
+      //setAllergies((prev) => [...prev, allergy]);
       handleCloseModal();
     }
   };
 
-  const handleDeleteAllergy = (id: string) => {
-    setAllergies((prev) => prev.filter((allergy) => allergy.id !== id));
+  
+
+   const handleDeleteAllergy = async (id: string) => {
+    try {
+      const response:any = await axiosClient.delete(ApiRoutes.DrugAllergies.getdeleteById(id));
+      console.log("Delete allergy response:", response);
+      // If response is true, show toast and refresh
+      if (response === true || (response && response.data === true)) {
+        setToastMessage({
+          title: "Drug Allergy Deleted Successfully",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
+        fetchallallergies();
+      }
+    } catch (error) {
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+      console.error("Delete allergy error:", error);
+    }
   };
+  
 
   const renderAllergyCard = useCallback(
     ({ item }: { item: DrugAllergy }) => (
       <View style={styles.allergyCard}>
         <View style={styles.allergyContent}>
-          <Text style={styles.drugName}>{item.drugName}</Text>
-          <Text style={styles.reactionText}>{item.reaction}</Text>
+          <Text style={styles.drugName}>{item.allergen}</Text>
           <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: item.status === 'active' ? colors.success : colors.textLight },
-              ]}
-            />
-            <Text style={styles.statusText}>
-              {item.status === 'active' ? 'Active' : 'Inactive'}
-            </Text>
+            
+          <Text style={styles.reactionText}>{item.reactions}</Text>
+           <Text style={styles.divider}>|</Text>
+           <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
+                        {item.status === "active" ? "Active" : "Inactive"}
+                      </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteAllergy(item.id)}
+          onPress={() => handleDeleteAllergy(item.drugId)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+           <Text style={styles.deletetext}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
     []
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
+  return (<>
+    <StatusBar
+              barStyle="dark-content"
+              translucent={false}
+              backgroundColor="#ffffff"
+            />
+    <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+             <View  style={styles.container}>
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -198,6 +311,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
             title=""
             onPress={handleBack}
             style={styles.backButton}
+            color='#000'
           />
           <Text style={styles.headerTitle}>Drug Allergies</Text>
         </View>
@@ -216,11 +330,17 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
       {/* Allergies List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.allergiesContainer}>
-          {allergies.map((allergy) => (
-            <View key={allergy.id} style={styles.allergyCardWrapper}>
-              {renderAllergyCard({ item: allergy })}
-            </View>
-          ))}
+          {allergies.length === 0 ? (
+            <Text style={{ fontFamily:fonts.regular,textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+              No Data Available
+            </Text>
+          ) : (
+            allergies.map((allergy, index) => (
+              <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                {renderAllergyCard({ item: allergy })}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -255,8 +375,8 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
                   style={styles.searchInputContainer}
                   onPress={handleOpenSearchModal}
                 >
-                  <Text style={[styles.searchInputText, newAllergy.drugName ? styles.searchInputTextSelected : styles.searchInputTextPlaceholder]}>
-                    {newAllergy.drugName || 'Search for drug name'}
+                  <Text style={[styles.searchInputText, newAllergy.allergen ? styles.searchInputTextSelected : styles.searchInputTextPlaceholder]}>
+                    {newAllergy.allergen || 'Search for drug name'}
                   </Text>
                   <Text style={styles.searchIcon}>🔍</Text>
                 </TouchableOpacity>
@@ -273,7 +393,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
                     }}
                   >
                     <Text style={styles.dropdownText}>
-                      {newAllergy.reaction || 'Select reaction type'}
+                      {newAllergy.reactions || 'Select reaction type'}
                     </Text>
                     <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>
@@ -289,14 +409,14 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
                       <View style={styles.dropdownOptions}>
                         {reactionOptions.map((option, index) => (
                           <TouchableOpacity
-                            key={index}
+                            key={option.masterDataId || index}
                             style={styles.dropdownOption}
                             onPress={() => {
-                              setNewAllergy({ ...newAllergy, reaction: option });
+                              setNewAllergy({ ...newAllergy, reactions: option.name });
                               setShowReactionDropdown(false);
                             }}
                           >
-                            <Text style={styles.dropdownOptionText}>{option}</Text>
+                            <Text style={styles.dropdownOptionText}>{option.name}</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -306,7 +426,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
               </View>
 
               {/* Status Radio Buttons */}
-              <View style={styles.inputGroup}>
+              <View style={styles.inputGroup1}>
                 <Text style={styles.inputLabel}>Status</Text>
                 <View style={styles.radioGroup}>
                   <TouchableOpacity
@@ -337,7 +457,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
                 title="Save"
                 onPress={handleSaveAllergy}
                 style={styles.saveButton}
-                disabled={!newAllergy.drugName.trim() || !newAllergy.reaction.trim()}
+                disabled={!newAllergy.allergen.trim() || !newAllergy.reactions.trim()}
               />
             </View>
           </SafeAreaView>
@@ -368,7 +488,7 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
               <View style={styles.searchInputContainer}>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search for drug names..."
+                  placeholder="Search"
                   placeholderTextColor="#999"
                   value={searchQuery}
                   onChangeText={handleSearchQueryChange}
@@ -388,11 +508,11 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
               <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
               {searchResults.map((drug, index) => (
                 <TouchableOpacity
-                  key={index}
+                 key={drug.masterDataId || index}
                   style={styles.searchResultItem}
-                  onPress={() => handleSelectDrug(drug)}
+                  onPress={() => handleSelectDrug(drug.name)}
                 >
-                  <Text style={styles.searchResultText}>{drug}</Text>
+                  <Text style={styles.searchResultText}>{drug.name}</Text>
                 </TouchableOpacity>
               ))}
               </ScrollView>
@@ -400,15 +520,23 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
           </SafeAreaView>
         </View>
       </Modal>
+            <Toast
+                    visible={showToast}
+                    title={toastMessage.title}
+                    subtitle={toastMessage.subtitle}
+                    type={toastMessage.type}
+                    onHide={() => setShowToast(false)}
+                    duration={3000}
+                  />
+                  </View>
     </SafeAreaView>
-  );
+ </>);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg_primary,
-  },
+    container: {
+      flex: 1
+    },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,36 +555,29 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
+    ...fontStyles.headercontent,
+        color: "#202427",
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(6),
+    paddingBottom: getResponsiveSpacing(4),
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(6),
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
-    color: '#fff',
+      fontSize: getResponsiveFontSize(14),
+    fontWeight: "600",
+    color: "#fff",
+    fontFamily: fonts.semiBold
   },
   divider: {
-    height: 1,
-    backgroundColor: '#eee',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+color: "#000",
+    marginHorizontal: getResponsiveSpacing(5),
   },
   content: {
     flex: 1,
+    backgroundColor: colors.bg_primary,
   },
   allergiesContainer: {
     padding: getResponsiveSpacing(20),
@@ -465,11 +586,14 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(12),
   },
   allergyCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: "#B4B6B9",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -477,22 +601,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    alignItems: 'flex-start',
   },
   allergyContent: {
     flex: 1,
     marginRight: getResponsiveSpacing(12),
   },
   drugName: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(14),
     color: colors.text,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold
   },
   reactionText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.textSecondary,
-    marginBottom: getResponsiveSpacing(8),
+       fontSize: getResponsiveFontSize(13),
+    color: '#000000',
+    marginTop: getResponsiveSpacing(2),
+    fontFamily: fonts.regular
   },
   statusContainer: {
     flexDirection: 'row',
@@ -507,11 +631,18 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
+    fontFamily: fonts.regular,
+    marginTop: getResponsiveSpacing(2),
   },
   deleteButton: {
     padding: getResponsiveSpacing(8),
   },
+    deletetext: {
+      fontFamily: fonts.regular,
+      fontSize: getResponsiveFontSize(12),
+      color: colors.error,
+    },
   deleteIcon: {
     ...getResponsiveImageSize(18, 18),
     tintColor: colors.error,
@@ -544,9 +675,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+      fontSize: getResponsiveFontSize(15),
+    fontWeight: "600",
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -559,13 +691,18 @@ const styles = StyleSheet.create({
     padding: getResponsiveSpacing(20),
   },
   inputGroup: {
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(10),
   },
+    inputGroup1: {
+    marginTop: getResponsiveSpacing(20),
+  },
+
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
-    marginBottom: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(3),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
@@ -576,27 +713,30 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: '#fff',
+    height: getResponsiveSpacing(48),
   },
   notesInput: {
     height: getResponsiveSpacing(80),
     textAlignVertical: 'top',
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
-    minHeight: getResponsiveSpacing(48),
+    paddingVertical: getResponsiveSpacing(6),
+    backgroundColor: "#fff",
+    height: getResponsiveSpacing(40),
   },
   dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
     flex: 1,
+    paddingTop:3
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -626,39 +766,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderTopLeftRadius: getResponsiveSpacing(8),
     borderTopRightRadius: getResponsiveSpacing(8),
-    maxHeight: getResponsiveSpacing(150),
-    zIndex: 10001,
-    elevation: 20,
+    //maxHeight: getResponsiveSpacing(150),
+    zIndex: 100001,
+    elevation: 10,
     shadowColor: '#000',
     shadowOffset: {
-      width: 0,
-      height: -4,
+      width: 1,
+      height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity:0.2,
     shadowRadius: 6,
     marginBottom: getResponsiveSpacing(2),
     flexDirection: 'column-reverse',
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(8),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     backgroundColor: '#fff',
   },
   dropdownOptionText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
-    width: '100%',
+    borderRadius: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(40),
+    width: "80%",
+    marginLeft: "10%",
+    marginRight: "10%",
   },
   radioGroup: {
     flexDirection: 'row',
@@ -685,13 +828,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   radioLabel: {
-    fontSize: getResponsiveFontSize(14),
+      fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   // Search input styles
   searchInputText: {
-    fontSize: getResponsiveFontSize(14),
+        fontSize: getResponsiveFontSize(13),
     flex: 1,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   searchInputTextSelected: {
     color: colors.text,
@@ -729,9 +876,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   searchModalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.text,
+color: colors.text,
+    ...fontStyles.headercontent,
   },
   searchModalCloseButton: {
     padding: getResponsiveSpacing(4),
@@ -741,23 +887,26 @@ const styles = StyleSheet.create({
     tintColor: colors.textSecondary,
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(6),
-    backgroundColor: '#fff',
-    marginBottom: getResponsiveSpacing(16),
+    paddingVertical: getResponsiveSpacing(0),
+    backgroundColor: "#fff",
+    marginBottom: getResponsiveSpacing(15),
+    height: getResponsiveSpacing(40),
+    justifyContent: "center",
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: colors.text,
-    borderWidth: 0,
+    fontFamily: fonts.regular,
     // outline: 'none',
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
+    paddingBottom: 5,
   },
   searchInputIcon: {
     fontSize: getResponsiveFontSize(16),
@@ -770,10 +919,11 @@ const styles = StyleSheet.create({
   searchResultItem: {
     paddingVertical: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
   },
 });

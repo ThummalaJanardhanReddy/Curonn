@@ -1,5 +1,4 @@
-// import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   Modal,
@@ -9,50 +8,170 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
 import { colors } from '../../shared/styles/commonStyles';
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
-  getResponsiveSpacing
+  getResponsiveSpacing,
 } from '../../shared/utils/responsive';
+import { useUser } from '../../shared/context/UserContext';
+import axiosClient from '@/src/api/axiosClient';
+import ApiRoutes from '@/src/api/employee/employee';
+import Toast from '@/app/shared/components/Toast';
 
 interface MedicalCondition {
-  id: string;
-  condition: string;
-  status: 'active' | 'resolved' | 'chronic';
+  medicalHistoryId: number;
+  historyName: string;
+  status: string;
+  conditionType: string;
 }
 
 interface MedicalHistoryScreenProps {
   onClose?: () => void;
+  showAddModal?: boolean;
 }
 
-export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenProps) {
-  const [conditions, setConditions] = useState<MedicalCondition[]>([
-    {
-      id: '1',
-      condition: 'Hypertension',
-      status: 'active',
-    },
-    {
-      id: '2',
-      condition: 'Diabetes Type 2',
-      status: 'active',
-    },
-  ]);
+export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalHistoryScreenProps) {
+  const { userData } = useUser();
+  const [conditions, setConditions] = useState<MedicalCondition[]>([]);
+  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<string[]>([]);
   const [newCondition, setNewCondition] = useState({
     condition: '',
-    status: 'active' as 'active' | 'resolved' | 'chronic',
+    status: 'active',
   });
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [showToast, setShowToast] = useState(false);
 
+  // Dropdown for master data (categoryId=13)
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
+
+  const fetchMedicalHistory = useCallback(async () => {
+    if (!userData?.e_id) return;
+    setLoading(true);
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        patientId: userData.e_id,
+        fromDate: "1900-01-01",
+        toDate: formattedDate,
+        groupName: "",
+      };
+
+      console.log('📤 Medical History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.getAll, payload);
+      console.log('📥 Medical History Response:', JSON.stringify(response, null, 2));
+
+      if (response?.items && Array.isArray(response.items)) {
+        setConditions(response.items);
+      } else if (response?.isSuccess && Array.isArray(response.data)) {
+        setConditions(response.data);
+      } else if (Array.isArray(response)) {
+        setConditions(response);
+      }
+    } catch (error) {
+      console.error('Fetch medical history error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.e_id]);
+
+  useEffect(() => {
+    fetchMedicalHistory();
+  }, [fetchMedicalHistory]);
+
+  useEffect(() => {
+    if (showAddModal) {
+      const timer = setTimeout(() => {
+        setModalVisible(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showAddModal]);
+
+  // Prefetch master options when Add modal opens
+  useEffect(() => {
+    if (modalVisible) {
+      fetchMasterOptions('');
+    }
+  }, [modalVisible]);
+
+  const fetchMasterOptions = useCallback(async (q: string = '') => {
+    try {
+      setDropdownLoading(true);
+      const url = `${ApiRoutes.Master.getmasterdata(13)}&search=${encodeURIComponent(q || '')}`;
+      console.log('[MedicalHistory] fetching master options URL:', url);
+      const response: any = await axiosClient.get(url);
+
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (Array.isArray(response?.data?.data)) items = response.data.data;
+      else if (Array.isArray(response?.data?.result)) items = response.data.result;
+      else if (Array.isArray(response?.items)) items = response.items;
+      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+
+      const mapped = (items || []).map((it: any) => ({
+        id: it.masterDataId ?? it.id ?? it.value ?? Math.random(),
+        name: it.name ?? it.displayName ?? String(it),
+      }));
+      setMasterOptions(mapped);
+    } catch (err) {
+      console.error('Failed to fetch master options:', err);
+      setMasterOptions([]);
+    } finally {
+      setDropdownLoading(false);
+    }
+  }, []);
+
+  // Merge master options and existing conditions for search modal suggestions
+  const suggestions = React.useMemo(() => {
+    const fromMaster = masterOptions.map((m) => ({ id: m.id, name: m.name, status: undefined as string | undefined }));
+    const fromHistory = (conditions || []).map((c) => ({ id: `h-${c.medicalHistoryId}`, name: c.historyName, status: c.status }));
+    const map = new Map<string, { id: any; name: string; status?: string }>();
+    [...fromMaster, ...fromHistory].forEach((it) => {
+      const key = (it.name || '').toString().toLowerCase().trim();
+      if (!map.has(key)) map.set(key, it);
+      else {
+        const prev = map.get(key)!;
+        if (!prev.status && it.status) map.set(key, it);
+      }
+    });
+    const arr = Array.from(map.values());
+    const q = (searchQuery || '').toLowerCase();
+    if (!q) return arr;
+    return arr.filter((it) => it.name.toLowerCase().includes(q));
+  }, [masterOptions, conditions, searchQuery]);
+
+  const filteredResults = suggestions;
 
   const handleBack = () => {
     if (onClose) {
@@ -65,9 +184,10 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
   };
 
   const handleOpenSearchModal = () => {
+    setSearchQuery('');
     setSearchModalVisible(true);
-    // Simulate API call to fetch medical conditions
-    setSearchResults(['Diabetes', 'Thyroid', 'Hypertension', 'Asthma', 'Arthritis', 'Migraine', 'Depression', 'Anxiety', 'Heart Disease', 'Cancer']);
+    setDropdownVisible(false);
+    fetchMasterOptions('');
   };
 
   const handleCloseSearchModal = () => {
@@ -75,66 +195,138 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
     setSearchQuery('');
   };
 
-  const handleSelectCondition = (condition: string) => {
-    setNewCondition({ ...newCondition, condition });
+  const handleSelectCondition = (item: { id: any; name: string; status?: string }) => {
+    setNewCondition({ ...newCondition, condition: item.name, status: item.status ?? newCondition.status });
     handleCloseSearchModal();
   };
 
-  const filteredResults = searchResults.filter(result =>
-    result.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleCloseModal = () => {
     setModalVisible(false);
+    setDropdownVisible(false);
+    setSearchQuery('');
+    setDropdownSearch('');
     setNewCondition({
       condition: '',
       status: 'active',
     });
   };
 
-  const handleSaveCondition = () => {
-    if (newCondition.condition.trim()) {
-      const condition: MedicalCondition = {
-        id: Date.now().toString(),
-        condition: newCondition.condition.trim(),
+  const handleSaveCondition = async () => {
+    if (!newCondition.condition.trim() || !userData?.e_id) return;
+
+    setSaveLoading(true);
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        medicalHistoryId: 0,
+        patientId: userData.e_id,
+        historyName: newCondition.condition.trim(),
+        reactions: "",
         status: newCondition.status,
+        onsetDate: formattedDate,
+        durationValue: 0,
+        duration: "",
+        notes: "",
+        appointmentId: 0,
+        isActive: true,
+        conditionType: "Chronic",
+        createdBy: userData.e_id,
+        createdOn: formattedDate,
+        totalCount: 0,
       };
-      setConditions((prev) => [...prev, condition]);
-      handleCloseModal();
+
+      console.log('📤 Save Medical History Request:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.save, payload);
+      console.log('📥 Save Medical History Response:', JSON.stringify(response, null, 2));
+
+      if (response) {
+        handleCloseModal();
+        setToastMessage({
+          title: "Condition Saved Successfully",
+          subtitle: response?.data?.message || "Saved successfully!",
+          type: "success"
+        });
+        setShowToast(true);
+        await fetchMedicalHistory();
+      }
+    } catch (error: any) {
+      console.error('Save medical history error:', error);
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
-  const handleDeleteCondition = (id: string) => {
-    setConditions((prev) => prev.filter((condition) => condition.id !== id));
+  const handleDeleteCondition = async (id: number) => {
+    if (!userData?.e_id) return;
+
+    try {
+      console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id}`);
+      const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id));
+      console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
+
+      if (response || response === "OK") {
+        setToastMessage({
+          title: "Condition Deleted Successfully",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
+        await fetchMedicalHistory();
+      }
+    } catch (error: any) {
+      console.error('Delete medical history error:', error);
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return colors.error;
+      case 'resolved': return colors.success;
+      case 'chronic': return colors.warning;
+      default: return colors.textSecondary;
+    }
   };
 
   const renderConditionCard = useCallback(
     ({ item }: { item: MedicalCondition }) => (
       <View style={styles.conditionCard}>
         <View style={styles.conditionContent}>
-          <Text style={styles.conditionName}>{item.condition}</Text>
+          <Text style={styles.conditionName}>{item.historyName}</Text>
           <View style={styles.statusContainer}>
             <View
               style={[
                 styles.statusIndicator,
-                { 
-                  backgroundColor: 
-                    item.status === 'active' ? colors.error :
-                    item.status === 'resolved' ? colors.success : 
-                    colors.warning
-                },
+                { backgroundColor: getStatusColor(item.status) },
               ]}
             />
             <Text style={styles.statusText}>
-              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+              {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A'}
             </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteCondition(item.id)}
+          onPress={() => handleDeleteCondition(item.medicalHistoryId)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -168,15 +360,28 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
       {/* Conditions List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.conditionsContainer}>
-          {conditions.map((condition) => (
-            <View key={condition.id} style={styles.conditionCardWrapper}>
-              {renderConditionCard({ item: condition })}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
-          ))}
+          ) : conditions.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No medical history recorded</Text>
+              <Text style={styles.emptySubtext}>
+                Add conditions to track medical history
+              </Text>
+            </View>
+          ) : (
+            conditions.map((condition) => (
+              <View key={condition.medicalHistoryId} style={styles.conditionCardWrapper}>
+                {renderConditionCard({ item: condition })}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Add Condition Modal */}
+      {/* Add Medical Condition Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -200,18 +405,65 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
             </View>
 
             <View style={styles.modalBody}>
-              {/* Condition Input */}
-              <View style={styles.inputGroup}>
+              {/* Medical Condition Dropdown — same pattern as FamilyHistory relationship dropdown */}
+              <View style={[styles.inputGroup, { zIndex: 2 }]}>
                 <Text style={styles.inputLabel}>Medical Condition</Text>
-                <TouchableOpacity
-                  style={styles.conditionInputContainer}
-                  onPress={handleOpenSearchModal}
-                >
-                  <Text style={[styles.conditionInputText, newCondition.condition ? styles.conditionInputTextFilled : styles.conditionInputTextPlaceholder]}>
-                    {newCondition.condition || 'e.g., Hypertension, Diabetes'}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                </TouchableOpacity>
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => setDropdownVisible(!dropdownVisible)}
+                  >
+                    <Text style={styles.dropdownText}>
+                      {newCondition.condition || 'Select medical condition'}
+                    </Text>
+                    <Text style={styles.dropdownIcon}>▼</Text>
+                  </TouchableOpacity>
+
+                  {/* Dropdown Options */}
+                  {dropdownVisible && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.dropdownBackdrop}
+                        onPress={() => setDropdownVisible(false)}
+                        activeOpacity={1}
+                      />
+                      <View style={styles.dropdownOptions}>
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search condition..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={setDropdownSearch}
+                        />
+                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                          {dropdownLoading ? (
+                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                            filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  setNewCondition({ ...newCondition, condition: item.name });
+                                  setDropdownVisible(false);
+                                  setDropdownSearch('');
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>No options</Text>
+                            </View>
+                          )}
+                        </ScrollView>
+                      </View>
+                    </>
+                  )}
+                </View>
               </View>
 
               {/* Status Radio Buttons */}
@@ -223,10 +475,10 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
                     { value: 'resolved', label: 'Resolved' },
                     { value: 'chronic', label: 'Chronic' },
                   ].map((option) => (
-                  <TouchableOpacity
+                    <TouchableOpacity
                       key={option.value}
                       style={styles.radioOption}
-                      onPress={() => setNewCondition({ ...newCondition, status: option.value as 'active' | 'resolved' | 'chronic' })}
+                      onPress={() => setNewCondition({ ...newCondition, status: option.value })}
                     >
                       <View style={styles.radioButton}>
                         {newCondition.status === option.value && (
@@ -243,10 +495,10 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
             {/* Save Button */}
             <View style={styles.modalFooter}>
               <PrimaryButton
-                title="Save"
+                title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveCondition}
                 style={styles.saveButton}
-                disabled={!newCondition.condition.trim()}
+                disabled={!newCondition.condition.trim() || saveLoading}
               />
             </View>
           </SafeAreaView>
@@ -260,52 +512,75 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
         onRequestClose={handleCloseSearchModal}
       >
         <SafeAreaView style={styles.searchModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Search Medical History</Text>
-              <TouchableOpacity
-                onPress={handleCloseSearchModal}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Search Medical History</Text>
+            <TouchableOpacity
+              onPress={handleCloseSearchModal}
+              style={styles.closeButton}
+            >
+              <Image source={images.icons.close} style={styles.closeIcon} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.searchModalBody}>
+            {/* Search Input */}
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search medical conditions..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                selectionColor="transparent"
+                underlineColorAndroid="transparent"
+              />
+              <Text style={styles.searchInputIcon}>🔍</Text>
             </View>
 
-            <View style={styles.searchModalBody}>
-              {/* Search Input */}
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search medical conditions..."
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                  selectionColor="transparent"
-                  underlineColorAndroid="transparent"
-                />
-                <Text style={styles.searchInputIcon}>🔍</Text>
-              </View>
-
-              {/* Search Results */}
-              <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
-                {filteredResults.map((condition, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.searchResultItem}
-                    onPress={() => handleSelectCondition(condition)}
-                  >
-                    <Text style={styles.searchResultText}>{condition}</Text>
-                  </TouchableOpacity>
-                ))}
-                {filteredResults.length === 0 && searchQuery && (
-                  <View style={styles.noResultsContainer}>
-                    <Text style={styles.noResultsText}>No conditions found</Text>
+            {/* Search Results */}
+            <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
+              {filteredResults.map((item, index) => (
+                <TouchableOpacity
+                  key={String(item.id) + '-' + index}
+                  style={styles.searchResultItem}
+                  onPress={() => handleSelectCondition(item)}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.searchResultText}>{item.name}</Text>
+                    {item.status ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View
+                          style={[
+                            styles.statusIndicator,
+                            { backgroundColor: getStatusColor(item.status) },
+                          ]}
+                        />
+                        <Text style={{ color: '#666', fontSize: getResponsiveFontSize(12) }}>
+                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
-                )}
-              </ScrollView>
+                </TouchableOpacity>
+              ))}
+              {filteredResults.length === 0 && (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>No conditions found</Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </SafeAreaView>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -313,8 +588,7 @@ export default function MedicalHistoryScreen({ onClose }: MedicalHistoryScreenPr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
-    
+    backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -322,39 +596,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
-    // paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    ...fontStyles.headercontent,
     color: colors.black,
   },
   addButton: {
-    paddingHorizontal: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
     backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(22),
+    borderRadius: getResponsiveSpacing(6),
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: '#fff',
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
     backgroundColor: '#eee',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
@@ -363,8 +635,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   conditionsContainer: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(10),
+    padding: getResponsiveSpacing(20),
   },
   conditionCardWrapper: {
     marginBottom: getResponsiveSpacing(12),
@@ -375,10 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -393,6 +661,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -408,14 +677,21 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   deleteButton: {
     padding: getResponsiveSpacing(8),
+  },
+  deleteButtonText: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
+    color: colors.error,
   },
   deleteIcon: {
     ...getResponsiveImageSize(18, 18),
     tintColor: colors.error,
   },
+  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -433,21 +709,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
     maxHeight: '80%',
-    overflow: 'hidden',
+    overflow: 'visible',
+    zIndex: 1000,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(16),
+    padding: getResponsiveSpacing(16),
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -458,26 +735,100 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: getResponsiveSpacing(20),
+    overflow: 'visible',
   },
   inputGroup: {
     marginBottom: getResponsiveSpacing(20),
+    zIndex: 1,
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium,
   },
-  textInput: {
+  // Dropdown styles — matching FamilyHistoryScreen pattern
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 99999,
+    overflow: 'visible',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(10),
+    paddingVertical: getResponsiveSpacing(12),
+    backgroundColor: '#fff',
+    minHeight: getResponsiveSpacing(48),
+  },
+  dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    flex: 1,
+    fontFamily: fonts.regular,
+  },
+  dropdownIcon: {
+    fontSize: getResponsiveFontSize(12),
+    color: colors.textSecondary,
+  },
+  dropdownBackdrop: {
+    position: 'fixed' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99998,
+    backgroundColor: 'transparent',
+  },
+  dropdownOptions: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderBottomWidth: 0,
+    borderTopLeftRadius: getResponsiveSpacing(8),
+    borderTopRightRadius: getResponsiveSpacing(8),
+    maxHeight: getResponsiveSpacing(200),
+    zIndex: 100000,
+    elevation: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    marginBottom: getResponsiveSpacing(2),
+    flexDirection: 'column-reverse',
+  },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    color: colors.text,
+  },
+  dropdownOption: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
     backgroundColor: '#fff',
   },
+  dropdownOptionText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.text,
+    fontWeight: '500',
+    fontFamily: fonts.semiBold,
+  },
+  // Radio button styles
   radioContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -507,34 +858,43 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
-  conditionInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: getResponsiveSpacing(8),
-    paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(10),
-    backgroundColor: '#fff',
-    minHeight: getResponsiveSpacing(48),
+  // Footer
+  modalFooter: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(30),
   },
-  conditionInputText: {
-    fontSize: getResponsiveFontSize(14),
+  saveButton: {
+    borderRadius: getResponsiveSpacing(6),
+    height: getResponsiveSpacing(45),
+    width: '100%',
+  },
+  // Loading/empty states
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: getResponsiveSpacing(40),
   },
-  conditionInputTextFilled: {
-    color: colors.text,
+  emptyContainer: {
+    padding: getResponsiveSpacing(40),
+    alignItems: 'center',
   },
-  conditionInputTextPlaceholder: {
-    color: '#999',
-  },
-  searchIcon: {
+  emptyText: {
     fontSize: getResponsiveFontSize(16),
     color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.regular,
   },
+  emptySubtext: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: fonts.regular,
+  },
+  // Search modal styles
   searchModalContent: {
     backgroundColor: '#fff',
     flex: 1,
@@ -559,6 +919,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
   },
   searchInputIcon: {
     fontSize: getResponsiveFontSize(16),
@@ -579,6 +940,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: '500',
+    fontFamily: fonts.regular,
   },
   noResultsContainer: {
     padding: getResponsiveSpacing(20),
@@ -588,14 +950,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     fontStyle: 'italic',
-  },
-  modalFooter: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(30),
-  },
-  saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
-    width: '100%',
+    fontFamily: fonts.regular,
   },
 });

@@ -1,6 +1,7 @@
 import React, { cloneElement, isValidElement } from 'react';
 import { Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../styles/commonStyles';
 
 interface ProfileScreenModalProps {
   visible: boolean;
@@ -10,7 +11,7 @@ interface ProfileScreenModalProps {
 
 export default function ProfileScreenModal({ visible, onClose, children }: ProfileScreenModalProps) {
   // Clone the child component and pass the onClose function as a prop
-  const childWithProps = isValidElement(children) 
+  const childWithProps = isValidElement(children)
     ? cloneElement(children, { onClose })
     : children;
 
@@ -18,7 +19,7 @@ export default function ProfileScreenModal({ visible, onClose, children }: Profi
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
@@ -31,6 +32,6 @@ export default function ProfileScreenModal({ visible, onClose, children }: Profi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.white,
   },
 });

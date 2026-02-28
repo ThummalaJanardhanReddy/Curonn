@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from "react";
+import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
 import { RadioButton } from 'react-native-paper';
@@ -57,6 +58,48 @@ interface LabOrderDetails {
 
 
 function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsProps) {
+    // PDF preview state
+    const [pdfModalVisible, setPdfModalVisible] = useState(false);
+    const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
+    const [encodedPdfUrl, setEncodedPdfUrl] = useState<string | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [labReports, setLabReports] = useState<any[]>([]);
+
+    // Helper: get reports array from labReports (API)
+    function getReports() {
+        return labReports;
+    }
+    // Helper: get category and icon for report orderType
+    function getCategoryAndIcon(orderType: string) {
+        let category = '';
+        let iconSource = null;
+        switch (orderType) {
+            case "Single Test":
+                category = "Lab Test";
+                iconSource = images.labicon;
+                break;
+            case "Package":
+                category = "Health Check Up";
+                iconSource = images.labicon;
+                break;
+            case "Xray":
+                category = "Xray";
+                iconSource = images.labicon;
+                break;
+            case "Medicine":
+                category = "Medicine";
+                iconSource = images.medicalicon;
+                break;
+            case "Consultation":
+                category = "Consultation";
+                iconSource = images.consultationicon;
+                break;
+            default:
+                category = orderType || '';
+                iconSource = null;
+        }
+        return { category, iconSource };
+    }
     const navigation = useNavigation();
     const [orderDetails, setOrderDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -94,11 +137,19 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const statusColor = statusColors[statusKey] || "#666";
     const statusTextColor = statusTextColors[statusKey] || "#000";
     useEffect(() => {
+        console.log("Order in useEffect1:", order);
         if (!order) return;
+        console.log("Checking statusName and patientId:", order.statusName, order.patientId);
         setLoading(true);
+        // Fetch order details as before
         if (["Package", "Single Test", "Xray"].includes(order.orderType)) {
             fetchLabOrderById(order.masterId).then((data) => {
-                setOrderDetails({ type: "lab", data: data.data || data || {} });
+                // Ensure statusName is always present in data
+                const labData = data.data || data || {};
+                if (!labData.statusName && order.statusName) {
+                    labData.statusName = order.statusName;
+                }
+                setOrderDetails({ type: "lab", data: labData });
                 setLoading(false);
             });
         } else if (order.orderType === "Medicine") {
@@ -106,12 +157,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 setOrderDetails({ type: "medicine", data: data.data || data || {} });
                 // Get patientId from first medicine item (all have same patientId)
                 let medArr = Array.isArray(data) ? data : [];
-                console.log("Fetched patientId from medicine order:", medArr);
                 if (medArr.length > 0 && medArr[0].patientId) {
                     const pid = medArr[0].patientId;
                     setPatientId(pid);
-                    console.log("Fetched patientId from medicine order:", pid);
-                    // Fetch patient profile only after patientId is available
                     axiosClient.get(ApiRoutes.Employee.getById(pid)).then((response) => {
                         const data = response?.data ?? response;
                         setPatientProfile(data);
@@ -130,12 +178,37 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             setOrderDetails(null);
             setLoading(false);
         }
+        // Removed: lab reports fetch logic now handled in a separate effect after orderDetails is set
+        setLabReports([]);
     }, [order]);
+
+    // Fetch lab reports after orderDetails is set and has patientId
+    useEffect(() => {
+        if (
+            orderDetails &&
+            (orderDetails.data.statusName === 'Completed' || orderDetails.data.statusName === 'completed' || orderDetails.statusName === 'Completed') &&
+            orderDetails.data.labOrderId
+        ) {
+            console.log("Fetching lab reports for patientId (orderDetails):", orderDetails.data.labOrderId);
+            axiosClient.get(ApiRoutes.LabOrders.GetReportsByLabOrderId(orderDetails.data.labOrderId)).then((response) => {
+                console.log("Lab Reports Response (orderDetails):", response);
+                if (Array.isArray(response)) {
+                    setLabReports(response);
+                } else if (Array.isArray(response?.data)) {
+                    setLabReports(response.data);
+                } else {
+                    setLabReports([]);
+                }
+            }).catch(() => setLabReports([]));
+        } else {
+            setLabReports([]);
+        }
+    }, [orderDetails]);
 
     async function fetchLabOrderById(labOrderId: number): Promise<any> {
         try {
             const response = await axiosClient.get(ApiRoutes.LabOrders.getLabOrderById(labOrderId));
-             console.log("Lab Order Details:", response);
+            console.log("Lab Order Details:", response);
             return response;
         } catch (error) {
             return { success: false, data: {} };
@@ -378,7 +451,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
                                             </View>
                                             <View style={styles.servicesection}>
-                                                <Text style={styles.label}>Service Status:</Text>
+                                                <Text style={styles.label}>Service Status1:</Text>
                                                 <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                     {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                         ? "In Progress"
@@ -386,6 +459,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 </Text>
                                             </View>
                                         </View>
+
                                         {/* Patient Details */}
                                         <Text style={styles.sectionTitle}>Address Info</Text>
                                         <View style={styles.databox}>
@@ -401,6 +475,58 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 <Text style={styles.value}>{orderDetails.data.hNo || "N/A"}, {orderDetails.data.address || "N/A"}, {orderDetails.data.landMark || "N/A"}</Text>
                                             </View>
                                         </View>
+
+                                        {/* Reports Section (Lab)*/}
+                                        {(() => {
+                                            // Debug logs to help diagnose why Reports section is not displaying
+                                            console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
+                                            console.log('DEBUG: labReports:', labReports);
+                                            if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
+                                                return (
+                                                    <View style={styles.reportspage}>
+                                                        <Text style={styles.sectionTitle}>Reports2</Text>
+                                                        <View style={styles.databoxreports}>
+                                                            {labReports.map((report: any, idx: number) => {
+                                                                const { category, iconSource } = getCategoryAndIcon(report.orderType);
+                                                                return (
+                                                                    <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
+                                                                        {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                        <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                            {report.reportname}
+                                                                        </Text>
+                                                                        {/* <Text>
+                                                                              {report.reportinfo} || 'fdgnfdgbbn'
+                                                                        </Text> */}
+                                                                        <TouchableOpacity
+                                                                            style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                            onPress={() => {
+                                                                                console.log('Preview pressed:', report.url);
+                                                                                setPdfLoading(true);
+                                                                                setSelectedPdfUrl(report.url);
+                                                                                // Encode the file name part of the URL
+                                                                                try {
+                                                                                    const url = report.url;
+                                                                                    const lastSlash = url.lastIndexOf('/');
+                                                                                    const base = url.substring(0, lastSlash + 1);
+                                                                                    const file = url.substring(lastSlash + 1);
+                                                                                    const encodedUrl = base + encodeURIComponent(file);
+                                                                                    setEncodedPdfUrl(encodedUrl);
+                                                                                } catch (e) {
+                                                                                    setEncodedPdfUrl(report.url);
+                                                                                }
+                                                                                setPdfModalVisible(true);
+                                                                            }}
+                                                                        >
+                                                                            <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                );
+                                                            })}
+                                                        </View></View>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </View>
                                 )}
                                 {orderDetails.type === "medicine" && (
@@ -422,6 +548,28 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.value}>No medicines found.</Text>
                                                 )}
                                             </View>
+                                            {/* Reports Section (Medicine) */}
+                                            {(orderDetails.data.statusName === 'Completed' || order.statusName === 'Completed') && getReports().length > 0 && (
+                                                <View style={styles.databox}>
+                                                    <Text style={styles.sectionTitle}>Reports1</Text>
+                                                    {getReports().map((report: any, idx: number) => (
+                                                        <View key={report.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                                            <Text style={{ flex: 1, color: '#333', fontFamily: fonts.regular, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">{report.name || `Report ${idx + 1}`}</Text>
+                                                            <TouchableOpacity
+                                                                style={{ backgroundColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
+                                                                onPress={() => {
+                                                                    console.log('Preview pressed:', report.url);
+                                                                    setSelectedPdfUrl(report.url);
+                                                                    setPdfModalVisible(true);
+
+                                                                }}
+                                                            >
+                                                                <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
+                                                            </TouchableOpacity>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
                                             {/* Payment Section */}
                                             <View style={styles.paymentsection1}>
                                                 <Text style={styles.paidlabel}>Paid Amount</Text>
@@ -462,6 +610,27 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 )}
                                 {orderDetails.type === "consultation" && (
                                     <View style={styles.servicepage}>
+                                        {/* Reports Section (Consultation) */}
+                                        {(orderDetails.data.statusName === 'Completed' || order.statusName === 'Completed') && getReports().length > 0 && (
+                                            <View style={styles.databox}>
+                                                <Text style={styles.sectionTitle}>Reports</Text>
+                                                {getReports().map((report: any, idx: number) => (
+                                                    <View key={report.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                                        <Text style={{ flex: 1, color: '#333', fontFamily: fonts.regular, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">{report.name || `Report ${idx + 1}`}</Text>
+                                                        <TouchableOpacity
+                                                            style={{ backgroundColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
+                                                            onPress={() => {
+                                                                setSelectedPdfUrl(report.url);
+                                                                setPdfModalVisible(true);
+                                                            }}
+                                                        >
+                                                            <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+
                                         <Text style={styles.sectionTitle}>Doctor Details</Text>
                                         <View style={styles.databox}>
                                             <View style={styles.labelheaderdatabox2}>
@@ -523,7 +692,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 </View>
                             </>
                         )}
+
                     </ScrollView>
+
 
                     {/* Footer Buttons */}
                     <View style={styles.footerRow}>
@@ -567,6 +738,37 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 </View>
                 {renderRescheduleModal()}
                 {renderCancelModal()}
+
+                {/* PDF Preview Modal */}
+                <Modal
+                    visible={pdfModalVisible}
+                    animationType="slide"
+                    transparent={false}
+                    onRequestClose={() => setPdfModalVisible(false)}
+                >
+                    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                            <Text style={{ fontSize: 16, fontFamily: fonts.semiBold, color: '#333' }}>PDF Preview</Text>
+                            <TouchableOpacity onPress={() => setPdfModalVisible(false)} style={{ padding: 4 }}>
+                                <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
+                            </TouchableOpacity>
+                        </View>
+                         {pdfLoading && (
+                            <View style={{ padding: 20, alignItems: 'center' }}>
+                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 14 }}>Loading report...</Text>
+                            </View>
+                        )}
+                        {selectedPdfUrl && (
+                        <WebView
+                            source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
+                            style={{ flex: 1 }}
+                            onLoadEnd={() => setPdfLoading(false)}
+                            onError={() => setPdfLoading(true)}
+                        />
+                        )}
+                       
+                    </SafeAreaView>
+                </Modal>
             </SafeAreaView>
 
             {/* Toast Notification */}
@@ -719,6 +921,10 @@ const styles = StyleSheet.create({
         paddingTop: 15,
         backgroundColor: "rgba(245, 244, 249, 1)"
     },
+    reportspage: {
+        flex: 1,
+        backgroundColor: "rgba(245, 244, 249, 1)"
+    },
     sectionTitle:
     {
         fontSize: 13,
@@ -731,6 +937,16 @@ const styles = StyleSheet.create({
         borderColor: "rgba(212,212,212,1)",
         borderRadius: 20,
         backgroundColor: "#fff",
+        marginBottom: 20,
+        marginTop: 5,
+    },
+    databoxreports: {
+        borderWidth: 1,
+        borderColor: "rgba(212,212,212,1)",
+        borderRadius: 20,
+        backgroundColor: "#fff",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         marginBottom: 20,
         marginTop: 5,
     },

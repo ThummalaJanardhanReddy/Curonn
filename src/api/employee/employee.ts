@@ -46,11 +46,11 @@ export const HealthApi = {
   updateHealthData: '/Health/UpdateHealthData',
 } as const;
 
-export const NotificationApi = {
-  getAll: (userId: string | number) => `/Notification/GetAll/${userId}`,
-  markAsRead: (id: string | number) => `/Notification/MarkAsRead/${id}`,
-  delete: (id: string | number) => `/Notification/Delete/${id}`,
-} as const;
+// export const NotificationApi = {
+//   getAll: (userId: string | number) => `/Notification/GetAll/${userId}`,
+//   markAsRead: (id: string | number) => `/Notification/MarkAsRead/${id}`,
+//   delete: (id: string | number) => `/Notification/Delete/${id}`,
+// } as const;
 
 export const CommonApi = {
   getOrgList: '/Common/GetOrganizationList',
@@ -64,7 +64,19 @@ export const FamilyHistoryApi = {
   save: '/Histories/SaveFamily',
   getById: (id: string | number) => `/Histories/GetFamilyById/${id}`,
   getAll: '/Histories/GetAllFamily',
-  delete: (id: string | number) => `/Histories/DeleteFamily/${id}`,
+  delete: (id: string | number, deletedBy: string | number) => `/Histories/DeleteFamily/${id}?deletedBy=${deletedBy}`,
+} as const;
+
+export const MedicalHistoryApi = {
+  getAll: '/Histories/GetAllMedical',
+  save: '/Histories/SaveMedical',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteMedical/${id}?deletedBy=${deletedBy}`,
+} as const;
+
+export const SocialHistoryApi = {
+  getAll: '/Histories/GetAllSocial',
+  save: '/Histories/SaveSocial',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteSocial/${id}?deletedBy=${deletedBy}`,
 } as const;
 
 /* Lab Test APIs */
@@ -108,13 +120,15 @@ export const LabOrdersApi = {
   saveUpdate: '/laborders/save-update',
   RazopayOrder: 'laborders/Razorpayment_Order_details',
   getLabOrderById: (labOrderId: string | number) => `/laborders/GetLabOrderById?labOrderId=${labOrderId}`,
-  cancelOrder: '/laborders/CancelOrder'
+  cancelOrder: '/laborders/CancelOrder',
+  GetLabReporsByPatientId: (patientId: string | number) => `/laborders/GetLabReporsByPatientId?patientId=${patientId}`,
+  GetReportsByLabOrderId: (labOrderId: string | number) => `/laborders/GetReportsByLabOrderId?labOrderId=${labOrderId}`,
 } as const;
 
 export const MedicalOrdersApi = {
   getMedicalOrderById: (medicineOrderId: string | number) => `/medicine-orders/${medicineOrderId}/cart`,
-  
-  getMedicalOrderFullById: (medicineOrderId: string | number) =>`/medicine-orders/medicine-order/get-by-id/${medicineOrderId}`,
+
+  getMedicalOrderFullById: (medicineOrderId: string | number) => `/medicine-orders/medicine-order/get-by-id/${medicineOrderId}`,
   medicineCancel: '/medicine-orders/cancel',
   getDrugGroups: '/medicine-orders/drug-groups',
   getActiveCart: '/medicine-orders/GetActiveCart',
@@ -122,7 +136,7 @@ export const MedicalOrdersApi = {
   updateCartQuantity: (cartId: number | string, quantity: number) =>
     `/medicine-orders/cart/update-quantity?cartId=${cartId}&quantity=${quantity}`,
   updateCartQuantityBase: '/medicine-orders/cart/update-quantity',
-  deleteCartItem: '/medicine-orders/cart/delete',
+  deleteCartItem: '/medicine-orders/delete-cart-item',
   getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
     `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
   saveOrder: '/medicine-orders/save-order',
@@ -145,7 +159,52 @@ export const PrescriptionOrdersApi = {
   savePrescriptionOrder: '/medicine-orders/SavePrescriptionOrderAsync',
 } as const;
 
+export const AmbulanceApi = {
+  saveUpdate: '/AmbulanceBooking/save',
+  getAll: '/Ambulances/GetAll',
+  getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
+} as const;
+
+export const NotificationApi = {
+  GetCount: (userId: string | number, userType: string | number) => `/notifications/count?userId=${userId}&userType=${userType}`,
+  GetList: (userId: string | number, userType: string | number) => `/notifications/list?userId=${userId}&userType=${userType}`,
+  readmark: (id: number) => `/notifications/mark-read/${id}`,
+} as const;
+
+export const FoodAllergiesApi = {
+  saveUpdate: '/Allergies/SaveFoodAllergy',
+  getAll: '/Allergies/GetAllFoodAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteFoodAllergy/${id}`,
+} as const;
+
+export const DrugAllergiesApi = {
+  saveUpdate: '/Allergies/SaveDrugAllergy',
+  getAll: '/Allergies/GetAllDrugAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteDrugAllergy/${id}`,
+} as const;
+
+export const EnvAllergiesApi = {
+  saveUpdate: '/Allergies/SaveEnvironmentAllergy',
+  getAll: '/Allergies/GetAllEnvironmentAllergies',
+  getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
+} as const;
+
+
 // ✅ Unified export for convenience
+export const DiagApi = {
+  Diagsticcenter: '/DiagnosticCenters/nearby-centers',
+  saveUpdate: '/laborders/save-update-scan-order',
+  //getAll: '/Allergies/GetAllEnvironmentAllergies',
+ // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
+} as const;
+
+export const MenstrualHistoryApi = {
+  getAll: '/Histories/GetAllMenstral',
+  save: '/Histories/SaveMenstral',
+  delete: (id: number, deletedBy: number) => `/Histories/DeleteMenstral/${id}?deletedBy=${deletedBy}`,
+} as const;
+ 
+
 export const ApiRoutes = {
   Employee: EmployeeApi,
   Auth: AuthApi,
@@ -164,7 +223,16 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
+  Ambulance: AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
+  FoodAllergies: FoodAllergiesApi,
+  DrugAllergies: DrugAllergiesApi,
+  EnvAllergies: EnvAllergiesApi,
+  MedicalHistory: MedicalHistoryApi,
+  SocialHistory: SocialHistoryApi,
+  DiagCenter: DiagApi,
+  MenstrualHistory: MenstrualHistoryApi,
+
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

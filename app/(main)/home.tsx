@@ -40,7 +40,7 @@ import {
   getResponsiveSpacing,
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
- const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // FAQ data
 const faqs = [
@@ -73,38 +73,88 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
-  
+
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-
- 
-// Fetch all orders for the user
-const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
-  try {
-    let query = `?patientId=${patientId}&statusId=${statusId}`;
-    const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
-    if (response.isSuccess && Array.isArray(response.data)) {
-      return response.data;
-    } else {
+  const [notifications, setNotifications] = useState<any>(null);
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
+  // Fetch all orders for the user
+  const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
+    try {
+      let query = `?patientId=${patientId}&statusId=${statusId}`;
+      const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
+      if (response.isSuccess && Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        return [];
+      }
+    } catch (error) {
       return [];
     }
-  } catch (error) {
-    return [];
-  }
-};
-  const { userData } = useUser();
+  };
+
+useEffect(() => {
+    if (!patientId) return;
+     const fetchNotifications = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log(" Notification  response:", data);
+        setNotifications(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
+    fetchNotifications();
+  }, [patientId]);
+
+
   const [orders, setOrders] = useState<any[]>([]);
+  // Memoized sorted orders: always sort by createdOn descending before slicing
+  const latestOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders
+      .slice()
+      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
+      .slice(0, 3);
+  }, [orders]);
+
+  const remainingOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders
+      .slice()
+      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
+      .slice(3);
+  }, [orders]);
   const [showOrderSlider, setShowOrderSlider] = useState(false);
-    const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
-    const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
-  useEffect(() => {
-    if (userData?.e_id) {
-      fetchAllOrders(userData.e_id, 0).then((data) => {
-        setOrders(data);
-        setShowOrderSlider(Array.isArray(data) && data.length > 0);
-      });
-    }
-  }, [userData?.e_id]);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
+  const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
+  // Always fetch latest orders on mount and when page is focused
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchOrders = async () => {
+        if (userData?.e_id) {
+          const data = await fetchAllOrders(userData.e_id, 0);
+          if (isActive) {
+            // Always sort by createdOn descending
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+              const dateA = new Date(a.createdOn).getTime();
+              const dateB = new Date(b.createdOn).getTime();
+              return dateB - dateA;
+            });
+            setOrders(sorted);
+            setShowOrderSlider(sorted.length > 0);
+          }
+        }
+      };
+      fetchOrders();
+      return () => {
+        isActive = false;
+      };
+    }, [userData?.e_id])
+  );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const handleCloseOrderCard = (index: number) => {
@@ -165,66 +215,127 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     const statusKey = item.statusName === 'Requested' ? 'Requested' : (item.statusName || '');
     const statusBgColor = statusColors[statusKey] || "#666";
     const statusTxtColor = statusTextColors[statusKey] || "#fff";
+
+    // Category and icon mapping
+    let category = '';
+    let iconSource = null;
+    switch (item.orderType) {
+      case "Single Test":
+        category = "Lab Test";
+        iconSource = images.labicon;
+        break;
+      case "Package":
+        category = "Health Check Up";
+        iconSource = images.labicon;
+        break;
+      case "Xray":
+        category = "Xray";
+        iconSource = images.labicon;
+        break;
+      case "Medicine":
+        category = "Medicine";
+        iconSource = images.medicalicon;
+        break;
+      case "Consultation":
+        category = "Consultation";
+        iconSource = images.consultationicon;
+        break;
+      default:
+        category = item.orderType || '';
+        iconSource = null;
+    }
+
     return (
       <View style={{
         width: SCREEN_WIDTH * 0.95,
         marginHorizontal: 10,
         borderRadius: 18,
-        padding: 5,
-        marginBottom: 10,
+        paddingLeft: 15,
+        paddingBottom: 0,
+        paddingTop: 10,
+        marginBottom: 0,
         position: 'relative',
         backgroundColor: 'transparent',
       }}>
         <TouchableOpacity
-          style={{ position: 'absolute', top: 10, right: 20, zIndex: 2 }}
+          style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}
           onPress={() => handleCloseOrderCard(index)}
         >
           <Image source={images.icons.close} style={{ width: 22, height: 22, tintColor: '#694664' }} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 14,  color: '#C15E9D', marginBottom: 2,fontFamily:fonts.bold }}>{item.title}</Text>
 
-        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2,fontFamily:fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Order Created :</Text> {createdOn}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-          <Text style={{ fontSize: 12, color: '#333', fontFamily: fonts.bold }}>Status: </Text>
-          <View style={{
-            backgroundColor: statusBgColor,
-            borderRadius: 15,
-            paddingHorizontal: 8,
-            paddingVertical: 1,
-            marginLeft: 4,
-          }}>
-            <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+        <TouchableOpacity onPress={() => {
+          setSelectedOrderDetails(item);
+          setOrderDetailsModalVisible(true);
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 3 }}>
+            {/* {iconSource && (
+              <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
+            )} */}
+            <Text
+              style={{ fontSize: 11, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {category}
+            </Text></View>
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+            <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent:'space-between', marginBottom: 0 }}>
-        <Text style={{ fontSize: 12, color: '#333', marginBottom: 2, fontFamily: fonts.medium }}><Text style={{fontFamily:fonts.bold}}>Amount:</Text> ₹{item.paymentAmount ?? 'N/A'}</Text>
-        {/* View Button for OrderDetails */}
-        {item.masterId && (
-          <TouchableOpacity
-            style={{
-              marginTop: -8,
-              marginRight: 10,
-              alignSelf: 'flex-end',
-              backgroundColor: '#C15E9D',
+          <Text style={{ fontSize: 12, color: '#333', marginBottom: 3, fontFamily: fonts.medium }}>{createdOn}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0, justifyContent: 'space-between' }}>
+            {/* Status on the left */}
+            <View style={{
+              backgroundColor: statusBgColor,
               borderRadius: 15,
-              paddingHorizontal: 16,
-              paddingVertical: 3,
-              paddingTop: 5,
-            }}
-            onPress={() => {
-              setSelectedOrderDetails(item);
-              setOrderDetailsModalVisible(true);
-            }}
-          >
-            <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 11 }}>View</Text>
-          </TouchableOpacity>
-        )}
-        </View>
+              paddingHorizontal: 8,
+              paddingVertical: 0,
+              marginLeft: 4,
+              flexShrink: 0,
+            }}>
+              <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+            </View>
+            {/* Carousel Dots centered */}
+            {index < 3 && (
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
+                  <View
+                    key={idx}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      marginHorizontal: 2,
+                      backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
+                    }}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </View>
     );
     // State for OrderDetails modal
 
-        
+
+  };
+
+    const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      // Replace with your actual API endpoint for marking as read
+      await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), { notificationId });
+      // Update local state to mark as read
+      setNotifications((prev: any) =>
+        Array.isArray(prev)
+          ? prev.map((n) =>
+              n.notificationId === notificationId ? { ...n, isRead: true } : n
+            )
+          : prev
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read', error);
+    }
   };
 
   useEffect(() => {
@@ -276,6 +387,8 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     // }
   }, [notificationVisible]);
 
+  
+
   // Dummy services data (would come from API)
   const services = useMemo(
     () => [
@@ -320,40 +433,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     []
   );
 
-  // Dummy notifications
-  const notifications = useMemo(
-    () => [
-      {
-        id: 1,
-        title: "Appointment Reminder",
-        message: "Your doctor appointment is scheduled for tomorrow at 2:00 PM",
-        time: "2 hours ago",
-        type: "appointment",
-      },
-      {
-        id: 2,
-        title: "Medicine Delivery",
-        message: "Your medicine order has been delivered successfully",
-        time: "1 day ago",
-        type: "delivery",
-      },
-      {
-        id: 3,
-        title: "Health Tips",
-        message: "New health tips available for your wellness journey",
-        time: "2 days ago",
-        type: "tips",
-      },
-      {
-        id: 4,
-        title: "Lab Results Ready",
-        message: "Your recent lab test results are now available",
-        time: "3 days ago",
-        type: "results",
-      },
-    ],
-    []
-  );
+ 
 
   const showNotificationModal = useCallback(() => {
     setNotificationVisible(true);
@@ -484,34 +564,40 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     []
   );
 
+
+
   const renderNotification = useCallback(
-    ({ item }: { item: any }) => (
-      <View style={styles.notificationItem}>
-        <View style={styles.notificationItemIconContainer}>
-          <Image
-            source={images.notification}
-            style={styles.notificationItemIcon}
-            resizeMode="contain"
-          />
-          {/* <images.notificationIcon
-            width={32}
-            height={32}
-            // fill="#694664"
-          /> */}
-        </View>
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationMessage}>{item.message}</Text>
-          <Text style={styles.notificationTime}>{item.time}</Text>
-        </View>
-      </View>
-    ),
+    ({ item }: { item: any }) => {
+      const bgColor = item.isRead ? '#F6F6F6' : '#FFF3E0';
+      return (
+        <TouchableOpacity
+          style={[styles.notificationItem, { backgroundColor: bgColor }]}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (!item.isRead) markNotificationAsRead(item.notificationId);
+          }}
+        >
+          <View style={styles.notificationItemIconContainer}>
+            <Image
+              source={images.notification}
+              style={styles.notificationItemIcon}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationMessage}>{item.message}</Text>
+            {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
+          </View>
+        </TouchableOpacity>
+      );
+    },
     []
   );
 
   return (
     <View style={styles.container}>
-       <StatusBar
+      <StatusBar
         style="light"
         animated
       />
@@ -534,34 +620,14 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
           // You can add logic here to update the location state
         }}
       />
-     
-     
+
+
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Orders Slider (Bottom) */}
-        {showOrderSlider && (
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 100 }}>
-            <FlatList
-              data={orders}
-              renderItem={({ item, index }) => renderOrderCard({ item, index })}
-              keyExtractor={(item, idx) => item.orderNo + '-' + idx}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
-              style={{ maxHeight: 170 }}
-              onMomentumScrollEnd={e => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
-                setActiveOrderIndex(idx);
-              }}
-              initialScrollIndex={activeOrderIndex}
-              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
-            />
-          </View>
-        )}
+
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
@@ -739,7 +805,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                // onPress={() => router.push("/")}
+                 onPress={() => router.push("/features/ambulance/ambulanceservices")}
                 >
                   Book Now
                 </Button>
@@ -817,78 +883,47 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
         </View>
       </ScrollView>
 
- {/* Order Slider Fixed at Bottom */}
+      {/* Order Slider Fixed at Bottom */}
       {showOrderSlider && orders.length > 0 && (
         <View style={{
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
-          paddingVertical: 8,
-          // marginHorizontal: SCREEN_WIDTH * 0.075,
-          // borderTopLeftRadius: 18,
-          // borderTopRightRadius: 18,
+          paddingVertical: 5,
+          paddingTop:0,
           shadowColor: '#000',
           shadowOpacity: 0.08,
           shadowRadius: 8,
           elevation: 8,
           zIndex: 100,
           backgroundColor: '#fff',
+          borderTopLeftRadius: 15,
+          borderTopRightRadius: 15,
         }}>
           <FlatList
-            data={orders}
-            renderItem={renderOrderCard}
-            keyExtractor={(_, idx) => idx.toString()}
+            data={latestOrders}
+            renderItem={({ item, index }) => renderOrderCard({ item, index })}
+            keyExtractor={(item, idx) => (item.orderNo ? item.orderNo : idx) + '-' + idx}
             horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'flex-start', paddingHorizontal: 10 }}
-            style={{ flexGrow: 0 }}
             pagingEnabled
-            ref={flatListRef => {
-              // Store ref for programmatic scroll
-              if (flatListRef) {
-                (HomeScreen as any).flatListRef = flatListRef;
-              }
-            }}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
+            style={{ flexGrow: 0 }}
             onMomentumScrollEnd={e => {
-              const cardWidth = SCREEN_WIDTH * 0.15 + SCREEN_WIDTH * 0.075 * 2;
-              let index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
-              if (orders.length > 1) {
-                if (index >= orders.length) {
-                  // If scrolled past last, jump to first
-                  index = 0;
-                  if ((HomeScreen as any).flatListRef) {
-                    (HomeScreen as any).flatListRef.scrollToIndex({ index: 0, animated: false });
-                  }
-                } else if (index < 0) {
-                  // If scrolled before first, jump to last
-                  index = orders.length - 1;
-                  if ((HomeScreen as any).flatListRef) {
-                    (HomeScreen as any).flatListRef.scrollToIndex({ index: orders.length - 1, animated: false });
-                  }
-                }
-              }
-              setActiveOrderIndex(index);
+              const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
+              setActiveOrderIndex(idx);
             }}
+            initialScrollIndex={
+              latestOrders.length > 0 && activeOrderIndex < latestOrders.length
+                ? activeOrderIndex
+                : 0
+            }
+            getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
           />
-          {/* Carousel Dots */}
-          <View style={{ width: '80%', alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
-            {orders.map((_, idx) => (
-              <View
-                key={idx}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  marginHorizontal: 4,
-                  backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
-                }}
-              />
-            ))}
-          </View>
         </View>
       )}
-      
+
       {/* Full Article View Modal */}
       <Modal
         visible={!!selectedArticle}
@@ -917,7 +952,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
                   />
                   {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
                   <View style={styles.articalcontentdata}>
-                  <Text style={styles.descriptiondata}>{selectedArticle.descriptionName}</Text>
+                    <Text style={styles.descriptiondata}>{selectedArticle.descriptionName}</Text>
                   </View>
                   {/* If you have more fields, render them here */}
                 </>
@@ -1078,7 +1113,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
               <FlatList
                 data={notifications}
                 renderItem={renderNotification}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.notificationId.toString()}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.notificationList}
                 accessibilityRole="list"
@@ -1090,7 +1125,7 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
       </Modal>
       {/* </SafeAreaView> */}
 
-          <OrderDetails
+      <OrderDetails
         visible={orderDetailsModalVisible}
         order={selectedOrderDetails}
         statusName={selectedOrderDetails?.statusName || ''}
@@ -1100,11 +1135,11 @@ const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
             const ordersData = await fetchAllOrders(userData.e_id, 0);
             setOrders(ordersData);
           }
-        } } />
-    
-  
+        }} />
 
-     
+
+
+
     </View>
   );
 }
@@ -1152,7 +1187,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     // backgroundColor: '#f5f5f5',
-    
+
   },
   transhead: {
     fontSize: 50,
@@ -1164,8 +1199,8 @@ const styles = StyleSheet.create({
   transinner: {
     fontSize: 50, fontWeight: 600, color: colors.white,
     fontFamily: fonts.bold,
-    lineHeight:70
-    
+    lineHeight: 70
+
   },
   curonhealth: {
     fontSize: 16, fontWeight: 400, color: colors.white,
@@ -1191,7 +1226,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    
+
   },
   serviceCardWrapper: {
     // width: '48%',
@@ -1282,7 +1317,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#000000",
     marginBottom: 12,
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   featureButton: {
     alignSelf: "flex-start",
@@ -1325,7 +1360,7 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   ambulanceTitle: {
-     fontSize: 20,
+    fontSize: 20,
     color: "#000000",
     lineHeight: 24,
     marginBottom: 4,
@@ -1464,13 +1499,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 15,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#eee",
   },
   notificationModalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 16,
+    color: "#202427",
+    fontFamily: fonts.semiBold
   },
   notificationCloseButton: {
     padding: 4,
@@ -1489,7 +1524,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   notificationList: {
-    paddingVertical: 10,
+    paddingVertical: 0,
   },
   notificationItem: {
     flexDirection: "row",
@@ -1514,19 +1549,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+      fontSize: 15,
     color: "#000000",
+    flex: 1,
+    fontFamily: fonts.semiBold,
     marginBottom: 4,
   },
   notificationMessage: {
     fontSize: 14,
     color: "#666",
+    fontFamily: fonts.regular,
     lineHeight: 20,
     marginBottom: 4,
   },
   notificationTime: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "400",
+    fontFamily: fonts.regular,
     color: "#999",
   },
   articlesContainer: {

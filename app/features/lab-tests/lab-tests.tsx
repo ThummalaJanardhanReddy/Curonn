@@ -1,6 +1,8 @@
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Modal, TouchableWithoutFeedback } from "react-native";
+import { AntDesign } from '@expo/vector-icons';
+ 
 import { Button } from "react-native-paper";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
@@ -28,7 +30,8 @@ import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
 import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg';
-// import Svg, { Defs, Rect, Stop, RadialGradient } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface TestCategory {
   id: string;
@@ -117,8 +120,11 @@ export default function LabTestsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
   const [bookingVisible, setBookingVisible] = useState(false);
+  const [diagsticVisible, setdiagsticVisible] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
-
+  const [diagCenters, setDiagCenters] = useState([]);
+  const [diagLoading, setDiagLoading] = useState(false);
+   const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<number | null>(null);
   // Lab Test Groups
   const [subTestTypes, setSubTestTypes] = useState<SubTestType[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -593,6 +599,57 @@ export default function LabTestsScreen() {
     }
   };
 
+  const handleBookScan = (id: string) => {
+    const testItem = getDisplayedData().find((item) => item.id === id);
+    console.log("Selected test for booking:", testItem);
+    if (testItem) {
+      setSelectedTest(testItem);
+      setdiagsticVisible(true);
+      // Fetch diagnostic centers after opening modal
+      fetchDiagCenters();
+    }
+  };
+
+  const fetchDiagCenters = async () => {
+    setDiagLoading(true);
+    try {
+      const latLngStr = await AsyncStorage.getItem('userLocationLatLng');
+      let latitude = 0;
+      let longitude = 0;
+      if (latLngStr) {
+        const { latitude: lat, longitude: lng } = JSON.parse(latLngStr);
+        latitude = Number(lat);
+        longitude = Number(lng);
+      }
+      // Call DiagCenter API
+      const payload = {
+         latitude,
+        longitude,
+        radiusKm: 10,
+      }
+      const response: any = await axiosClient.post(
+        ApiRoutes.DiagCenter.Diagsticcenter,
+        payload
+      );
+      console.log('DiagCenter Responce:', response);
+      // Handle both top-level and nested array in response
+      // The API returns the array directly as the response body
+      if (Array.isArray(response)) {
+        setDiagCenters(response);
+        console.log('DiagCenter API response (array at root):', response);
+      } else {
+        setDiagCenters([]);
+        console.log('DiagCenter API response: not an array', response);
+      }
+      console.log('DiagCenter API response:', response);
+    } catch (error) {
+      console.error('Error fetching diagnostic centers:', error);
+      setDiagCenters([]);
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
   // const handleViewMoreTests = () => {
   //   // Navigate to full test list
   //   console.log("View more tests");
@@ -758,6 +815,7 @@ export default function LabTestsScreen() {
 
 
               </View>
+              { selectedCategory !== 'scans' &&(
               <View style={styles.healthprice}>
                 <Text style={styles.priceRow}>
                   <Text style={styles.originalPrice}>
@@ -769,6 +827,7 @@ export default function LabTestsScreen() {
                   </Text>
                 </Text>
               </View>
+              )}
             </View>
 
             <View style={styles.testActioncard}>
@@ -793,12 +852,18 @@ export default function LabTestsScreen() {
               >
                 View Details
               </Button>
-              <PrimaryButton
+            { selectedCategory !== 'scans' ?(  <PrimaryButton
                 title="Book Now"
                 onPress={() => handleBookTest(item.id)}
                 style={styles.bookButton}
               />
-
+            ):
+            (<PrimaryButton
+                title="Book Now"
+                onPress={() => handleBookScan(item.id)}
+                style={styles.bookButton}
+              />)
+            }
             </View>
           </View>
         </>)
@@ -1017,14 +1082,171 @@ export default function LabTestsScreen() {
               selectedTest.xrayMasterId
             }
             type={selectedCategory as ServiceType}
+            selectedDiagCenter={selectedTest.selectedDiagCenter}
           />
         )}
+
+        {/* Diagnostic Center Modal */}
+        <Modal
+          visible={diagsticVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setdiagsticVisible(false)}
+        >
+          
+          <TouchableWithoutFeedback onPress={() => setdiagsticVisible(false)}>
+            <View style={styles.modalOverlay} />
+          </TouchableWithoutFeedback>
+         
+          <View style={styles.bottomSheet}>
+             <SafeAreaView style={{ flex: 1}} >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Diagnostic Center</Text>
+              <TouchableOpacity onPress={() => setdiagsticVisible(false)}>
+                <AntDesign name="close" size={24} color="#694664" />
+              </TouchableOpacity>
+            </View>
+            {diagLoading ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <ActivityIndicator size="large" color="#694664" />
+              </View>
+            ) : (
+              <View style={styles.modalScrollableContent}>
+                {diagCenters.length === 0 ? (
+                  <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
+                ) : (
+                  <>
+                    <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={true}>
+                      {diagCenters.map((center: any) => (
+                        <TouchableOpacity
+                          key={center.id}
+                          style={styles.centerRow}
+                          onPress={() => setSelectedDiagCenterId(center.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.radioOuter}>
+                            {selectedDiagCenterId === center.id && <View style={styles.radioInner} />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.centerName}>{center.centerName}</Text>
+                            <Text style={styles.centerAddress}>{center.address}</Text>
+                            <Text style={styles.centerDistance}>{center.distanceKm.toFixed(2)} km away</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    <PrimaryButton
+                      title="Next"
+                      style={styles.nextButton}
+                      disabled={selectedDiagCenterId === null}
+                      onPress={() => {
+                        const selectedCenter = diagCenters.find((c: any) => c.id === selectedDiagCenterId);
+                        if (selectedCenter && selectedTest) {
+                          // Pass selectedCenter to booking logic or next step
+                          console.log('Selected Diagnostic Center:', selectedCenter);
+                          setdiagsticVisible(false);
+                          // Example: Pass selectedCenter to BookingScreen via selectedTest
+                          setSelectedTest({ ...selectedTest, selectedDiagCenter: selectedCenter });
+                          setBookingVisible(true);
+                        }
+                      }}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+            </SafeAreaView>
+          </View>
+        </Modal>
 
       </View>
     </>);
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 10,
+    minHeight: 200,
+    maxHeight: 550,
+  },
+  modalScrollableContent: {
+    flexGrow: 1,
+    maxHeight: 450,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    color: '#000',
+    fontFamily: fonts.semiBold,
+  },
+  centerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+    gap: 12,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#694664',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+    marginRight: 8,
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#694664',
+  },
+  centerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#251729',
+    fontFamily: fonts.semiBold,
+  },
+  centerAddress: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 2,
+    fontFamily: fonts.regular,
+  },
+  centerDistance: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+    fontFamily: fonts.regular,
+  },
+  nextButton: {
+    marginTop: 20,
+    width: '100%',
+  },
   container: {
     ...commonStyles.containercontent_layout,
     backgroundColor: colors.white, // colors.bg_secondary,

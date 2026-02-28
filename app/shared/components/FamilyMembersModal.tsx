@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#202427',
      fontFamily: fonts.semiBold

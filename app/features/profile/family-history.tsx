@@ -3,6 +3,7 @@ import axiosClient from "@/src/api/axiosClient";
 import { ApiRoutes } from "@/src/api/employee/employee";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -22,11 +23,14 @@ import {
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
+import { useUser } from "../../shared/context/UserContext";
+import Toast from '@/app/shared/components/Toast';
 
 interface FamilyMember {
-  id: string;
+  familyHistoryId: number;
   relationship: string;
-  condition: string;
+  historyName: string;
+  status: string;
 }
 
 interface FamilyHistoryScreenProps {
@@ -50,20 +54,35 @@ interface FamilyMemberData {
 export default function FamilyHistoryScreen({
   onClose,
 }: FamilyHistoryScreenProps) {
+  const { userData } = useUser();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<string[]>([]);
+  // Master data options for conditions (categoryId=13)
+  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
   const [newMember, setNewMember] = useState({
     relationship: "",
     condition: "",
   });
   const [showRelationshipDropdown, setShowRelationshipDropdown] =
     useState(false);
+  const [showConditionDropdown, setShowConditionDropdown] = useState(false);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   const relationshipOptions = [
     "Father",
@@ -88,29 +107,40 @@ export default function FamilyHistoryScreen({
 
   const handleAddMember = () => {
     setModalVisible(true);
+    fetchMasterOptions('');
   };
 
   const handleOpenSearchModal = () => {
+    console.log('[FamilyHistory] Opening search modal - prefetch master options');
     setSearchModalVisible(true);
-    // Simulate API call to fetch medical conditions
-    setSearchResults([
-      "Diabetes",
-      "Thyroid",
-      "Hypertension",
-      "Asthma",
-      "Arthritis",
-      "Migraine",
-      "Depression",
-      "Anxiety",
-      "Heart Disease",
-      "Cancer",
-      "Stroke",
-      "Kidney Disease",
-      "Liver Disease",
-      "Lung Disease",
-      "Alzheimer's",
-      "Parkinson's",
-    ]);
+    fetchMasterOptions('');
+  };
+
+  const fetchMasterOptions = async (q: string = '') => {
+    try {
+      setDropdownLoading(true);
+      console.log('[FamilyHistory] fetchMasterOptions q=', q);
+      const url = `${ApiRoutes.Master.getmasterdata(13)}&search=${encodeURIComponent(q || '')}`;
+      const response: any = await axiosClient.get(url);
+      console.log('[FamilyHistory] master options response:', response);
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (Array.isArray(response?.items)) items = response.items;
+      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+
+      const mapped = (items || []).map((it: any) => ({ id: it.masterDataId ?? it.id ?? it.value ?? Math.random(), name: it.name ?? it.displayName ?? String(it) }));
+      setMasterOptions(mapped);
+      // Initialize searchResults as names for immediate display
+      setSearchResults(mapped.map(m => m.name));
+    } catch (err) {
+      console.error('Failed to fetch master options for family history:', err);
+      // fallback to empty
+      setMasterOptions([]);
+      setSearchResults([]);
+    } finally {
+      setDropdownLoading(false);
+    }
   };
 
   const handleCloseSearchModal = () => {
@@ -118,22 +148,41 @@ export default function FamilyHistoryScreen({
     setSearchQuery("");
   };
 
-  const handleSelectCondition = (condition: string) => {
-    setNewMember({ ...newMember, condition });
+  const handleSelectCondition = (item: { id: any; name: string; status?: string }) => {
+    setNewMember({ ...newMember, condition: item.name });
     handleCloseSearchModal();
   };
 
-  const filteredResults = searchResults.filter((result) =>
-    result.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Merge master options and existing family members to include status when applicable
+  const suggestions = React.useMemo(() => {
+    const fromMaster = masterOptions.map(m => ({ id: m.id, name: m.name, status: undefined as string | undefined }));
+    const fromFamily = (familyMembers || []).map(fm => ({ id: `f-${fm.familyHistoryId}`, name: fm.historyName, status: fm.status }));
+    const map = new Map<string, { id: any; name: string; status?: string }>();
+    [...fromMaster, ...fromFamily].forEach(it => {
+      const key = (it.name || '').toLowerCase().trim();
+      if (!map.has(key)) map.set(key, it);
+      else {
+        const prev = map.get(key)!;
+        if (!prev.status && it.status) map.set(key, it);
+      }
+    });
+    const arr = Array.from(map.values());
+    const q = (searchQuery || '').toLowerCase();
+    if (!q) return arr;
+    return arr.filter(it => it.name.toLowerCase().includes(q));
+  }, [masterOptions, familyMembers, searchQuery]);
+
+  const filteredResults = suggestions;
 
   const handleCloseModal = () => {
     setModalVisible(false);
     setShowRelationshipDropdown(false);
+    setShowConditionDropdown(false);
     setNewMember({
       relationship: "",
       condition: "",
     });
+    setDropdownSearch('');
   };
 
   const handleSaveMember = async () => {
@@ -157,17 +206,42 @@ export default function FamilyHistoryScreen({
 
   // API Functions
   const fetchAllFamilyMembers = async () => {
+    if (!userData?.e_id) return;
     try {
       setIsLoading(true);
       setError("");
-      const response = (await axiosClient.get(
-        ApiRoutes.FamilyHistory.getAll
-      )) as FamilyHistoryResponse;
 
-      if (response?.isSuccess && response?.data) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        patientId: userData.e_id,
+        fromDate: "1900-01-01",
+        toDate: formattedDate,
+        groupName: ""
+      };
+
+      console.log('📤 Family History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.FamilyHistory.getAll,
+        payload
+      );
+      console.log('📥 Family History Response:', JSON.stringify(response, null, 2));
+
+      if (response?.items && Array.isArray(response.items)) {
+        setFamilyMembers(response.items);
+      } else if (response?.isSuccess && Array.isArray(response.data)) {
         setFamilyMembers(response.data);
+      } else if (Array.isArray(response)) {
+        setFamilyMembers(response);
       } else {
-        setError(response?.message || "Failed to fetch family history");
+        setError("Failed to fetch family history");
       }
     } catch (error: any) {
       console.error("Error fetching family members:", error);
@@ -178,24 +252,70 @@ export default function FamilyHistoryScreen({
   };
 
   const saveFamilyMember = async (memberData: FamilyMemberData) => {
+    if (!userData?.e_id) return;
     try {
       setIsSaving(true);
       setError("");
-      const response = (await axiosClient.post(
-        ApiRoutes.FamilyHistory.save,
-        memberData
-      )) as FamilyHistoryResponse;
 
-      if (response?.isSuccess) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const payload = {
+        familyHistoryId: 0,
+        patientId: userData.e_id,
+        historyName: memberData.condition,
+        relationId: 0,
+        onsetDate: formattedDate,
+        appointmentId: 0,
+        isActive: true,
+        createdOn: formattedDate,
+        createdBy: userData.e_id,
+        deletedOn: formattedDate,
+        deletedBy: 0,
+        modifiedOn: formattedDate,
+        modifiedBy: 0,
+        relationName: memberData.relationship,
+        totalCount: 0
+      };
+
+      console.log('📤 Save Family History Request:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.FamilyHistory.save,
+        payload
+      );
+      console.log('📥 Save Family History Response:', JSON.stringify(response, null, 2));
+
+      if (response) {
+        setToastMessage({
+          title: "Family Member Saved",
+          subtitle: response?.message || "Saved successfully!",
+          type: "success"
+        });
+        setShowToast(true);
         // Refresh the list after successful save
         await fetchAllFamilyMembers();
         return true;
       } else {
-        setError(response?.message || "Failed to save family member");
+        setToastMessage({
+          title: "Save Failed",
+          subtitle: "Failed to save family member",
+          type: "error"
+        });
+        setShowToast(true);
+        setError("Failed to save family member");
         return false;
       }
     } catch (error: any) {
       console.error("Error saving family member:", error);
+      setToastMessage({
+        title: "Save Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
       setError("Network error. Please try again.");
       return false;
     } finally {
@@ -204,22 +324,43 @@ export default function FamilyHistoryScreen({
   };
 
   const deleteFamilyMember = async (id: string) => {
+    if (!userData?.e_id) return;
     try {
       setError("");
-      const response = (await axiosClient.delete(
-        ApiRoutes.FamilyHistory.delete(id)
-      )) as FamilyHistoryResponse;
+      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${userData.e_id}`);
+      const response: any = await axiosClient.delete(
+        ApiRoutes.FamilyHistory.delete(id, userData.e_id)
+      );
+      console.log('📥 Delete Family History Response:', JSON.stringify(response, null, 2));
 
-      if (response?.isSuccess) {
-        // Remove from local state
-        setFamilyMembers((prev) => prev.filter((member) => member.id !== id));
+      if (response || response === "OK") {
+        setToastMessage({
+          title: "Family Member Deleted",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
+        // Refresh the list after successful delete
+        await fetchAllFamilyMembers();
         return true;
       } else {
-        setError(response?.message || "Failed to delete family member");
+        setToastMessage({
+          title: "Delete Failed",
+          subtitle: "Failed to delete family member",
+          type: "error"
+        });
+        setShowToast(true);
+        setError("Failed to delete family member");
         return false;
       }
     } catch (error: any) {
       console.error("Error deleting family member:", error);
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
       setError("Network error. Please try again.");
       return false;
     }
@@ -235,13 +376,14 @@ export default function FamilyHistoryScreen({
       <View style={styles.memberCard}>
         <View style={styles.memberContent}>
           <Text style={styles.relationship}>{item.relationship}</Text>
-          <Text style={styles.condition}>{item.condition}</Text>
+          <Text style={styles.condition}>{item.historyName}</Text>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteMember(item.id)}
+          onPress={() => handleDeleteMember(String(item.familyHistoryId))}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -301,7 +443,7 @@ export default function FamilyHistoryScreen({
             </View>
           ) : (
             familyMembers.map((member) => (
-              <View key={member.id} style={styles.memberCardWrapper}>
+              <View key={member.familyHistoryId} style={styles.memberCardWrapper}>
                 {renderMemberCard({ item: member })}
               </View>
             ))
@@ -341,6 +483,7 @@ export default function FamilyHistoryScreen({
                     style={styles.dropdownButton}
                     onPress={() => {
                       setShowRelationshipDropdown(!showRelationshipDropdown);
+                      setShowConditionDropdown(false);
                     }}
                   >
                     <Text style={styles.dropdownText}>
@@ -381,26 +524,73 @@ export default function FamilyHistoryScreen({
                 </View>
               </View>
 
-              {/* Condition Input */}
+              {/* Medical Condition Dropdown */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Medical Condition</Text>
-                <TouchableOpacity
-                  style={styles.conditionInputContainer}
-                  onPress={handleOpenSearchModal}
-                >
-                  <Text
-                    style={[
-                      styles.conditionInputText,
-                      newMember.condition
-                        ? styles.conditionInputTextFilled
-                        : styles.conditionInputTextPlaceholder,
-                    ]}
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setShowConditionDropdown(!showConditionDropdown);
+                      setShowRelationshipDropdown(false);
+                    }}
                   >
-                    {newMember.condition ||
-                      "e.g., Heart Disease, Diabetes, Cancer"}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                </TouchableOpacity>
+                    <Text style={styles.dropdownText}>
+                      {newMember.condition || "Select medical condition"}
+                    </Text>
+                    <Text style={styles.dropdownIcon}>▼</Text>
+                  </TouchableOpacity>
+
+                  {/* Dropdown Options */}
+                  {showConditionDropdown && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.dropdownBackdrop}
+                        onPress={() => setShowConditionDropdown(false)}
+                        activeOpacity={1}
+                      />
+                      <View style={styles.dropdownOptions}>
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search condition..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={setDropdownSearch}
+                        />
+                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                          {dropdownLoading ? (
+                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                            filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  setNewMember({
+                                    ...newMember,
+                                    condition: item.name,
+                                  });
+                                  setShowConditionDropdown(false);
+                                  setDropdownSearch('');
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>
+                                  {item.name}
+                                </Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>No options</Text>
+                            </View>
+                          )}
+                        </ScrollView>
+                      </View>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -459,13 +649,21 @@ export default function FamilyHistoryScreen({
               style={styles.searchResultsContainer}
               showsVerticalScrollIndicator={false}
             >
-              {filteredResults.map((condition, index) => (
+              {filteredResults.map((item, index) => (
                 <TouchableOpacity
-                  key={index}
+                  key={String(item.id) + '-' + index}
                   style={styles.searchResultItem}
-                  onPress={() => handleSelectCondition(condition)}
+                  onPress={() => handleSelectCondition(item)}
                 >
-                  <Text style={styles.searchResultText}>{condition}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.searchResultText}>{item.name}</Text>
+                    {item.status ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={[styles.statusIndicator, { width: 10, height: 10, borderRadius: 5, marginRight: 8, backgroundColor: item.status.toLowerCase() === 'active' ? colors.error : item.status.toLowerCase() === 'resolved' ? colors.success : colors.warning }]} />
+                        <Text style={{ color: '#666', fontSize: getResponsiveFontSize(12) }}>{item.status}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </TouchableOpacity>
               ))}
               {filteredResults.length === 0 && searchQuery && (
@@ -477,6 +675,14 @@ export default function FamilyHistoryScreen({
           </View>
         </SafeAreaView>
       </Modal>
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -699,6 +905,14 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(2),
     flexDirection: "column-reverse",
   },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    color: colors.text,
+  },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
@@ -850,5 +1064,16 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  statusIndicator: {
+    width: getResponsiveSpacing(10),
+    height: getResponsiveSpacing(10),
+    borderRadius: getResponsiveSpacing(5),
+    marginRight: getResponsiveSpacing(6),
+  },
+  deleteButtonText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.error,
+    fontWeight: "500",
   },
 });

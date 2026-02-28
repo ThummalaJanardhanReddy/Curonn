@@ -16,8 +16,12 @@ import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fonts } from '../../shared/styles/fonts';
+import { useCart } from '../context/CartContext';
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
+import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 interface CommonHeaderProps {
   title?: string;
@@ -47,6 +51,8 @@ export default function CommonHeader({
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
+  const [count, setCount] = useState(0);
+  
   const [selectedLocation, setSelectedLocation] = useState(currentLocation);
   const [profileForm, setProfileForm] = useState({
     gender: "",
@@ -54,6 +60,7 @@ export default function CommonHeader({
   });
   const { getCurrentAddress, address } = useLocation();
   const { userData } = useUser();
+  const { cartCount } = useCart();
   const patientId = userData?.e_id;
 
   React.useEffect(() => {
@@ -73,6 +80,18 @@ export default function CommonHeader({
       }
     };
     fetchProfile();
+
+     const fetchNotiCounts = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log("[CommonHeader] Notification count response:", response);
+        setCount(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
+    fetchNotiCounts();
   }, [patientId]);
 
   useEffect(() => {
@@ -88,6 +107,19 @@ export default function CommonHeader({
     }
     fetchAddress();
   }, []);
+      const [latLng, setLatLng] = useState<{ latitude: string; longitude: string } | null>(null);
+
+      // Fetch lat/lng from AsyncStorage
+      useEffect(() => {
+        const getLatLng = async () => {
+          const stored = await AsyncStorage.getItem('userLocationLatLng');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setLatLng(parsed);
+          }
+        };
+        getLatLng();
+      }, [selectedLocation]);
 
   useEffect(() => {
     setSelectedLocation(address);
@@ -111,7 +143,7 @@ export default function CommonHeader({
 
   const handleCartPress = () => {
     console.log('Cart button pressed');
-    setCartVisible(true);
+    // setCartVisible(true);
     if (onCartPress) {
       onCartPress();
     }
@@ -177,6 +209,11 @@ export default function CommonHeader({
             onPress={handleNotificationPress}
           >
             <images.notification_bell_svg style={styles.notificationIcon} />
+             {count > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{count}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -201,6 +238,12 @@ export default function CommonHeader({
       </>
     );
   }
+                    {/* Show lat/lng below address */}
+                    {latLng && (
+                      <Text style={{ color: 'white', fontSize: 12 }}>
+                        Lat: {latLng.latitude} | Lng: {latLng.longitude}
+                      </Text>
+                    )}
 
   // Default style for other pages (like lab-tests)
   return (
@@ -208,21 +251,21 @@ export default function CommonHeader({
       <View style={styles.defaultHeader}>
         <View style={styles.headerLeft}>
           {showProfile && (
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={handleProfilePress}
-          >
-            {profileForm?.image ? (
-              <Image
-                source={{ uri: profileForm.image }}
-                style={styles.profileIcon}
-              />
-            ) : profileForm?.gender === 'Female' ? (
-              <WomenIcon width={40} height={40} style={styles.profileIcon} />
-            ) : (
-              <MenIcon width={40} height={40} style={styles.profileIcon} />
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
+              {profileForm?.image ? (
+                <Image
+                  source={{ uri: profileForm.image }}
+                  style={styles.profileIcon}
+                />
+              ) : profileForm?.gender === 'Female' ? (
+                <WomenIcon width={40} height={40} style={styles.profileIcon} />
+              ) : (
+                <MenIcon width={40} height={40} style={styles.profileIcon} />
+              )}
+            </TouchableOpacity>
           )}
           {showLocation ? (
             <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
@@ -242,7 +285,12 @@ export default function CommonHeader({
             style={styles.cartButton}
             onPress={handleCartPress}
           >
-            <Image source={images.icons.cart} style={styles.cartIcon} />
+            <CartIcon style={styles.cartIcon} width={15} height={15} />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -363,9 +411,49 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   cartButton: {
-    padding: getResponsiveSpacing(8),
+    padding: getResponsiveSpacing(3),
+    backgroundColor: '#FED8EC',
+    width: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(30),
+    borderRadius: getResponsiveSpacing(15),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cartIcon: {
     ...getResponsiveImageSize(28, 28),
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: getResponsiveSpacing(-8),
+    right: getResponsiveSpacing(-2),
+    backgroundColor: '#FF4444',
+    borderRadius: getResponsiveSpacing(10),
+    minWidth: getResponsiveSpacing(20),
+    height: getResponsiveSpacing(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(4),
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(9),
+    fontFamily: fonts.bold,
+  },
+    notificationBadge: {
+    position: 'absolute',
+    borderRadius: getResponsiveSpacing(10),
+    top: getResponsiveSpacing(2),
+    right: getResponsiveSpacing(0),
+    backgroundColor: '#C35E9C',
+    minWidth: getResponsiveSpacing(20),
+    height: getResponsiveSpacing(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(2),
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: getResponsiveFontSize(10),
+    fontFamily: fonts.bold,
   },
 });

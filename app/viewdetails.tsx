@@ -24,7 +24,7 @@ import { fontStyles } from "./shared/styles/fonts";
 
 interface RouteParams {
   id: string;
-  type: "lab-test" | "health-checks" | "scans";
+  type: "lab-test" | "health-checks" | "scans" | "ambulance";
 }
 
 export default function ViewDetailsScreen() {
@@ -45,9 +45,11 @@ export default function ViewDetailsScreen() {
 
       let response: any;
       if (type === "lab-test") {
-        response = await axiosClient.get(
+       const response = await axiosClient.get(
           ApiRoutes.LabTests.getById(id)
         );
+        setDetails(response.data);
+      
       }
       else{
       if (type === "health-checks") {
@@ -55,8 +57,13 @@ export default function ViewDetailsScreen() {
           ApiRoutes.LabPackages.getById(id)
         );
       } else {
+        if (type === "scans") {
         response = await axiosClient.get(
           ApiRoutes.Xray.getById(id)
+        );
+      } else if (type === "ambulance") {
+        response = await axiosClient.get(
+          ApiRoutes.Ambulance.getdataById(id)
         );
       }
       }
@@ -65,6 +72,7 @@ export default function ViewDetailsScreen() {
         console.log("Details fetched:", response.data);
         setDetails(response.data);
       }
+    }
     } catch (error) {
       console.log("Details fetch error:", error);
     } finally {
@@ -112,7 +120,9 @@ export default function ViewDetailsScreen() {
           >
             <Ionicons name="arrow-back" size={24} color="#694664" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{details.testName}</Text>
+          <Text style={styles.headerTitle}>
+            {type === "ambulance" ? details.packageName : details.testName}
+          </Text>
 
         </View>
         <ScrollView
@@ -127,7 +137,8 @@ export default function ViewDetailsScreen() {
           />
 
           {/* Test Name */}
-          <Text style={styles.title}>{details.testName}</Text>
+          <Text style={styles.title}>
+            {type === "ambulance" ? details.packageName : details.testName}</Text>
 
           {/* Tests List (only for health checks) */}
           {type === "health-checks" && details.testsList && (
@@ -154,10 +165,21 @@ export default function ViewDetailsScreen() {
         </ScrollView>
         {/* Price */}
         <View style={styles.footer}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.originalPrice}>₹ {details.price}</Text>
-            <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
-          </View>
+          {type === "ambulance" ? (
+            <View style={styles.priceContainer}>
+              <Text style={styles.finalPrice}>₹ {details.price}</Text>
+            </View>
+          ) : (
+            type !== "scans" && (
+              <View style={styles.priceContainer}>
+                <Text style={styles.originalPrice}>₹ {details.price}</Text>
+                <Text style={styles.finalPrice}>₹{details.curonnprice}{details.curonnPrice}</Text>
+              </View>
+            )
+          )}
+          
+
+
           {/* Book Now */}
           <PrimaryButton
             title="Book Now"

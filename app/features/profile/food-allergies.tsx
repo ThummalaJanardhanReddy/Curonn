@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   Image,
   Modal,
@@ -10,20 +10,27 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
+import { useUser } from "../../shared/context/UserContext";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
-
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from '@/app/shared/components/Toast';
 interface FoodAllergy {
   id: string;
+  foodId: string;
   allergen: string;
-  reaction: string;
+  reactions: string;
   status: "active" | "inactive";
 }
 
@@ -36,59 +43,101 @@ export default function FoodAllergiesModal({
   visible,
   onClose,
 }: FoodAllergiesModalProps) {
-  const [allergies, setAllergies] = useState<FoodAllergy[]>([
-    {
-      id: "1",
-      allergen: "Peanuts",
-      reaction: "Severe allergic reaction",
-      status: "active",
-    },
-    {
-      id: "2",
-      allergen: "Shellfish",
-      reaction: "Mild skin rash",
-      status: "active",
-    },
-  ]);
+  const [allergies, setAllergies] = useState<FoodAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [newAllergy, setNewAllergy] = useState({
     allergen: "",
-    reaction: "",
+    reactions: "",
     status: "active" as "active" | "inactive",
   });
   const [showReactionDropdown, setShowReactionDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [foodSearchOptions, setfoodSearchOptions] = useState<any[]>([]);
+  const [reactionOptions, setreactionOptionss] = useState<any[]>([]);
+const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [showToast, setShowToast] = useState(false);
+  const { userData } = useUser();
+  const patientId = userData?.e_id;
 
-  const reactionOptions = [
-    "Mild skin rash",
-    "Severe allergic reaction",
-    "Nausea and vomiting",
-    "Difficulty breathing",
-    "Swelling of face/lips",
-    "Hives",
-    "Anaphylaxis",
-    "Other",
-  ];
+ const fetchallallergies = async () => {
+      try {
+        
+const payload = {
+        patientId: patientId
+      };
+        const response: any = await axiosClient.post(
+          ApiRoutes.FoodAllergies.getAll,payload
+        );
+        console.log('DEBUG: fetch All Allergies response:', response);
+        // If response is an array, use it directly
+        setAllergies(Array.isArray(response) ? response : response.items|| []);
+      } catch (error) {
+        console.error("Failed to fetch relation types", error);
+      }
+    };
 
-  const foodSearchOptions = [
-    "Peanuts",
-    "Tree nuts",
-    "Shellfish",
-    "Fish",
-    "Eggs",
-    "Milk",
-    "Soy",
-    "Wheat",
-    "Sesame",
-    "Gluten",
-    "Lactose",
-    "Strawberries",
-    "Tomatoes",
-    "Chocolate",
-    "Citrus fruits",
-  ];
+  React.useEffect(() => {
+    
+    fetchallallergies();
+    const fetchFoodallergies = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(8)
+        );
+        console.log('DEBUG: fetchFoodAllergies response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filtered = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setfoodSearchOptions(filtered);
+          console.log('DEBUG: New Food Allergies:', filtered);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filtered = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setfoodSearchOptions(filtered);
+          console.log('DEBUG: Food Allergies:', filtered);
+        }
+      } catch (error) {
+        console.error("Failed to fetch relation types", error);
+      }
+    };
+    fetchFoodallergies();
+  }, []);
+
+  React.useEffect(() => {
+    const fetchreactions = async () => {
+      try {
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(9)
+        );
+        console.log('DEBUG: fetchreactionss response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filteredreactions = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setreactionOptionss(filteredreactions);
+          console.log('DEBUG: New reactionc:', filteredreactions);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filteredreactions = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setreactionOptionss(filteredreactions);
+          console.log('DEBUG: New reactionc:', filteredreactions);
+        }
+      } catch (error) {
+        console.error("Failed to fetch relation types", error);
+      }
+    };
+    fetchreactions();
+  }, []);
+
 
   const handleBack = () => {
     onClose(); // Close the modal
@@ -115,7 +164,7 @@ export default function FoodAllergiesModal({
     setSearchQuery(query);
     if (query.trim()) {
       const filtered = foodSearchOptions.filter((food) =>
-        food.toLowerCase().includes(query.toLowerCase())
+        food.name.toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(filtered);
     } else {
@@ -123,8 +172,8 @@ export default function FoodAllergiesModal({
     }
   };
 
-  const handleSelectFood = (food: string) => {
-    setNewAllergy({ ...newAllergy, allergen: food });
+  const handleSelectFood = (food: any) => {
+    setNewAllergy({ ...newAllergy, allergen: food.name });
     handleCloseSearchModal();
   };
 
@@ -133,26 +182,76 @@ export default function FoodAllergiesModal({
     setShowReactionDropdown(false);
     setNewAllergy({
       allergen: "",
-      reaction: "",
+      reactions: "",
       status: "active",
     });
   };
 
   const handleSaveAllergy = () => {
-    if (newAllergy.allergen.trim() && newAllergy.reaction.trim()) {
-      const allergy: FoodAllergy = {
-        id: Date.now().toString(),
+    if (newAllergy.allergen.trim() && newAllergy.reactions.trim()) {
+      const payload = {
+        foodId: 0,
+        patientId: patientId,
         allergen: newAllergy.allergen.trim(),
-        reaction: newAllergy.reaction.trim(),
+        reactions: newAllergy.reactions.trim(),
         status: newAllergy.status,
       };
-      setAllergies((prev) => [...prev, allergy]);
+      console.log("Saving allergy with payload:", payload);
+      axiosClient.post(ApiRoutes.FoodAllergies.saveUpdate, payload)
+      .then(async response => {
+        setToastMessage({
+          title: "Allergy Saved Successfully",
+          subtitle: response?.data?.message || "Saved successfully!",
+          type: "success"
+        });
+        
+        setShowToast(true);
+        fetchallallergies();
+      })
+      .catch(error => {
+        let errorMsg = 'Something went wrong';
+        if (error && typeof error === 'object') {
+          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if ('message' in error) {
+            errorMsg = error.message;
+          }
+        }
+        setToastMessage({
+          title: "Save Failed",
+          subtitle: errorMsg,
+          type: "error"
+        });
+        setShowToast(true);
+      });
+      //setAllergies((prev) => [...prev, allergy]);
       handleCloseModal();
     }
   };
 
-  const handleDeleteAllergy = (id: string) => {
-    setAllergies((prev) => prev.filter((allergy) => allergy.id !== id));
+  const handleDeleteAllergy = async (id: string) => {
+    try {
+      const response:any = await axiosClient.delete(ApiRoutes.FoodAllergies.getdeleteById(id));
+      console.log("Delete allergy response:", response);
+      // If response is true, show toast and refresh
+      if (response === true || (response && response.data === true)) {
+        setToastMessage({
+          title: "Allergy Deleted Successfully",
+          subtitle: "Deleted successfully!",
+          type: "success"
+        });
+        setShowToast(true);
+        fetchallallergies();
+      }
+    } catch (error) {
+      setToastMessage({
+        title: "Delete Failed",
+        subtitle: "Something went wrong",
+        type: "error"
+      });
+      setShowToast(true);
+      console.error("Delete allergy error:", error);
+    }
   };
 
   const renderAllergyCard = useCallback(
@@ -160,29 +259,20 @@ export default function FoodAllergiesModal({
       <View style={styles.allergyCard}>
         <View style={styles.allergyContent}>
           <Text style={styles.allergenName}>{item.allergen}</Text>
-          <Text style={styles.reactionText}>{item.reaction}</Text>
           <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                {
-                  backgroundColor:
-                    item.status === "active"
-                      ? colors.success
-                      : colors.textLight,
-                },
-              ]}
-            />
-            <Text style={styles.statusText}>
+          <Text style={styles.reactionText}>{item.reactions}</Text>
+          <Text style={styles.divider}>|</Text>
+            
+             <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
               {item.status === "active" ? "Active" : "Inactive"}
             </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteAllergy(item.id)}
+          onPress={() => handleDeleteAllergy(item.foodId)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+         <Text style={styles.deletetext}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -196,7 +286,10 @@ export default function FoodAllergiesModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container}>
+      <>
+      
+         <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+          <View  style={styles.container}>
         {/* Header - Food Allergies Screen */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -222,11 +315,18 @@ export default function FoodAllergiesModal({
         {/* Allergies List */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.allergiesContainer}>
-            {allergies.map((allergy) => (
-              <View key={allergy.id} style={styles.allergyCardWrapper}>
-                {renderAllergyCard({ item: allergy })}
-              </View>
-            ))}
+             {allergies.length === 0 ? (
+                        <Text style={{ fontFamily:fonts.regular,textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+                          No Data Available
+                        </Text>
+                      ) :
+
+            (allergies.map((allergy, index) => (
+                          <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                            {renderAllergyCard({ item: allergy })}
+                          </View>
+                        ))
+          )}
           </View>
         </ScrollView>
 
@@ -245,7 +345,7 @@ export default function FoodAllergiesModal({
             <SafeAreaView style={styles.modalContent}>
               {/* Modal Header */}
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add food allergy</Text>
+                <Text style={styles.modalTitle}>Add Food Allergy</Text>
                 <TouchableOpacity
                   onPress={handleCloseModal}
                   style={styles.modalCloseButton}
@@ -294,7 +394,7 @@ export default function FoodAllergiesModal({
                       }}
                     >
                       <Text style={styles.dropdownText}>
-                        {newAllergy.reaction || "Select reaction type"}
+                        {newAllergy.reactions || "Select reaction type"}
                       </Text>
                       <Text style={styles.dropdownIcon}>▼</Text>
                     </TouchableOpacity>
@@ -310,18 +410,18 @@ export default function FoodAllergiesModal({
                         <View style={styles.dropdownOptions}>
                           {reactionOptions.map((option, index) => (
                             <TouchableOpacity
-                              key={index}
+                              key={option.masterDataId || index}
                               style={styles.dropdownOption}
                               onPress={() => {
                                 setNewAllergy({
                                   ...newAllergy,
-                                  reaction: option,
+                                  reactions: option.name,
                                 });
                                 setShowReactionDropdown(false);
                               }}
                             >
                               <Text style={styles.dropdownOptionText}>
-                                {option}
+                                {option.name}
                               </Text>
                             </TouchableOpacity>
                           ))}
@@ -332,7 +432,7 @@ export default function FoodAllergiesModal({
                 </View>
 
                 {/* Status Radio Buttons */}
-                <View style={styles.inputGroup}>
+                <View style={styles.inputGroup1}>
                   <Text style={styles.inputLabel}>Status</Text>
                   <View style={styles.radioGroup}>
                     <TouchableOpacity
@@ -372,7 +472,7 @@ export default function FoodAllergiesModal({
                   onPress={handleSaveAllergy}
                   style={styles.saveButton}
                   disabled={
-                    !newAllergy.allergen.trim() || !newAllergy.reaction.trim()
+                    !newAllergy.allergen.trim() || !newAllergy.reactions.trim()
                   }
                 />
               </View>
@@ -409,8 +509,8 @@ export default function FoodAllergiesModal({
                 <View style={styles.searchInputContainer}>
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search for food allergens..."
-                    placeholderTextColor="#999"
+                    placeholder="Search"
+                    placeholderTextColor="#000"
                     value={searchQuery}
                     onChangeText={handleSearchQueryChange}
                     autoFocus
@@ -432,11 +532,11 @@ export default function FoodAllergiesModal({
                 >
                   {searchResults.map((food, index) => (
                     <TouchableOpacity
-                      key={index}
+                      key={food.masterDataId || index}
                       style={styles.searchResultItem}
                       onPress={() => handleSelectFood(food)}
                     >
-                      <Text style={styles.searchResultText}>{food}</Text>
+                      <Text style={styles.searchResultText}>{food.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -444,22 +544,32 @@ export default function FoodAllergiesModal({
             </SafeAreaView>
           </View>
         </Modal>
-      </SafeAreaView>
+        </View>
+        </SafeAreaView>
+      </>
+         <Toast
+              visible={showToast}
+              title={toastMessage.title}
+              subtitle={toastMessage.subtitle}
+              type={toastMessage.type}
+              onHide={() => setShowToast(false)}
+              duration={3000}
+            />
     </Modal>
+    
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(15),
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
   },
@@ -470,16 +580,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: "flex-start",
+    color: '#000',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
-    color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
+    ...fontStyles.headercontent,
+    color: "#202427",
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(6),
+    paddingBottom: getResponsiveSpacing(4),
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(6),
   },
@@ -487,21 +597,15 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     fontWeight: "600",
     color: "#fff",
+    fontFamily: fonts.semiBold
   },
   divider: {
-    height: 1,
-    backgroundColor: "#eee",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    color: "#000",
+    marginHorizontal: getResponsiveSpacing(5),
   },
   content: {
     flex: 1,
+    backgroundColor: colors.bg_primary,
   },
   allergiesContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -514,6 +618,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
+    borderWidth: 1,
+    borderColor: "#B4B6B9",
     flexDirection: "row",
     alignItems: "flex-start",
     shadowColor: "#000",
@@ -529,16 +635,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   allergenName: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(14),
     color: colors.text,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold
   },
   reactionText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.textSecondary,
-    marginBottom: getResponsiveSpacing(8),
+    fontSize: getResponsiveFontSize(13),
+    color: '#000000',
+    marginTop: getResponsiveSpacing(2),
+    fontFamily: fonts.regular
   },
+
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -553,10 +661,17 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
     fontWeight: "500",
+    fontFamily: fonts.regular,
+    marginTop: getResponsiveSpacing(2),
   },
   deleteButton: {
     padding: getResponsiveSpacing(4),
     marginLeft: getResponsiveSpacing(8),
+  },
+  deletetext: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
+    color: colors.error,
   },
   deleteIcon: {
     ...getResponsiveImageSize(20, 20),
@@ -584,11 +699,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
+    fontFamily: fonts.semiBold
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: "600",
     color: colors.text,
+    fontFamily: fonts.semiBold
   },
   modalCloseButton: {
     padding: getResponsiveSpacing(4),
@@ -607,39 +724,46 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(20),
   },
   inputGroup: {
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(10),
+  },
+
+  inputGroup1: {
+    marginTop: getResponsiveSpacing(10),
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
     fontWeight: "600",
     color: colors.text,
-    marginBottom: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(3),
+    fontFamily: fonts.medium
   },
   textInput: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     backgroundColor: "#fff",
+    height: getResponsiveSpacing(48),
   },
   dropdownButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(6),
     backgroundColor: "#fff",
-    minHeight: getResponsiveSpacing(48),
+    height: getResponsiveSpacing(40),
   },
   dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
     flex: 1,
   },
   dropdownIcon: {
@@ -685,7 +809,7 @@ const styles = StyleSheet.create({
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(8),
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     backgroundColor: "#fff",
@@ -694,6 +818,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
+     fontFamily: fonts.regular,
   },
   radioGroup: {
     flexDirection: "row",
@@ -722,20 +847,27 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(30),
+
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
-    width: "100%",
+    borderRadius: getResponsiveSpacing(30),
+    height: getResponsiveSpacing(40),
+    width: "80%",
+    marginLeft: "10%",
+    marginRight: "10%",
   },
   // Search input styles
   searchInputText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     flex: 1,
+    fontFamily: fonts.regular,
+    paddingTop: 3,
   },
   searchInputTextSelected: {
     color: colors.text,
@@ -773,9 +905,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   searchModalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
     color: colors.text,
+    ...fontStyles.headercontent,
   },
   searchModalCloseButton: {
     padding: getResponsiveSpacing(4),
@@ -788,20 +919,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#A7A7A7",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(6),
+    paddingVertical: getResponsiveSpacing(0),
     backgroundColor: "#fff",
-    marginBottom: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(15),
+    height: getResponsiveSpacing(40),
+    justifyContent: "center",
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: colors.text,
-    borderWidth: 0,
+    fontFamily: fonts.regular,
     // outline: 'none',
     backgroundColor: "transparent",
+    paddingBottom: 5,
   },
   searchInputIcon: {
     fontSize: getResponsiveFontSize(16),
@@ -819,5 +953,6 @@ const styles = StyleSheet.create({
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
   },
 });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { setStatusBarStyle, setStatusBarBackgroundColor } from 'expo-status-bar';
 import {
   Image,
   ScrollView,
@@ -12,6 +13,7 @@ import axiosClient from '../../../src/api/axiosClient';
 import ApiRoutes from '../../../src/api/employee/employee';
 import BackButton from '../../shared/components/BackButton';
 import { colors } from '../../shared/styles/commonStyles';
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getResponsiveFontSize,
   getResponsiveSpacing
@@ -32,9 +34,10 @@ interface HealthFeedItem {
 
 interface HealthFeedScreenProps {
   onClose?: () => void;
+  visible: boolean;
 }
 
-export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
+export default function HealthFeedScreen({ visible,onClose }: HealthFeedScreenProps) {
   const [healthFeeds, setHealthFeeds] = useState<HealthFeedItem[]>([]);
 
   useEffect(() => {
@@ -77,6 +80,12 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
   const closeArticleView = () => {
     setSelectedArticle(null);
   };
+  useEffect(() => {
+    if (visible) {
+      setStatusBarStyle('dark');
+      setStatusBarBackgroundColor('#7E6781');
+    }
+  }, [visible]);
 
   const renderHealthFeedItem = ({ item }: { item: HealthFeedItem }) => (
     <TouchableOpacity 
@@ -124,6 +133,7 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
   );
 
   return (
+    <SafeAreaView style={{ flex: 1,backgroundColor:'#fff'}}>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -199,13 +209,13 @@ export default function HealthFeedScreen({ onClose }: HealthFeedScreenProps) {
         </View>
       )}
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
   },
   header: {
     flexDirection: 'row',
@@ -225,9 +235,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.black,
+    ...fontStyles.headercontent,
+    color: "#202427",
     marginLeft: getResponsiveSpacing(12),
   },
   closeButton: {
@@ -240,6 +249,7 @@ const styles = StyleSheet.create({
   },
   feedsContainer: {
     flex: 1,
+    backgroundColor: colors.bg_primary,
     paddingHorizontal: getResponsiveSpacing(20),
   },
   feedItemWrapper: {
@@ -343,6 +353,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
+    marginTop: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(10),
   },
   articleHeader: {
     flexDirection: 'row',
@@ -394,11 +406,11 @@ const styles = StyleSheet.create({
   },
   articleTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
     color: colors.text,
-    lineHeight: getResponsiveFontSize(32),
+    lineHeight: getResponsiveFontSize(28),
     fontFamily: fonts.semiBold,
     marginTop: getResponsiveSpacing(5),
+    width: '80%',
   },
   articleMeta: {
     flexDirection: 'row',

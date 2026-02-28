@@ -345,6 +345,18 @@ export default function BookingPayLaterScreen() {
     return 'image/jpeg';
   };
 
+  // ── Remove image ─────────────────────────────────────────────────────
+  const handleRemoveImage = (indexToRemove: number) => {
+    setPrescriptionImages((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      prescriptionStore.set({
+        ...prescriptionStore.get(),
+        images: updated,
+      });
+      return updated;
+    });
+  };
+
   // ── Confirm order ────────────────────────────────────────────────────
   const handleConfirmOrder = async () => {
     // Validate address
@@ -444,7 +456,7 @@ export default function BookingPayLaterScreen() {
           // idx,
           fileName: f.fileName,
           mimeType: f.mimeType,
-          fileBase64: f.fileBase64.length,
+          fileBase64: f.fileBase64,
           //prefix: f.fileBase64?.substring(0, 50),
           //suffix: f.fileBase64?.substring(f.fileBase64.length - 10),
         })),
@@ -517,11 +529,19 @@ export default function BookingPayLaterScreen() {
                 style={{ marginBottom: getResponsiveSpacing(8) }}
               >
                 {prescriptionImages.map((img, idx) => (
-                  <Image
-                    key={`prescImg-${idx}`}
-                    source={{ uri: img.uri }}
-                    style={styles.prescriptionThumb}
-                  />
+                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(10) }}>
+                    <Image
+                      source={{ uri: img.uri }}
+                      style={[styles.prescriptionThumb, { marginRight: 0 }]}
+                    />
+                    <TouchableOpacity
+                      style={styles.removeImageIcon}
+                      onPress={() => handleRemoveImage(idx)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.removeX}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </ScrollView>
             ) : (
@@ -793,6 +813,9 @@ export default function BookingPayLaterScreen() {
             setLocationModalVisible(true);
           }}
           onClose={() => setAddressVisible(false)}
+          onAddressChanged={() => {
+            if (typeof fetchAddresses === "function") fetchAddresses();
+          }}
         />
       )}
 
@@ -889,6 +912,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 10,
     resizeMode: 'cover',
+  },
+  removeImageIcon: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  removeX: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 10,
   },
   notesText: {
     fontSize: 13,

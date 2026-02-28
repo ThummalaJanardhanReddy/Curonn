@@ -21,6 +21,9 @@ import {
   prescriptionStore,
   PrescriptionImage,
 } from '../utils/prescriptionStore';
+import { fonts } from '@/app/shared/styles/fonts';
+import UploadIcon from '../../../assets/AppIcons/Curonn_icons/uploadmore.svg';
+import TakeaphotoIcon from '../../../assets/AppIcons/Curonn_icons/takeaphoto.svg';
 
 export interface PrescriptionUploadModalProps {
   visible: boolean;
@@ -112,14 +115,18 @@ export default function PrescriptionUploadModal({
           </View>
 
           <View style={styles.modalBodyLarge}>
+           
             {/* Upload action buttons */}
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.primaryBtn} onPress={onUploadMoreGallery}>
+                <UploadIcon style={styles.uploadIcon} width={15} height={15} />
                 <Text style={styles.primaryBtnText}>
-                  {selectedImages.length > 0 ? 'Add More' : 'Upload from Gallery'}
+                   
+                  {selectedImages.length > 0 ? 'Upload More' : 'Upload from Gallery'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={onTakePhoto}>
+                <TakeaphotoIcon style={styles.uploadIcon} width={15} height={15} />
                 <Text style={styles.secondaryBtnText}>Take a Photo</Text>
               </TouchableOpacity>
             </View>
@@ -166,8 +173,9 @@ export default function PrescriptionUploadModal({
                 {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
               </Text>
             )}
-
+</View>
             {/* Order option radio buttons */}
+            <View style={styles.bottombox}>
             <View style={styles.optionRow}>
               <TouchableOpacity style={styles.optionItem} onPress={() => setOption('all')}>
                 <View style={[styles.radio, option === 'all' && styles.radioSelected]} />
@@ -180,6 +188,7 @@ export default function PrescriptionUploadModal({
                 <Text style={styles.optionText}>Mention Specific Medicine</Text>
               </TouchableOpacity>
             </View>
+           
 
             {/* Notes input (only for specific) */}
             {option === 'specific' && (
@@ -192,6 +201,7 @@ export default function PrescriptionUploadModal({
                 multiline
               />
             )}
+             </View>
 
             {/* Next button */}
             <View style={styles.nextRow}>
@@ -199,7 +209,7 @@ export default function PrescriptionUploadModal({
                 <Text style={styles.nextText}>Next</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          
         </View>
       </View>
     </Modal>
@@ -232,19 +242,22 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.text,
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
+    fontFamily: fonts.semiBold,
+    color: '#000'
   },
   closePill: {
     backgroundColor: '#ffdfe6',
-    paddingHorizontal: getResponsiveSpacing(12),
+    paddingHorizontal: getResponsiveSpacing(15),
     paddingVertical: getResponsiveSpacing(6),
     borderRadius: getResponsiveSpacing(20),
   },
   closePillText: {
-    color: '#E04F85',
-    fontWeight: '700',
+    color: '#ff0000',
+    fontWeight: '600',
+     fontFamily: fonts.semiBold,
+     fontSize: getResponsiveFontSize(11),
   },
   modalBodyLarge: {
     padding: getResponsiveSpacing(18),
@@ -252,7 +265,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: getResponsiveSpacing(12),
+    marginBottom: getResponsiveSpacing(8),
   },
   primaryBtn: {
     flex: 1,
@@ -260,26 +273,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderColor: colors.primary,
     borderWidth: 1,
-    paddingVertical: getResponsiveSpacing(10),
-    paddingHorizontal: getResponsiveSpacing(14),
-    borderRadius: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(4),
+    paddingHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSpacing(20),
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    height: getResponsiveSpacing(33),
   },
   primaryBtnText: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '500',
+    fontFamily: fonts.medium,
+    fontSize: getResponsiveFontSize(12),
+
+  },
+  uploadIcon: {
+    marginRight: getResponsiveSpacing(6),
+    marginTop: -1,
   },
   secondaryBtn: {
     flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: getResponsiveSpacing(10),
-    paddingHorizontal: getResponsiveSpacing(14),
-    borderRadius: getResponsiveSpacing(8),
+    marginRight: getResponsiveSpacing(8),
+    backgroundColor: '#fff',
+    borderColor: colors.primary,
+    borderWidth: 1,
+    paddingVertical: getResponsiveSpacing(4),
+    paddingHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSpacing(20),
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    height: getResponsiveSpacing(33),
   },
   secondaryBtnText: {
-    color: '#fff',
-    fontWeight: '600',
+     color: colors.primary,
+    fontWeight: '500',
+    fontFamily: fonts.medium,
+    fontSize: getResponsiveFontSize(12),
   },
   thumbsScroll: {
     marginVertical: getResponsiveSpacing(10),
@@ -300,6 +331,9 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(8),
     overflow: 'hidden',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: '#D9D9D9',
   },
   thumb: {
     width: '100%',
@@ -332,9 +366,16 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: '#888',
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
+  },
+  bottombox: {
+      marginTop: getResponsiveSpacing(12),
+      backgroundColor: '#F5F4F9',
+      paddingHorizontal: getResponsiveSpacing(18),
+      marginBottom: getResponsiveSpacing(12),
   },
   optionRow: {
-    marginTop: getResponsiveSpacing(10),
+    marginTop: getResponsiveSpacing(5),
   },
   optionItem: {
     flexDirection: 'row',
@@ -354,35 +395,45 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   optionText: {
-    fontSize: getResponsiveFontSize(14),
-    color: '#333',
+    fontSize: getResponsiveFontSize(13),
+    color: '#000',
     flex: 1,
+    fontFamily: fonts.semiBold,
   },
   notesInput: {
-    borderWidth: 1,
-    borderColor: '#eee',
     borderRadius: getResponsiveSpacing(8),
-    padding: getResponsiveSpacing(10),
     minHeight: getResponsiveSpacing(80),
     marginTop: getResponsiveSpacing(10),
     textAlignVertical: 'top',
     fontSize: getResponsiveFontSize(14),
-    color: '#333',
+        borderWidth: 1,
+    borderColor: "#9D9D9F",
+    padding: 12,
+    paddingBottom: 8,
+    paddingTop: 9,
+    backgroundColor: "#fff",
+    fontFamily: fonts.regular,
+    color: "#000",
+    fontWeight: '500',
+    marginBottom: getResponsiveSpacing(12),
   },
   nextRow: {
     marginTop: getResponsiveSpacing(18),
     alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(18),
+    marginBottom: getResponsiveSpacing(10),
   },
   nextBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: getResponsiveSpacing(16),
     width: '100%',
-    borderRadius: getResponsiveSpacing(30),
-    alignItems: 'center',
+    paddingVertical: getResponsiveSpacing(14), 
+    borderRadius: getResponsiveSpacing(30), 
+    alignItems: 'center'
+
   },
   nextText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: getResponsiveFontSize(16),
+    color: '#fff', fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(15), fontWeight: '500'
+
   },
 });
