@@ -19,6 +19,7 @@ import { images } from "../../../assets";
 import PrimaryButton from "@/app/shared/components/PrimaryButton";
 import Toast from "@/app/shared/components/Toast";
 import { fontStyles, fonts, fontWeights } from "../../shared/styles/fonts";
+import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import { router } from "expo-router";
 
 interface SavedAddress {
@@ -109,7 +110,7 @@ export default function AddressSelection({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
 
         <View style={styles.container}>
           <View style={styles.header}>
@@ -321,13 +322,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(10),
+    paddingBottom: getResponsiveSpacing(10),
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    marginBottom: 10,
+    marginBottom: getResponsiveSpacing(10),
   },
   backButton: {
     padding: 8,

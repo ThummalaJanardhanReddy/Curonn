@@ -134,18 +134,23 @@ export default function MedicinesScreen() {
 
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
-      const mapped = drugGroups.map((g: any, idx: number) => {
-        const imgUrl = getDirectImageUrl(g.imageUrl);
-        // Debug: log each image URL transformation
-        console.log('Category:', g.drugGroup ?? g.name, 'Original:', g.imageUrl, 'Transformed:', imgUrl);
-        return {
+      return drugGroups.map((g: any, idx: number) => {
+        let imgUrl = g.imageUrl || '';
+        if (imgUrl.includes('drive.google.com')) {
+          const match = imgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            imgUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+          }
+        }
+        const category = {
           id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
           title: g.drugGroup ?? g.name ?? 'Untitled',
           image: imgUrl,
           backgroundColor: categoryColors[idx % categoryColors.length],
         };
+        console.log(`[MedicinesScreen] Category ${idx}:`, category);
+        return category;
       });
-      return mapped;
     }
     console.warn('No drug groups available to create categories');
     return [];
@@ -283,7 +288,11 @@ export default function MedicinesScreen() {
     >
       <View style={styles.categoryContent}>
         <Text style={styles.categoryTitle}>{item.title}</Text>
-        <Image source={{ uri: item.image }} style={styles.categoryImage} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.categoryImage} />
+        ) : (
+          <View style={[styles.categoryImage, { backgroundColor: 'rgba(0,0,0,0.05)' }]} />
+        )}
       </View>
     </TouchableOpacity>
   ), []);

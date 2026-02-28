@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -499,9 +496,9 @@ export default function BookingPayLaterScreen() {
     setTimeout(() => setToastVisible(false), 3000);
   };
 
-  // ���────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────
   // RENDER
-  // ────────────────────────────────────────────────────────────────��────
+  // ───────────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -518,7 +515,7 @@ export default function BookingPayLaterScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── Prescription card ────────────────────────────────────────�� */}
+        {/* ── Prescription card ────────────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Prescription</Text>
           <View style={styles.prescriptionCard}>
@@ -526,29 +523,29 @@ export default function BookingPayLaterScreen() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: getResponsiveSpacing(8) }}
+                style={{ marginBottom: getResponsiveSpacing(6) }}
               >
                 {prescriptionImages.map((img, idx) => (
-                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(10) }}>
+                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(12) }}>
                     <Image
                       source={{ uri: img.uri }}
-                      style={[styles.prescriptionThumb, { marginRight: 0 }]}
+                      style={styles.prescriptionThumb}
                     />
                     <TouchableOpacity
                       style={styles.removeImageIcon}
                       onPress={() => handleRemoveImage(idx)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.removeX}>✕</Text>
+                      <Image source={images.icons.close} style={styles.removeXIcon} />
                     </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
             ) : (
               <View style={styles.prescriptionRow}>
-                <View style={styles.prescriptionPreview} />
-                <View style={styles.prescriptionPreview} />
-                <View style={styles.prescriptionPreview} />
+                <View style={styles.prescriptionPlaceholder} />
+                <View style={styles.prescriptionPlaceholder} />
+                <View style={styles.prescriptionPlaceholder} />
               </View>
             )}
 
@@ -558,79 +555,35 @@ export default function BookingPayLaterScreen() {
               </Text>
             ) : null}
 
-            <View style={styles.serviceFooter}>
-              <Text style={{ flex: 1 }} />
-              <TouchableOpacity style={styles.editAddressButton1} onPress={handleEdit}>
-                <Text style={styles.editAddressText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.editPillButton} onPress={handleEdit}>
+              <Text style={styles.editPillText}>Edit</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* ── Service Address (mirrors booking.tsx LAB flow) ──────────── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Address</Text>
-          {selectedLocation ? (
-            <View style={styles.addressCard}>
-              <View style={styles.addressHeader}>
-                <View style={styles.addressInfo}>
-                  <Text style={styles.addressNickname}>
-                    {selectedLocation.nickname.charAt(0).toUpperCase() +
-                      selectedLocation.nickname.slice(1)}
-                  </Text>
-                  <Text style={styles.addressText}>
-                    {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
-                    {selectedLocation.address}
-                  </Text>
-                  {selectedLocation.landmark ? (
-                    <Text style={styles.landmarkText}>
-                      Near {selectedLocation.landmark}
-                    </Text>
-                  ) : null}
-                </View>
-                <TouchableOpacity style={styles.editAddressButton} onPress={handleEditAddress}>
-                  <Text style={styles.editAddressText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.addressCard}>
-              <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
-                No address found. Please add a new address.
-              </Text>
-              <TouchableOpacity style={styles.addnewaddressButton} onPress={handleViewAddress}>
-                <Text style={styles.AddressText}>+ Add New Address</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {errors === 'Please select or add new address' && (
-            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
-          )}
-        </View>
-
-        {/* ── Patient Details (mirrors booking.tsx) ───────────────────── */}
+        {/* ── Patient Details ───────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Patient Details</Text>
           <View style={styles.patientCard}>
             <View style={styles.radioGroup}>
-              <View style={styles.radioOption}>
-                <RadioButton
-                  value="self"
-                  status={patientType === 'self' ? 'checked' : 'unchecked'}
-                  onPress={() => setPatientType('self')}
-                  color="#C15E9C"
-                />
-                <Text style={styles.radioLabel}>Self Service</Text>
-              </View>
-              <View style={styles.radioOption}>
-                <RadioButton
-                  value="others"
-                  status={patientType === 'others' ? 'checked' : 'unchecked'}
-                  onPress={() => setPatientType('others')}
-                  color="#C15E9C"
-                />
-                <Text style={styles.radioLabel}>For Others</Text>
-              </View>
+              <TouchableOpacity
+                style={[styles.radioOptionNew, patientType === 'self' && styles.selectedRadioOption]}
+                onPress={() => setPatientType('self')}
+              >
+                <View style={[styles.customRadio, patientType === 'self' && styles.customRadioSelected]}>
+                  {patientType === 'self' && <View style={styles.customRadioInner} />}
+                </View>
+                <Text style={[styles.radioLabel, patientType === 'self' && styles.selectedRadioLabel]}>Self Service</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.radioOptionNew, patientType === 'others' && styles.selectedRadioOption]}
+                onPress={() => setPatientType('others')}
+              >
+                <View style={[styles.customRadio, patientType === 'others' && styles.customRadioSelected]}>
+                  {patientType === 'others' && <View style={styles.customRadioInner} />}
+                </View>
+                <Text style={[styles.radioLabel, patientType === 'others' && styles.selectedRadioLabel]}>For Family</Text>
+              </TouchableOpacity>
             </View>
 
             {patientType === 'others' && (
@@ -702,16 +655,54 @@ export default function BookingPayLaterScreen() {
           </View>
         </View>
 
+        {/* ── Service Address ──────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Address</Text>
+          {selectedLocation ? (
+            <View style={styles.addressCard}>
+              <View style={styles.addressInfoNew}>
+                <Text style={styles.addressNameBold}>
+                  {userData?.fullName || "Anil Kumar"}
+                </Text>
+                <Text style={styles.addressTextNew}>
+                  {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
+                  {selectedLocation.address}
+                  {selectedLocation.landmark && `, ${selectedLocation.landmark}`}
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.editAddressButtonNew}
+                  onPress={handleViewAddress}
+                >
+                  <Text style={styles.editAddressTextNew}>Edit Address</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.addressCard}>
+              <Text style={{ color: '#999', fontSize: 12, marginBottom: 10, fontFamily: fonts.regular }}>
+                No address found. Please add a new address.
+              </Text>
+              <TouchableOpacity style={styles.addnewaddressButton} onPress={handleViewAddress}>
+                <Text style={styles.AddressText}>+ Add New Address</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {errors === 'Please select or add new address' && (
+            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
+          )}
+        </View>
+
         {/* ── Cancellation Policy ─────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cancellation Policy</Text>
+          <Text style={styles.policyTitle}>Cancellation policy</Text>
           <View style={styles.policyCard}>
-            <Text style={styles.policyText}>
+            <Text style={styles.policyTextNew}>
               Free cancellation is done more than 2 hrs before the service or if a professional
-              isn&apos;t assigned. A fee will be charged otherwise.
+              isn&apos;t assigned. A fee with be charge otherwise
             </Text>
             <TouchableOpacity style={styles.learnMoreButton}>
-              <Text style={styles.learnMoreText}>Learn more</Text>
+              <Text style={styles.learnMoreTextNew}>Learn more</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -847,201 +838,218 @@ export default function BookingPayLaterScreen() {
   );
 }
 
-// ─── Styles (copied from booking.tsx with minimal additions) ──────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: '#fff',
   },
   header: {
-    ...commonStyles.container_header,
-    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(10),
+    paddingBottom: getResponsiveSpacing(15),
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontSize: 16,
-    color: '#202427',
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
+    fontSize: getResponsiveFontSize(20),
+    color: '#333',
   },
   closeButton: {
-    padding: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeIcon: {
-    width: 24,
-    height: 24,
-    tintColor: '#000000',
+    width: 16,
+    height: 16,
+    tintColor: '#000',
   },
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: '#F5F5F9',
   },
   section: {
-    marginTop: getResponsiveSpacing(10),
+    marginTop: getResponsiveSpacing(20),
   },
   sectionTitle: {
-    fontSize: 13,
-    color: '#000000',
-    marginBottom: getResponsiveSpacing(4),
-    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.bold,
+    color: '#000',
+    marginBottom: getResponsiveSpacing(8),
   },
-
-  // ── Prescription card ────────────────────────────────────────────────
   prescriptionCard: {
     backgroundColor: '#fff',
-    borderRadius: getResponsiveSpacing(12),
-    padding: getResponsiveSpacing(16),
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dbdbdb',
+    borderColor: '#E0E0E0',
+    padding: getResponsiveSpacing(16),
   },
   prescriptionRow: {
     flexDirection: 'row',
-    marginBottom: getResponsiveSpacing(8),
-  },
-  prescriptionPreview: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginRight: 10,
+    marginBottom: getResponsiveSpacing(6),
   },
   prescriptionThumb: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 10,
-    resizeMode: 'cover',
+    width: getResponsiveSpacing(80),
+    height: getResponsiveSpacing(80),
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+  },
+  prescriptionPlaceholder: {
+    width: getResponsiveSpacing(80),
+    height: getResponsiveSpacing(80),
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+    marginRight: getResponsiveSpacing(12),
   },
   removeImageIcon: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 12,
-    width: 22,
-    height: 22,
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#737274',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  removeXIcon: {
+    width: 10,
+    height: 10,
+    tintColor: '#fff',
   },
   removeX: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   notesText: {
-    fontSize: 13,
-    color: '#555',
+    fontSize: getResponsiveFontSize(13),
+    color: '#333',
+    fontFamily: fonts.regular,
     marginBottom: getResponsiveSpacing(6),
-    lineHeight: 18,
-    fontFamily: fonts.regular,
   },
-  serviceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: getResponsiveSpacing(8),
-  },
+  editPillButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 30,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
 
-  // ── Address card (copied exactly from booking.tsx) ───────────────────
-  addressCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#dbdbdb',
+    borderColor: '#C35E9C',
   },
-  addressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  addressInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  addressNickname: {
-    fontSize: 14,
-    color: '#C15E9C',
-    marginBottom: 4,
-    fontFamily: fonts.semiBold,
-  },
-  addressText: {
-    fontSize: 12,
-    color: '#000',
-    lineHeight: 18,
-    marginBottom: 4,
-    fontFamily: fonts.regular,
-  },
-  landmarkText: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: fonts.regular,
-  },
-  addnewaddressButton: {
-    borderRadius: 8,
-    width: '50%',
-    borderColor: '#0580FA',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    paddingVertical: 3,
-    paddingHorizontal: 12,
-    textAlign: 'center',
-    marginTop: 12,
-    height: 28,
-  },
-  AddressText: {
-    color: '#0580FA',
-    fontSize: 13,
+  editPillText: {
+    fontSize: getResponsiveFontSize(14),
+    color: '#C35E9C',
     fontFamily: fonts.medium,
   },
-  editAddressButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    borderRadius: 15,
+  addressCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#C15E9C',
+    borderColor: '#E0E0E0',
+    marginBottom: getResponsiveSpacing(5),
   },
-  editAddressButton1: {
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#C15E9C',
+  addressInfoNew: {
+    flex: 1,
   },
-  editAddressText: {
-    fontSize: 12,
-    color: '#C15E9C',
-    fontWeight: '500',
+  addressNameBold: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: '#3B2032',
+    marginBottom: 6,
+  },
+  addressTextNew: {
+    fontSize: 13,
+    color: '#737274',
+    lineHeight: 18,
     fontFamily: fonts.regular,
+    marginBottom: 12,
   },
-
-  // ── Patient card (copied exactly from booking.tsx) ────────────────────
+  editAddressButtonNew: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C35E9C',
+  },
+  editAddressTextNew: {
+    fontSize: 13,
+    color: '#C35E9C',
+    fontFamily: fonts.medium,
+  },
+  addnewaddressButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+  },
+  AddressText: {
+    color: '#C15E9C',
+    fontFamily: fonts.medium,
+  },
   patientCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#dbdbdb',
+    borderColor: '#E0E0E0',
     padding: 16,
   },
   radioGroup: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  radioOption: {
+  radioOptionNew: {
     flexDirection: 'row',
     alignItems: 'center',
     borderColor: '#D9DEE6',
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    width: '49%',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    width: '48%',
+  },
+  selectedRadioOption: {
+    borderColor: '#C35E9C',
+  },
+  customRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D9DEE6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  customRadioSelected: {
+    borderColor: '#C35E9C',
+  },
+  customRadioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#C35E9C',
   },
   radioLabel: {
     fontSize: 14,
     color: '#2B2B2B',
+    fontFamily: fonts.regular,
+  },
+  selectedRadioLabel: {
+    fontFamily: fonts.semiBold,
   },
   othersForm: {
     marginTop: 16,
@@ -1088,26 +1096,31 @@ const styles = StyleSheet.create({
     height: 16,
     tintColor: '#666',
   },
-
-  // ── Policy (copied from booking.tsx) ─────────────────────────────────
-  policyCard: {},
-  policyText: {
-    fontSize: 14,
-    color: '#666',
+  policyTitle: {
+    fontSize: getResponsiveFontSize(18),
+    fontFamily: fonts.regular,
+    color: '#333',
+    marginBottom: getResponsiveSpacing(8),
+  },
+  policyCard: {
+    marginTop: 4,
+  },
+  policyTextNew: {
+    fontSize: 13,
+    color: '#333',
     lineHeight: 20,
-    marginBottom: 8,
+    fontFamily: fonts.regular,
+    marginBottom: getResponsiveSpacing(12),
   },
   learnMoreButton: {
     alignSelf: 'flex-start',
   },
-  learnMoreText: {
+  learnMoreTextNew: {
     fontSize: 14,
     color: '#0881FC',
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     textDecorationLine: 'underline',
   },
-
-  // ── Footer (copied from booking.tsx) ─────────────────────────────────
   footer: {
     padding: 20,
     backgroundColor: '#fff',
@@ -1116,7 +1129,7 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     width: '100%',
-    backgroundColor: '#C15E9C',
+    backgroundColor: '#C35E9C',
     borderRadius: getResponsiveSpacing(30),
     paddingVertical: getResponsiveSpacing(14),
     alignItems: 'center',
@@ -1128,8 +1141,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(15),
     fontFamily: fonts.semiBold,
   },
-
-  // ── Dropdown modals (copied from booking.tsx) ─────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
