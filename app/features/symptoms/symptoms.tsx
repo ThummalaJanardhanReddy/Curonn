@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { router } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -8,16 +8,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { images } from '../../../assets';
-import BackButton from '../../shared/components/BackButton';
-import PrimaryButton from '../../shared/components/PrimaryButton';
-import { colors } from '../../shared/styles/commonStyles';
+} from "react-native";
+import { images } from "../../../assets";
+import BackButton from "../../shared/components/BackButton";
+import PrimaryButton from "../../shared/components/PrimaryButton";
+import { colors } from "../../shared/styles/commonStyles";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
-  getResponsiveSpacing
-} from '../../shared/utils/responsive';
+  getResponsiveSpacing,
+} from "../../shared/utils/responsive";
+import { useDoctorConsultationStore } from "@/src/store/doctor-consultation";
 
 interface Symptom {
   id: string;
@@ -26,36 +27,37 @@ interface Symptom {
 }
 
 export default function SymptomsScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSymptoms, setSelectedSymptoms] = useState<Symptom[]>([]);
-
+  const { setSymptoms} = useDoctorConsultationStore();
   // Mock symptoms data - in real app this would come from API
   const allSymptoms: Symptom[] = useMemo(
     () => [
-      { id: '1', name: 'Fever', category: 'General' },
-      { id: '2', name: 'Headache', category: 'General' },
-      { id: '3', name: 'Cough', category: 'Respiratory' },
-      { id: '4', name: 'Chest Pain', category: 'Cardiovascular' },
-      { id: '5', name: 'Nausea', category: 'Digestive' },
-      { id: '6', name: 'Dizziness', category: 'Neurological' },
-      { id: '7', name: 'Fatigue', category: 'General' },
-      { id: '8', name: 'Shortness of Breath', category: 'Respiratory' },
-      { id: '9', name: 'Joint Pain', category: 'Musculoskeletal' },
-      { id: '10', name: 'Skin Rash', category: 'Dermatological' },
-      { id: '11', name: 'Abdominal Pain', category: 'Digestive' },
-      { id: '12', name: 'Back Pain', category: 'Musculoskeletal' },
+      { id: "1", name: "Fever", category: "General" },
+      { id: "2", name: "Headache", category: "General" },
+      { id: "3", name: "Cough", category: "Respiratory" },
+      { id: "4", name: "Chest Pain", category: "Cardiovascular" },
+      { id: "5", name: "Nausea", category: "Digestive" },
+      { id: "6", name: "Dizziness", category: "Neurological" },
+      { id: "7", name: "Fatigue", category: "General" },
+      { id: "8", name: "Shortness of Breath", category: "Respiratory" },
+      { id: "9", name: "Joint Pain", category: "Musculoskeletal" },
+      { id: "10", name: "Skin Rash", category: "Dermatological" },
+      { id: "11", name: "Abdominal Pain", category: "Digestive" },
+      { id: "12", name: "Back Pain", category: "Musculoskeletal" },
     ],
-    []
+    [],
   );
 
   const filteredSymptoms = useMemo(() => {
     let filtered = allSymptoms.filter(
-      (symptom) => !selectedSymptoms.some((selected) => selected.id === symptom.id)
+      (symptom) =>
+        !selectedSymptoms.some((selected) => selected.id === symptom.id),
     );
 
     if (searchQuery) {
       filtered = filtered.filter((symptom) =>
-        symptom.name.toLowerCase().includes(searchQuery.toLowerCase())
+        symptom.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -71,18 +73,27 @@ export default function SymptomsScreen() {
   };
 
   const handleSymptomDeselect = (symptomId: string) => {
-    setSelectedSymptoms((prev) => prev.filter((symptom) => symptom.id !== symptomId));
+    setSelectedSymptoms((prev) =>
+      prev.filter((symptom) => symptom.id !== symptomId),
+    );
   };
 
   const handleProceedToChat = () => {
     router.push({
-      pathname: '/features/chat/chat-screen',
-      params: { 
+      pathname: "/features/chat/chat-screen",
+      params: {
         selectedSymptoms: JSON.stringify(selectedSymptoms),
-        doctorName: 'Dr. Sarah Johnson' // This would come from previous screen
-      }
+        doctorName: "Dr. Sarah Johnson", // This would come from previous screen
+      },
     });
   };
+
+  const handleConfirm = () => {
+    setSymptoms(selectedSymptoms.map(s=>s.name));
+    router.push({
+      pathname: '/shared/components/doctor/confirmConsultation',
+    })
+  }
 
   const renderSymptomCard = useCallback(
     ({ item }: { item: Symptom }) => (
@@ -94,7 +105,7 @@ export default function SymptomsScreen() {
         <Text style={styles.symptomName}>{item.name}</Text>
       </TouchableOpacity>
     ),
-    []
+    [],
   );
 
   const renderSelectedChip = useCallback(
@@ -109,7 +120,7 @@ export default function SymptomsScreen() {
         </TouchableOpacity>
       </View>
     ),
-    []
+    [],
   );
 
   return (
@@ -139,7 +150,7 @@ export default function SymptomsScreen() {
             {searchQuery.length > 0 && (
               <TouchableOpacity
                 style={styles.clearButton}
-                onPress={() => setSearchQuery('')}
+                onPress={() => setSearchQuery("")}
               >
                 <Image source={images.icons.close} style={styles.clearIcon} />
               </TouchableOpacity>
@@ -180,8 +191,8 @@ export default function SymptomsScreen() {
       {selectedSymptoms.length > 0 && (
         <View style={styles.buttonContainer}>
           <PrimaryButton
-            title="Proceed to Chat"
-            onPress={handleProceedToChat}
+            title="Confirm"
+            onPress={handleConfirm}
             style={styles.proceedButton}
           />
         </View>
@@ -199,16 +210,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(50),
     paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   headerTitle: {
     fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.black,
   },
   content: {
@@ -220,25 +231,25 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(10),
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(8),
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
     marginRight: getResponsiveSpacing(8),
-    tintColor: '#999',
+    tintColor: "#999",
   },
   searchInput: {
     flex: 1,
     fontSize: getResponsiveFontSize(16),
     paddingVertical: getResponsiveSpacing(4),
-    color: '#333',
+    color: "#333",
   },
   clearButton: {
     padding: getResponsiveSpacing(4),
@@ -246,21 +257,21 @@ const styles = StyleSheet.create({
   },
   clearIcon: {
     ...getResponsiveImageSize(16, 16),
-    tintColor: '#999',
+    tintColor: "#999",
   },
   selectedContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
   },
   selectedChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: getResponsiveSpacing(8),
   },
   selectedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E6DCF5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6DCF5",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(6),
@@ -269,18 +280,18 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: getResponsiveFontSize(12),
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
     marginRight: getResponsiveSpacing(6),
   },
   chipCloseButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: getResponsiveSpacing(4),
   },
   chipCloseText: {
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   titleContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -288,7 +299,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
   },
   symptomsContainer: {
@@ -296,49 +307,49 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(20),
   },
   symptomsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: getResponsiveSpacing(8),
   },
   symptomCardWrapper: {
     marginBottom: getResponsiveSpacing(8),
   },
   symptomCard: {
-    backgroundColor: '#F2F6FF',
+    backgroundColor: "#F2F6FF",
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     borderRadius: getResponsiveSpacing(15),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(6),
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
   },
   symptomName: {
     fontSize: getResponsiveFontSize(12),
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   bottomSpacing: {
     height: getResponsiveSpacing(80),
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
+    position: "absolute",
+    bottom: getResponsiveSpacing(60),
     left: 0,
     right: 0,
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(30),
-    paddingTop: getResponsiveSpacing(15),
+    // paddingBottom: getResponsiveSpacing(30),
+    // paddingTop: getResponsiveSpacing(15),
     backgroundColor: colors.bg_primary,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    alignItems: 'center',
+    borderTopColor: "#eee",
+    alignItems: "center",
   },
   proceedButton: {
-    borderRadius: getResponsiveSpacing(6),
+    borderRadius: getResponsiveSpacing(23),
     height: getResponsiveSpacing(45),
-    width: '100%',
+    width: "100%",
   },
 });

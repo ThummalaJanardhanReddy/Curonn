@@ -23,7 +23,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-export default function ChatScreen() {
+export default function ChatScreen1() {
   const { doctorName, selectedSymptoms } = useLocalSearchParams<{
     doctorName: string;
     selectedSymptoms: string;

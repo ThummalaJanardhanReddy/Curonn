@@ -1,21 +1,21 @@
 import { router, Tabs, usePathname } from "expo-router";
-import * as Font from 'expo-font';
+import * as Font from "expo-font";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import RegistrationGuard from "../shared/components/RegistrationGuard";
-import HomeIcon from '../../assets/AppIcons/Curonn_icons/menu/new/home.svg';
-import HomeIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/home_select.svg';
-import LabIcon from '../../assets/AppIcons/Curonn_icons/menu/new/lab.svg';
-import LabIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/lab_select.svg';
-import DoctorIcon from '../../assets/AppIcons/Curonn_icons/menu/new/doctor.svg';
-import DoctorIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/doctor_select.svg';
-import MedicineIcon from '../../assets/AppIcons/Curonn_icons/menu/new/medicine.svg';
-import MedicineIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/medicine_select.svg';
-import OrderIcon from '../../assets/AppIcons/Curonn_icons/menu/new/orders.svg';
-import OrderIconSelected from '../../assets/AppIcons/Curonn_icons/menu/new/orders_slect.svg';
+import HomeIcon from "../../assets/AppIcons/Curonn_icons/menu/new/home.svg";
+import HomeIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/home_select.svg";
+import LabIcon from "../../assets/AppIcons/Curonn_icons/menu/new/lab.svg";
+import LabIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/lab_select.svg";
+import DoctorIcon from "../../assets/AppIcons/Curonn_icons/menu/new/doctor.svg";
+import DoctorIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/doctor_select.svg";
+import MedicineIcon from "../../assets/AppIcons/Curonn_icons/menu/new/medicine.svg";
+import MedicineIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/medicine_select.svg";
+import OrderIcon from "../../assets/AppIcons/Curonn_icons/menu/new/orders.svg";
+import OrderIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/orders_slect.svg";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -31,45 +31,61 @@ export default function MainLayout() {
   // Tab configuration (must be before any early return)
   const tabs = useMemo(
     () => [
-      { key: "home", title: "Home", image: HomeIcon, selectedImage: HomeIconSelected, route: "/main/home", width: 24, height: 24 },
+      {
+        key: "home",
+        title: "Home",
+        image: HomeIcon,
+        selectedImage: HomeIconSelected,
+        route: "/main/home",
+        width: 24,
+        height: 24,
+      },
       {
         key: "lab-tests",
         title: "Lab Tests",
-        image: LabIcon, selectedImage: LabIconSelected,
+        image: LabIcon,
+        selectedImage: LabIconSelected,
         route: "/lab-tests",
-        width: 24, height: 24
+        width: 24,
+        height: 24,
       },
       {
         key: "my-doctor",
         title: "My Doctor",
-        image: DoctorIcon, selectedImage: DoctorIconSelected,
+        image: DoctorIcon,
+        selectedImage: DoctorIconSelected,
         route: "/my-doctor",
-         width: 24, height: 24
+        width: 24,
+        height: 24,
       },
       {
         key: "medicines",
         title: "Medicines",
-        image: MedicineIcon, selectedImage: MedicineIconSelected,
+        image: MedicineIcon,
+        selectedImage: MedicineIconSelected,
         route: "/medicines",
-         width: 24, height: 24
+        width: 24,
+        height: 24,
       },
       {
         key: "orders",
         title: "Orders",
-        image: OrderIcon, selectedImage: OrderIconSelected,
+        image: OrderIcon,
+        selectedImage: OrderIconSelected,
         route: "/orders",
-        width: 24, height: 24
+        width: 24,
+        height: 24,
       },
     ],
-    []
+    [],
   );
 
   useEffect(() => {
     Font.loadAsync({
-      'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
-      'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
-      'Poppins-SemiBold': require('../../assets/fonts/Poppins-SemiBold.ttf'),
-      'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
+      "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
+      "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
+      "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
+      "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
       // ...add all other font files
     }).then(() => setFontsLoaded(true));
   }, []);
@@ -89,7 +105,7 @@ export default function MainLayout() {
       // Navigate to the tab's route
       router.push(tab.route as any);
     },
-    [tabs]
+    [tabs],
   );
 
   if (!fontsLoaded) {
@@ -97,63 +113,6 @@ export default function MainLayout() {
   }
 
   return (
-    // <RegistrationGuard>
-    //   {/* <AppLayout> */}
-    //   <SafeAreaView
-    //     style={styles.container}
-    //     edges={["top", "left", "right", "bottom"]}
-    //   >
-    //     {/* Main Content */}
-    //     <View style={styles.content}>
-    //       <Slot />
-    //     </View>
-
-    //     {/* Bottom Tab Navigation */}
-    //     <View style={styles.bottomTabContainer}>
-    //       {tabs.map((tab: any, index: number) => (
-    //         <TouchableOpacity
-    //           key={tab.key}
-    //           style={styles.tabItem}
-    //           onPress={() => handleTabPress(index)}
-    //           accessibilityLabel={`${tab.title} tab`}
-    //           accessibilityState={{ selected: activeTab === index }}
-    //           accessibilityHint={`Tap to navigate to ${tab.title}`}
-    //         >
-    //           {typeof tab.image === "function" ? (
-    //             <tab.image
-    //               width={24}
-    //               height={24}
-    //               stroke={activeTab === index ? "#ED67B8" : ""}
-    //               strokeWidth={2}
-    //               style={styles.tabIcon}
-    //             />
-    //           ) : (
-    //             <Image
-    //               source={tab.image}
-    //               style={[
-    //                 styles.tabIcon,
-    //                 {
-    //                   tintColor: activeTab === index ? "#ED67B8" : "#FFFFFF70",
-    //                 },
-    //               ]}
-    //               resizeMode="contain"
-    //             />
-    //           )}
-    //           <Text
-    //             style={[
-    //               styles.tabText,
-    //               { color: activeTab === index ? "#ED67B8" : "#FFFFFF70" },
-    //             ]}
-    //           >
-    //             {tab.title}
-    //           </Text>
-    //         </TouchableOpacity>
-    //       ))}
-    //     </View>
-    //   </SafeAreaView>
-    //   {/* </AppLayout> */}
-    // </RegistrationGuard>
-
     <RegistrationGuard>
       <Tabs
         screenOptions={{
@@ -198,7 +157,8 @@ export default function MainLayout() {
               title: tab.title,
               tabBarIcon: ({ color, size, focused }) => {
                 // Use selectedImage for all tabs when focused
-                const IconComponent = focused && tab.selectedImage ? tab.selectedImage : tab.image;
+                const IconComponent =
+                  focused && tab.selectedImage ? tab.selectedImage : tab.image;
                 return typeof IconComponent === "function" ? (
                   <IconComponent
                     width={tab.width || size}

@@ -23,11 +23,11 @@ axiosClient.interceptors.request.use(
     // Optionally log requests in dev mode (include params and resolved full URL)
     if (__DEV__) {
       const fullUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
-      console.log('📤 API Request:', config.method?.toUpperCase(), fullUrl, {
-        params: config.params,
-        data: config.data,
-        headers: config.headers,
-      });
+      // console.log('📤 API Request:', config.method?.toUpperCase(), fullUrl, {
+      //   params: config.params,
+      //   data: config.data,
+      //   headers: config.headers,
+      // });
     }
 
     return config;
@@ -42,7 +42,7 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
-      console.log('📥 API Response:', response.status, response.config.url, response.data);
+      // console.log('📥 API Response:', response.status, response.config.url, response.data);
     }
     return response.data; // Always return just data for easier usage
   },

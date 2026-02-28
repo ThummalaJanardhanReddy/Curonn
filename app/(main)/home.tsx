@@ -32,14 +32,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
 import commonStyles, { colors } from "../shared/styles/commonStyles";
-import axiosClient from '../../src/api/axiosClient';
-import ApiRoutes from '../../src/api/employee/employee';
+import axiosClient from "../../src/api/axiosClient";
+import ApiRoutes from "../../src/api/employee/employee";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
+import { IUser, useUserStore } from "../../src/store/UserStore";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // FAQ data
@@ -73,7 +74,6 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
-
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<any>(null);
@@ -84,7 +84,9 @@ export default function HomeScreen() {
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     try {
       let query = `?patientId=${patientId}&statusId=${statusId}`;
-      const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
+      const response: any = await axiosClient.get(
+        ApiRoutes.MyOrders.Allorders + query,
+      );
       if (response.isSuccess && Array.isArray(response.data)) {
         return response.data;
       } else {
@@ -95,11 +97,13 @@ export default function HomeScreen() {
     }
   };
 
-useEffect(() => {
+  useEffect(() => {
     if (!patientId) return;
-     const fetchNotifications = async () => {
+    const fetchNotifications = async () => {
       try {
-        const response = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, 'patient'));
+        const response = await axiosClient.get(
+          ApiRoutes.Notification.GetList(patientId, "patient"),
+        );
         const data = response?.data ?? response;
         console.log(" Notification  response:", data);
         setNotifications(data);
@@ -109,7 +113,6 @@ useEffect(() => {
     };
     fetchNotifications();
   }, [patientId]);
-
 
   const [orders, setOrders] = useState<any[]>([]);
   // Lock the visible set of 3 orders per session
@@ -122,18 +125,22 @@ useEffect(() => {
         if (userData?.e_id) {
           const data = await fetchAllOrders(userData.e_id, 0);
           if (isActive) {
-            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
-              const dateA = new Date(a.createdOn).getTime();
-              const dateB = new Date(b.createdOn).getTime();
-              return dateB - dateA;
-            });
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort(
+              (a, b) => {
+                const dateA = new Date(a.createdOn).getTime();
+                const dateB = new Date(b.createdOn).getTime();
+                return dateB - dateA;
+              },
+            );
             setOrders(sorted);
             // Lock the first 3 Requested/Completed order IDs
-            const locked = sorted.filter(
-              (o) => o.statusName === 'Requested' || o.statusName === 'Completed'
-            ).slice(0, 3).map(
-              (o) => o.orderNo?.toString?.() || o.id?.toString?.() || ''
-            );
+            const locked = sorted
+              .filter(
+                (o) =>
+                  o.statusName === "Requested" || o.statusName === "Completed",
+              )
+              .slice(0, 3)
+              .map((o) => o.orderNo?.toString?.() || o.id?.toString?.() || "");
             setLockedOrderIds(locked);
             setClosedOrderIds([]); // Reset closed orders when user returns to page
             setShowOrderSlider(locked.length > 0);
@@ -144,14 +151,19 @@ useEffect(() => {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id])
-);
+    }, [userData?.e_id]),
+  );
   // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     const filtered = orders.filter(
-      (o) => lockedOrderIds.includes(o.orderNo?.toString?.() || o.id?.toString?.() || '') &&
-        !closedOrderIds.includes(o.orderNo?.toString?.() || o.id?.toString?.() || '')
+      (o) =>
+        lockedOrderIds.includes(
+          o.orderNo?.toString?.() || o.id?.toString?.() || "",
+        ) &&
+        !closedOrderIds.includes(
+          o.orderNo?.toString?.() || o.id?.toString?.() || "",
+        ),
     );
     return filtered;
   }, [orders, lockedOrderIds, closedOrderIds]);
@@ -160,56 +172,75 @@ useEffect(() => {
     if (!Array.isArray(orders)) return [];
     return orders
       .slice()
-      .sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime(),
+      )
       .slice(3);
   }, [orders]);
   const [showOrderSlider, setShowOrderSlider] = useState(false);
-  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
-  const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(
+    null,
+  );
+  const [orderDetailsModalVisible, setOrderDetailsModalVisible] =
+    useState(false);
   // Always fetch latest orders on mount and when page is focused
- useFocusEffect(
-  useCallback(() => {
-    let isActive = true;
-    const fetchOrders = async () => {
-      if (userData?.e_id) {
-        const data = await fetchAllOrders(userData.e_id, 0);
-        if (isActive) {
-          const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
-            const dateA = new Date(a.createdOn).getTime();
-            const dateB = new Date(b.createdOn).getTime();
-            return dateB - dateA;
-          });
-          setOrders(sorted);
-          setShowOrderSlider(sorted.length > 0);
-          setClosedOrderIds([]); // Reset closed orders when user returns to page
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchOrders = async () => {
+        if (userData?.e_id) {
+          const data = await fetchAllOrders(userData.e_id, 0);
+          if (isActive) {
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort(
+              (a, b) => {
+                const dateA = new Date(a.createdOn).getTime();
+                const dateB = new Date(b.createdOn).getTime();
+                return dateB - dateA;
+              },
+            );
+            setOrders(sorted);
+            setShowOrderSlider(sorted.length > 0);
+            setClosedOrderIds([]); // Reset closed orders when user returns to page
+          }
         }
-      }
-    };
-    fetchOrders();
-    return () => {
-      isActive = false;
-    };
-  }, [userData?.e_id])
-);
+      };
+      fetchOrders();
+      return () => {
+        isActive = false;
+      };
+    }, [userData?.e_id]),
+  );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
-const handleCloseOrderCard = (index: number) => {
-  // Remove the order from the visible list for this session only
-  const order = latestOrders[index];
-  const orderId = order?.orderNo?.toString?.() || order?.id?.toString?.() || '';
-  setClosedOrderIds((prev) => [...prev, orderId]);
-  if (activeOrderIndex >= latestOrders.length - 1) {
-    setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
-  }
-  if (latestOrders.length - 1 === 0) setShowOrderSlider(false);
-};
+  const handleCloseOrderCard = (index: number) => {
+    // Remove the order from the visible list for this session only
+    const order = latestOrders[index];
+    const orderId =
+      order?.orderNo?.toString?.() || order?.id?.toString?.() || "";
+    setClosedOrderIds((prev) => [...prev, orderId]);
+    if (activeOrderIndex >= latestOrders.length - 1) {
+      setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
+    }
+    if (latestOrders.length - 1 === 0) setShowOrderSlider(false);
+  };
 
   // Format date as 'Feb 20th, 2026, 12:14 PM'
   const formatDate = (isoDate: string) => {
     const date = new Date(isoDate);
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
     const getOrdinal = (n: number) => {
       const s = ["th", "st", "nd", "rd"];
@@ -229,7 +260,10 @@ const handleCloseOrderCard = (index: number) => {
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
     const createdOn = item.createdOn ? formatDate(item.createdOn) : "";
     // Status display
-    const status = item.statusName === 'Requested' ? 'In Progress' : (item.statusName || 'N/A');
+    const status =
+      item.statusName === "Requested"
+        ? "In Progress"
+        : item.statusName || "N/A";
     // Status color mapping
     const statusColors: { [key: string]: string } = {
       Requested: "#d0eaff",
@@ -250,12 +284,13 @@ const handleCloseOrderCard = (index: number) => {
       Rescheduled: "#00BCD4",
     };
     // Normalize status key for color mapping
-    const statusKey = item.statusName === 'Requested' ? 'Requested' : (item.statusName || '');
+    const statusKey =
+      item.statusName === "Requested" ? "Requested" : item.statusName || "";
     const statusBgColor = statusColors[statusKey] || "#666";
     const statusTxtColor = statusTextColors[statusKey] || "#fff";
 
     // Category and icon mapping
-    let category = '';
+    let category = "";
     let iconSource = null;
     switch (item.orderType) {
       case "Single Test":
@@ -279,75 +314,147 @@ const handleCloseOrderCard = (index: number) => {
         iconSource = images.consultationicon;
         break;
       default:
-        category = item.orderType || '';
+        category = item.orderType || "";
         iconSource = null;
     }
 
     return (
-      <View style={{
-        width: SCREEN_WIDTH * 0.95,
-        marginHorizontal: 10,
-        borderRadius: 18,
-        paddingLeft: 15,
-        paddingBottom: 0,
-        paddingTop: 10,
-        marginBottom: 0,
-        position: 'relative',
-        backgroundColor: 'transparent',
-      }}>
+      <View
+        style={{
+          width: SCREEN_WIDTH * 0.95,
+          marginHorizontal: 10,
+          borderRadius: 18,
+          paddingLeft: 15,
+          paddingBottom: 0,
+          paddingTop: 10,
+          marginBottom: 0,
+          position: "relative",
+          backgroundColor: "transparent",
+        }}
+      >
         <TouchableOpacity
-          style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}
+          style={{ position: "absolute", top: 10, right: 10, zIndex: 2 }}
           onPress={() => handleCloseOrderCard(index)}
         >
-          <Image source={images.icons.close} style={{ width: 22, height: 22, tintColor: '#694664' }} />
+          <Image
+            source={images.icons.close}
+            style={{ width: 22, height: 22, tintColor: "#694664" }}
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => {
-          setSelectedOrderDetails(item);
-          setOrderDetailsModalVisible(true);
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 3 }}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedOrderDetails(item);
+            setOrderDetailsModalVisible(true);
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 3,
+            }}
+          >
             {/* {iconSource && (
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
             <Text
-              style={{ fontSize: 10, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
+              style={{
+                fontSize: 10,
+                color: "#888",
+                fontFamily: fonts.medium,
+                marginRight: 6,
+                lineHeight: 15,
+              }}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
               {category}
-            </Text></View>
-             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={{ fontSize: 14,lineHeight:19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
+            </Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#333', marginBottom: 4, fontFamily: fonts.medium }}>{createdOn}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 0, justifyContent: 'space-between' }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 4,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                lineHeight: 19,
+                color: "#C15E9D",
+                fontFamily: fonts.bold,
+              }}
+            >
+              {item.title}
+            </Text>
+          </View>
+          <Text
+            style={{
+              fontSize: 12,
+              color: "#333",
+              marginBottom: 4,
+              fontFamily: fonts.medium,
+            }}
+          >
+            {createdOn}
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              marginBottom: 0,
+              justifyContent: "space-between",
+            }}
+          >
             {/* Status on the left */}f
-            <View style={{
-              backgroundColor: statusBgColor,
-              borderRadius: 15,
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              marginLeft: 4,
-              flexShrink: 0,
-            }}>
-              <Text style={{ fontSize: 10, color: statusTxtColor, fontFamily: fonts.regular }}>{status}</Text>
+            <View
+              style={{
+                backgroundColor: statusBgColor,
+                borderRadius: 15,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                marginLeft: 4,
+                flexShrink: 0,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: statusTxtColor,
+                  fontFamily: fonts.regular,
+                }}
+              >
+                {status}
+              </Text>
             </View>
             {/* Carousel Dots centered */}
             {index < 3 && (
-              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',marginRight: 10 }}>
-                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
-                  <View
-                    key={idx}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      marginHorizontal: 3,
-                      backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
-                    }}
-                  />
-                ))}
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  marginRight: 10,
+                }}
+              >
+                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(
+                  (idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        marginHorizontal: 3,
+                        backgroundColor:
+                          idx === activeOrderIndex ? "#C15E9D" : "#ccc",
+                      }}
+                    />
+                  ),
+                )}
               </View>
             )}
           </View>
@@ -355,24 +462,24 @@ const handleCloseOrderCard = (index: number) => {
       </View>
     );
     // State for OrderDetails modal
-
-
   };
 
-    const markNotificationAsRead = async (notificationId: number) => {
+  const markNotificationAsRead = async (notificationId: number) => {
     try {
       // Replace with your actual API endpoint for marking as read
-      await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), { notificationId });
+      await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
+        notificationId,
+      });
       // Update local state to mark as read
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n
+              n.notificationId === notificationId ? { ...n, isRead: true } : n,
             )
-          : prev
+          : prev,
       );
     } catch (error) {
-      console.error('Failed to mark notification as read', error);
+      console.error("Failed to mark notification as read", error);
     }
   };
 
@@ -385,7 +492,7 @@ const handleCloseOrderCard = (index: number) => {
           setArticles(res);
         }
       } catch (e) {
-        console.error('Failed to fetch articles', e);
+        console.error("Failed to fetch articles", e);
       }
     }
     fetchArticles();
@@ -402,20 +509,19 @@ const handleCloseOrderCard = (index: number) => {
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         const timeout = setTimeout(() => {
           // Use React Native StatusBar API to set background color on Android
           RNStatusBar.setBackgroundColor("#7E6781", true);
         }, 400); // Adjust timeout as needed
         return () => clearTimeout(timeout);
       }
-    }, [])
+    }, []),
   );
-
 
   // Handle status bar when notification modal opens/closes
   useEffect(() => {
-    console.log("Home Page data Started")
+    console.log("Home Page data Started");
     // if (notificationVisible) {
     //   StatusBar.setBarStyle('dark-content', true);
     //   StatusBar.setBackgroundColor('#fff', true);
@@ -424,8 +530,6 @@ const handleCloseOrderCard = (index: number) => {
     //   StatusBar.setBackgroundColor('transparent', true);
     // }
   }, [notificationVisible]);
-
-  
 
   // Dummy services data (would come from API)
   const services = useMemo(
@@ -443,7 +547,7 @@ const handleCloseOrderCard = (index: number) => {
         route: "/medicines",
       },
     ],
-    []
+    [],
   );
 
   // Dummy FAQs data
@@ -468,10 +572,8 @@ const handleCloseOrderCard = (index: number) => {
           "Yes, we provide home visits for certain services. Check availability in your area.",
       },
     ],
-    []
+    [],
   );
-
- 
 
   const showNotificationModal = useCallback(() => {
     setNotificationVisible(true);
@@ -503,7 +605,7 @@ const handleCloseOrderCard = (index: number) => {
         useNativeDriver: true,
       }).start();
     },
-    [bottomSlideAnim]
+    [bottomSlideAnim],
   );
 
   const hideBottomModal = useCallback(() => {
@@ -564,7 +666,7 @@ const handleCloseOrderCard = (index: number) => {
         </View>
       </TouchableOpacity>
     ),
-    []
+    [],
   );
 
   const renderArticleCard = useCallback(
@@ -578,18 +680,24 @@ const handleCloseOrderCard = (index: number) => {
         onPress={() => setSelectedArticle(item)}
       >
         <Image
-          source={item.thumbnailImag ? { uri: item.thumbnailImag } : images.healthArticle}
+          source={
+            item.thumbnailImag
+              ? { uri: item.thumbnailImag }
+              : images.healthArticle
+          }
           style={styles.articleImage}
           accessibilityLabel={`${item.titleName}`}
         />
         <View style={styles.articleContent}>
           <Text style={styles.articleTitle}>{item.titleName}</Text>
-          <Text style={styles.articleExcerpt} numberOfLines={2}>{item.descriptionName}</Text>
+          <Text style={styles.articleExcerpt} numberOfLines={2}>
+            {item.descriptionName}
+          </Text>
           {/* <Text style={styles.articleReadTime}>{item.readTime || ''}</Text> */}
         </View>
       </TouchableOpacity>
     ),
-    []
+    [],
   );
 
   const renderFAQ = useCallback(
@@ -599,46 +707,38 @@ const handleCloseOrderCard = (index: number) => {
         <Text style={styles.faqAnswer}>{item.answer}</Text>
       </View>
     ),
-    []
+    [],
   );
 
-
-
-  const renderNotification = useCallback(
-    ({ item }: { item: any }) => {
-      const bgColor = item.isRead ? '#F6F6F6' : '#FFF3E0';
-      return (
-        <TouchableOpacity
-          style={[styles.notificationItem, { backgroundColor: bgColor }]}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (!item.isRead) markNotificationAsRead(item.notificationId);
-          }}
-        >
-          <View style={styles.notificationItemIconContainer}>
-            <Image
-              source={images.notification}
-              style={styles.notificationItemIcon}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.notificationContent}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationMessage}>{item.message}</Text>
-            {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
-          </View>
-        </TouchableOpacity>
-      );
-    },
-    []
-  );
+  const renderNotification = useCallback(({ item }: { item: any }) => {
+    const bgColor = item.isRead ? "#F6F6F6" : "#FFF3E0";
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, { backgroundColor: bgColor }]}
+        activeOpacity={0.7}
+        onPress={() => {
+          if (!item.isRead) markNotificationAsRead(item.notificationId);
+        }}
+      >
+        <View style={styles.notificationItemIconContainer}>
+          <Image
+            source={images.notification}
+            style={styles.notificationItemIcon}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.notificationContent}>
+          <Text style={styles.notificationTitle}>{item.title}</Text>
+          <Text style={styles.notificationMessage}>{item.message}</Text>
+          {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
+        </View>
+      </TouchableOpacity>
+    );
+  }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        style="light"
-        animated
-      />
+      <StatusBar style="light" animated />
       {/* <SafeAreaView style={styles.container}> */}
 
       {/* Background Image */}
@@ -659,32 +759,17 @@ const handleCloseOrderCard = (index: number) => {
         }}
       />
 
-
-
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
           <View style={{ alignItems: "center", paddingHorizontal: 30 }}>
-            <Text
-              style={styles.transhead}
-            >
-              Transform
-            </Text>
-            <Text
-              style={styles.transinner}
-            >
-              Your Life
-            </Text>
-            <Text
-              style={styles.curonhealth}
-            >
-              with Curonn.health
-            </Text>
+            <Text style={styles.transhead}>Transform</Text>
+            <Text style={styles.transinner}>Your Life</Text>
+            <Text style={styles.curonhealth}>with Curonn.health</Text>
           </View>
 
           <Image
@@ -718,8 +803,8 @@ const handleCloseOrderCard = (index: number) => {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'60%'}
-            // height={'60%'}
+              // width={'60%'}
+              // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -763,8 +848,8 @@ const handleCloseOrderCard = (index: number) => {
             />
             <images.home.book_wellness
               style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'20%'}
-            // height={'80%'}
+              // width={'20%'}
+              // height={'80%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle, { color: "#fff" }]}>
@@ -794,7 +879,7 @@ const handleCloseOrderCard = (index: number) => {
                   alignItems: "center",
                   justifyContent: "center",
                 }}
-              // onPress={() => router.push("/")}
+                // onPress={() => router.push("/")}
               >
                 Get Now
               </Button>
@@ -843,7 +928,9 @@ const handleCloseOrderCard = (index: number) => {
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                 onPress={() => router.push("/features/ambulance/ambulanceservices")}
+                  onPress={() =>
+                    router.push("/features/ambulance/ambulanceservices")
+                  }
                 >
                   Book Now
                 </Button>
@@ -867,12 +954,13 @@ const handleCloseOrderCard = (index: number) => {
           <FlatList
             data={articles}
             renderItem={renderArticleCard}
-            keyExtractor={(item) => item.id?.toString?.() || item._id || Math.random().toString()}
+            keyExtractor={(item) =>
+              item.id?.toString?.() || item._id || Math.random().toString()
+            }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.articlesContainer}
           />
-
         </View>
 
         {/* FAQ & Feedback Section */}
@@ -922,34 +1010,45 @@ const handleCloseOrderCard = (index: number) => {
       </ScrollView>
 
       {/* Order Slider Fixed at Bottom */}
+      {/* Order Slider Fixed at Bottom */}
       {showOrderSlider && orders.length > 0 && (
-        <View style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingVertical: 5,
-          paddingTop:0,
-          shadowColor: '#000',
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-          elevation: 8,
-          zIndex: 100,
-          backgroundColor: '#fff',
-          borderTopLeftRadius: 15,
-          borderTopRightRadius: 15,
-        }}>
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingVertical: 5,
+            paddingTop: 0,
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 8,
+            zIndex: 100,
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 15,
+            borderTopRightRadius: 15,
+          }}
+        >
           <FlatList
             data={latestOrders}
             renderItem={({ item, index }) => renderOrderCard({ item, index })}
-            keyExtractor={(item, idx) => (item.orderNo ? item.orderNo : idx) + '-' + idx}
+            keyExtractor={(item, idx) =>
+              (item.orderNo ? item.orderNo : idx) + "-" + idx
+            }
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'flex-end', paddingBottom: 10 }}
+            contentContainerStyle={{
+              alignItems: "flex-end",
+              paddingBottom: 10,
+            }}
             style={{ flexGrow: 0 }}
-            onMomentumScrollEnd={e => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2));
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(
+                e.nativeEvent.contentOffset.x /
+                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+              );
               setActiveOrderIndex(idx);
             }}
             initialScrollIndex={
@@ -957,7 +1056,11 @@ const handleCloseOrderCard = (index: number) => {
                 ? activeOrderIndex
                 : 0
             }
-            getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2, offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index, index })}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2,
+              offset: (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2) * index,
+              index,
+            })}
           />
         </View>
       )}
@@ -969,28 +1072,64 @@ const handleCloseOrderCard = (index: number) => {
         transparent={true}
         onRequestClose={() => setSelectedArticle(null)}
       >
-
-        <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 0, justifyContent: 'flex-start' }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "#fff",
+            borderRadius: 0,
+            justifyContent: "flex-start",
+          }}
+        >
           <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-              <Text style={styles.articletitle} numberOfLines={2} ellipsizeMode="tail">
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: "#eee",
+              }}
+            >
+              <Text
+                style={styles.articletitle}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {selectedArticle?.titleName}
               </Text>
-              <TouchableOpacity onPress={() => setSelectedArticle(null)} style={{ marginLeft: 16, padding: 4 }}>
-                <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
+              <TouchableOpacity
+                onPress={() => setSelectedArticle(null)}
+                style={{ marginLeft: 16, padding: 4 }}
+              >
+                <Image
+                  source={images.icons.close}
+                  style={{ width: 24, height: 24, tintColor: "#333" }}
+                />
               </TouchableOpacity>
             </View>
             <ScrollView style={{ padding: 20 }}>
               {selectedArticle && (
                 <>
                   <Image
-                    source={selectedArticle.thumbnailImag ? { uri: selectedArticle.thumbnailImag } : images.healthArticle}
-                    style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 8 }}
+                    source={
+                      selectedArticle.thumbnailImag
+                        ? { uri: selectedArticle.thumbnailImag }
+                        : images.healthArticle
+                    }
+                    style={{
+                      width: "100%",
+                      height: 200,
+                      borderRadius: 12,
+                      marginBottom: 8,
+                    }}
                     resizeMode="cover"
                   />
                   {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
                   <View style={styles.articalcontentdata}>
-                    <Text style={styles.descriptiondata}>{selectedArticle.descriptionName}</Text>
+                    <Text style={styles.descriptiondata}>
+                      {selectedArticle.descriptionName}
+                    </Text>
                   </View>
                   {/* If you have more fields, render them here */}
                 </>
@@ -1020,9 +1159,7 @@ const handleCloseOrderCard = (index: number) => {
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Frequently Asked Questions
-              </Text>
+              <Text style={styles.modalTitle}>Frequently Asked Questions</Text>
               <TouchableOpacity
                 onPress={hideBottomModal}
                 style={styles.closeButton}
@@ -1166,18 +1303,15 @@ const handleCloseOrderCard = (index: number) => {
       <OrderDetails
         visible={orderDetailsModalVisible}
         order={selectedOrderDetails}
-        statusName={selectedOrderDetails?.statusName || ''}
+        statusName={selectedOrderDetails?.statusName || ""}
         onClose={() => setOrderDetailsModalVisible(false)}
         refreshOrders={async () => {
           if (userData?.e_id) {
             const ordersData = await fetchAllOrders(userData.e_id, 0);
             setOrders(ordersData);
           }
-        }} />
-
-
-
-
+        }}
+      />
     </View>
   );
 }
@@ -1225,7 +1359,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     // backgroundColor: '#f5f5f5',
-
   },
   transhead: {
     fontSize: 50,
@@ -1235,13 +1368,16 @@ const styles = StyleSheet.create({
     lineHeight: 50,
   },
   transinner: {
-    fontSize: 50, fontWeight: 600, color: colors.white,
+    fontSize: 50,
+    fontWeight: 600,
+    color: colors.white,
     fontFamily: fonts.bold,
-    lineHeight: 70
-
+    lineHeight: 70,
   },
   curonhealth: {
-    fontSize: 16, fontWeight: 400, color: colors.white,
+    fontSize: 16,
+    fontWeight: 400,
+    color: colors.white,
     fontFamily: fonts.regular,
   },
   yogaImage: {
@@ -1264,7 +1400,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-
   },
   serviceCardWrapper: {
     // width: '48%',
@@ -1356,6 +1491,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: 12,
     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   featureButton: {
     alignSelf: "flex-start",
@@ -1399,6 +1535,7 @@ const styles = StyleSheet.create({
   },
   ambulanceTitle: {
     fontSize: 20,
+    fontSize: 20,
     color: "#000000",
     lineHeight: 24,
     marginBottom: 4,
@@ -1408,7 +1545,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "black",
     marginBottom: 12,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   ambulanceButton: {
     alignSelf: "flex-start",
@@ -1543,7 +1680,7 @@ const styles = StyleSheet.create({
   notificationModalTitle: {
     fontSize: 16,
     color: "#202427",
-    fontFamily: fonts.semiBold
+    fontFamily: fonts.semiBold,
   },
   notificationCloseButton: {
     padding: 4,
@@ -1587,7 +1724,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
-      fontSize: 15,
+    fontSize: 15,
     color: "#000000",
     flex: 1,
     fontFamily: fonts.semiBold,
@@ -1624,7 +1761,7 @@ const styles = StyleSheet.create({
   },
   articleContent: {
     padding: 16,
-    paddingTop: 12
+    paddingTop: 12,
   },
   articleTitle: {
     fontSize: 16,
@@ -1635,7 +1772,7 @@ const styles = StyleSheet.create({
   },
   articleExcerpt: {
     fontSize: 13,
-    color: '#000000',
+    color: "#000000",
     lineHeight: 20,
     fontFamily: fonts.regular,
   },

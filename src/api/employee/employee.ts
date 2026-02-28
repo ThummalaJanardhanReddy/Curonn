@@ -1,5 +1,3 @@
-// /d:/MCW/Zemplee/AndroidBuild/curronn/src/api/employee/employee.ts
-
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 // ✅ Centralized API route definitions for the entire app
@@ -190,6 +188,10 @@ export const EnvAllergiesApi = {
 } as const;
 
 
+export const DepartmentsApi = {
+  getAllDepartments: '/Specialities/GetAll',
+} as const
+
 // ✅ Unified export for convenience
 export const DiagApi = {
   Diagsticcenter: '/DiagnosticCenters/nearby-centers',
@@ -233,6 +235,7 @@ export const ApiRoutes = {
   DiagCenter: DiagApi,
   MenstrualHistory: MenstrualHistoryApi,
 
+  Departments: DepartmentsApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;
