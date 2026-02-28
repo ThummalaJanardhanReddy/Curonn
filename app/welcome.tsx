@@ -28,9 +28,9 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={{ flex: 1, }}>
-      <StatusBar barStyle="dark-content" translucent={false} animated />
-      <SafeAreaView style={[styles.container]}>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <StatusBar barStyle="dark-content" translucent={false} backgroundColor="#ffffff" animated />
+      <SafeAreaView style={[styles.container, { backgroundColor: "#ffffff" }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.contentContainer}
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: getResponsiveFontSize(24),
-    fontWeight:400,
+    fontWeight: 400,
     color: colors.black,
     textAlign: "center",
     marginBottom: getResponsiveSpacing(15),

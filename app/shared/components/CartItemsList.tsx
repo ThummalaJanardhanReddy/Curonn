@@ -47,29 +47,22 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
                     items.map((ci, idx) => (
                         <View key={`${ci.id ?? idx}_${ci.cartId ?? 0}`} style={styles.itemWrapper}>
                             <View style={styles.medicineItem}>
-                                <View style={styles.imageContainer}>
-                                    {ci.image ? (
-                                        <Image source={{ uri: ci.image }} style={styles.medicineImage} />
-                                    ) : (
-                                        <View style={styles.medicineImagePlaceholder} />
-                                    )}
-                                </View>
                                 <View style={styles.medicineMainInfo}>
                                     <Text style={styles.medicineName} numberOfLines={2}>
                                         {ci.name}
                                     </Text>
-                                    {ci.subtitle && (
+                                    {!!ci.subtitle ? (
                                         <Text style={styles.medicinePack}>{ci.subtitle}</Text>
-                                    )}
+                                    ) : null}
                                 </View>
 
                                 <View style={styles.medicineActionGroup}>
                                     <View style={styles.priceContainer}>
-                                        {ci.originalPrice && ci.originalPrice > ci.price && (
+                                        {!!(ci.originalPrice && ci.originalPrice > ci.price) ? (
                                             <Text style={styles.originalPrice}>
                                                 {"\u20B9"}{Math.round(ci.originalPrice)}
                                             </Text>
-                                        )}
+                                        ) : null}
                                         <Text style={styles.currentPrice}>
                                             {"\u20B9"}{Math.round(ci.price)}
                                         </Text>
@@ -94,15 +87,13 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
                                     </View>
                                 </View>
                             </View>
-                            {idx !== items.length - 1 && (
-                                <View style={styles.itemDivider} />
-                            )}
+                            <View style={styles.itemDivider} />
                         </View>
                     ))
                 )}
             </View>
 
-            {showPricingDetails && (
+            {showPricingDetails ? (
                 <View style={styles.deliveryCard}>
                     <View style={styles.deliveryRow}>
                         <Text style={styles.deliveryLabel}>Item Price</Text>
@@ -124,7 +115,7 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
                         </Text>
                     </View>
                 </View>
-            )}
+            ) : null}
         </View>
     );
 };
@@ -161,18 +152,18 @@ const styles = StyleSheet.create({
     medicineName: {
         fontFamily: fonts.semiBold,
         fontSize: getResponsiveFontSize(14),
-        color: '#3B2032',
+        color: '#000',
         lineHeight: 20,
     },
     medicinePack: {
         fontFamily: fonts.regular,
-        fontSize: getResponsiveFontSize(12),
-        color: '#8A6F7F',
-        marginTop: 4,
+        fontSize: getResponsiveFontSize(14),
+        color: '#000',
+        marginTop: 6,
     },
     medicineActionGroup: {
         alignItems: 'flex-end',
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
     },
     priceContainer: {
         flexDirection: 'row',
@@ -189,6 +180,7 @@ const styles = StyleSheet.create({
     currentPrice: {
         fontSize: getResponsiveFontSize(16),
         color: '#000',
+        fontWeight: '700',
         fontFamily: fonts.bold,
     },
     qtyControl: {
@@ -218,8 +210,8 @@ const styles = StyleSheet.create({
         fontSize: getResponsiveFontSize(14),
     },
     itemDivider: {
-        height: 1,
-        backgroundColor: '#f0f0f0',
+        height: 1.5,
+        backgroundColor: '#D1D1D1',
     },
     deliveryCard: {
         backgroundColor: "#fff",
@@ -244,9 +236,9 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     lineSeparator: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 4,
+        height: 2,
+        backgroundColor: '#ddd',
+        marginVertical: 8,
         borderStyle: 'dashed',
     },
     toPayLabel: {

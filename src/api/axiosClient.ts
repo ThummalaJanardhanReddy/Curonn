@@ -53,7 +53,7 @@ axiosClient.interceptors.response.use(
       // Example: navigateToLoginScreen();
     }
 
-    console.error('❌ Response Error:', error.response?.data || error.message);
+    // console.error('❌ Response Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

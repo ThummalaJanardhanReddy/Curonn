@@ -144,14 +144,14 @@ const commonStyles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(20),
-    paddingTop:getResponsiveSpacing(15),
+    paddingTop: getResponsiveSpacing(15),
     // minHeight: hp(100) - getResponsiveSpacing(20),
   },
 
   containercontent_layout: {
-   flex: 1,
+    flex: 1,
     paddingBottom: getResponsiveSpacing(20),
-    paddingTop:getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(20),
   },
   container_header: {
     flexDirection: 'row',

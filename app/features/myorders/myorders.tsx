@@ -1,5 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
 import {
@@ -14,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+// import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator } from "react-native";
 import { Button, Card, Chip } from "react-native-paper";
 import CommonHeader from "../../shared/components/CommonHeader";
@@ -23,6 +24,8 @@ import { Order, orderManager } from "../../shared/utils/orderManager";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
+import { useRouter } from "expo-router";
+import BackButton from "../../shared/components/BackButton";
 import { useUser } from "../../shared/context/UserContext";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { images } from "../../../assets";
@@ -35,6 +38,7 @@ export default function OrdersScreen() {
   const [currentLocation] = useState("New York, NY");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const { userData } = useUser();
   const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -121,7 +125,7 @@ export default function OrdersScreen() {
       { key: "Requested", title: "In Progress" },
       { key: "Completed", title: "Completed" },
       { key: "Cancelled", title: "Cancelled" },
-     
+
     ],
     []
   );
@@ -162,7 +166,7 @@ export default function OrdersScreen() {
       }
       const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
       if (response.isSuccess && Array.isArray(response.data)) {
-        console.log("Orders of :", response.data);
+        // console.log("Orders of :", response.data);
         return response.data;
       } else {
         console.log("No orders found or error:", response.message);
@@ -176,31 +180,31 @@ export default function OrdersScreen() {
 
 
   const formatDate = (isoDate: string) => {
-  const date = new Date(isoDate);
+    const date = new Date(isoDate);
 
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
 
-  const getOrdinal = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    const getOrdinal = (n: number) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+
+    const month = months[date.getMonth()];
+    const day = getOrdinal(date.getDate());
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12 || 12;
+
+    return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
   };
-
-  const month = months[date.getMonth()];
-  const day = getOrdinal(date.getDate());
-  const year = date.getFullYear();
-
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-
-  const ampm = hours >= 12 ? "pm" : "am";
-  hours = hours % 12 || 12;
-
-  return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
-};
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -245,7 +249,7 @@ export default function OrdersScreen() {
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? formatDate(item.createdOn): "";
+      const createdOn = item.createdOn ? formatDate(item.createdOn) : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
@@ -276,7 +280,7 @@ export default function OrdersScreen() {
           <View style={styles.orderCard}>
             <View style={styles.orderLeft}>
               {iconSource && (
-                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain',borderRadius:10 }} />
+                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain', borderRadius: 10 }} />
               )}
               <Text style={styles.orderno}>{item.orderNo}</Text>
             </View>
@@ -290,13 +294,13 @@ export default function OrdersScreen() {
               </View>
               <View style={styles.categoryrow}>
                 {/* StatusName with background color */}
-                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2,paddingTop:4, marginTop: 0 }}>
-                  <Text style={{ color: statusTextColor, fontSize: 10,fontFamily:fonts.regular }}>{displayStatusName}</Text>
+                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2, paddingTop: 4, marginTop: 0 }}>
+                  <Text style={{ color: statusTextColor, fontSize: 10, fontFamily: fonts.regular }}>{displayStatusName}</Text>
                 </View>
                 {item.orderType !== "Consultation" && (
                   <View style={styles.paymentrow}>
                     {/* <Text style={styles.paymentheader}>Payment:</Text> */}
-                    <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text>
+                    {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
                   </View>
                 )}
               </View>
@@ -331,97 +335,88 @@ export default function OrdersScreen() {
   );
 
   return (
-    <><View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        translucent={false}
-        backgroundColor="#ffffffff" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          translucent={false}
+          backgroundColor="#ffffffff" />
 
-      {/* Header */}
-      <View style={styles.defaultHeader}>
-        <CommonHeader
-          title="My Orders"
-          showProfile={false}
-          showCart={false}
-          showLocation={false}
-          onProfilePress={() => console.log('Profile pressed')} />
-      </View>
-
-               <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 1)",
-                  "rgba(247, 84, 10, 0.2)",
-                ]}
-                start={{ x: 0.1, y: 0.6}}
-                end={{ x: 0.1, y: 0.1 }}
-                style={{
-                  paddingHorizontal: 0, // ✅ works
-                  paddingVertical: 5,
-                }}
-              >
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-           <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for Order Id"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery} />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => setSearchQuery("")}
-            >
-              <Image source={images.icons.close} style={styles.clearIcon} />
-            </TouchableOpacity>
-          )}
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Orders</Text>
         </View>
-      </View>
 
-      {/* <View>
+        <View
+          style={{
+            paddingHorizontal: 0,
+            paddingVertical: 5,
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for Order Id"
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery} />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setSearchQuery("")}
+                >
+                  <Image source={images.icons.close} style={styles.clearIcon} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* <View>
       <Text style={{fontSize:20,fontWeight:'600',color:'#333',marginLeft:20,marginTop:10,marginBottom:10}}>{address}</Text>
     </View> */}
 
-      {/* Filters */}
-      {searchQuery.trim().length === 0 && (
-        <View style={styles.filtersContainer}>
-          <FlatList
-            data={filters}
-            renderItem={renderFilterChip}
-            keyExtractor={(item) => item.key}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.filtersList, { paddingLeft: 20,paddingRight:20 }]} />
+          {/* Filters */}
+          {searchQuery.trim().length === 0 && (
+            <View style={styles.filtersContainer}>
+              <FlatList
+                data={filters}
+                renderItem={renderFilterChip}
+                keyExtractor={(item) => item.key}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.filtersList, { paddingLeft: 20, paddingRight: 20 }]} />
+            </View>
+          )}
         </View>
-      )}
-</LinearGradient>
-      {/* Orders List */}
-      <View style={styles.ordersdataContainer}>
-        {loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-            <ActivityIndicator size="large" color="#694664" />
-          </View>
-        ) : filteredOrders.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-            <Text style={{ fontSize: 16, color: '#888' }}>No orders found</Text>
-          </View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <FlatList
-              data={filteredOrders}
-              renderItem={renderOrderCard}
-              keyExtractor={(item) => item.orderNo}
-              contentContainerStyle={styles.ordersList}
-              showsVerticalScrollIndicator={true}
-              style={{ flex: 1 }} />
+        {/* Orders List */}
+        <View style={[styles.ordersdataContainer, { backgroundColor: '#F5F4F9', marginHorizontal: 0, marginTop: 0 }]}>
+          {loading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+              <ActivityIndicator size="large" color="#694664" />
+            </View>
+          ) : filteredOrders.length === 0 ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 16, color: '#888' }}>No orders found</Text>
+            </View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <FlatList
+                data={filteredOrders}
+                renderItem={renderOrderCard}
+                keyExtractor={(item) => item.orderNo}
+                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15 }]}
+                showsVerticalScrollIndicator={true}
+                style={{ flex: 1, backgroundColor: '#F5F4F9' }} />
 
-          </View>
-        )}
+            </View>
+          )}
+        </View>
+
       </View>
-
-    </View>
-    <OrderDetails
+      <OrderDetails
         visible={orderDetailsVisible}
         order={selectedOrder}
         statusName={selectedOrder?.statusName || ''}
@@ -431,21 +426,32 @@ export default function OrdersScreen() {
             const ordersData = await fetchAllOrders(userData.e_id, 0);
             setOrders(ordersData);
           }
-        } } /></>
-    
+        }} />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.containercontent_layout,
-    backgroundColor: colors.white, // colors.bg_secondary,
-    // backgroundColor: colors.bg_primary,
+    flex: 1,
+    backgroundColor: colors.white,
     paddingBottom: 0,
   },
 
-  defaultHeader: {
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: 10,
+    paddingBottom: 15,
+  },
+  headerTitle: {
+    fontSize: 16,
+    color: colors.black,
+    fontFamily: fonts.semiBold,
+  },
+  backButton: {
+    padding: 0,
   },
   filtersContainer: {
     paddingVertical: 10,
@@ -460,7 +466,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 20,
   },
   filterChip: {
-     paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: "rgba(105, 70, 100, 0.4)",
@@ -470,20 +476,20 @@ const styles = StyleSheet.create({
   },
   selectedFilterChip: {
     backgroundColor: "#694664",
-    
+
   },
-    orderRight: {
+  orderRight: {
     flex: 1,
   },
   filterChipText: {
-   fontSize: 13,
+    fontSize: 13,
     fontWeight: "400",
     color: "#251729",
     fontFamily: fonts.regular,
     lineHeight: 20,
   },
   selectedFilterChipText: {
-     color: "#fff",
+    color: "#fff",
     fontFamily: fonts.semiBold,
   },
   ordersList: {
@@ -510,23 +516,23 @@ const styles = StyleSheet.create({
   paymentheader: {
     fontSize: 12,
     color: "#303030",
-     fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold,
   },
-   paymentamount: {
+  paymentamount: {
     fontSize: 13,
     color: "#000000",
     marginBottom: 4,
-    marginTop:2,
-      fontFamily: fonts.semiBold,
+    marginTop: 2,
+    fontFamily: fonts.semiBold,
   },
-  span:{
+  span: {
     fontSize: 12,
     color: "#694664",
-    
+
   },
-   
-  
-  
+
+
+
   orderCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -545,7 +551,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-    paymentrow: {
+  paymentrow: {
     flexDirection: "row",
   },
 

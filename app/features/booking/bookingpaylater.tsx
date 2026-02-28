@@ -224,6 +224,41 @@ export default function BookingPayLaterScreen() {
     fetchRelationTypes();
   }, [userData?.e_id]);
 
+  const fetchRelationDetails = async (relationId: number) => {
+    try {
+      setLoading(true);
+      const patientId = userData?.e_id;
+      if (!patientId) return;
+      const response: any = await axiosClient.get(
+        ApiRoutes.Employee.getRelation(relationId, patientId)
+      );
+
+      // Handle both wrapped response { isSuccess: true, data: {...} } and raw response {...}
+      const detail = (response && response.isSuccess && response.data) ? response.data : response;
+
+      if (detail && (detail.relationName || detail.fullName)) {
+        setFullName(detail.relationName || detail.fullName || '');
+        setAge(detail.age ? detail.age.toString() : '');
+        // Capitalize gender if it's 'male'/'female'
+        const g = detail.gender || '';
+        setGender(g.charAt(0).toUpperCase() + g.slice(1).toLowerCase());
+      } else {
+        // Clear fields if no detail found for this relation type
+        setFullName('');
+        setAge('');
+        setGender('');
+      }
+    } catch (error) {
+      // console.error('Fetch relation details error:', error);
+      setFullName('');
+      setAge('');
+      setGender('');
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Edit prescription: go back to modal ──────────────────────────────
   const handleEdit = () => {
     prescriptionStore.set({
@@ -428,11 +463,11 @@ export default function BookingPayLaterScreen() {
         // Use yyyymmdd date format (no separators)
         deliveryDate: formattedDate,
         timeSlot: '',
-        isSelfService: true,
-        relationId: 0,
-        relationName: "",
-        relationAge: 0,
-        relationGender: "",
+        isSelfService: isSelfService,
+        relationId: isSelfService ? 0 : (selectedRelation?.masterDataId ?? 0),
+        relationName: isSelfService ? "" : fullName,
+        relationAge: isSelfService ? 0 : (age ? Number(age) : 0),
+        relationGender: isSelfService ? "" : gender,
 
         paymentDetails: 'pay_later',
         isPaymentDone: false,
@@ -524,9 +559,10 @@ export default function BookingPayLaterScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={{ marginBottom: getResponsiveSpacing(6) }}
+                contentContainerStyle={{ paddingVertical: 8, paddingRight: 8 }}
               >
                 {prescriptionImages.map((img, idx) => (
-                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(12) }}>
+                  <View key={`prescImg-${idx}`} style={{ position: 'relative', marginRight: getResponsiveSpacing(15) }}>
                     <Image
                       source={{ uri: img.uri }}
                       style={styles.prescriptionThumb}
@@ -536,7 +572,7 @@ export default function BookingPayLaterScreen() {
                       onPress={() => handleRemoveImage(idx)}
                       activeOpacity={0.7}
                     >
-                      <Image source={images.icons.close} style={styles.removeXIcon} />
+                      <Image source={images.icons.close} style={styles.removeXIcon} resizeMode="contain" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -593,9 +629,9 @@ export default function BookingPayLaterScreen() {
                   <Text style={styles.fieldLabel}>Relation Type</Text>
                   <TouchableOpacity style={styles.dropdown} onPress={() => setShowRelationDropdown(true)}>
                     <Text style={styles.dropdownText}>
-                      {selectedRelation ? selectedRelation.name : 'Select Relation'}
+                      {selectedRelation ? selectedRelation.name : 'Select'}
                     </Text>
-                    <View style={styles.dropdownIcon} />
+                    <View style={styles.dropdownArrow} />
                   </TouchableOpacity>
                   {fieldErrors.relation ? (
                     <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
@@ -643,8 +679,8 @@ export default function BookingPayLaterScreen() {
                 <View style={styles.formField}>
                   <Text style={styles.fieldLabel}>Gender</Text>
                   <TouchableOpacity style={styles.dropdown} onPress={() => setShowGenderDropdown(true)}>
-                    <Text style={styles.dropdownText}>{gender || 'Select Gender'}</Text>
-                    <View style={styles.dropdownIcon} />
+                    <Text style={styles.dropdownText}>{gender || 'Select '}</Text>
+                    <View style={styles.dropdownArrow} />
                   </TouchableOpacity>
                   {fieldErrors.gender ? (
                     <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
@@ -744,6 +780,7 @@ export default function BookingPayLaterScreen() {
                   if (fieldErrors && typeof setFieldErrors === 'function') {
                     setFieldErrors((prev) => ({ ...prev, relation: '' }));
                   }
+                  fetchRelationDetails(relation.masterDataId);
                   setShowRelationDropdown(false);
                 }}
               >
@@ -914,8 +951,8 @@ const styles = StyleSheet.create({
   },
   removeImageIcon: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: -5,
+    right: -5,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -924,16 +961,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#fff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+    zIndex: 10,
   },
+  // removeXIcon: {
+  //   width: 8,
+  //   height: 8,
+  //   // tintColor: '#646060ff',
+  //   tintColor: "black",
+  // },
   removeXIcon: {
-    width: 10,
-    height: 10,
-    tintColor: '#fff',
+    width: 14,
+    height: 14,
+    tintColor: '#000',
+    backgroundColor: "#fff",
+    borderRadius: 7,
   },
   removeX: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    padding: 4,
   },
   notesText: {
     fontSize: getResponsiveFontSize(13),
@@ -944,16 +993,17 @@ const styles = StyleSheet.create({
   editPillButton: {
     alignSelf: 'flex-start',
     paddingHorizontal: 30,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
+    height: 30,
 
     borderColor: '#C35E9C',
   },
   editPillText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(13),
     color: '#C35E9C',
-    fontFamily: fonts.medium,
+    fontFamily: fonts.semiBold,
   },
   addressCard: {
     backgroundColor: '#fff',
@@ -974,8 +1024,9 @@ const styles = StyleSheet.create({
   },
   addressTextNew: {
     fontSize: 13,
-    color: '#737274',
+    color: '#000',
     lineHeight: 18,
+    fontWeight: '400',
     fontFamily: fonts.regular,
     marginBottom: 12,
   },
@@ -1090,6 +1141,19 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 16,
     color: '#333',
+  },
+  dropdownArrow: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#666',
+    marginLeft: 10,
   },
   dropdownIcon: {
     width: 16,

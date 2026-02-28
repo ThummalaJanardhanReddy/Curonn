@@ -54,14 +54,30 @@ interface Medicine {
 
 export default function MedicineListScreen() {
   // State for medicines fetched from API
+  const params = useLocalSearchParams();
+  const category = params.category;
+  const search = params.search;
+  const groupNameInParams = params.groupName as string | undefined;
+
+  // Categorization of the current mode: Browse (by category/group) vs Search Entry
+  const isBrowseMode = (!!groupNameInParams || !!params.categoryId || !!category) && !search;
+
   const [medicines, setMedicines] = useState<Medicine[]>([]);
-  // Get drugGroup from the first medicine (if available)
-  const drugGroup = (medicines?.length ?? 0) > 0 ? medicines[0]?.drugGroup ?? '' : '';
+  // Get drugGroup ONLY when we are in browse mode (not in global search mode)
+  const drugGroup = (isBrowseMode && (medicines?.length ?? 0) > 0) ? medicines[0]?.drugGroup ?? '' : '';
+  const [searchQuery, setSearchQuery] = useState((search as string) || (groupNameInParams as string) || '');
   const { userData } = useUser();
   const { refreshCart, cartCount, cartItems, addItem, updateQuantity, removeItem } = useCart();
-  const patientId = userData?.e_id ?? 0;
-  const { category } = useLocalSearchParams();
-  const [searchQuery, setSearchQuery] = useState('');
+
+
+  // Sync searchQuery state when search param changes
+  useEffect(() => {
+    if (search !== undefined) {
+      setSearchQuery(search as string);
+    } else if (groupNameInParams !== undefined) {
+      setSearchQuery(groupNameInParams as string);
+    }
+  }, [search, groupNameInParams]);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,15 +100,28 @@ export default function MedicineListScreen() {
   const pageSize = 10;
   const [hasMore, setHasMore] = useState(true);
 
-  const group = (useLocalSearchParams() as any).groupName as string | undefined;
+  const group = groupNameInParams;
 
   // Map API item to our UI model
   const mapApiToMedicine = (item: any): Medicine => {
-    const curPrice = item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0;
-    const original = item.streepBoxPrice ?? item.originalPrice ?? 0;
+    // Sanitize prices by removing currency symbols and non-numeric characters
+    const sanitizePrice = (val: any) => {
+      if (val === null || val === undefined) return 0;
+      const str = val.toString().replace(/[^0-9.]/g, '');
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const curPrice = sanitizePrice(item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0);
+    const original = sanitizePrice(item.streepBoxPrice ?? item.originalPrice ?? 0);
+    const medId = (item.id ?? item.medicineMasterId ?? item.medicineId ?? Math.random().toString()).toString();
+    const medName = item.medicineName ?? item.name ?? item.drugName ?? 'Unknown';
+    const desc = item.streepBoxQty ?? item.shortDescription ?? '';
+    const groupName = item.drugGroup ?? item.groupName ?? '';
+    const imgProp = item.imageUrl ?? item.image ?? '';
 
     // Handle Google Drive links to make them direct image URLs
-    let imgUrl = item.imageUrl ?? item.image ?? '';
+    let imgUrl = imgProp;
     if (imgUrl.includes('drive.google.com')) {
       const match = imgUrl.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
@@ -101,43 +130,72 @@ export default function MedicineListScreen() {
     }
 
     return {
-      id: (item.id ?? item.medicineMasterId ?? item.medicineId ?? Math.random().toString()).toString(),
-      name: item.medicineName ?? item.name ?? item.drugName ?? 'Unknown',
+      id: medId,
+      name: medName,
       manufacturer: item.manufacturer ?? item.brand ?? '',
       price: `₹${curPrice}`,
       originalPrice: original ? `₹${original}` : '',
       discount: item.discount ?? item.discountText ?? '',
       image: imgUrl,
       inStock: item.instock ?? item.inStock ?? item.available ?? true,
-      description: item.streepBoxQty ?? item.shortDescription ?? item.streepBoxQty ?? '',
+      description: desc,
       rating: item.rating ?? 0,
       reviews: item.reviews ?? 0,
       curonnPrice: curPrice,
       streepBoxPrice: original,
-      streepBoxQty: item.streepBoxQty ?? '',
-      totalPrice: item.totalPrice ?? 0,
-      drugGroup: item.drugGroup ?? '',
+      streepBoxQty: desc,
+      totalPrice: curPrice,
+      drugGroup: groupName,
     };
   };
 
   const loadMedicines = async (opts?: { reset?: boolean }) => {
-    if (!group && !category) {
-      setMedicines([]);
-      return;
-    }
-
-    const groupName = group ?? ((): string => {
-      return (category ?? '').toString().replace(/-/g, ' ');
-    })();
-
+    const groupName = group || (category ? category.toString().replace(/-/g, ' ') : '');
     const currentPage = opts?.reset ? 1 : page;
 
     try {
       setLoading(true);
       setError(null);
-      const url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize, searchQuery || undefined);
+
+      let url = '';
+      // Only treat searchQuery as a user-level filter if it's NOT just the breadcrumb group name
+      const isCustomSearch = !!searchQuery && searchQuery !== groupNameInParams;
+
+      if (isCustomSearch) {
+        if (groupName) {
+          // Filter within group
+          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize, searchQuery);
+        } else {
+          // Global search
+          url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize, searchQuery);
+        }
+      } else {
+        if (groupName) {
+          // Regular group fetch (includes case where searchQuery === groupNameInParams)
+          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize);
+        } else if (searchQuery) {
+          // Global list fetch with searchQuery (if no group)
+          url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize, searchQuery);
+        } else {
+          // Basic list fetch
+          url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize);
+        }
+      }
+
       const res: any = await axiosClient.get(url);
-      const list: any[] = Array.isArray(res) ? res : res?.data ?? res?.items ?? [];
+
+      // Handle different response structures
+      let list: any[] = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res?.data?.items) {
+        list = res.data.items;
+      } else if (res?.items) {
+        list = res.items;
+      } else if (res?.data) {
+        list = Array.isArray(res.data) ? res.data : [];
+      }
+
       const mapped = list.map(mapApiToMedicine);
 
       setMedicines(prev => (currentPage === 1 ? mapped : [...prev, ...mapped]));
@@ -153,7 +211,7 @@ export default function MedicineListScreen() {
   useEffect(() => {
     setPage(1);
     loadMedicines({ reset: true });
-  }, [category, group, searchQuery]);
+  }, [category, groupNameInParams, searchQuery]);
 
   useEffect(() => {
     if (page === 1) return;
@@ -161,14 +219,16 @@ export default function MedicineListScreen() {
   }, [page]);
 
   const filteredMedicines = useMemo(() => {
-    if (!searchQuery) return medicines;
+    // If search is just the breadcrumb group name, don't filter the group's results locally
+    const isCustomSearch = !!searchQuery && searchQuery !== groupNameInParams;
+    if (!isCustomSearch) return medicines;
 
     return medicines.filter(medicine =>
       medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       medicine.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       medicine.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [medicines, searchQuery]);
+  }, [medicines, searchQuery, groupNameInParams]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -254,7 +314,7 @@ export default function MedicineListScreen() {
                 <View style={[styles.cardImage, { backgroundColor: '#f5f5f5' }]} />
               )}
               <View style={styles.imagePriceContainer}>
-                {displayOriginal ? (
+                {displayOriginal && displayOriginal > displayPrice ? (
                   <Text style={styles.imageOriginalPrice}>₹{displayOriginal}</Text>
                 ) : null}
                 <Text style={styles.imagePrice}>₹{displayPrice}</Text>
@@ -308,6 +368,7 @@ export default function MedicineListScreen() {
               onPress={handleBack}
               style={styles.backButton}
               textStyle={styles.headerTitle}
+              arrowColor={colors.black}
             />
           </View>
           <View style={styles.headerRight}>
@@ -323,16 +384,12 @@ export default function MedicineListScreen() {
           </View>
         </View>
 
-        <LinearGradient
-          colors={[
-            "rgba(255, 255, 255, 1)",
-            "rgba(247, 84, 10, 0.2)",
-          ]}
-          start={{ x: 0.1, y: 0.4 }}
-          end={{ x: 0.1, y: 0.1 }}
+        <View
           style={{
             paddingHorizontal: 20,
-            paddingVertical: 10,
+            paddingTop: 5,
+            paddingBottom: 5,
+            backgroundColor: '#ffffff'
           }}
         >
           {/* Search Field */}
@@ -351,24 +408,30 @@ export default function MedicineListScreen() {
                   style={styles.clearButton}
                   onPress={() => setSearchQuery('')}
                 >
-                  <Image source={images.icons.close} style={styles.clearIcon} />
+                  <Image
+                    source={images.icons.close}
+                    style={styles.clearIcon}
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          {/* Display drugGroup if available */}
-          {drugGroup ? (
+          {/* Show drugGroup title ONLY when browsing a category and NOT actively searching */}
+          {isBrowseMode && !searchQuery && drugGroup ? (
             <Text style={styles.dragtitle}>{drugGroup}</Text>
           ) : null}
-        </LinearGradient>
+        </View>
         {/* Medicines List */}
         <FlatList
+          style={{ flex: 1, backgroundColor: '#F5F4F9' }}
           data={filteredMedicines}
           renderItem={renderMedicineCard}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.medicinesList}
           showsVerticalScrollIndicator={false}
+
         />
 
         {/* Continue button fixed at bottom */}
@@ -384,7 +447,8 @@ export default function MedicineListScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.containercontent_layout,
+    // ...commonStyles.containercontent_layout,
+    flex: 1,
     backgroundColor: colors.white,
   },
   header: {
@@ -393,11 +457,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(0),
-    paddingBottom: getResponsiveSpacing(15),
+    paddingBottom: getResponsiveSpacing(0),
     backgroundColor: '#fff',
   },
   headerLeft: {
     flex: 1,
+    color: colors.black,
   },
   headerRight: {
     alignItems: 'center',
@@ -405,10 +470,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: 'flex-start',
+    color: colors.black,
   },
   headerTitle: {
     fontSize: 16,
-    color: "#202427",
+    color: colors.black,
     fontFamily: fonts.semiBold
   },
   cartButton: {
@@ -483,13 +549,14 @@ const styles = StyleSheet.create({
     marginLeft: getResponsiveSpacing(8),
   },
   clearIcon: {
-    ...getResponsiveImageSize(16, 16),
-    tintColor: '#999',
+    width: 20,
+    height: 20,
+    tintColor: colors.black,
   },
   medicinesList: {
     paddingBottom: getResponsiveSpacing(160),
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(2),
+    paddingTop: 10,
   },
   medicineCard: {
     backgroundColor: '#fff',
@@ -536,6 +603,9 @@ const styles = StyleSheet.create({
   cardBody: {
     flex: 1,
     alignSelf: 'flex-start',
+    // borderWidth: 1,
+    // borderColor: '#DBDBDB',
+    paddingTop: 5,
   },
   cardTitle: {
     fontSize: getResponsiveFontSize(13),
@@ -545,7 +615,7 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: getResponsiveFontSize(12),
-    color: '#737274',
+    color: '#000',
     fontFamily: fonts.regular
   },
   cardBottomRow: {
@@ -594,7 +664,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: '#C35E9C',
     fontFamily: fonts.bold,
-    marginLeft: getResponsiveSpacing(2),
+    marginLeft: 4,
   },
   quantityPill: {
     flexDirection: 'row',
@@ -612,7 +682,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(8),
   },
   quantityNumber: {
-    color: '#3B2032',
+    color: '#C35E9C',
     fontSize: getResponsiveFontSize(14),
     fontWeight: '500',
     fontFamily: fonts.regular
