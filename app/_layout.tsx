@@ -4,6 +4,11 @@ import { UserProvider } from "./shared/context/UserContext";
 import { CartProvider } from "./shared/context/CartContext";
 import AppFontLoader from "./shared/components/AppFontLoader";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { useEffect } from "react";
+import {
+  configureNotificationHandler,
+  initializeNotificationListeners,
+} from "@/src/api/NotificationService";
 
 const theme = {
   ...MD3LightTheme,
@@ -15,6 +20,13 @@ const theme = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    configureNotificationHandler();
+    const cleanup = initializeNotificationListeners();
+
+    return cleanup;
+  }, []);
+
   return (
     <AppFontLoader>
       <UserProvider>

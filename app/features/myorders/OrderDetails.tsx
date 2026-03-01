@@ -13,6 +13,7 @@ import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { Button } from "react-native-paper";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import Toast from "../../shared/components/Toast";
+import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 interface OrderDetailsProps {
     visible: boolean;
     order: any;
@@ -688,83 +689,93 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     </View>
                                 )}
                                 {orderDetails.type === "consultation" && (
-                                    <View style={styles.servicepage}>
-                                        {/* Reports Section (Consultation) */}
-                                        {(orderDetails.data.statusName === 'Completed' || order.statusName === 'Completed') && getReports().length > 0 && (
-                                            <View style={styles.databox}>
-                                                <Text style={styles.sectionTitle}>Reports</Text>
-                                                {getReports().map((report: any, idx: number) => (
-                                                    <View key={report.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                                                        <Text style={{ flex: 1, color: '#333', fontFamily: fonts.regular, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">{report.name || `Report ${idx + 1}`}</Text>
-                                                        <TouchableOpacity
-                                                            style={{ backgroundColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
-                                                            onPress={() => {
-                                                                setSelectedPdfUrl(report.url);
-                                                                setPdfModalVisible(true);
-                                                            }}
-                                                        >
-                                                            <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                ))}
-                                            </View>
-                                        )}
+                                    // <View style={styles.servicepage}>
+                                    //     {/* Reports Section (Consultation) */}
+                                    //     {(orderDetails.data.statusName === 'Completed' || order.statusName === 'Completed') && getReports().length > 0 && (
+                                    //         <View style={styles.databox}>
+                                    //             <Text style={styles.sectionTitle}>Reports</Text>
+                                    //             {getReports().map((report: any, idx: number) => (
+                                    //                 <View key={report.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                    //                     <Text style={{ flex: 1, color: '#333', fontFamily: fonts.regular, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">{report.name || `Report ${idx + 1}`}</Text>
+                                    //                     <TouchableOpacity
+                                    //                         style={{ backgroundColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
+                                    //                         onPress={() => {
+                                    //                             setSelectedPdfUrl(report.url);
+                                    //                             setPdfModalVisible(true);
+                                    //                         }}
+                                    //                     >
+                                    //                         <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
+                                    //                     </TouchableOpacity>
+                                    //                 </View>
+                                    //             ))}
+                                    //         </View>
+                                    //     )}
 
-                                        <Text style={styles.sectionTitle}>Doctor Details</Text>
-                                        <View style={styles.databox}>
-                                            <View style={styles.labelheaderdatabox2}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <Text style={styles.labelheader}>{orderDetails.data.doctorName}</Text>
+                                    //     <Text style={styles.sectionTitle}>Doctor Details</Text>
+                                    //     <View style={styles.databox}>
+                                    //         <View style={styles.labelheaderdatabox2}>
+                                    //             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    //                 <Text style={styles.labelheader}>{orderDetails.data.doctorName}</Text>
 
-                                                </View>
-                                                <Text style={styles.labelinner}>
-                                                    {orderDetails.data.speciality}
-                                                </Text>
-                                            </View>
-                                        </View>
+                                    //             </View>
+                                    //             <Text style={styles.labelinner}>
+                                    //                 {orderDetails.data.speciality}
+                                    //             </Text>
+                                    //         </View>
+                                    //     </View>
 
 
 
-                                        <Text style={styles.sectionTitle}>Appointment Details</Text>
+                                    //     <Text style={styles.sectionTitle}>Appointment Details</Text>
 
-                                        <View style={styles.databox1}>
-                                            <Text style={styles.label}>Appointment ID:</Text>
-                                            <Text style={styles.value}>{orderDetails.data.appointmentId || "N/A"}</Text>
-                                            <Text style={styles.label}>Consultation Date:</Text>
-                                            <Text style={styles.value}>
-                                                {orderDetails.data.scheduleDate
-                                                    ? (() => {
-                                                        const d = new Date(orderDetails.data.scheduleDate);
-                                                        const day = String(d.getDate()).padStart(2, '0');
-                                                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                                                        const year = d.getFullYear();
-                                                        return `${day}-${month}-${year}`;
-                                                    })()
-                                                    : "N/A"}
-                                            </Text>
-                                            <Text style={styles.label}>Consultation Type:</Text>
-                                            <Text style={styles.value}>{orderDetails.data.scheduleTypeName || "N/A"}</Text>
-                                            <Text style={styles.label}>Status:</Text>
-                                            <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }]}>
-                                                {orderDetails.data.statusName || "N/A"}
-                                            </Text>
-                                            <Text style={styles.label}>Description:</Text>
-                                            <Text style={styles.value}>{orderDetails.data.description || "N/A"}</Text>
-                                        </View>
-                                        <Text style={styles.sectionTitle}>Address Info</Text>
-                                        <View style={styles.databox}>
-                                            <View style={styles.labelheaderdatabox2}>
-                                                <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
-                                                <Text style={styles.value}>
-                                                    {[
-                                                        orderDetails.data.age ? `${orderDetails.data.age} yrs ` : null,
-                                                        orderDetails.data.gender ? `${orderDetails.data.gender}` : null
-                                                    ].filter(Boolean).join(', ') || 'N/A'}
-                                                </Text>
-                                            </View>
+                                    //     <View style={styles.databox1}>
+                                    //         <Text style={styles.label}>Appointment ID:</Text>
+                                    //         <Text style={styles.value}>{orderDetails.data.appointmentId || "N/A"}</Text>
+                                    //         <Text style={styles.label}>Consultation Date:</Text>
+                                    //         <Text style={styles.value}>
+                                    //             {orderDetails.data.scheduleDate
+                                    //                 ? (() => {
+                                    //                     const d = new Date(orderDetails.data.scheduleDate);
+                                    //                     const day = String(d.getDate()).padStart(2, '0');
+                                    //                     const month = String(d.getMonth() + 1).padStart(2, '0');
+                                    //                     const year = d.getFullYear();
+                                    //                     return `${day}-${month}-${year}`;
+                                    //                 })()
+                                    //                 : "N/A"}
+                                    //         </Text>
+                                    //         <Text style={styles.label}>Consultation Type:</Text>
+                                    //         <Text style={styles.value}>{orderDetails.data.scheduleTypeName || "N/A"}</Text>
+                                    //         <Text style={styles.label}>Status:</Text>
+                                    //         <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }]}>
+                                    //             {orderDetails.data.statusName || "N/A"}
+                                    //         </Text>
+                                    //         <Text style={styles.label}>Description:</Text>
+                                    //         <Text style={styles.value}>{orderDetails.data.description || "N/A"}</Text>
+                                    //     </View>
+                                    //     <Text style={styles.sectionTitle}>Address Info</Text>
+                                    //     <View style={styles.databox}>
+                                    //         <View style={styles.labelheaderdatabox2}>
+                                    //             <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
+                                    //             <Text style={styles.value}>
+                                    //                 {[
+                                    //                     orderDetails.data.age ? `${orderDetails.data.age} yrs ` : null,
+                                    //                     orderDetails.data.gender ? `${orderDetails.data.gender}` : null
+                                    //                 ].filter(Boolean).join(', ') || 'N/A'}
+                                    //             </Text>
+                                    //         </View>
 
-                                        </View>
-                                    </View>
+                                    //     </View>
+                                    // </View>
+                                    <VideoOrderDetails 
+                                    orderDetails={orderDetails} 
+                                    getReports={getReports} 
+                                    order={order} 
+                                    setPdfModalVisible={setPdfModalVisible} 
+                                    setSelectedPdfUrl={setSelectedPdfUrl}
+                                    statusColor={statusColor}
+                                    statusTextColor={statusTextColor}
+                                    />
+                                    
                                 )}
                                 {orderDetails.type === "ambulance" && (
                                     <View style={styles.servicepage}>

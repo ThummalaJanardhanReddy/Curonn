@@ -65,10 +65,14 @@ export async function registerForPushNotifications(patientId: number) {
 
     console.log("FCM Token:", fcmToken);
 
-    await axiosClient.post(EmployeeApi.updateDeviceToken, {
-      patientId,
-      deviceToken: fcmToken,
-    });
+    const tokenUpdateResponse = await axiosClient.post(
+      EmployeeApi.updateDeviceToken,
+      {
+        employeeId: patientId,
+        deviceToken: fcmToken,
+      },
+    );
+    console.log("token generated: ", tokenUpdateResponse);
   } catch (error) {
     console.log("token error: ", error);
   }
