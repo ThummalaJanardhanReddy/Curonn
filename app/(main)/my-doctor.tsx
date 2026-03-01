@@ -26,95 +26,72 @@ import { useUserStore } from "@/src/store/UserStore";
 import PrimaryButton from "../shared/components/PrimaryButton";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
+import { IConsultationType } from "@/src/constants/constants";
 
+export interface IDepartments {
+  charges: number;
+  createdBy: number;
+  createdOn: string;
+  deletedBy: string;
+  deletedOn: string;
+  isActive: boolean;
+  modifiedBy: string;
+  modifiedOn: string;
+  serviceId: string;
+  specialityMasterId: number;
+  specialityName: string;
+  totalCount: number;
+  image: string;
+  description: string;
+}
+const consultationTypes: IConsultationType[] = [
+  { label: "Chat", value: 1340, key: "chat" },
+  { label: "Video Call", value: 1339, key: "video" },
+  { label: "Phone", value: 1341, key: "phone" },
+];
+const chatId = 1340;
 export default function MyDoctorScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
-  const [consultationTypeIndex, setConsultationTypeIndex] = useState(0);
+  // const [consultationTypeIndex, setConsultationTypeIndex] = useState(0);
+  const [consultationTypeId, setConsultationTypeId] = useState(
+    consultationTypes[0].value,
+  );
+  const [departments, setDepartments] = useState<IDepartments[]>();
   // const user = useUser();
   const { user } = useUserStore();
   const setDepartment = useDoctorConsultationStore(
     (state) => state.setDepartment,
   );
-  // Specialist categories data
-  const specialists = useMemo(
-    () => [
-      {
-        id: "physician",
-        name: "Physician",
-        description: "General Medicine",
-        image: {
-          uri: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "orthopedician",
-        name: "Orthopedician",
-        description: "Bone & Joint Care",
-        image: {
-          uri: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "skincare",
-        name: "Skin Care",
-        description: "Dermatology",
-        image: {
-          uri: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "cardiologist",
-        name: "Cardiologist",
-        description: "Heart Specialist",
-        image: {
-          uri: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "pediatrician",
-        name: "Pediatrician",
-        description: "Child Specialist",
-        image: {
-          uri: "https://images.unsplash.com/photo-1594824374896-9881d8c1f1e3?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "gynecologist",
-        name: "Gynecologist",
-        description: "Women's Health",
-        image: {
-          uri: "https://images.unsplash.com/photo-1594824374896-9881d8c1f1e3?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "neurologist",
-        name: "Neurologist",
-        description: "Brain & Nerve",
-        image: {
-          uri: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop",
-        },
-      },
-      {
-        id: "psychiatrist",
-        name: "Psychiatrist",
-        description: "Mental Health",
-        image: {
-          uri: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300&h=400&fit=crop",
-        },
-      },
-    ],
-    [],
+  const setConsultation = useDoctorConsultationStore(
+    (state) => state.setConsultationType,
   );
 
-  const fetchDepartments = async ()=>{
-    const deptResponse = await axiosClient.get(ApiRoutes.Departments.getAllDepartments);
-    console.log(deptResponse);
-  }
+  const fetchDepartments = async () => {
+    try {
+      const deptResponse = await axiosClient.get(
+        ApiRoutes.Departments.getAllDepartments,
+      );
 
-  useEffect(()=>{
-    fetchDepartments();
-  },[])
+      const items = deptResponse?.data?.items;
+
+      if (!items) {
+        console.warn("Departments fetch failed");
+        return;
+      }
+
+      setDepartments(items);
+      console.log("departments: ", items);
+    } catch (error) {
+      console.log("Departments error:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (consultationTypeId === chatId) {
+      fetchDepartments();
+    }
+  }, [consultationTypeId]);
   //MBBS Category
   const mbbsList = useMemo(
     () => [
@@ -131,42 +108,50 @@ export default function MyDoctorScreen() {
   );
 
   const filteredSpecialists = useMemo(() => {
-    if (!searchQuery) return specialists;
+    if (!searchQuery) return departments ?? [];
 
-    return specialists.filter(
-      (specialist) =>
-        specialist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        specialist.description
-          .toLowerCase()
+    return (
+      departments?.filter((department) =>
+        department.specialityName
+          ?.toLowerCase()
           .includes(searchQuery.toLowerCase()),
+      ) ?? []
     );
-  }, [specialists, searchQuery]);
+  }, [departments, searchQuery]);
 
-  const handleSpecialistSelect = (specialistId: string | number) => {
-    console.log("Selected specialist:", specialistId);
-    // Navigate to doctor list page with specialist type
-    // router.push({
-    //   pathname: "/features/doctors/doctor-list",
-    //   params: { specialistType: specialistId },
-    // });
-    setDepartment(Number(specialistId), "test department");
+  const handleSpecialistSelect = (
+    specialistId: number,
+    specialistName: string,
+  ) => {
+    setDepartment(specialistId, specialistName);
+
     router.push({
       pathname: "/features/symptoms/symptoms",
     });
   };
 
   const renderSpecialistCard = useCallback(
-    ({ item }: { item: any }) => (
+    ({ item }: { item: IDepartments }) => (
       <TouchableOpacity
         style={styles.specialistCard}
-        onPress={() => handleSpecialistSelect(item.id)}
+        onPress={() =>
+          handleSpecialistSelect(item.specialityMasterId, item.specialityName)
+        }
         activeOpacity={0.8}
       >
         <View style={styles.specialistImageContainer}>
-          <Image source={item.image} style={styles.specialistImage} />
+          <Image
+            defaultSource={{
+              uri: `https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop`,
+            }}
+            source={{
+              uri: item.image,
+            }}
+            style={styles.specialistImage}
+          />
         </View>
         <View style={styles.specialistTextContainer}>
-          <Text style={styles.specialistName}>{item.name}</Text>
+          <Text style={styles.specialistName}>{item.specialityName}</Text>
           <Text style={styles.specialistDescription}>{item.description}</Text>
         </View>
       </TouchableOpacity>
@@ -176,6 +161,10 @@ export default function MyDoctorScreen() {
 
   const handleChatStart = () => {
     router.push("/features/chat/Chat");
+  };
+  const handleConsultationTypeChange = (data: IConsultationType) => {
+    setConsultationTypeId(data.value);
+    setConsultation(data.key, data.value);
   };
 
   return (
@@ -192,7 +181,6 @@ export default function MyDoctorScreen() {
         onProfilePress={() => console.log("Profile pressed")}
         onCartPress={() => console.log("Cart pressed")}
       />
-
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ flexGrow: 1 }}
@@ -220,14 +208,14 @@ export default function MyDoctorScreen() {
           </View>
           <View style={{ paddingVertical: 15 }}>
             <AnimatedTabs
-              tabs={["Chat", "Video Call", "Phone"]}
-              activeIndex={consultationTypeIndex}
-              onChange={setConsultationTypeIndex}
+              tabs={consultationTypes}
+              activeValue={consultationTypeId}
+              onChange={handleConsultationTypeChange}
             />
           </View>
         </View>
 
-        {consultationTypeIndex === 0 ? (
+        {consultationTypeId === chatId ? (
           <View
             style={{
               flex: 1,
@@ -262,9 +250,9 @@ export default function MyDoctorScreen() {
             {/* Specialists Grid */}
             <View style={styles.specialistsContainer}>
               <View style={styles.specialistsGrid}>
-                {filteredSpecialists.map((specialist) => (
+                {filteredSpecialists?.map((specialist) => (
                   <View
-                    key={specialist.id}
+                    key={specialist.specialityMasterId}
                     style={styles.specialistCardWrapper}
                   >
                     {renderSpecialistCard({ item: specialist })}

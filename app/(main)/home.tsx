@@ -40,7 +40,6 @@ import {
   getResponsiveSpacing,
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
-import { IUser, useUserStore } from "../../src/store/UserStore";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // FAQ data
@@ -97,9 +96,8 @@ export default function HomeScreen() {
     }
   };
 
-    useEffect(() => {
+  useEffect(() => {
     if (!patientId) return;
-    const fetchNotifications = async () => {
     const fetchNotifications = async () => {
       try {
         const response = await axiosClient.get(
@@ -153,7 +151,7 @@ export default function HomeScreen() {
         isActive = false;
       };
     }, [userData?.e_id]),
-    );
+  );
   // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -193,11 +191,13 @@ export default function HomeScreen() {
         if (userData?.e_id) {
           const data = await fetchAllOrders(userData.e_id, 0);
           if (isActive) {
-            const sorted = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
-              const dateA = new Date(a.createdOn).getTime();
-              const dateB = new Date(b.createdOn).getTime();
-              return dateB - dateA;
-            });
+            const sorted = (Array.isArray(data) ? data.slice() : []).sort(
+              (a, b) => {
+                const dateA = new Date(a.createdOn).getTime();
+                const dateB = new Date(b.createdOn).getTime();
+                return dateB - dateA;
+              },
+            );
             setOrders(sorted);
             setShowOrderSlider(sorted.length > 0);
             setClosedOrderIds([]); // Reset closed orders when user returns to page
@@ -208,14 +208,15 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id])
+    }, [userData?.e_id]),
   );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const handleCloseOrderCard = (index: number) => {
     // Remove the order from the visible list for this session only
     const order = latestOrders[index];
-    const orderId = order?.orderNo?.toString?.() || order?.id?.toString?.() || '';
+    const orderId =
+      order?.orderNo?.toString?.() || order?.id?.toString?.() || "";
     setClosedOrderIds((prev) => [...prev, orderId]);
     if (activeOrderIndex >= latestOrders.length - 1) {
       setActiveOrderIndex(Math.max(0, latestOrders.length - 2));
@@ -340,11 +341,19 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => {
-          setSelectedOrderDetails(item);
-          setOrderDetailsModalVisible(true);
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedOrderDetails(item);
+            setOrderDetailsModalVisible(true);
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 3,
+            }}
+          >
             {/* {iconSource && (
               <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
             )} */}
@@ -355,9 +364,6 @@ export default function HomeScreen() {
             >
               {category}
             </Text> */}
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={{ fontSize: 14, lineHeight: 19, color: '#C15E9D', fontFamily: fonts.bold }}>{item.title}</Text>
           </View>
           <View
             style={{
@@ -418,19 +424,30 @@ export default function HomeScreen() {
             </View>
             {/* Carousel Dots centered */}
             {index < 3 && (
-              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginRight: 10 }}>
-                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(idx => (
-                  <View
-                    key={idx}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      marginHorizontal: 3,
-                      backgroundColor: idx === activeOrderIndex ? '#C15E9D' : '#ccc',
-                    }}
-                  />
-                ))}
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  marginRight: 10,
+                }}
+              >
+                {[...Array(Math.min(latestOrders.length, 3)).keys()].map(
+                  (idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        marginHorizontal: 3,
+                        backgroundColor:
+                          idx === activeOrderIndex ? "#C15E9D" : "#ccc",
+                      }}
+                    />
+                  ),
+                )}
               </View>
             )}
           </View>
@@ -450,9 +467,9 @@ export default function HomeScreen() {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-            n.notificationId === notificationId ? { ...n, isRead: true } : n
-          )
-          : prev
+              n.notificationId === notificationId ? { ...n, isRead: true } : n,
+            )
+          : prev,
       );
     } catch (error) {
       console.error("Failed to mark notification as read", error);
@@ -507,8 +524,6 @@ export default function HomeScreen() {
     // }
   }, [notificationVisible]);
 
-
-
   // Dummy services data (would come from API)
   const services = useMemo(
     () => [
@@ -552,8 +567,6 @@ export default function HomeScreen() {
     ],
     [],
   );
-
-
 
   const showNotificationModal = useCallback(() => {
     setNotificationVisible(true);
@@ -690,34 +703,31 @@ export default function HomeScreen() {
     [],
   );
 
-  const renderNotification = useCallback(
-    ({ item }: { item: any }) => {
-      const bgColor = item.isRead ? '#F6F6F6' : '#F4E6EE';
-      return (
-        <TouchableOpacity
-          style={[styles.notificationItem, { backgroundColor: bgColor }]}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (!item.isRead) markNotificationAsRead(item.notificationId);
-          }}
-        >
-          <View style={styles.notificationItemIconContainer}>
-            <Image
-              source={images.notification}
-              style={styles.notificationItemIcon}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.notificationContent}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationMessage}>{item.message}</Text>
-            {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
-          </View>
-        </TouchableOpacity>
-      );
-    },
-    []
-  );
+  const renderNotification = useCallback(({ item }: { item: any }) => {
+    const bgColor = item.isRead ? "#F6F6F6" : "#F4E6EE";
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, { backgroundColor: bgColor }]}
+        activeOpacity={0.7}
+        onPress={() => {
+          if (!item.isRead) markNotificationAsRead(item.notificationId);
+        }}
+      >
+        <View style={styles.notificationItemIconContainer}>
+          <Image
+            source={images.notification}
+            style={styles.notificationItemIcon}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.notificationContent}>
+          <Text style={styles.notificationTitle}>{item.title}</Text>
+          <Text style={styles.notificationMessage}>{item.message}</Text>
+          {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
+        </View>
+      </TouchableOpacity>
+    );
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -911,7 +921,9 @@ export default function HomeScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                  onPress={() => router.push("/features/ambulance/ambulanceservices")}
+                  onPress={() =>
+                    router.push("/features/ambulance/ambulanceservices")
+                  }
                 >
                   Book Now
                 </Button>
@@ -991,24 +1003,25 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Order Slider Fixed at Bottom */}
-      {/* Order Slider Fixed at Bottom */}
       {showOrderSlider && orders.length > 0 && (
-        <View style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingVertical: 5,
-          paddingTop: 0,
-          shadowColor: '#000',
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-          elevation: 8,
-          zIndex: 100,
-          backgroundColor: '#fff',
-          borderTopLeftRadius: 15,
-          borderTopRightRadius: 15,
-        }}>
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingVertical: 5,
+            paddingTop: 0,
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 8,
+            zIndex: 100,
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 15,
+            borderTopRightRadius: 15,
+          }}
+        >
           <FlatList
             data={latestOrders}
             renderItem={({ item, index }) => renderOrderCard({ item, index })}
@@ -1237,7 +1250,7 @@ export default function HomeScreen() {
         presentationStyle="pageSheet"
         onRequestClose={hideNotificationModal}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
           <TouchableOpacity
             style={styles.notificationModalBackdrop}
             onPress={hideNotificationModal}
@@ -1470,7 +1483,6 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: 12,
     fontFamily: fonts.regular,
-    fontFamily: fonts.regular,
   },
   featureButton: {
     alignSelf: "flex-start",
@@ -1513,7 +1525,6 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   ambulanceTitle: {
-    fontSize: 20,
     fontSize: 20,
     color: "#000000",
     lineHeight: 24,
@@ -1644,7 +1655,7 @@ const styles = StyleSheet.create({
     // right: 0,
     width: SCREEN_WIDTH,
     height: "100%",
-   // backgroundColor: "#ffffffff",
+    // backgroundColor: "#ffffffff",
   },
   notificationModalHeader: {
     flexDirection: "row",

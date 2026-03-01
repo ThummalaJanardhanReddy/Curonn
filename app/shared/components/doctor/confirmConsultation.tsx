@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,16 +20,51 @@ import {
 import PrimaryButton from "../PrimaryButton";
 import { useNavigation } from "expo-router";
 import Toast from "../Toast";
+import { useUserStore } from "@/src/store/UserStore";
+import { useUser } from "../../context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes, { EmployeeApi, MasterApi } from "@/src/api/employee/employee";
+import {
+  ICreateAppointmentRequest,
+  IMaster,
+  IRelation,
+} from "@/src/constants/constants";
 
 const SLOT_GROUPS = {
   morning: ["09:00 AM", "09:30 AM", "10:00 AM"],
   afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
   evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
 };
+const familyRelationTypeId = 5;
+
+export interface IFamilyMember {
+  empRelationId: number;
+  relationId: number;
+
+  relationTypeName: string; // From Master table (Brother, Mother...)
+  name: string; // Actual name (Test bro)
+
+  age: number;
+  gender: string;
+  imagePath: string;
+  patientId: number;
+  createdOn: string;
+}
 
 export default function ConfirmConsultationScreen() {
-  const { departmentName, symptoms, slotTime, setSlot, patientId, setPatient } =
-    useDoctorConsultationStore();
+  const {
+    departmentName,
+    symptoms,
+    slotTime,
+    setSlot,
+    patientId,
+    setPatient,
+    departmentId,
+    slotId,
+    consultationType,
+    consultationTypeId
+  } = useDoctorConsultationStore();
+  const { user } = useUserStore();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -40,23 +75,122 @@ export default function ConfirmConsultationScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<IFamilyMember[]>([]);
 
-  const mockFamily = [
-    { id: 1, name: "Self" },
-    { id: 2, name: "Mother" },
-    { id: 3, name: "Father" },
-  ];
+  const self: IFamilyMember = {
+    name: user?.fullName || "",
+    age: Number(user?.age) || 0,
+    gender: user?.gender || "",
+    createdOn: "",
+    empRelationId: 0,
+    imagePath: "",
+    patientId: user?.eId || 0,
+    relationId: 0,
+    relationTypeName: "Self",
+  };
 
   const selectedMember =
-    mockFamily.find((m) => m.id === patientId) || mockFamily[0];
+    familyMembers.find((m) => m.empRelationId === patientId) ||
+    familyMembers[0];
+
+  useEffect(() => {
+    const initialize = async () => {
+      setFamilyMembers([self]);
+      await fetchPatientRelations();
+    };
+
+    initialize();
+  }, []);
+
+  const fetchPatientRelations = async () => {
+    if (!user) return;
+    try {
+      //   const masterRelationData = await axiosClient.get<IMaster[]>(
+      //     MasterApi.getmasterdata(familyRelationTypeId),
+      //   );
+      //   const res = await axiosClient.get<IRelation[]>(
+      //     EmployeeApi.GetPatientRelations(user?.eId),
+      //   );
+
+      const [masterRes, relationRes] = await Promise.all([
+        axiosClient.get<any>(MasterApi.getmasterdata(familyRelationTypeId)),
+        axiosClient.get<any>(EmployeeApi.GetPatientRelations(user.eId)),
+      ]);
+
+      const masterList = masterRes;
+      const relationList = relationRes;
+      // Create lookup map (O(1) access)
+      const masterMap = new Map<number, IMaster>();
+      masterList?.forEach((m) => {
+        masterMap.set(m.masterDataId, m);
+      });
+
+      const familyMembers = relationList?.map((rel) => {
+        const master = masterMap.get(rel.relationId);
+
+        return {
+          empRelationId: rel.empRelationId,
+          patientId: rel.patientId,
+
+          relationId: rel.relationId,
+          relationTypeName: master?.name ?? "Unknown",
+
+          name: rel.relationName,
+          age: rel.age,
+          gender: rel.gender,
+
+          imagePath: master?.imagePath ?? null,
+          createdOn: rel.createdOn,
+        };
+      });
+
+      console.log("Family Members:", familyMembers);
+      setFamilyMembers((prev) => [...prev, ...familyMembers]);
+      //   if (res) {
+      //     console.log("relations : ", res);
+      //   }
+    } catch (error) {
+      console.log("error: ", error);
+    }
+  };
 
   const handleSlotSelect = (time: string) => {
     setSelectedSlot(time);
     setSlot(1, time);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     // console.log("Confirm Consultation");
+    if (!user) return;
+    try {
+      const payload: ICreateAppointmentRequest = {
+        patientId: user.eId,
+        specialityId: departmentId || 0,
+        isAppointmentAssigned: true,
+
+        patientName: user.fullName,
+        patientMobile: user.mobileNo,
+        patientGender: selectedMember.gender,
+        patientAge: selectedMember.age,
+
+        scheduleDate: selectedDate.toISOString(),
+        scheduleBetween: selectedSlot || "",
+
+        scheduleTypeId: consultationTypeId || 1340,
+        scheduledBy: user.eId,
+        statusId: 2867,
+        createdBy: user.eId,
+
+        symptoms: symptoms?.join(",") || "",
+      };
+
+      const res = await axiosClient.post<ICreateAppointmentRequest>(
+        ApiRoutes.Appointments.save, payload
+      );
+      console.log('Video consultation appointment confirm: ', res);
+    } catch (error) {
+        console.log('error: ', error);
+    }
     setShowConfirm(true);
   };
 
@@ -183,7 +317,7 @@ export default function ConfirmConsultationScreen() {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>{selectedMember.name}</Text>
+              <Text style={styles.infoTitle}>{selectedMember?.name}</Text>
               <Text style={styles.infoSubtitle}>Family Member</Text>
             </View>
 
@@ -236,44 +370,48 @@ export default function ConfirmConsultationScreen() {
             </View>
 
             {/* FAMILY LIST */}
-            {mockFamily.map((member) => {
-              const isSelected = member.id === patientId;
+            {familyMembers.length > 0 &&
+              familyMembers?.map((member) => {
+                const isSelected = member.empRelationId === patientId;
 
-              return (
-                <TouchableOpacity
-                  key={member.id}
-                  style={styles.familyCard}
-                  onPress={() => {
-                    setPatient(member.id);
-                    setFamilyModalVisible(false);
-                  }}
-                >
-                  {/* LEFT - IMAGE + DETAILS */}
-                  <View style={styles.familyLeft}>
-                    <View style={styles.avatar}>
-                      <Ionicons name="person" size={20} color="#666" />
-                    </View>
-
-                    <View>
-                      <Text style={styles.familyName}>{member.name}</Text>
-                      <Text style={styles.familyRelation}>
-                        {member.name === "Self" ? "Self" : member.name}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* RIGHT - RADIO */}
-                  <View
-                    style={[
-                      styles.radioOuter,
-                      isSelected && styles.radioSelected,
-                    ]}
+                return (
+                  <TouchableOpacity
+                    key={member.empRelationId}
+                    style={styles.familyCard}
+                    onPress={() => {
+                      setPatient(member.empRelationId);
+                      setFamilyModalVisible(false);
+                    }}
                   >
-                    {isSelected && <View style={styles.radioInner} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                    {/* LEFT - IMAGE + DETAILS */}
+                    <View style={styles.familyLeft}>
+                      <View style={styles.avatar}>
+                        <Ionicons name="person" size={20} color="#666" />
+                      </View>
+
+                      <View>
+                        <Text style={styles.familyName}>{member.name}</Text>
+                        <Text style={styles.familyRelation}>
+                          {member.gender}, {member.age}yrs,{" "}
+                          {member.relationTypeName === "Self"
+                            ? "Self"
+                            : member.relationTypeName}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* RIGHT - RADIO */}
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        isSelected && styles.radioSelected,
+                      ]}
+                    >
+                      {isSelected && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

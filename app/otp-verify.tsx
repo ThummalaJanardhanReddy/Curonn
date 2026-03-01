@@ -25,6 +25,8 @@ import PrimaryButton from "./shared/components/PrimaryButton";
 import { useUser } from "./shared/context/UserContext";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
 import { fonts } from "./shared/styles/fonts";
+import { useUserStore } from "@/src/store/UserStore";
+import { registerForPushNotifications } from "@/src/api/DeviceToken";
 
 // API Response interface
 interface OTPResponse {
@@ -52,6 +54,7 @@ export default function OTPVerifyScreen() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const inputRefs = useRef<TextInputType[]>([]);
   const insets = useSafeAreaInsets();
+  const { setUser } = useUserStore();
 
   const theme = useTheme();
   const customTheme = {
@@ -119,19 +122,30 @@ export default function OTPVerifyScreen() {
 
       const otpResponse = (await axiosClient.post(
         ApiRoutes.Employee.verifyOTP,
-        requestData
+        requestData,
       )) as OTPResponse;
       console.log("OTP response:", otpResponse);
 
       // If OTP verification is successful, update user data and navigate
       if (otpResponse?.isSuccess && otpResponse.e_id) {
         getEmployeeDetails(otpResponse.e_id);
-        console.log("OTP verified successfully. Employee ID:", otpResponse.e_id);
-        setUserData({ ...(userData ?? {}), isVerified: true, e_id: otpResponse.e_id });
+        console.log(
+          "OTP verified successfully. Employee ID:",
+          otpResponse.e_id,
+        );
+        setUserData({
+          ...(userData ?? {}),
+          isVerified: true,
+          e_id: otpResponse.e_id,
+        });
         // Pass mobile_details_updated to username page via query param
         router.push({
           pathname: "/username",
-          params: { mobile_details_updated: otpResponse.mobile_details_updated ? "true" : "false" },
+          params: {
+            mobile_details_updated: otpResponse.mobile_details_updated
+              ? "true"
+              : "false",
+          },
         });
       } else {
         showSnackbar(otpResponse?.message || "Invalid OTP. Please try again.");
@@ -177,6 +191,8 @@ export default function OTPVerifyScreen() {
       const employee = response?.data ?? response;
       console.log("employee: ", employee);
       setUserData({ ...(userData ?? {}), ...employee });
+      setUser(employee);
+      registerForPushNotifications(employee.eId);
     } catch (err) {
       console.error("Failed to fetch employee details:", err);
       showSnackbar("Failed to fetch employee details.");
@@ -187,7 +203,7 @@ export default function OTPVerifyScreen() {
     const validateUser = (await axiosClient.get(ApiRoutes.Employee.validate, {
       params: { employeeId: userData?.employeeId, emailId: userData?.email },
     })) as ValidationResponse;
-    if (!validateUser.isSuccess) showSnackbar('Something went wrong...')
+    if (!validateUser.isSuccess) showSnackbar("Something went wrong...");
     setResendTimer(30);
     showSnackbar("A new OTP has been sent to your email");
   };
@@ -199,21 +215,21 @@ export default function OTPVerifyScreen() {
   const isOtpComplete = otp.every((digit) => digit !== "");
 
   return (
-    <SafeAreaView style={{ flex: 1, height: screenHeight}}>
+    <SafeAreaView style={{ flex: 1, height: screenHeight }}>
       {/* <RegistrationLayout headerBackgroundColor="#f5f5f5"> */}
       <KeyboardAvoidingView
-        style={{ flex: 1}}
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
-       <KeyboardAwareScrollView
-                   style={styles.container}
-                   contentContainerStyle={styles.contentContainer}
-                   keyboardShouldPersistTaps="handled"
-                   enableOnAndroid
-                   extraScrollHeight={80}
-                   showsVerticalScrollIndicator={false}
-                 >
+        <KeyboardAwareScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={80}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <View>
               <images.curonnLogo style={styles.image} width={234} height={60} />
@@ -253,8 +269,8 @@ export default function OTPVerifyScreen() {
                   textColor="#000000"
                   returnKeyType={index === 3 ? "go" : "next"}
                   outlineColor="#9D9D9F"
-                activeOutlineColor="#E45C9C"
-                outlineStyle={{ borderWidth: 1 }}
+                  activeOutlineColor="#E45C9C"
+                  outlineStyle={{ borderWidth: 1 }}
                   blurOnSubmit={index === 3}
                   onSubmitEditing={index === 3 ? handleVerify : undefined}
                 />
@@ -273,62 +289,60 @@ export default function OTPVerifyScreen() {
               )}
             </View>
           </View>
-        
 
-         {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
-        <View style={styles.bottomContainer}>
-                      {/* Terms */}
-                      <View style={{ flexDirection: "row", justifyContent: "center",  }}>
-         <Text style={styles.termsText}>
-                        By signing up, you agree to Curonn{"\n"}
-                        <Text
-                          style={styles.linkText}
-                          onPress={() => console.log("Terms of services")}
-                        >
-                          Terms of services
-                        </Text>{" "}
-                        and{" "}
-                        <Text
-                          style={styles.linkText}
-                          onPress={() => console.log("privacy policy")}
-                        >
-                          privacy policy
-                        </Text>
-                        .
-                      </Text>
-        </View>
-        
+          {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
+          <View style={styles.bottomContainer}>
+            {/* Terms */}
+            <View style={{ flexDirection: "row", justifyContent: "center" }}>
+              <Text style={styles.termsText}>
+                By signing up, you agree to Curonn{"\n"}
+                <Text
+                  style={styles.linkText}
+                  onPress={() => console.log("Terms of services")}
+                >
+                  Terms of services
+                </Text>{" "}
+                and{" "}
+                <Text
+                  style={styles.linkText}
+                  onPress={() => console.log("privacy policy")}
+                >
+                  privacy policy
+                </Text>
+                .
+              </Text>
+            </View>
 
-        <View style={styles.buttonContainer}>
-          <BackButton
-            title="Back"
-            onPress={handleBack}
-            color="#000000"
-            style={styles.backButton}
-          />
+            <View style={styles.buttonContainer}>
+              <BackButton
+                title="Back"
+                onPress={handleBack}
+                color="#000000"
+                style={styles.backButton}
+              />
 
-          <PrimaryButton
-            title={isLoading ? "Verifying..." : "Verify"}
-            onPress={handleVerify}
-            // onPress={() => router.push("/username")} // TODO: Remove this after testing
-            disabled={!isOtpComplete || isLoading}
-            style={styles.verifyButton}
-          />
-        </View>
-        </View>
+              <PrimaryButton
+                title={isLoading ? "Verifying..." : "Verify"}
+                onPress={handleVerify}
+                // onPress={() => router.push("/username")} // TODO: Remove this after testing
+                disabled={!isOtpComplete || isLoading}
+                style={styles.verifyButton}
+              />
+            </View>
+          </View>
 
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={4000}
-          style={styles.snackbar}
-          action={{
-            label: "Dismiss",
-            onPress: () => setSnackbarVisible(false),
-          }}
-        >
-          {snackbarMessage}
-        </Snackbar>
+          <Snackbar
+            visible={snackbarVisible}
+            onDismiss={() => setSnackbarVisible(false)}
+            duration={4000}
+            style={styles.snackbar}
+            action={{
+              label: "Dismiss",
+              onPress: () => setSnackbarVisible(false),
+            }}
+          >
+            {snackbarMessage}
+          </Snackbar>
         </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
 
@@ -364,16 +378,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    color: '#000000',
+    color: "#000000",
     marginBottom: 0,
-    textAlign: 'left',
+    textAlign: "left",
     marginTop: 5,
     fontFamily: fonts.semiBold,
   },
   subtitle: {
     fontSize: 13,
-    color: '#000000',
-    textAlign: 'left',
+    color: "#000000",
+    textAlign: "left",
     fontFamily: fonts.regular,
   },
   formContainer: {
@@ -410,7 +424,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontWeight: "700",
     fontFamily: fonts.semiBold,
-
   },
   resendContainer: {
     alignItems: "center",
@@ -426,10 +439,10 @@ const styles = StyleSheet.create({
   resendButton: {
     fontSize: 14,
     color: "#2196F3",
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
     // textDecorationLine: 'underline',
   },
-    bottomContainer: {
+  bottomContainer: {
     position: "absolute",
     left: 0,
     right: 0,
@@ -442,12 +455,12 @@ const styles = StyleSheet.create({
     // borderTopColor: "#E2E2E4",
   },
   termsText: {
-fontSize: 13,
+    fontSize: 13,
     lineHeight: 22,
-    color: '#000000',
+    color: "#000000",
     marginBottom: 8,
-    textAlign: 'center',
-     fontFamily: fonts.regular,
+    textAlign: "center",
+    fontFamily: fonts.regular,
   },
   linkText: {
     color: "#2196F3",
@@ -455,7 +468,7 @@ fontSize: 13,
     // textDecorationLine: 'underline',
   },
   buttonContainer: {
-      flexDirection: "row",
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 10,
     gap: 16,

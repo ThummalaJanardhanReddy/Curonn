@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Pressable, LayoutChangeEvent } from "react-native";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  View,
+  StyleSheet,
+  LayoutChangeEvent,
+  TouchableOpacity,
+} from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
   useSharedValue,
@@ -7,38 +12,41 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { colors } from "../../styles/commonStyles";
+import { IConsultationType } from "@/src/constants/constants";
 
-interface Props {
-  tabs: string[];
-  activeIndex?: number;
-  onChange?: (index: number) => void;
+interface AnimatedTabsProps {
+  tabs: IConsultationType[];
+  activeValue: number;
+  onChange: (value: IConsultationType) => void;
 }
 
-const CONTAINER_PADDING = 4; // same padding everywhere
+const CONTAINER_PADDING = 4;
 
 export default function AnimatedTabs({
   tabs,
-  activeIndex = 0,
+  activeValue,
   onChange,
-}: Props) {
+}: AnimatedTabsProps) {
   const theme = useTheme();
-
   const [containerWidth, setContainerWidth] = useState(0);
 
-  // subtract padding from both sides
-  const usableWidth = containerWidth - CONTAINER_PADDING * 2;
-
-  const tabWidth = usableWidth / tabs.length;
-
-  const translateX = useSharedValue(
-    activeIndex * tabWidth + CONTAINER_PADDING
+  const activeIndex = useMemo(
+    () => tabs.findIndex((t) => t.value === activeValue),
+    [tabs, activeValue]
   );
 
+  const usableWidth = containerWidth - CONTAINER_PADDING * 2;
+  const tabWidth = tabs.length > 0 ? usableWidth / tabs.length : 0;
+
+  const translateX = useSharedValue(0);
+
   useEffect(() => {
-    translateX.value = withTiming(
-      activeIndex * tabWidth + CONTAINER_PADDING,
-      { duration: 250 }
-    );
+    if (tabWidth > 0 && activeIndex >= 0) {
+      translateX.value = withTiming(
+        activeIndex * tabWidth + CONTAINER_PADDING,
+        { duration: 250 }
+      );
+    }
   }, [activeIndex, tabWidth]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
@@ -47,14 +55,6 @@ export default function AnimatedTabs({
 
   const onLayout = (e: LayoutChangeEvent) => {
     setContainerWidth(e.nativeEvent.layout.width);
-  };
-
-  const handlePress = (index: number) => {
-    translateX.value = withTiming(
-      index * tabWidth + CONTAINER_PADDING,
-      { duration: 250 }
-    );
-    onChange?.(index);
   };
 
   return (
@@ -71,7 +71,7 @@ export default function AnimatedTabs({
       onLayout={onLayout}
     >
       {/* Indicator */}
-      {containerWidth > 0 && (
+      {containerWidth > 0 && tabWidth > 0 && (
         <Animated.View
           style={[
             styles.indicator,
@@ -85,25 +85,28 @@ export default function AnimatedTabs({
       )}
 
       {/* Tabs */}
-      {tabs.map((tab, index) => (
-        <Pressable
-          key={index}
-          style={styles.tab}
-          onPress={() => handlePress(index)}
-        >
-          <Text
-            style={{
-              color:
-                activeIndex === index
+      {tabs.map((tab) => {
+        const isActive = tab.value === activeValue;
+
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.tab}
+            onPress={() => onChange(tab)}
+          >
+            <Text
+              style={{
+                color: isActive
                   ? colors.white
                   : theme.colors.onSurface,
-              fontWeight: "600",
-            }}
-          >
-            {tab}
-          </Text>
-        </Pressable>
-      ))}
+                fontWeight: "600",
+              }}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }

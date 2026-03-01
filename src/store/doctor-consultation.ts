@@ -10,6 +10,8 @@ interface DoctorConsultationState {
   slotTime?: string;
   patientId?: number;
   orderId?: number;
+  consultationType?: string;
+  consultationTypeId?: number;
 
   setDoctor: (doctorId: number, doctorName: string) => void;
   setDepartment: (id: number, name: string) => void;
@@ -17,6 +19,7 @@ interface DoctorConsultationState {
   setSlot: (slotId: number, slotTime: string) => void;
   setPatient: (patientId: number) => void;
   setOrder: (orderId: number) => void;
+  setConsultationType: (name: string, id: number) => void;
 
   reset: () => void;
 }
@@ -37,6 +40,8 @@ export const useDoctorConsultationStore = create<DoctorConsultationState>(
     setPatient: (patientId) => set({ patientId }),
 
     setOrder: (orderId) => set({ orderId }),
+    setConsultationType: (name, id) =>
+      set({ consultationType: name, consultationTypeId: id }),
 
     reset: () =>
       set({
@@ -49,6 +54,8 @@ export const useDoctorConsultationStore = create<DoctorConsultationState>(
         slotTime: undefined,
         patientId: undefined,
         orderId: undefined,
+        consultationType: undefined,
+        consultationTypeId: undefined,
       }),
   }),
 );

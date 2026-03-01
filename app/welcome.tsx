@@ -21,8 +21,7 @@ export default function WelcomeScreen() {
   const handleContinue = () => {
     try {
       //console.log("Navigating to terms screen...");
-      // router.push("/terms");
-      router.push('/(main)/home')
+      router.push("/terms");
     } catch (error) {
       console.error("Error navigating to terms:", error);
     }

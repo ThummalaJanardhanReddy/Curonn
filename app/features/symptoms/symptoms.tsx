@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -19,6 +19,12 @@ import {
   getResponsiveSpacing,
 } from "../../shared/utils/responsive";
 import { useDoctorConsultationStore } from "@/src/store/doctor-consultation";
+import axiosClient from "@/src/api/axiosClient";
+import {
+  ISymptomMaster,
+  ISymptomMasterApiResponse,
+} from "@/src/constants/constants";
+import ApiRoutes from "@/src/api/employee/employee";
 
 interface Symptom {
   id: string;
@@ -28,36 +34,59 @@ interface Symptom {
 
 export default function SymptomsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSymptoms, setSelectedSymptoms] = useState<Symptom[]>([]);
-  const { setSymptoms} = useDoctorConsultationStore();
-  // Mock symptoms data - in real app this would come from API
-  const allSymptoms: Symptom[] = useMemo(
-    () => [
-      { id: "1", name: "Fever", category: "General" },
-      { id: "2", name: "Headache", category: "General" },
-      { id: "3", name: "Cough", category: "Respiratory" },
-      { id: "4", name: "Chest Pain", category: "Cardiovascular" },
-      { id: "5", name: "Nausea", category: "Digestive" },
-      { id: "6", name: "Dizziness", category: "Neurological" },
-      { id: "7", name: "Fatigue", category: "General" },
-      { id: "8", name: "Shortness of Breath", category: "Respiratory" },
-      { id: "9", name: "Joint Pain", category: "Musculoskeletal" },
-      { id: "10", name: "Skin Rash", category: "Dermatological" },
-      { id: "11", name: "Abdominal Pain", category: "Digestive" },
-      { id: "12", name: "Back Pain", category: "Musculoskeletal" },
-    ],
+  const [selectedSymptoms, setSelectedSymptoms] = useState<ISymptomMaster[]>(
     [],
   );
+  const [allSymptoms, setAllSymptoms] = useState<ISymptomMaster[]>([]);
+  const { setSymptoms, departmentId } = useDoctorConsultationStore();
+  // Mock symptoms data - in real app this would come from API
+  // const allSymptoms: Symptom[] = useMemo(
+  //   () => [
+  //     { id: "1", name: "Fever", category: "General" },
+  //     { id: "2", name: "Headache", category: "General" },
+  //     { id: "3", name: "Cough", category: "Respiratory" },
+  //     { id: "4", name: "Chest Pain", category: "Cardiovascular" },
+  //     { id: "5", name: "Nausea", category: "Digestive" },
+  //     { id: "6", name: "Dizziness", category: "Neurological" },
+  //     { id: "7", name: "Fatigue", category: "General" },
+  //     { id: "8", name: "Shortness of Breath", category: "Respiratory" },
+  //     { id: "9", name: "Joint Pain", category: "Musculoskeletal" },
+  //     { id: "10", name: "Skin Rash", category: "Dermatological" },
+  //     { id: "11", name: "Abdominal Pain", category: "Digestive" },
+  //     { id: "12", name: "Back Pain", category: "Musculoskeletal" },
+  //   ],
+  //   [],
+  // );
+
+  useEffect(() => {
+    fetchAllSymptoms();
+  }, []);
+
+  const fetchAllSymptoms = async () => {
+    const response = await axiosClient.get<ISymptomMasterApiResponse>(
+      ApiRoutes.Symptoms.getAll,
+    );
+
+    if (response?.isSuccess) {
+      const symptoms = response.data.items;
+      const data = symptoms?.filter((sym) => sym.specialityId == departmentId);
+      const _d = data || [];
+      console.log(data);
+      setAllSymptoms(_d);
+    }
+  };
 
   const filteredSymptoms = useMemo(() => {
-    let filtered = allSymptoms.filter(
+    let filtered = allSymptoms?.filter(
       (symptom) =>
-        !selectedSymptoms.some((selected) => selected.id === symptom.id),
+        !selectedSymptoms.some(
+          (selected) => selected.symptomMasterId === symptom.symptomMasterId,
+        ),
     );
 
     if (searchQuery) {
-      filtered = filtered.filter((symptom) =>
-        symptom.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      filtered = filtered?.filter((symptom) =>
+        symptom.symptom.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -68,13 +97,15 @@ export default function SymptomsScreen() {
     router.back();
   };
 
-  const handleSymptomSelect = (symptom: Symptom) => {
+  const handleSymptomSelect = (symptom: ISymptomMaster) => {
     setSelectedSymptoms((prev) => [...prev, symptom]);
   };
 
-  const handleSymptomDeselect = (symptomId: string) => {
+  const handleSymptomDeselect = (symptomId: string | number) => {
     setSelectedSymptoms((prev) =>
-      prev.filter((symptom) => symptom.id !== symptomId),
+      prev.filter(
+        (symptom) => symptom.symptomMasterId.toString() !== symptomId,
+      ),
     );
   };
 
@@ -89,31 +120,31 @@ export default function SymptomsScreen() {
   };
 
   const handleConfirm = () => {
-    setSymptoms(selectedSymptoms.map(s=>s.name));
+    setSymptoms(selectedSymptoms.map((s) => s.symptom));
     router.push({
-      pathname: '/shared/components/doctor/confirmConsultation',
-    })
-  }
+      pathname: "/shared/components/doctor/confirmConsultation",
+    });
+  };
 
   const renderSymptomCard = useCallback(
-    ({ item }: { item: Symptom }) => (
+    ({ item }: { item: ISymptomMaster }) => (
       <TouchableOpacity
         style={styles.symptomCard}
         onPress={() => handleSymptomSelect(item)}
         activeOpacity={0.8}
       >
-        <Text style={styles.symptomName}>{item.name}</Text>
+        <Text style={styles.symptomName}>{item.symptom}</Text>
       </TouchableOpacity>
     ),
     [],
   );
 
   const renderSelectedChip = useCallback(
-    (symptom: Symptom) => (
-      <View key={symptom.id} style={styles.selectedChip}>
-        <Text style={styles.chipText}>{symptom.name}</Text>
+    (symptom: ISymptomMaster) => (
+      <View key={symptom.symptomMasterId} style={styles.selectedChip}>
+        <Text style={styles.chipText}>{symptom.symptom}</Text>
         <TouchableOpacity
-          onPress={() => handleSymptomDeselect(symptom.id)}
+          onPress={() => handleSymptomDeselect(symptom.symptomMasterId)}
           style={styles.chipCloseButton}
         >
           <Text style={styles.chipCloseText}>×</Text>
@@ -175,8 +206,11 @@ export default function SymptomsScreen() {
         {/* Symptoms Grid */}
         <View style={styles.symptomsContainer}>
           <View style={styles.symptomsGrid}>
-            {filteredSymptoms.map((symptom) => (
-              <View key={symptom.id} style={styles.symptomCardWrapper}>
+            {filteredSymptoms?.map((symptom) => (
+              <View
+                key={symptom.symptomMasterId}
+                style={styles.symptomCardWrapper}
+              >
                 {renderSymptomCard({ item: symptom })}
               </View>
             ))}

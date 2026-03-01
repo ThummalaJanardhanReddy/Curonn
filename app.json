@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "appleTeamId": "4JAM43NMGL"
@@ -30,7 +29,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic"
         }
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",

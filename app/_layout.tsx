@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import { UserProvider } from "./shared/context/UserContext";
-import { CartProvider } from './shared/context/CartContext';
+import { CartProvider } from "./shared/context/CartContext";
 import AppFontLoader from "./shared/components/AppFontLoader";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
@@ -21,21 +21,21 @@ export default function RootLayout() {
         <CartProvider>
           <PaperProvider theme={theme}>
             <KeyboardProvider>
-            <Stack
+              <Stack
                 screenOptions={{
                   headerShown: false,
                   animation: "slide_from_right",
                 }}
-            >
-              <Stack.Screen
-                name="features/medicines/medicine-list"
-                options={{
-                  animation: 'none'
-                }}
+              >
+                <Stack.Screen
+                  name="features/medicines/medicine-list"
+                  options={{
+                    animation: "none",
+                  }}
                 />
-            </Stack>
+              </Stack>
             </KeyboardProvider>
-        </PaperProvider>
+          </PaperProvider>
         </CartProvider>
       </UserProvider>
     </AppFontLoader>
