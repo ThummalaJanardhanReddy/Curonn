@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
@@ -118,29 +119,41 @@ export default function MenstrualHistoryScreen({
 
   const handleDeleteRecord = async (id: string) => {
     if (!userData || !userData.e_id) return;
-    try {
-      console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
-      const res: any = await axiosClient.delete(
-        ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id)
-      );
-      console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
-      setToastMessage({
-        title: "Record Deleted Successfully",
-        subtitle: "Deleted successfully!",
-        type: "success"
-      });
-      setShowToast(true);
-      await fetchHistory();
-    } catch (err: any) {
-      console.error("Failed to delete menstrual history:", err);
-      // setError("Failed to delete menstrual record");
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-    }
+
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
+              const res: any = await axiosClient.delete(
+                ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id || 0)
+              );
+              console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
+              setToastMessage({
+                title: "Record Deleted Successfully",
+                subtitle: "Deleted successfully!",
+                type: "success"
+              });
+              setShowToast(true);
+              await fetchHistory();
+            } catch (err: any) {
+              console.error("Failed to delete menstrual history:", err);
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const fetchHistory = useCallback(async () => {
@@ -222,7 +235,7 @@ export default function MenstrualHistoryScreen({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton title="" onPress={handleBack} style={styles.backButton} />
+          <BackButton title="" onPress={handleBack} style={styles.backButton} color={colors.black} />
           <Text style={styles.headerTitle}>Menstrual History</Text>
         </View>
         <TouchableOpacity
@@ -414,19 +427,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...fontStyles.headercontent,
     color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: "#fff",
-    fontFamily: fonts.semiBold
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: colors.primary,
+    fontFamily: fonts.bold,
   },
   divider: {
     height: 1,

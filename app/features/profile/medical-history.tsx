@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
@@ -214,6 +215,16 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   const handleSaveCondition = async () => {
     if (!newCondition.condition.trim() || !userData?.e_id) return;
 
+    // Duplicate check
+    const isDuplicate = conditions.some(
+      (c) => (c.historyName || '').toLowerCase().trim() === newCondition.condition.toLowerCase().trim()
+    );
+
+    if (isDuplicate) {
+      Alert.alert('Record already exists', 'This medical condition is already in your history.');
+      return;
+    }
+
     setSaveLoading(true);
     try {
       const today = new Date();
@@ -270,29 +281,45 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   const handleDeleteCondition = async (id: number) => {
     if (!userData?.e_id) return;
 
-    try {
-      console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id}`);
-      const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id));
-      console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
+    Alert.alert(
+      'Delete Record',
+      'Are you sure you want to delete this record?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            try {
+              console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id!}`);
+              const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id!));
+              console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
 
-      if (response || response === "OK") {
-        setToastMessage({
-          title: "Condition Deleted Successfully",
-          subtitle: "Deleted successfully!",
-          type: "success"
-        });
-        setShowToast(true);
-        await fetchMedicalHistory();
-      }
-    } catch (error: any) {
-      console.error('Delete medical history error:', error);
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-    }
+              if (response || response === "OK") {
+                setToastMessage({
+                  title: "Condition Deleted Successfully",
+                  subtitle: "Deleted successfully!",
+                  type: "success"
+                });
+                setShowToast(true);
+                await fetchMedicalHistory();
+              }
+            } catch (error: any) {
+              console.error('Delete medical history error:', error);
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -310,20 +337,14 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         <View style={styles.conditionContent}>
           <Text style={styles.conditionName}>{item.historyName}</Text>
           <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: getStatusColor(item.status) },
-              ]}
-            />
-            <Text style={styles.statusText}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
               {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A'}
             </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteCondition(item.medicalHistoryId)}
+          onPress={() => item.medicalHistoryId && handleDeleteCondition(item.medicalHistoryId)}
         >
           {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
           <Text style={styles.deleteButtonText}>Delete</Text>
@@ -340,6 +361,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         <View style={styles.headerLeft}>
           <BackButton
             title="Medical History"
+            color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
             textStyle={styles.headerTitle}
@@ -350,7 +372,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
           onPress={handleAddCondition}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
@@ -613,14 +635,13 @@ const styles = StyleSheet.create({
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: colors.primary,
+    fontFamily: fonts.bold,
   },
   divider: {
     height: 1,
@@ -633,6 +654,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: "#F5F4F9"
   },
   conditionsContainer: {
     padding: getResponsiveSpacing(20),
@@ -657,9 +679,9 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(12),
   },
   conditionName: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(18),
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.black,
     marginBottom: getResponsiveSpacing(4),
     fontFamily: fonts.bold,
   },
@@ -674,10 +696,10 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(6),
   },
   statusText: {
-    fontSize: getResponsiveFontSize(12),
-    color: colors.textSecondary,
-    fontWeight: '500',
-    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(14),
+    color: colors.success,
+    fontWeight: '600',
+    fontFamily: fonts.medium,
   },
   deleteButton: {
     padding: getResponsiveSpacing(8),

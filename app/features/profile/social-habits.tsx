@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
@@ -193,6 +194,32 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
 
   const handleSave = async () => {
     if (!userData?.e_id) return;
+
+    // Duplicate check
+    if (selectedTab === 'smoking' && smokingStatus !== 3) {
+      if (habits.some(h => h.smokingStatus !== 3 && h.smokingHistory)) {
+        Alert.alert('Record already exists', 'Smoking history is already recorded.');
+        return;
+      }
+    }
+
+    if (selectedTab === 'alcohol' && alcoholStatus !== 3) {
+      if (habits.some(h => h.alcoholStatus !== 3 && h.alcoholHistory)) {
+        Alert.alert('Record already exists', 'Alcohol history is already recorded.');
+        return;
+      }
+    }
+
+    // Validation: ensure something is selected on the current tab
+    if (selectedTab === 'smoking' && smokingStatus === 3) {
+      Alert.alert('Selection Required', 'Please select a smoking status.');
+      return;
+    }
+    if (selectedTab === 'alcohol' && alcoholStatus === 3) {
+      Alert.alert('Selection Required', 'Please select an alcohol status.');
+      return;
+    }
+
     setSaveLoading(true);
     try {
       const now = new Date().toISOString();
@@ -245,28 +272,40 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
 
   const handleDelete = async (id: number) => {
     if (!userData?.e_id) return;
-    try {
-      console.log(`📤 DeleteSocial id=${id}, deletedBy=${userData.e_id}`);
-      const response: any = await axiosClient.delete(
-        ApiRoutes.SocialHistory.delete(id, userData.e_id)
-      );
-      console.log('📥 DeleteSocial Response:', JSON.stringify(response, null, 2));
-      setToastMessage({
-        title: "Habit Deleted Successfully",
-        subtitle: "Deleted successfully!",
-        type: "success"
-      });
-      setShowToast(true);
-      await fetchHabits();
-    } catch (error: any) {
-      console.error('DeleteSocial error:', error);
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-    }
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              console.log(`📤 DeleteSocial id=${id}, deletedBy=${userData.e_id}`);
+              const response: any = await axiosClient.delete(
+                ApiRoutes.SocialHistory.delete(id, userData.e_id || 0)
+              );
+              console.log('📥 DeleteSocial Response:', JSON.stringify(response, null, 2));
+              setToastMessage({
+                title: "Habit Deleted Successfully",
+                subtitle: "Deleted successfully!",
+                type: "success"
+              });
+              setShowToast(true);
+              await fetchHabits();
+            } catch (error: any) {
+              console.error('DeleteSocial error:', error);
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────────
@@ -519,6 +558,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
             title=""
             onPress={handleBack}
             style={styles.backButton}
+            color={colors.black}
           />
           <Text style={styles.headerTitle}>Social Habits</Text>
         </View>
@@ -662,19 +702,29 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...fontStyles.headercontent,
     color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
   },
+  // addButton: {
+  //   paddingHorizontal: getResponsiveSpacing(16),
+  //   paddingVertical: getResponsiveSpacing(8),
+  //   backgroundColor: colors.primary,
+  //   borderRadius: getResponsiveSpacing(6),
+  // },
+  // addButtonText: {
+  //   fontSize: getResponsiveFontSize(14),
+  //   fontWeight: '600',
+  //   color: '#fff',
+  //   fontFamily: fonts.semiBold
+  // },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: fonts.semiBold
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: colors.primary,
+    fontFamily: fonts.bold,
   },
   divider: {
     height: 1,
