@@ -26,6 +26,7 @@ import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import Toast from '@/app/shared/components/Toast';
 import { StatusBar } from "expo-status-bar";
+import * as SecureStore from 'expo-secure-store';
 
 interface EnvironmentalAllergy {
   id: string;
@@ -56,8 +57,19 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   const { userData } = useUser();
-  const patientId = userData?.e_id;
+  const { setUserData } = useUser();
+  const patientId = userData?.e_id || userData?.eId;
 
+useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
 
   const fetchallallergies = async () => {
     try {

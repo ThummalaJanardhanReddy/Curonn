@@ -27,6 +27,7 @@ import AddressSelection from '../address/address-selection';
 import LocationSelection from '../location/location-selection';
 import { images } from '../../../assets';
 import { fonts } from '@/app/shared/styles/fonts';
+import * as SecureStore from 'expo-secure-store';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,17 @@ export default function BookingPayLaterScreen() {
   }>({ title: '', subtitle: '', type: 'success' });
 
   const genderOptions = ['Male', 'Female', 'Other'];
-
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+ const { setUserData } = useUser();
   // ── On mount: read prescription from store ───────────────────────────
   useEffect(() => {
     const stored = prescriptionStore.get();
@@ -101,7 +112,7 @@ export default function BookingPayLaterScreen() {
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+       const patientId = userData?.e_id || userData?.eId;
       if (!patientId) throw new Error('Patient ID not available');
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId),
@@ -227,7 +238,7 @@ export default function BookingPayLaterScreen() {
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)

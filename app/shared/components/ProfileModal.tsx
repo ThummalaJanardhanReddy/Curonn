@@ -95,7 +95,20 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     gender: ""
   });
   const { userData } = useUser();
-  const patientId = userData?.e_id;
+   const { setUserData } = useUser();
+  const patientId = userData?.e_id || userData?.eId;
+
+  useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+    
   React.useEffect(() => {
     if (!visible || !patientId) return;
     // console.log("[ProfileModal] userData:", userData);
@@ -349,7 +362,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       await AsyncStorage.clear();
       if (typeof SecureStore !== 'undefined' && SecureStore.deleteItemAsync) {
         await SecureStore.deleteItemAsync('userToken');
-        await SecureStore.deleteItemAsync('userData');
+        await SecureStore.deleteItemAsync('userData'); // Clear userData
+        await SecureStore.deleteItemAsync('isLoggedIn');
+        await SecureStore.deleteItemAsync('mobile_details_updated');
       }
     } catch (e) {
       console.error('Error clearing user data:', e);

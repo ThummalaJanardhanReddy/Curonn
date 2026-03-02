@@ -35,6 +35,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from '@/app/shared/styles/fonts';
+import * as SecureStore from 'expo-secure-store';
 // Guarded access to expo-router's useSearchParams hook (for medicine flow).
 let maybeUseSearchParams: any = null;
 try {
@@ -99,7 +100,17 @@ export default function BookingScreen({
   const [selectedDate, setSelectedDate] = useState<Date | null>(propSelectedDate || null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
-
+  const { setUserData } = useUser();
+ useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -224,7 +235,7 @@ export default function BookingScreen({
     if (isFromMedicalFlag) return;
     async function fetchDiscount() {
       try {
-        const patientId = userData?.e_id;
+       const patientId = userData?.e_id || userData?.eId;
         if (!patientId) return;
         const res: any = await axiosClient.get(
           ApiRoutes.Employee.getById(patientId)
@@ -341,7 +352,7 @@ export default function BookingScreen({
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) throw new Error("Patient ID is not available");
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId)
@@ -402,7 +413,7 @@ export default function BookingScreen({
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)

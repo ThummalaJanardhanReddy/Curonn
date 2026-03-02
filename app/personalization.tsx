@@ -19,7 +19,9 @@ import { ApiRoutes } from '../src/api/employee/employee';
 import { fonts } from './shared/styles/fonts';
 import { useUser } from "./shared/context/UserContext";
 import Toast from './shared/components/Toast';
+
 import { useLocalSearchParams } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
 interface PersonalizationData {
   gender: string;
@@ -102,6 +104,16 @@ export default function PersonalizationScreen() {
       }, 100);
     }
   }, [currentStep]);
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
 
   // Conversion functions
   const convertHeight = (
@@ -135,7 +147,8 @@ export default function PersonalizationScreen() {
   };
 
   const totalSteps = 5;
-  const patientId = userData?.e_id;
+  const { setUserData } = useUser();
+  const patientId = userData?.e_id || userData?.eId;
   React.useEffect(() => {
     if (!patientId) return;
     // console.log("[ProfileModal] userData:", userData);

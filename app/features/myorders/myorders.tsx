@@ -78,7 +78,7 @@ export default function OrdersScreen() {
       const map = await getOrderStatusIdMap();
       setStatusIdMap(map);
       // Fetch all orders initially
-      const patientId = userData?.e_id || 0;
+      const patientId = userData?.e_id || userData?.eId;
       if (patientId) {
         const ordersData = await fetchAllOrders(patientId, 0);
         setOrders(ordersData);
@@ -104,7 +104,7 @@ export default function OrdersScreen() {
   // Refresh orders from API when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const patientId = userData?.e_id || 0;
+      const patientId = userData?.e_id || userData?.eId;
       if (patientId) {
         setLoading(true);
         fetchAllOrders(patientId, 0).then((ordersData) => {
@@ -133,9 +133,15 @@ export default function OrdersScreen() {
 
   // Fetch orders when filter changes or search is performed
   useEffect(() => {
-    const patientId = userData?.e_id || 0;
+    const patientId = userData?.e_id || userData?.eId;
     let statusId = 0;
     console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
+    
+    if (!patientId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     // If searching by order number
     if (searchQuery.trim().length > 0) {

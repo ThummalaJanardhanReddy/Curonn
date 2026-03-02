@@ -35,14 +35,14 @@ import type { PrescriptionImage } from '../shared/utils/prescriptionStore';
 import SeacrchIcon from '../../assets/AppIcons/Curonn_icons/search.svg';
 import GalleryIcon from '../../assets/AppIcons/Curonn_icons/gallery.svg';
 import CameraIcon from '../../assets/AppIcons/Curonn_icons/camera.svg';
+import * as SecureStore from 'expo-secure-store';
 
 export default function MedicinesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentLocation] = useState('New York, NY');
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const { userData } = useUser();
-  const patientId = userData?.e_id ?? undefined;
-
+ 
   const [drugGroups, setDrugGroups] = useState<any[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
@@ -52,6 +52,18 @@ export default function MedicinesScreen() {
   // State for edit back-flow: pre-fill modal with previously entered data
   const [initialModalNotes, setInitialModalNotes] = useState('');
   const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+  const { setUserData } = useUser();
+const patientId = userData?.e_id || userData?.eId;
 
   useEffect(() => {
     if (searchQuery.trim().length >= 3) {

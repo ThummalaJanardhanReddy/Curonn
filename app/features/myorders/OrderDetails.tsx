@@ -8,11 +8,13 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Platform, StatusBar } from 'react-native';
 import { images } from "../../../assets";
 import axiosClient from "@/src/api/axiosClient";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { Button } from "react-native-paper";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import Toast from "../../shared/components/Toast";
+import { colors } from "../..//shared/styles/commonStyles";
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 interface OrderDetailsProps {
     visible: boolean;
@@ -86,7 +88,13 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [encodedPdfUrl, setEncodedPdfUrl] = useState<string | null>(null);
     const [pdfLoading, setPdfLoading] = useState(false);
     const [labReports, setLabReports] = useState<any[]>([]);
-
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const SLOT_GROUPS = {
+        morning: ["09:00 AM", "09:30 AM", "10:00 AM"],
+        afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
+        evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
+    };
     // Helper: get reports array from labReports (API)
     function getReports() {
         return labReports;
@@ -132,10 +140,36 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [newRescheduleDate, setNewRescheduleDate] = useState('');
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+    const [errors, setErrors] = useState("");
+      const [selectedSlot, setSelectedSlot] = useState<any>(null);
     // For patient profile
     const [patientProfile, setPatientProfile] = useState<any>(null);
     const [patientId, setPatientId] = useState<number | null>(null);
     // Status color maps based on serviceName
+
+    const handleMedDateChange = (event: any, selectedDate?: Date) => {
+        setShowDatePicker(Platform.OS === "ios");
+        if (selectedDate) {
+            setSelectedDate(selectedDate);
+            if (errors === "Please select reschedule date") setErrors("");
+        }
+    };
+    const handleLabDateChange = (event: any, date?: Date) => {
+        setShowDatePicker(Platform.OS === "ios");
+        if (date) {
+            setSelectedDate(date);
+            setNewRescheduleDate(formatDateLab(date));
+            if (errors === "Please select service start date") setErrors("");
+        }
+    };
+
+    const formatDateLab = (date: Date) => {
+        const day = date.getDate().toString().padStart(2, "0");
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const year = date.getFullYear();
+        return `${year}-${month}-${day}`;
+    };
+
     const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
         Completed: "#ccface",
@@ -278,7 +312,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         }
     }
 
+  const handleSlotSelect = (time: string) => {
+    setSelectedSlot(time);
+  };
 
+  
     if (!order) return null;
     // Helper: statusName check for button display
     const canReschedule = ["Requested", "Inprogress"].includes(order.statusName);
@@ -289,84 +327,225 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     // Helper: Render Reschedule Modal
     const renderRescheduleModal = () => (
         <Modal visible={showRescheduleModal} transparent animationType="slide" onRequestClose={() => setShowRescheduleModal(false)}>
-            <View style={styles.modalOverlay}>
-                <View style={styles.bottomModal}>
-                    <View style={styles.modalHeaderRow}>
-                        <Text style={styles.modalHeading}>Reschedule Order</Text>
-                        <TouchableOpacity onPress={() => setShowRescheduleModal(false)} style={styles.modalCloseBtn}>
-                            <Image source={images.icons.close} style={styles.modalCloseIcon} />
-                        </TouchableOpacity>
-                    </View>
+            <SafeAreaView style={{ flex: 1 }}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.bottomModal}>
+                        <View style={styles.modalHeaderRow}>
+                            {orderDetails?.type === 'consultation' && (
+                                <Text style={styles.modalHeading}>Reschedule Consultation</Text>
+                            )}
+                            {orderDetails?.type === 'lab' && (
+                                <Text style={styles.modalHeading}>Reschedule Order</Text>
+                            )}
+                            <TouchableOpacity onPress={() => setShowRescheduleModal(false)} style={styles.modalCloseBtn}>
+                                <Image source={images.icons.close} style={styles.modalCloseIcon} />
+                            </TouchableOpacity>
+                        </View>
 
-                    <Text style={styles.modalLabelBold}>Reason for Reschedule</Text>
-                    <View>
-                        <TouchableOpacity
-                            style={styles.radioButtonContainer}
-                            onPress={() => setRescheduleReason("Professional not assigned")}
-                        >
-                            <RadioButton.Android
-                                value="Professional not assigned"
-                                status={rescheduleReason === "Professional not assigned" ? 'checked' : 'unchecked'}
+                        <Text style={styles.modalLabelBold}>Reason for Reschedule</Text>
+                        <View>
+                            <TouchableOpacity
+                                style={styles.radioButtonContainer}
                                 onPress={() => setRescheduleReason("Professional not assigned")}
-                                color="#C35E9D"
-                                uncheckedColor="#8E8E93"
-                            />
-                            <Text style={styles.radioButtonLabel}>Professional not assigned</Text>
-                        </TouchableOpacity>
+                            >
+                                <RadioButton.Android
+                                    value="Professional not assigned"
+                                    status={rescheduleReason === "Professional not assigned" ? 'checked' : 'unchecked'}
+                                    onPress={() => setRescheduleReason("Professional not assigned")}
+                                    color="#C35E9D"
+                                    uncheckedColor="#8E8E93"
+                                />
+                                <Text style={styles.radioButtonLabel}>Professional not assigned</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.radioButtonContainer}
-                            onPress={() => setRescheduleReason("Service required at a different time")}
-                        >
-                            <RadioButton.Android
-                                value="Service required at a different time"
-                                status={rescheduleReason === "Service required at a different time" ? 'checked' : 'unchecked'}
+                            <TouchableOpacity
+                                style={styles.radioButtonContainer}
                                 onPress={() => setRescheduleReason("Service required at a different time")}
-                                color="#C35E9D"
-                                uncheckedColor="#8E8E93"
+                            >
+                                <RadioButton.Android
+                                    value="Service required at a different time"
+                                    status={rescheduleReason === "Service required at a different time" ? 'checked' : 'unchecked'}
+                                    onPress={() => setRescheduleReason("Service required at a different time")}
+                                    color="#C35E9D"
+                                    uncheckedColor="#8E8E93"
+                                />
+                                <Text style={styles.radioButtonLabel}>Service required at a different time</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.modalLabel}>Reschedule Date</Text>
+                        <TouchableOpacity
+                            style={styles.dateInput}
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text
+                                style={[
+                                    styles.dateText,
+                                    !selectedDate && styles.placeholderText,
+                                ]}
+                            >
+                                {selectedDate
+                                    ? formatDateLab(selectedDate)
+                                    : "dd/mm/yyyy"}
+                            </Text>
+                            <Image
+                                source={images.icons.calendar}
+                                style={styles.calendarIcon}
                             />
-                            <Text style={styles.radioButtonLabel}>Service required at a different time</Text>
+                        </TouchableOpacity>
+                        {/* DateTimePicker rendered inside modal */}
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={selectedDate || new Date()}
+                                mode="date"
+                                display={Platform.OS === "ios" ? "spinner" : "default"}
+                                onChange={handleLabDateChange}
+                                minimumDate={new Date()}
+                            />
+                        )}
+                        <View style={styles.timeSection}>
+                            <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                            <View style={styles.timeSlotsContainer}>
+                                <View style={{ marginTop: 20 }}>
+                                    {Object.entries(SLOT_GROUPS).map(([group, times]) => (
+                                        <View key={group} style={{ marginBottom: 16 }}>
+                                            <Text style={styles.slotGroupTitle}>
+                                                {group.toUpperCase()}
+                                            </Text>
+
+                                            <View style={styles.chipContainer}>
+                                                {times.map((time) => (
+                                                    <TouchableOpacity
+                                                        key={time}
+                                                        style={[
+                                                            styles.slotChip,
+                                                            selectedSlot === time && styles.selectedSlotChip,
+                                                        ]}
+                                                        onPress={() => handleSlotSelect(time)}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.slotText,
+                                                                selectedSlot === time && {
+                                                                    color: "#fff",
+                                                                },
+                                                            ]}
+                                                        >
+                                                            {time}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                            {errors === "Please select time slot" && (
+                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                    {errors}
+                                </Text>
+                            )}
+                        </View>
+
+                        <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
+                            // API call for consultation reschedule
+                            if (orderDetails?.type === 'consultation') {
+                               
+                                const payload: any = {
+                                        appointmentId: orderDetails.data.appointmentId,
+                                        scheduleDate: newRescheduleDate ? newRescheduleDate : null,
+                                        reason: rescheduleReason,
+                                        scheduleBetween: selectedSlot ? selectedSlot : null,
+                                        modifiedBy: orderDetails.data.patientId
+                                }
+                                 console.log("Payload of  consultation reschedule:", payload);
+                                try {
+                                    const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.rescheduleAppointment, payload);
+                                    console.log("Consultation Reschedule Response:", responsce);
+                                    setShowRescheduleModal(false);
+                                    setToastMessage({
+                                        title: 'Reschedule Success',
+                                        subtitle: 'Booking rescheduled successfully!',
+                                        type: 'success',
+                                    });
+                                    setShowToast(true);
+                                    setTimeout(() => {
+                                        setShowToast(false);
+                                        if (refreshOrders) refreshOrders();
+                                        onClose && onClose();
+                                    }, 3500);
+                                } catch (e) {
+                                    setToastMessage({
+                                        title: 'Reschedule Failed',
+                                        subtitle: 'Failed to reschedule.',
+                                        type: 'error',
+                                    });
+                                    setShowToast(true);
+                                }
+                            }
+                            if (orderDetails?.type === 'lab') {
+                                console.log("Rescheduling consultation with appointmentId:", orderDetails.data.appointmentId, "newDate:", newRescheduleDate);
+                                const payload: any = {
+                                    // labOrderId: 0,
+                                    // testName: serviceName,
+                                    // patientId: userData?.e_id || 0,
+                                    // address: selectedLocation?.address || "",
+                                    // hNo: selectedLocation?.houseNumber || "",
+                                    // landMark: selectedLocation?.landmark || "",
+                                    // addressNickname: selectedLocation?.nickname
+                                    //     ? selectedLocation.nickname.charAt(0).toUpperCase() +
+                                    //     selectedLocation.nickname.slice(1)
+                                    //     : "",
+                                    // serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
+                                    // timeSlot: selectedTimeSlot,
+                                    // paymentDetails: String(totalAmount),
+                                    // isPaymentDone: !!paymentData,
+                                    // createdBy: userData?.e_id || 0,
+                                    // labPartnerId: 0,
+                                    // statusId: statusId,
+                                    // paymentAmount: totalAmount,
+                                    // razorpayOrderId: paymentData?.razorpayOrderId || "",
+                                    // razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+                                    // razorpaySignature: paymentData?.razorpaySignature || "",
+                                };
+                                try {
+                                    const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.reshduledata, {
+                                        appointmentId: orderDetails.data.appointmentId,
+                                        newDate: newRescheduleDate ? newRescheduleDate : null,
+                                        modifiedBy: orderDetails.data.patientId
+                                    });
+                                    console.log("Consultation Reschedule Response:", responsce);
+                                    setShowRescheduleModal(false);
+                                    setToastMessage({
+                                        title: 'Reschedule Success',
+                                        subtitle: 'Booking rescheduled successfully!',
+                                        type: 'success',
+                                    });
+                                    setShowToast(true);
+                                    setTimeout(() => {
+                                        setShowToast(false);
+                                        if (refreshOrders) refreshOrders();
+                                        onClose && onClose();
+                                    }, 3500);
+                                } catch (e) {
+                                    setToastMessage({
+                                        title: 'Reschedule Failed',
+                                        subtitle: 'Failed to reschedule.',
+                                        type: 'error',
+                                    });
+                                    setShowToast(true);
+                                }
+                            }
+                        }}>
+                            {orderDetails?.type === 'consultation' && (
+                                <Text style={styles.reshduletext}>Reschedule Booking</Text>
+                            )}
+                            {orderDetails?.type === 'lab' && (
+                                <Text style={styles.reshduletext}>Reschedule Order</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.modalLabel}>Change Reschedule Date</Text>
-                    <TouchableOpacity style={styles.dateInput} onPress={() => {/* TODO: Show date picker */ }}>
-                        <Text>{newRescheduleDate || 'Select new date'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
-                        // API call for consultation reschedule
-                        if (orderDetails?.type === 'consultation') {
-                            try {
-                                await axiosClient.post(ApiRoutes.ConsultationsData.reshduledata, {
-                                    appointmentId: orderDetails.data.appointmentId,
-                                    newDate: newRescheduleDate,
-                                    modifiedBy: orderDetails.data.patientId
-                                });
-                                setShowRescheduleModal(false);
-                                setToastMessage({
-                                    title: 'Reschedule Success',
-                                    subtitle: 'Booking rescheduled successfully!',
-                                    type: 'success',
-                                });
-                                setShowToast(true);
-                                setTimeout(() => {
-                                    setShowToast(false);
-                                    if (refreshOrders) refreshOrders();
-                                    onClose && onClose();
-                                }, 3500);
-                            } catch (e) {
-                                setToastMessage({
-                                    title: 'Reschedule Failed',
-                                    subtitle: 'Failed to reschedule.',
-                                    type: 'error',
-                                });
-                                setShowToast(true);
-                            }
-                        }
-                    }}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reschedule Booking</Text>
-                    </TouchableOpacity>
                 </View>
-            </View>
+            </SafeAreaView>
         </Modal>
     );
 
@@ -463,8 +642,19 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 </View>
             </SafeAreaView>
         </Modal>
-    );
 
+    );
+    {
+        showDatePicker && (
+            <DateTimePicker
+                value={selectedDate || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleMedDateChange}
+                minimumDate={new Date()}
+            />
+        )
+    }
     return (
         <Modal
             visible={visible}
@@ -472,64 +662,64 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             transparent={false}
             onRequestClose={onClose}
         > <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-            <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                <StatusBar barStyle="dark-content" />
-                {/* Header Section with safe area support for iOS */}
-                <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? insets.top : 10, paddingBottom: 15 }]}>
-                    <Text style={styles.headerTitle}>Order Info</Text>
-                    <TouchableOpacity onPress={onClose} style={styles.backButton}>
-                        <Image source={images.icons.close} style={styles.backIcon} />
-                    </TouchableOpacity>
-                </View>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    <StatusBar barStyle="dark-content" />
+                    {/* Header Section with safe area support for iOS */}
+                    <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? insets.top : 10, paddingBottom: 15 }]}>
+                        <Text style={styles.headerTitle}>Order Info</Text>
+                        <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                            <Image source={images.icons.close} style={styles.backIcon} />
+                        </TouchableOpacity>
+                    </View>
 
-                <View style={styles.container}>
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
-                        {loading ? (
-                            <Text>Loading details...</Text>
-                        ) : orderDetails && orderDetails.data ? (
-                            <>
-                                {orderDetails.type === "lab" && (
-                                    <View style={styles.servicepage}>
-                                        {/* Service Information */}
-                                        <Text style={styles.sectionTitle}>Service Information</Text>
-                                        <View style={styles.databox}>
-                                            <View style={styles.labelheaderdatabox}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <Text style={styles.labelheader}>{orderDetails.data.testName}</Text>
+                    <View style={styles.container}>
+                        <ScrollView contentContainerStyle={styles.scrollContent}>
+                            {loading ? (
+                                <Text>Loading details...</Text>
+                            ) : orderDetails && orderDetails.data ? (
+                                <>
+                                    {orderDetails.type === "lab" && (
+                                        <View style={styles.servicepage}>
+                                            {/* Service Information */}
+                                            <Text style={styles.sectionTitle}>Service Information</Text>
+                                            <View style={styles.databox}>
+                                                <View style={styles.labelheaderdatabox}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text style={styles.labelheader}>{orderDetails.data.testName}</Text>
+                                                        <Text style={styles.labelinner}>
+                                                            {order.orderType === "Single Test" ? "AT Home" : "AT Lab"}
+                                                        </Text>
+                                                    </View>
                                                     <Text style={styles.labelinner}>
-                                                        {order.orderType === "Single Test" ? "AT Home" : "AT Lab"}
+                                                        {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
                                                     </Text>
                                                 </View>
-                                                <Text style={styles.labelinner}>
-                                                    {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
-                                                </Text>
+                                                <View style={styles.datesection}>
+                                                    <Text style={styles.label}>Sample pickup date & time</Text>
+                                                    <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
+                                                </View>
+                                                <View style={styles.paymentsection}>
+                                                    <Text style={styles.paidlabel}>Paid Amount</Text>
+                                                    <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
+                                                </View>
+                                                <View style={styles.servicesection}>
+                                                    <Text style={styles.label}>Service Status:</Text>
+                                                    <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "In Progress"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                            <View style={styles.datesection}>
-                                                <Text style={styles.label}>Sample pickup date & time</Text>
-                                                <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
-                                            </View>
-                                            <View style={styles.paymentsection}>
-                                                <Text style={styles.paidlabel}>Paid Amount</Text>
-                                                <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
-                                            </View>
-                                            <View style={styles.servicesection}>
-                                                <Text style={styles.label}>Service Status1:</Text>
-                                                <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
-                                                    {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                        ? "In Progress"
-                                                        : (orderDetails.data.statusName || order.statusName || "N/A")}
-                                                </Text>
-                                            </View>
-                                        </View>
 
-                                        {order.orderType === "Xray" && (<>
+                                            {order.orderType === "Xray" && (<>
                                                 <Text style={styles.sectionTitle}>Diagstic Center Details</Text>
-                                                 <View style={styles.databox}>
-                                            <View style={styles.diagsticdetails}>
-                                                <Text style={styles.diagname}>{orderDetails.data.diagnosiscenter || "N/A"}</Text>
-                                                
-                                            </View>
-                                            {/* <View style={styles.addressection}>
+                                                <View style={styles.databox}>
+                                                    <View style={styles.diagsticdetails}>
+                                                        <Text style={styles.diagname}>{orderDetails.data.diagnosiscenter || "N/A"}</Text>
+
+                                                    </View>
+                                                    {/* <View style={styles.addressection}>
                                                 <Text style={styles.value}>
                                                     {[
                                                         orderDetails.data.hNo ? orderDetails.data.hNo : null,
@@ -538,403 +728,331 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     ].filter(Boolean).join(', ') || 'N/A'}
                                                 </Text>
                                             </View> */}
-                                        </View>
-                                        </>)}
+                                                </View>
+                                            </>)}
 
-                                        {/* Patient Details */}
-                                        <Text style={styles.sectionTitle}>Address Info</Text>
-                                        <View style={styles.databox}>
-                                            <View style={{ padding: 16 }}>
-                                                <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
-                                                <Text style={styles.itemSubText}>
-                                                    {orderDetails.data.isSelfService
-                                                        ? [
-                                                            orderDetails.data.age ? orderDetails.data.age + ' years' : null,
-                                                            orderDetails.data.gender ? orderDetails.data.gender : null
-                                                        ].filter(Boolean).join(', ') || 'N/A'
-                                                        : [
-                                                            orderDetails.data.relationAge ? orderDetails.data.relationAge + ' years' : null,
-                                                            orderDetails.data.relationGender ? orderDetails.data.relationGender : null
-                                                        ].filter(Boolean).join(', ') || 'N/A'
-                                                    }
-                                                </Text>
+                                            {/* Patient Details */}
+                                            <Text style={styles.sectionTitle}>Address Info</Text>
+                                            <View style={styles.databox}>
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
+                                                    <Text style={styles.itemSubText}>
+                                                        {orderDetails.data.isSelfService
+                                                            ? [
+                                                                orderDetails.data.age ? orderDetails.data.age + ' years' : null,
+                                                                orderDetails.data.gender ? orderDetails.data.gender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                            : [
+                                                                orderDetails.data.relationAge ? orderDetails.data.relationAge + ' years' : null,
+                                                                orderDetails.data.relationGender ? orderDetails.data.relationGender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                        }
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.divider} />
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.itemSubText}>
+                                                        {[
+                                                            orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                            orderDetails.data.address ? orderDetails.data.address : null,
+                                                            orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                            <View style={styles.divider} />
-                                            <View style={{ padding: 16 }}>
-                                                <Text style={styles.itemSubText}>
-                                                    {[
-                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
-                                                        orderDetails.data.address ? orderDetails.data.address : null,
-                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
-                                                    ].filter(Boolean).join(', ') || 'N/A'}
-                                                </Text>
-                                            </View>
-                                        </View>
 
-                                        {/* Reports Section (Lab)*/}
-                                        {(() => {
-                                            // Debug logs to help diagnose why Reports section is not displaying
-                                            console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
-                                            console.log('DEBUG: labReports:', labReports);
-                                            if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
-                                                return (
-                                                    <View style={styles.reportspage}>
-                                                        <Text style={styles.sectionTitle}>Reports</Text>
-                                                        <View style={styles.databoxreports}>
-                                                            {labReports.map((report: any, idx: number) => {
-                                                                const { category, iconSource } = getCategoryAndIcon(report.orderType);
-                                                                return (
-                                                                    <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
-                                                                        {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
-                                                                        <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                                                                            {report.reportname}
-                                                                        </Text>
-                                                                        {/* <Text>
+                                            {/* Reports Section (Lab)*/}
+                                            {(() => {
+                                                // Debug logs to help diagnose why Reports section is not displaying
+                                                console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
+                                                console.log('DEBUG: labReports:', labReports);
+                                                if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
+                                                    return (
+                                                        <View style={styles.reportspage}>
+                                                            <Text style={styles.sectionTitle}>Reports</Text>
+                                                            <View style={styles.databoxreports}>
+                                                                {labReports.map((report: any, idx: number) => {
+                                                                    const { category, iconSource } = getCategoryAndIcon(report.orderType);
+                                                                    return (
+                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
+                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                {report.reportname}
+                                                                            </Text>
+                                                                            {/* <Text>
                                                                               {report.reportinfo} || 'fdgnfdgbbn'
                                                                         </Text> */}
-                                                                        <TouchableOpacity
-                                                                            style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
-                                                                            onPress={() => {
-                                                                                console.log('Preview pressed:', report.url);
-                                                                                setPdfLoading(true);
-                                                                                setSelectedPdfUrl(report.url);
-                                                                                // Encode the file name part of the URL
-                                                                                try {
-                                                                                    const url = report.url;
-                                                                                    const lastSlash = url.lastIndexOf('/');
-                                                                                    const base = url.substring(0, lastSlash + 1);
-                                                                                    const file = url.substring(lastSlash + 1);
-                                                                                    const encodedUrl = base + encodeURIComponent(file);
-                                                                                    setEncodedPdfUrl(encodedUrl);
-                                                                                } catch (e) {
-                                                                                    setEncodedPdfUrl(report.url);
-                                                                                }
-                                                                                setPdfModalVisible(true);
-                                                                            }}
-                                                                        >
-                                                                            <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
-                                                                        </TouchableOpacity>
-                                                                    </View>
-                                                                );
-                                                            })}
-                                                        </View></View>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-                                    </View>
-                                )}
-                                {orderDetails.type === "medicine" && (
-                                    <View style={styles.servicepage}>
-                                        <Text style={styles.sectionTitle}>Order Information</Text>
-                                        <View style={styles.databox}>
-                                            {Array.isArray(orderDetails.data.medicines) ? (
-                                                orderDetails.data.medicines.map((med: any, idx: any) => (
-                                                    <React.Fragment key={med.cartId || idx}>
-                                                        <View style={styles.itemRow}>
-                                                            <View style={styles.itemInfo}>
-                                                                <Text style={styles.itemName}>{med.medicineName}</Text>
-                                                                <Text style={styles.itemSubText}>{med.description}</Text>
+                                                                            <TouchableOpacity
+                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                onPress={() => {
+                                                                                    console.log('Preview pressed:', report.url);
+                                                                                    setPdfLoading(true);
+                                                                                    setSelectedPdfUrl(report.url);
+                                                                                    // Encode the file name part of the URL
+                                                                                    try {
+                                                                                        const url = report.url;
+                                                                                        const lastSlash = url.lastIndexOf('/');
+                                                                                        const base = url.substring(0, lastSlash + 1);
+                                                                                        const file = url.substring(lastSlash + 1);
+                                                                                        const encodedUrl = base + encodeURIComponent(file);
+                                                                                        setEncodedPdfUrl(encodedUrl);
+                                                                                    } catch (e) {
+                                                                                        setEncodedPdfUrl(report.url);
+                                                                                    }
+                                                                                    setPdfModalVisible(true);
+                                                                                }}
+                                                                            >
+                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    );
+                                                                })}
+                                                            </View></View>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                        </View>
+                                    )}
+                                    {orderDetails.type === "medicine" && (
+                                        <View style={styles.servicepage}>
+                                            <Text style={styles.sectionTitle}>Order Information</Text>
+                                            <View style={styles.databox}>
+                                                {Array.isArray(orderDetails.data.medicines) ? (
+                                                    orderDetails.data.medicines.map((med: any, idx: any) => (
+                                                        <React.Fragment key={med.cartId || idx}>
+                                                            <View style={styles.itemRow}>
+                                                                <View style={styles.itemInfo}>
+                                                                    <Text style={styles.itemName}>{med.medicineName}</Text>
+                                                                    <Text style={styles.itemSubText}>{med.description}</Text>
+                                                                </View>
+                                                                <Text style={styles.itemQty}>Qty: {med.quantity}</Text>
                                                             </View>
-                                                            <Text style={styles.itemQty}>Qty: {med.quantity}</Text>
-                                                        </View>
-                                                        <View style={styles.divider} />
-                                                    </React.Fragment>
-                                                ))
-                                            ) : (
-                                                <View style={styles.itemRow}>
-                                                    <Text style={styles.itemSubText}>No medicines found.</Text>
+                                                            <View style={styles.divider} />
+                                                        </React.Fragment>
+                                                    ))
+                                                ) : (
+                                                    <View style={styles.itemRow}>
+                                                        <Text style={styles.itemSubText}>No medicines found.</Text>
+                                                    </View>
+                                                )}
+
+                                                {/* Payment Section - Inside the card like the design */}
+                                                <View style={styles.paidAmountRow}>
+                                                    <Text style={styles.paidAmountLabel}>Paid Amount</Text>
+                                                    <Text style={styles.paidAmountValue}>
+                                                        ₹{orderDetails.data.paymentAmount || "N/A"}
+                                                    </Text>
                                                 </View>
-                                            )}
 
-                                            {/* Payment Section - Inside the card like the design */}
-                                            <View style={styles.paidAmountRow}>
-                                                <Text style={styles.paidAmountLabel}>Paid Amount</Text>
-                                                <Text style={styles.paidAmountValue}>
-                                                    ₹{orderDetails.data.paymentAmount || "N/A"}
-                                                </Text>
+                                                {/* Status Section */}
+                                                <View style={styles.paidAmountRow}>
+                                                    <Text style={styles.paidAmountLabel}>Status</Text>
+                                                    <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "In Progress"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {/* Patient Details */}
+                                            <Text style={styles.sectionTitle}>Address Info</Text>
+                                            <View style={styles.databox}>
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
+                                                    <Text style={styles.itemSubText}>
+                                                        {orderDetails.data.age ? orderDetails.data.age + ' years' : 'N/A'}, {orderDetails.data.gender || 'N/A'}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.divider} />
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.itemSubText}>
+                                                        {[
+                                                            orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                            orderDetails.data.address ? orderDetails.data.address : null,
+                                                            orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'}
+                                                    </Text>
+                                                </View>
                                             </View>
 
-                                            {/* Status Section */}
-                                            <View style={styles.paidAmountRow}>
-                                                <Text style={styles.paidAmountLabel}>Status</Text>
-                                                <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
-                                                    {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                        ? "In Progress"
-                                                        : (orderDetails.data.statusName || order.statusName || "N/A")}
-                                                </Text>
-                                            </View>
                                         </View>
-                                        {/* Patient Details */}
-                                        <Text style={styles.sectionTitle}>Address Info</Text>
-                                        <View style={styles.databox}>
-                                            <View style={{ padding: 16 }}>
-                                                <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
-                                                <Text style={styles.itemSubText}>
-                                                    {orderDetails.data.age ? orderDetails.data.age + ' years' : 'N/A'}, {orderDetails.data.gender || 'N/A'}
-                                                </Text>
-                                            </View>
-                                            <View style={styles.divider} />
-                                            <View style={{ padding: 16 }}>
-                                                <Text style={styles.itemSubText}>
-                                                    {[
-                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
-                                                        orderDetails.data.address ? orderDetails.data.address : null,
-                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
-                                                    ].filter(Boolean).join(', ') || 'N/A'}
-                                                </Text>
-                                            </View>
-                                        </View>
+                                    )}
+                                    {orderDetails.type === "consultation" && (
+                                        <VideoOrderDetails
+                                            orderDetails={orderDetails}
+                                            getReports={getReports}
+                                            order={order}
+                                            setPdfModalVisible={setPdfModalVisible}
+                                            setSelectedPdfUrl={setSelectedPdfUrl}
+                                            statusColor={statusColor}
+                                            statusTextColor={statusTextColor}
+                                        />
 
-                                    </View>
-                                )}
-                                {orderDetails.type === "consultation" && (
-                                    // <View style={styles.servicepage}>
-                                    //     {/* Reports Section (Consultation) */}
-                                    //     {(orderDetails.data.statusName === 'Completed' || order.statusName === 'Completed') && getReports().length > 0 && (
-                                    //         <View style={styles.databox}>
-                                    //             <Text style={styles.sectionTitle}>Reports</Text>
-                                    //             {getReports().map((report: any, idx: number) => (
-                                    //                 <View key={report.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                                    //                     <Text style={{ flex: 1, color: '#333', fontFamily: fonts.regular, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">{report.name || `Report ${idx + 1}`}</Text>
-                                    //                     <TouchableOpacity
-                                    //                         style={{ backgroundColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
-                                    //                         onPress={() => {
-                                    //                             setSelectedPdfUrl(report.url);
-                                    //                             setPdfModalVisible(true);
-                                    //                         }}
-                                    //                     >
-                                    //                         <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
-                                    //                     </TouchableOpacity>
-                                    //                 </View>
-                                    //             ))}
-                                    //         </View>
-                                    //     )}
-
-                                    //     <Text style={styles.sectionTitle}>Doctor Details</Text>
-                                    //     <View style={styles.databox}>
-                                    //         <View style={styles.labelheaderdatabox2}>
-                                    //             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    //                 <Text style={styles.labelheader}>{orderDetails.data.doctorName}</Text>
-
-                                    //             </View>
-                                    //             <Text style={styles.labelinner}>
-                                    //                 {orderDetails.data.speciality}
-                                    //             </Text>
-                                    //         </View>
-                                    //     </View>
-
-
-
-                                    //     <Text style={styles.sectionTitle}>Appointment Details</Text>
-
-                                    //     <View style={styles.databox1}>
-                                    //         <Text style={styles.label}>Appointment ID:</Text>
-                                    //         <Text style={styles.value}>{orderDetails.data.appointmentId || "N/A"}</Text>
-                                    //         <Text style={styles.label}>Consultation Date:</Text>
-                                    //         <Text style={styles.value}>
-                                    //             {orderDetails.data.scheduleDate
-                                    //                 ? (() => {
-                                    //                     const d = new Date(orderDetails.data.scheduleDate);
-                                    //                     const day = String(d.getDate()).padStart(2, '0');
-                                    //                     const month = String(d.getMonth() + 1).padStart(2, '0');
-                                    //                     const year = d.getFullYear();
-                                    //                     return `${day}-${month}-${year}`;
-                                    //                 })()
-                                    //                 : "N/A"}
-                                    //         </Text>
-                                    //         <Text style={styles.label}>Consultation Type:</Text>
-                                    //         <Text style={styles.value}>{orderDetails.data.scheduleTypeName || "N/A"}</Text>
-                                    //         <Text style={styles.label}>Status:</Text>
-                                    //         <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }]}>
-                                    //             {orderDetails.data.statusName || "N/A"}
-                                    //         </Text>
-                                    //         <Text style={styles.label}>Description:</Text>
-                                    //         <Text style={styles.value}>{orderDetails.data.description || "N/A"}</Text>
-                                    //     </View>
-                                    //     <Text style={styles.sectionTitle}>Address Info</Text>
-                                    //     <View style={styles.databox}>
-                                    //         <View style={styles.labelheaderdatabox2}>
-                                    //             <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
-                                    //             <Text style={styles.value}>
-                                    //                 {[
-                                    //                     orderDetails.data.age ? `${orderDetails.data.age} yrs ` : null,
-                                    //                     orderDetails.data.gender ? `${orderDetails.data.gender}` : null
-                                    //                 ].filter(Boolean).join(', ') || 'N/A'}
-                                    //             </Text>
-                                    //         </View>
-
-                                    //     </View>
-                                    // </View>
-                                    <VideoOrderDetails 
-                                    orderDetails={orderDetails} 
-                                    getReports={getReports} 
-                                    order={order} 
-                                    setPdfModalVisible={setPdfModalVisible} 
-                                    setSelectedPdfUrl={setSelectedPdfUrl}
-                                    statusColor={statusColor}
-                                    statusTextColor={statusTextColor}
-                                    />
-                                    
-                                )}
-                                {orderDetails.type === "ambulance" && (
-                                    <View style={styles.servicepage}>
-                                        {/* Service Information */}
-                                        <Text style={styles.sectionTitle}>Service Information</Text>
-                                        <View style={styles.databox}>
-                                            <View style={styles.labelheaderdatabox}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <Text style={styles.labelheader}>{orderDetails.data.serviceName}</Text>
-                                                    {/* <Text style={styles.labelinner}>
+                                    )}
+                                    {orderDetails.type === "ambulance" && (
+                                        <View style={styles.servicepage}>
+                                            {/* Service Information */}
+                                            <Text style={styles.sectionTitle}>Service Information</Text>
+                                            <View style={styles.databox}>
+                                                <View style={styles.labelheaderdatabox}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text style={styles.labelheader}>{orderDetails.data.serviceName}</Text>
+                                                        {/* <Text style={styles.labelinner}>
                                                         AT Home
                                                     </Text> */}
-                                                </View>
-                                                {/* <Text style={styles.labelinner}>
+                                                    </View>
+                                                    {/* <Text style={styles.labelinner}>
                                                     Report within 10-12 hours
                                                 </Text> */}
+                                                </View>
+                                                <View style={styles.datesection}>
+                                                    <Text style={styles.label}>Booking Date & Time</Text>
+                                                    <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
+                                                </View>
+                                                <View style={styles.paymentsection}>
+                                                    <Text style={styles.paidlabel}>Paid Amount</Text>
+                                                    <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
+                                                </View>
+                                                <View style={styles.servicesection}>
+                                                    <Text style={styles.label}>Service Status:</Text>
+                                                    <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "In Progress"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                            <View style={styles.datesection}>
-                                                <Text style={styles.label}>Booking Date & Time</Text>
-                                                <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
-                                            </View>
-                                            <View style={styles.paymentsection}>
-                                                <Text style={styles.paidlabel}>Paid Amount</Text>
-                                                <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
-                                            </View>
-                                            <View style={styles.servicesection}>
-                                                <Text style={styles.label}>Service Status:</Text>
-                                                <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
-                                                    {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                        ? "In Progress"
-                                                        : (orderDetails.data.statusName || order.statusName || "N/A")}
-                                                </Text>
-                                            </View>
-                                        </View>
 
-                                        {/* Patient Details */}
-                                        <Text style={styles.sectionTitle}>Address Info</Text>
-                                        <View style={styles.databox}>
-                                            <View style={styles.patiendetails}>
-                                                <Text style={styles.patientname}>{orderDetails.data.personName || "N/A"}</Text>
+                                            {/* Patient Details */}
+                                            <Text style={styles.sectionTitle}>Address Info</Text>
+                                            <View style={styles.databox}>
+                                                <View style={styles.patiendetails}>
+                                                    <Text style={styles.patientname}>{orderDetails.data.personName || "N/A"}</Text>
 
-                                                <Text style={styles.value}>
-                                                    {orderDetails.data.isSelfService
-                                                        ? [
-                                                            orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
-                                                            orderDetails.data.gender ? orderDetails.data.gender : null
-                                                        ].filter(Boolean).join(', ') || 'N/A'
-                                                        : [
-                                                            orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
-                                                            orderDetails.data.relationGender ? orderDetails.data.relationGender : null
-                                                        ].filter(Boolean).join(', ') || 'N/A'
-                                                    }
-                                                </Text>
+                                                    <Text style={styles.value}>
+                                                        {orderDetails.data.isSelfService
+                                                            ? [
+                                                                orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
+                                                                orderDetails.data.gender ? orderDetails.data.gender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                            : [
+                                                                orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
+                                                                orderDetails.data.relationGender ? orderDetails.data.relationGender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                        }
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.addressection}>
+                                                    <Text style={styles.value}>
+                                                        {[
+                                                            orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                            orderDetails.data.address ? orderDetails.data.address : null,
+                                                            orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'}
+                                                    </Text>
+
+                                                </View>
                                             </View>
-                                            <View style={styles.addressection}>
-                                                <Text style={styles.value}>
-                                                    {[
-                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
-                                                        orderDetails.data.address ? orderDetails.data.address : null,
-                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
-                                                    ].filter(Boolean).join(', ') || 'N/A'}
-                                                </Text>
 
-                                            </View>
-                                        </View>
-
-                                        {/* Reports Section (Lab)*/}
-                                        {(() => {
-                                            // Debug logs to help diagnose why Reports section is not displaying
-                                            console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
-                                            console.log('DEBUG: labReports:', labReports);
-                                            if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
-                                                return (
-                                                    <View style={styles.reportspage}>
-                                                        <Text style={styles.sectionTitle}>Reports</Text>
-                                                        <View style={styles.databoxreports}>
-                                                            {labReports.map((report: any, idx: number) => {
-                                                                const { category, iconSource } = getCategoryAndIcon(report.orderType);
-                                                                return (
-                                                                    <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
-                                                                        {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
-                                                                        <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                                                                            {report.reportname}
-                                                                        </Text>
-                                                                        {/* <Text>
+                                            {/* Reports Section (Lab)*/}
+                                            {(() => {
+                                                // Debug logs to help diagnose why Reports section is not displaying
+                                                console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
+                                                console.log('DEBUG: labReports:', labReports);
+                                                if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
+                                                    return (
+                                                        <View style={styles.reportspage}>
+                                                            <Text style={styles.sectionTitle}>Reports</Text>
+                                                            <View style={styles.databoxreports}>
+                                                                {labReports.map((report: any, idx: number) => {
+                                                                    const { category, iconSource } = getCategoryAndIcon(report.orderType);
+                                                                    return (
+                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
+                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                {report.reportname}
+                                                                            </Text>
+                                                                            {/* <Text>
                                                                               {report.reportinfo} || 'fdgnfdgbbn'
                                                                         </Text> */}
-                                                                        <TouchableOpacity
-                                                                            style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
-                                                                            onPress={() => {
-                                                                                console.log('Preview pressed:', report.url);
-                                                                                setPdfLoading(true);
-                                                                                setSelectedPdfUrl(report.url);
-                                                                                // Encode the file name part of the URL
-                                                                                try {
-                                                                                    const url = report.url;
-                                                                                    const lastSlash = url.lastIndexOf('/');
-                                                                                    const base = url.substring(0, lastSlash + 1);
-                                                                                    const file = url.substring(lastSlash + 1);
-                                                                                    const encodedUrl = base + encodeURIComponent(file);
-                                                                                    setEncodedPdfUrl(encodedUrl);
-                                                                                } catch (e) {
-                                                                                    setEncodedPdfUrl(report.url);
-                                                                                }
-                                                                                setPdfModalVisible(true);
-                                                                            }}
-                                                                        >
-                                                                            <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
-                                                                        </TouchableOpacity>
-                                                                    </View>
-                                                                );
-                                                            })}
-                                                        </View></View>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
+                                                                            <TouchableOpacity
+                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                onPress={() => {
+                                                                                    console.log('Preview pressed:', report.url);
+                                                                                    setPdfLoading(true);
+                                                                                    setSelectedPdfUrl(report.url);
+                                                                                    // Encode the file name part of the URL
+                                                                                    try {
+                                                                                        const url = report.url;
+                                                                                        const lastSlash = url.lastIndexOf('/');
+                                                                                        const base = url.substring(0, lastSlash + 1);
+                                                                                        const file = url.substring(lastSlash + 1);
+                                                                                        const encodedUrl = base + encodeURIComponent(file);
+                                                                                        setEncodedPdfUrl(encodedUrl);
+                                                                                    } catch (e) {
+                                                                                        setEncodedPdfUrl(report.url);
+                                                                                    }
+                                                                                    setPdfModalVisible(true);
+                                                                                }}
+                                                                            >
+                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    );
+                                                                })}
+                                                            </View></View>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                        </View>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <View style={styles.servicepage}>
+                                        <Text style={styles.sectionTitle}>No details available for this order.</Text>
                                     </View>
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <View style={styles.servicepage}>
-                                    <Text style={styles.sectionTitle}>No details available for this order.</Text>
+                                </>
+                            )}
+
+                        </ScrollView>
+
+
+                        {/* Footer Buttons */}
+                        <View style={styles.footerRow}>
+                            {/* Lab & Medicine: Cancel Order only */}
+                            {orderDetails?.type === 'medicine' && canCancel && (
+                                <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
+                                    <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                                </TouchableOpacity>
+                            )}
+                            {orderDetails?.type === 'lab' && canCancel && (<>
+                                <View style={styles.reschedulebox}>
+                                    <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
+                                        <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
+                                        <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+                                    </TouchableOpacity>
                                 </View>
-                            </>
-                        )}
+                            </>)}
+                            {/* Consultation: Reschedule only */}
+                            {orderDetails?.type === 'consultation' && canReschedule && (
+                                <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
+                                    <Text style={styles.rescheduleBtnText}>Reschedule Consultation</Text>
+                                </TouchableOpacity>
+                            )}
 
-                    </ScrollView>
-
-
-                    {/* Footer Buttons */}
-                    <View style={styles.footerRow}>
-                        {/* Lab & Medicine: Cancel Order only */}
-                        {orderDetails?.type === 'medicine' && canCancel && (
-                            <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
-                                <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
-                            </TouchableOpacity>
-                        )}
-                        {orderDetails?.type === 'lab' && canCancel && (
-                            <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
-                                <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
-                            </TouchableOpacity>
-                        )}
-                        {/* Consultation: Reschedule only */}
-                        {orderDetails?.type === 'consultation' && canReschedule && (
-                            <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
-                                <Text style={styles.rescheduleBtnText}>Reschedule</Text>
-                            </TouchableOpacity>
-                        )}
-
-                        {/* {canCompleted && (
+                            {/* {canCompleted && (
                             <TouchableOpacity style={styles.cancelOrderBtn} onPress={() => setShowCancelModal(true)}>
                                 <Text style={styles.cancelOrderBtnText}>Book Again</Text>
                             </TouchableOpacity>
                         )} */}
 
-                        {/* Lab: Both if allowed */}
-                        {/* {orderDetails?.type === 'lab' && canReschedule && canCancel && (
+                            {/* Lab: Both if allowed */}
+                            {/* {orderDetails?.type === 'lab' && canReschedule && canCancel && (
                             <>
                                 <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
                                     <Text style={styles.rescheduleBtnText}>Reschedule</Text>
@@ -944,44 +1062,44 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 </TouchableOpacity>
                             </>
                         )} */}
-                    </View>
-
-                </View>
-                {renderRescheduleModal()}
-                {renderCancelModal()}
-
-                {/* PDF Preview Modal */}
-                <Modal
-                    visible={pdfModalVisible}
-                    animationType="slide"
-                    transparent={false}
-                    onRequestClose={() => setPdfModalVisible(false)}
-                >
-                    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-                            <Text style={{ fontSize: 16, fontFamily: fonts.semiBold, color: '#333' }}>PDF Preview</Text>
-                            <TouchableOpacity onPress={() => setPdfModalVisible(false)} style={{ padding: 4 }}>
-                                <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
-                            </TouchableOpacity>
                         </View>
-                        {pdfLoading && (
-                            <View style={{ padding: 20, alignItems: 'center' }}>
-                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 14 }}>Loading report...</Text>
-                            </View>
-                        )}
-                        {selectedPdfUrl && (
-                            <WebView
-                                source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
-                                style={{ flex: 1 }}
-                                onLoadEnd={() => setPdfLoading(false)}
-                                onError={() => setPdfLoading(true)}
-                            />
-                        )}
 
-                    </SafeAreaView>
-                </Modal>
-            </View>
- </SafeAreaView>
+                    </View>
+                    {renderRescheduleModal()}
+                    {renderCancelModal()}
+
+                    {/* PDF Preview Modal */}
+                    <Modal
+                        visible={pdfModalVisible}
+                        animationType="slide"
+                        transparent={false}
+                        onRequestClose={() => setPdfModalVisible(false)}
+                    >
+                        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                                <Text style={{ fontSize: 16, fontFamily: fonts.semiBold, color: '#333' }}>PDF Preview</Text>
+                                <TouchableOpacity onPress={() => setPdfModalVisible(false)} style={{ padding: 4 }}>
+                                    <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
+                                </TouchableOpacity>
+                            </View>
+                            {pdfLoading && (
+                                <View style={{ padding: 20, alignItems: 'center' }}>
+                                    <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 14 }}>Loading report...</Text>
+                                </View>
+                            )}
+                            {selectedPdfUrl && (
+                                <WebView
+                                    source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
+                                    style={{ flex: 1 }}
+                                    onLoadEnd={() => setPdfLoading(false)}
+                                    onError={() => setPdfLoading(true)}
+                                />
+                            )}
+
+                        </SafeAreaView>
+                    </Modal>
+                </View>
+            </SafeAreaView>
             {/* Toast Notification */}
             <Toast
                 visible={showToast}
@@ -1056,6 +1174,14 @@ const styles = StyleSheet.create({
         height: 48,
         width: '70%',
     },
+    rescheduleBtn1: {
+        backgroundColor: 'rgba(247, 164, 30, 1)',
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 48,
+        width: '48%',
+    },
     rescheduleBtnText: {
         color: '#fff',
         fontWeight: 'bold',
@@ -1070,6 +1196,22 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: 48,
         width: '70%',
+        alignSelf: 'center',
+    },
+    reschedulebox: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 20,
+    },
+    cancelOrderBtn1: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#C35E9D',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 48,
+        width: '48%',
         alignSelf: 'center',
     },
     cancelOrderBtnText: {
@@ -1107,17 +1249,17 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     modalLabelBold: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#000',
-        fontFamily: fonts.bold,
-        marginBottom: 12,
-        fontWeight: '700',
+        fontFamily: fonts.semiBold,
+        marginBottom: 10,
+        fontWeight: '600',
     },
     modalHeading: {
         color: '#000',
-        fontSize: 20,
-        fontFamily: fonts.bold,
-        fontWeight: '700',
+        fontSize: 16,
+        fontFamily: fonts.semiBold,
+        fontWeight: '600',
     },
     modalSubheading: {
         fontSize: 16,
@@ -1133,20 +1275,112 @@ const styles = StyleSheet.create({
         fontFamily: fonts.regular,
     },
     dateInput: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: "#ddd",
         borderRadius: 8,
-        padding: 10,
-        marginBottom: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: "#fff",
+    },
+    dateText: {
+        fontSize: 13,
+        color: "#333",
+        fontFamily: fonts.regular
+    },
+    placeholderText: {
+        color: "#999",
+    },
+    calendarIcon: {
+        width: 20,
+        height: 20,
+        tintColor: "#666",
     },
     rescheduleButton: {
         backgroundColor: 'rgba(247, 164, 30, 1)',
-        borderRadius: 8,
+        borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        height: 44,
+        height: 40,
         marginTop: 16,
     },
+    reshduletext: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+        fontFamily: fonts.semiBold,
+        paddingTop: 2,
+    },
+     timeSection: {
+    marginTop: 6,
+  },
+   fieldLabel: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#333",
+    marginBottom: 3,
+    fontFamily: fonts.medium,
+  },
+  timeSlotsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+   /* SLOT */
+    slotGroupTitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 8,
+      color: "#6B7280",
+    },
+   /* SYMPTOM CHIP */
+  chipContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+ 
+    slotChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: "#F3F4F6",
+    },
+    selectedSlotChip: {
+    backgroundColor: colors.primary,
+  },
+  
+  
+    slotText: {
+      fontSize: 13,
+      color: "#374151",
+    },
+  
+  timeSlot: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    color: "#333",
+    fontFamily: fonts.regular,
+  },
+  selectedTimeSlot: {
+    backgroundColor: "#C15E9C",
+    borderColor: "#C15E9C",
+  },
+  timeSlotText: {
+    fontSize: 11,
+    color: "#333",
+    fontFamily: fonts.regular,
+  },
+  selectedTimeSlotText: {
+    color: "#fff",
+  },
     cancelButton: {
         backgroundColor: '#fff',
         borderRadius: 25,
@@ -1156,7 +1390,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: 44,
         marginTop: 16,
-        marginHorizontal: 70
+        marginHorizontal: 70,
+
     },
     header: {
         flexDirection: "row",
@@ -1166,12 +1401,12 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         backgroundColor: "#fff",
         borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+        borderBottomColor: '#E0E0E0',
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 16,
         color: '#000',
-        fontFamily: fonts.bold,
+        fontFamily: fonts.semiBold,
         fontWeight: '600',
     },
     servicepage: {
@@ -1187,8 +1422,8 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 15,
         color: "#000",
-        fontFamily: fonts.bold,
-        fontWeight: '700',
+        fontFamily: fonts.semiBold,
+        fontWeight: '600',
         marginBottom: 8,
         marginTop: 10,
     },
@@ -1249,7 +1484,7 @@ const styles = StyleSheet.create({
         color: '#C35E9D',
         fontFamily: fonts.bold,
     },
-   
+
     databoxreports: {
         borderWidth: 1,
         borderColor: "rgba(212,212,212,1)",
@@ -1269,7 +1504,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginTop: 5,
     },
-     databox2: {
+    databox2: {
         borderWidth: 1,
         borderColor: "rgba(212,212,212,1)",
         borderRadius: 20,
@@ -1287,7 +1522,7 @@ const styles = StyleSheet.create({
     },
 
     diagsticdetails: {
-       
+
         paddingBottom: 6,
         paddingHorizontal: 20,
         paddingTop: 10,
@@ -1390,7 +1625,7 @@ const styles = StyleSheet.create({
         color: '#333',
         fontFamily: fonts.semiBold,
     },
-      diagname: {
+    diagname: {
         fontSize: 15,
         fontWeight: '600',
         color: '#333',

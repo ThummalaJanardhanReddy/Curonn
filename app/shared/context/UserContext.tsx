@@ -10,6 +10,7 @@ interface UserData {
   employeeId: string;
   isVerified: boolean;
   e_id?: number;
+  eId?: number;
 }
 
 // Context interface

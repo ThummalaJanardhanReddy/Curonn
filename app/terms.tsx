@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState,useEffect } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,10 +7,33 @@ import BackButton from './shared/components/BackButton';
 import PrimaryButton from './shared/components/PrimaryButton';
 import commonStyles, { colors } from './shared/styles/commonStyles';
 import { fonts } from './shared/styles/fonts';
+import * as SecureStore from 'expo-secure-store';
+import { useUser } from './shared/context/UserContext';
+
 
 export default function TermsScreen() {
   const [canContinue, setCanContinue] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [mobileDetailsUpdated, setMobileDetailsUpdated] = useState(false);
+  const { setUserData } = useUser();
+  
+  
+  useEffect(() => {
+    const restoreUserData = async () => {
+    const userDataString = await SecureStore.getItemAsync('userData');
+    if (userDataString) {
+      setUserData(JSON.parse(userDataString));
+    }
+  };
+  restoreUserData();
+
+  const fetchMobileDetailsUpdated = async () => {
+    const value = await SecureStore.getItemAsync('mobile_details_updated');
+    setMobileDetailsUpdated(value === 'true');
+  };
+  fetchMobileDetailsUpdated();
+}, []);
+
   const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const paddingToBottom = 20;
@@ -25,7 +48,14 @@ export default function TermsScreen() {
 
   const handleContinue = () => {
     if (canContinue) {
-      router.push('/verify-details');
+      import('expo-secure-store').then(async (SecureStore) => {
+        const isLoggedIn = await SecureStore.getItemAsync('isLoggedIn');
+        if (isLoggedIn === 'true') {
+          router.push('/username');
+        } else {
+          router.push('/verify-details');
+        }
+      });
     }
   };
 

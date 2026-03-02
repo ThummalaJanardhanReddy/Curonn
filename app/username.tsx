@@ -1,4 +1,5 @@
 import { images } from '@/assets';
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Image,
@@ -14,15 +15,23 @@ import { useUser } from './shared/context/UserContext';
 import commonStyles, { colors } from './shared/styles/commonStyles';
 import { fonts } from './shared/styles/fonts';
 import { saveUserData, setRegistrationCompleted } from './shared/utils/storage';
+import * as SecureStore from 'expo-secure-store';
 
 export default function UsernameScreen() {
   const { userData, setUserData } = useUser();
+  const [mobileDetailsUpdated, setMobileDetailsUpdated] = useState(false);
   // Simulate API response for username
   const apiUsername = userData?.fullName || 'John Doe'; // This would come from API
-
+  useEffect(() => {
+  const fetchMobileDetailsUpdated = async () => {
+    const value = await SecureStore.getItemAsync('mobile_details_updated');
+    setMobileDetailsUpdated(value === 'true');
+  };
+  fetchMobileDetailsUpdated();
+}, []);
   // Get mobile_details_updated from router params
   const params = useLocalSearchParams();
-  const mobileDetailsUpdated = params.mobile_details_updated === 'true';
+  //const mobileDetailsUpdated = params.mobile_details_updated === 'true';
 
   const handleContinue = async() => {
     if (mobileDetailsUpdated) {

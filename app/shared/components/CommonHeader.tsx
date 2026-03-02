@@ -21,7 +21,7 @@ import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import * as SecureStore from 'expo-secure-store';
 
 interface CommonHeaderProps {
   title?: string;
@@ -61,7 +61,19 @@ export default function CommonHeader({
   const { getCurrentAddress, address } = useLocation();
   const { userData } = useUser();
   const { cartCount } = useCart();
-  const patientId = userData?.e_id;
+   const { setUserData } = useUser();
+  const patientId = userData?.e_id || userData?.eId;
+
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
 
   React.useEffect(() => {
     if (!patientId) return;

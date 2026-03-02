@@ -9,7 +9,9 @@ import React, {
   useState,
 } from "react";
 import { useUser } from "../shared/context/UserContext";
+import * as SecureStore from 'expo-secure-store';
 import { Dimensions } from "react-native";
+import * as signalR from "@microsoft/signalr";
 // Carousel slider for orders
 
 import {
@@ -33,6 +35,7 @@ import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
 import commonStyles, { colors } from "../shared/styles/commonStyles";
 import axiosClient from "../../src/api/axiosClient";
+import { ArticlesApi } from "../../src/api/employee/employee";
 import ApiRoutes from "../../src/api/employee/employee";
 import {
   getResponsiveFontSize,
@@ -41,6 +44,8 @@ import {
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
 const SCREEN_WIDTH = Dimensions.get("window").width;
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // FAQ data
 const faqs = [
@@ -73,12 +78,48 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
+  // Restore userData from SecureStore on mount
+  const { setUserData } = useUser();
+  const { userData } = useUser();
+
+  //     useEffect(() => {
+  //   console.log("Home Screen userData121212:", userData);
+  //   console.log("Home Screen patientId top:", patientId);
+  // }, [userData]);
+
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      //console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+  const patientId = userData?.e_id || userData?.eId;
+
+  //console.log("Home Screen patientId:", patientId);
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<any>(null);
-  const { userData } = useUser();
+
   const [closedOrderIds, setClosedOrderIds] = useState<string[]>([]);
-  const patientId = userData?.e_id;
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [faqVisible, setFaqVisible] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
+  // Lock the visible set of 3 orders per session
+  const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const bottomSlideAnim = useRef(new Animated.Value(400)).current;
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
+
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     try {
@@ -96,26 +137,72 @@ export default function HomeScreen() {
     }
   };
 
+
+
   useEffect(() => {
+    //const token = await AsyncStorage.getItem('authToken');
+    console.log("Fetching notifications for patientId:", patientId);
     if (!patientId) return;
     const fetchNotifications = async () => {
-      try {
-        const response = await axiosClient.get(
-          ApiRoutes.Notification.GetList(patientId, "patient"),
-        );
-        const data = response?.data ?? response;
-        console.log(" Notification  response:", data);
-        setNotifications(data);
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
+      const response = await axiosClient.get(
+        ApiRoutes.Notification.GetList(patientId, "patient")
+      );
+      console.log("Notifications API response:", response);
+      const data = response?.data ?? response;
+      setNotifications(data);
     };
     fetchNotifications();
   }, [patientId]);
 
-  const [orders, setOrders] = useState<any[]>([]);
-  // Lock the visible set of 3 orders per session
-  const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
+
+  const loadNotifications = async () => {
+    try {
+      console.log("Fetching notifications for patientId:", patientId);
+      if (!patientId) return;
+      const data = await axiosClient.get(
+        ApiRoutes.Notification.GetList(patientId, "patient")
+      );
+      console.log("Notifications API response:", data);
+      setNotifications(data);
+    } catch (error) {
+      console.log("Error loading notifications", error);
+    }
+  };
+
+  useEffect(() => {
+    let connection: signalR.HubConnection;
+
+    const setupSignalR = async () => {
+      // Load existing notifications first
+      await loadNotifications();
+      const token = await AsyncStorage.getItem("authToken");
+      console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl(`https://api.curonn.com/notifications/list?userId=${patientId}&userType=patient`, {
+          accessTokenFactory: () => token || "",
+        })
+        .withAutomaticReconnect()
+        .build();
+
+      await connection.start();
+
+      console.log("✅ SignalR Connected");
+
+      // 🔔 Listen for new notification event
+      connection.on("NewNotification", async () => {
+        console.log("📩 New notification received");
+
+        // ⭐ Reload API to update list
+        await loadNotifications();
+      });
+    };
+
+    setupSignalR();
+
+    return () => {
+      if (connection) connection.stop();
+    };
+  }, []);
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
     useCallback(() => {
@@ -188,8 +275,9 @@ export default function HomeScreen() {
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        if (userData?.e_id) {
-          const data = await fetchAllOrders(userData.e_id, 0);
+        const patientId = userData?.eId || userData?.e_id;
+        if (patientId) {
+          const data = await fetchAllOrders(patientId);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
@@ -293,23 +381,23 @@ export default function HomeScreen() {
     let iconSource = null;
     switch (item.orderType) {
       case "Single Test":
-        category = "Lab Test";
+        category = "Lab Order";
         iconSource = images.labicon;
         break;
       case "Package":
-        category = "Health Check Up";
+        category = "Health Check Up Order";
         iconSource = images.labicon;
         break;
       case "Xray":
-        category = "Xray";
+        category = "Scan Order";
         iconSource = images.labicon;
         break;
       case "Medicine":
-        category = "Medicine";
+        category = "Medicine Order";
         iconSource = images.medicalicon;
         break;
       case "Consultation":
-        category = "Consultation";
+        category = "Doctor Consultation";
         iconSource = images.consultationicon;
         break;
       default:
@@ -380,7 +468,8 @@ export default function HomeScreen() {
                 fontFamily: fonts.bold,
               }}
             >
-              {item.title}
+              {/* {item.title} */}
+              {category}
             </Text>
           </View>
           <Text
@@ -467,8 +556,8 @@ export default function HomeScreen() {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n,
-            )
+            n.notificationId === notificationId ? { ...n, isRead: true } : n,
+          )
           : prev,
       );
     } catch (error) {
@@ -479,7 +568,9 @@ export default function HomeScreen() {
   useEffect(() => {
     async function fetchArticles() {
       try {
+        console.log("Request URL:", ApiRoutes.ArticlesData.Allarticles);
         const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
+        console.log("Articles API response:", res);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res)) {
           setArticles(res);
@@ -490,16 +581,7 @@ export default function HomeScreen() {
     }
     fetchArticles();
   }, []);
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [faqVisible, setFaqVisible] = useState(false);
-  const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [feedbackForm, setFeedbackForm] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
-  const bottomSlideAnim = useRef(new Animated.Value(400)).current;
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS === "android") {
@@ -796,8 +878,8 @@ export default function HomeScreen() {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-              // width={'60%'}
-              // height={'60%'}
+            // width={'60%'}
+            // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -841,8 +923,8 @@ export default function HomeScreen() {
             />
             <images.home.book_wellness
               style={{ position: "absolute", right: 20, bottom: 0 }}
-              // width={'20%'}
-              // height={'80%'}
+            // width={'20%'}
+            // height={'80%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle, { color: "#fff" }]}>
@@ -872,7 +954,7 @@ export default function HomeScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                 }}
-                // onPress={() => router.push("/")}
+              // onPress={() => router.push("/")}
               >
                 Get Now
               </Button>
@@ -1039,7 +1121,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}
@@ -1298,8 +1380,9 @@ export default function HomeScreen() {
         statusName={selectedOrderDetails?.statusName || ""}
         onClose={() => setOrderDetailsModalVisible(false)}
         refreshOrders={async () => {
-          if (userData?.e_id) {
-            const ordersData = await fetchAllOrders(userData.e_id, 0);
+          const patientId = userData?.eId || userData?.e_id;
+          if (patientId) {
+            const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);
           }
         }}
