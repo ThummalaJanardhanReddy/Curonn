@@ -8,6 +8,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -52,62 +54,94 @@ export default function FoodAllergiesModal({
     status: "active" as "active" | "inactive",
   });
   const [showReactionDropdown, setShowReactionDropdown] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [foodSearchOptions, setfoodSearchOptions] = useState<any[]>([]);
   const [reactionOptions, setreactionOptionss] = useState<any[]>([]);
-const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   const { userData } = useUser();
   const patientId = userData?.e_id;
 
- const fetchallallergies = async () => {
-      try {
-        
-const payload = {
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
+
+  const fetchallallergies = async () => {
+    try {
+
+      const payload = {
         patientId: patientId
       };
-        const response: any = await axiosClient.post(
-          ApiRoutes.FoodAllergies.getAll,payload
-        );
-        console.log('DEBUG: fetch All Allergies response:', response);
-        // If response is an array, use it directly
-        setAllergies(Array.isArray(response) ? response : response.items|| []);
-      } catch (error) {
-        console.error("Failed to fetch relation types", error);
-      }
-    };
+      const response: any = await axiosClient.post(
+        ApiRoutes.FoodAllergies.getAll, payload
+      );
+      console.log('DEBUG: fetch All Allergies response:', response);
+      // If response is an array, use it directly
+      setAllergies(Array.isArray(response) ? response : response.items || []);
+    } catch (error) {
+      console.error("Failed to fetch relation types", error);
+    }
+  };
 
-  React.useEffect(() => {
-    
-    fetchallallergies();
-    const fetchFoodallergies = async () => {
-      try {
-        const response: any = await axiosClient.get(
-          ApiRoutes.Master.getmasterdata(8)
-        );
-        console.log('DEBUG: fetchFoodAllergies response:', response);
-        // If response is an array, use it directly
-        if (Array.isArray(response)) {
-          const filtered = response
-            .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setfoodSearchOptions(filtered);
-          console.log('DEBUG: New Food Allergies:', filtered);
-        } else if (response.isSuccess && Array.isArray(response.data)) {
-          // fallback for old API shape
-          const filtered = response.data
-            .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setfoodSearchOptions(filtered);
-          console.log('DEBUG: Food Allergies:', filtered);
-        }
-      } catch (error) {
-        console.error("Failed to fetch relation types", error);
-      }
-    };
-    fetchFoodallergies();
+  useEffect(() => {
+    if (modalVisible) {
+      fetchMasterOptions('');
+    }
+  }, [modalVisible]);
+
+  const fetchMasterOptions = useCallback(async (q: string = '') => {
+    try {
+      setDropdownLoading(true);
+      const url = `${ApiRoutes.Master.getmasterdata(8)}&search=${encodeURIComponent(q || '')}`;
+      console.log('[FoodAllergies] fetching master options URL:', url);
+      const response: any = await axiosClient.get(url);
+
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (Array.isArray(response?.data?.data)) items = response.data.data;
+      else if (Array.isArray(response?.data?.result)) items = response.data.result;
+      else if (Array.isArray(response?.items)) items = response.items;
+      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+
+      const mapped = (items || []).map((it: any) => ({
+        id: it.masterDataId ?? it.id ?? it.value ?? Math.random(),
+        name: it.name ?? it.displayName ?? String(it),
+      }));
+      setMasterOptions(mapped);
+    } catch (err) {
+      console.error('Failed to fetch master options:', err);
+      setMasterOptions([]);
+    } finally {
+      setDropdownLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchallallergies();
+  }, []);
+
+  const suggestions = React.useMemo(() => {
+    const fromMaster = masterOptions.map((m) => ({ id: m.id, name: m.name }));
+    const fromHistory = (allergies || []).map((a) => ({ id: `h-${a.foodId}`, name: a.allergen }));
+    const map = new Map<string, { id: any; name: string }>();
+    [...fromMaster, ...fromHistory].forEach((it) => {
+      const key = (it.name || '').toString().toLowerCase().trim();
+      if (!map.has(key)) map.set(key, it);
+    });
+    const arr = Array.from(map.values());
+    const q = (searchQuery || '').toLowerCase();
+    if (!q) return arr;
+    return arr.filter((it) => it.name.toLowerCase().includes(q));
+  }, [masterOptions, allergies, searchQuery]);
 
   React.useEffect(() => {
     const fetchreactions = async () => {
@@ -151,7 +185,8 @@ const payload = {
   const handleOpenSearchModal = () => {
     setSearchModalVisible(true);
     setSearchQuery("");
-    setSearchResults(foodSearchOptions);
+    setDropdownVisible(false);
+    fetchMasterOptions('');
   };
 
   const handleCloseSearchModal = () => {
@@ -162,14 +197,6 @@ const payload = {
 
   const handleSearchQueryChange = (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      const filtered = foodSearchOptions.filter((food) =>
-        food.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setSearchResults(filtered);
-    } else {
-      setSearchResults(foodSearchOptions);
-    }
   };
 
   const handleSelectFood = (food: any) => {
@@ -179,6 +206,8 @@ const payload = {
 
   const handleCloseModal = () => {
     setModalVisible(false);
+    setDropdownVisible(false);
+    setDropdownSearch('');
     setShowReactionDropdown(false);
     setNewAllergy({
       allergen: "",
@@ -189,6 +218,17 @@ const payload = {
 
   const handleSaveAllergy = () => {
     if (newAllergy.allergen.trim() && newAllergy.reactions.trim()) {
+      // Duplicate check
+      const isDuplicate = allergies.some(
+        (a) => (a.allergen || '').toLowerCase().trim() === newAllergy.allergen.toLowerCase().trim()
+      );
+
+      if (isDuplicate) {
+        Alert.alert('Record already exists', 'This food/allergen is already recorded in your allergies.');
+        return;
+      }
+
+      setSaveLoading(true);
       const payload = {
         foodId: 0,
         patientId: patientId,
@@ -198,60 +238,74 @@ const payload = {
       };
       console.log("Saving allergy with payload:", payload);
       axiosClient.post(ApiRoutes.FoodAllergies.saveUpdate, payload)
-      .then(async response => {
-        setToastMessage({
-          title: "Allergy Saved Successfully",
-          subtitle: response?.data?.message || "Saved successfully!",
-          type: "success"
-        });
-        
-        setShowToast(true);
-        fetchallallergies();
-      })
-      .catch(error => {
-        let errorMsg = 'Something went wrong';
-        if (error && typeof error === 'object') {
-          if ('response' in error && error.response && error.response.data && error.response.data.message) {
-            errorMsg = error.response.data.message;
-          } else if ('message' in error) {
-            errorMsg = error.message;
+        .then(async response => {
+          setToastMessage({
+            title: "Allergy Saved Successfully",
+            subtitle: response?.data?.message || "Saved successfully!",
+            type: "success"
+          });
+
+          setShowToast(true);
+          fetchallallergies();
+        })
+        .catch(error => {
+          let errorMsg = 'Something went wrong';
+          if (error && typeof error === 'object') {
+            if ('response' in error && error.response && error.response.data && error.response.data.message) {
+              errorMsg = error.response.data.message;
+            } else if ('message' in error) {
+              errorMsg = error.message;
+            }
           }
-        }
-        setToastMessage({
-          title: "Save Failed",
-          subtitle: errorMsg,
-          type: "error"
+          setToastMessage({
+            title: "Save Failed",
+            subtitle: errorMsg,
+            type: "error"
+          });
+          setShowToast(true);
+        })
+        .finally(() => {
+          setSaveLoading(false);
         });
-        setShowToast(true);
-      });
-      //setAllergies((prev) => [...prev, allergy]);
       handleCloseModal();
     }
   };
 
   const handleDeleteAllergy = async (id: string) => {
-    try {
-      const response:any = await axiosClient.delete(ApiRoutes.FoodAllergies.getdeleteById(id));
-      console.log("Delete allergy response:", response);
-      // If response is true, show toast and refresh
-      if (response === true || (response && response.data === true)) {
-        setToastMessage({
-          title: "Allergy Deleted Successfully",
-          subtitle: "Deleted successfully!",
-          type: "success"
-        });
-        setShowToast(true);
-        fetchallallergies();
-      }
-    } catch (error) {
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-      console.error("Delete allergy error:", error);
-    }
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              const response: any = await axiosClient.delete(ApiRoutes.FoodAllergies.getdeleteById(id));
+              console.log("Delete allergy response:", response);
+              // If response is true, show toast and refresh
+              if (response === true || (response && response.data === true)) {
+                setToastMessage({
+                  title: "Allergy Deleted Successfully",
+                  subtitle: "Deleted successfully!",
+                  type: "success"
+                });
+                setShowToast(true);
+                fetchallallergies();
+              }
+            } catch (error) {
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+              console.error("Delete allergy error:", error);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderAllergyCard = useCallback(
@@ -260,10 +314,10 @@ const payload = {
         <View style={styles.allergyContent}>
           <Text style={styles.allergenName}>{item.allergen}</Text>
           <View style={styles.statusContainer}>
-          <Text style={styles.reactionText}>{item.reactions}</Text>
-          <Text style={styles.divider}>|</Text>
-            
-             <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
+            <Text style={styles.reactionText}>{item.reactions}</Text>
+            <Text style={styles.divider}>|</Text>
+
+            <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
               {item.status === "active" ? "Active" : "Inactive"}
             </Text>
           </View>
@@ -272,7 +326,7 @@ const payload = {
           style={styles.deleteButton}
           onPress={() => handleDeleteAllergy(item.foodId)}
         >
-         <Text style={styles.deletetext}>Delete</Text>
+          <Text style={styles.deletetext}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -287,276 +341,319 @@ const payload = {
       onRequestClose={onClose}
     >
       <>
-      
-         <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
-          <View  style={styles.container}>
-        {/* Header - Food Allergies Screen */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <BackButton
-              title=""
-              onPress={handleBack}
-              style={styles.backButton}
-            />
-            <Text style={styles.headerTitle}>Food Allergies</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddAllergy}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.addButtonText}>+Add</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Divider with shadow */}
-        <View style={styles.divider} />
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+          <View style={styles.container}>
+            {/* Header - Food Allergies Screen */}
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <BackButton title="" onPress={handleBack} style={styles.backButton} color={colors.black} />
 
-        {/* Allergies List */}
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.allergiesContainer}>
-             {allergies.length === 0 ? (
-                        <Text style={{ fontFamily:fonts.regular,textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
-                          No Data Available
-                        </Text>
-                      ) :
+                <Text style={styles.headerTitle}>Food Allergies</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddAllergy}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>+Add</Text>
+              </TouchableOpacity>
+            </View>
 
-            (allergies.map((allergy, index) => (
-                          <View key={allergy.id || index} style={styles.allergyCardWrapper}>
-                            {renderAllergyCard({ item: allergy })}
-                          </View>
-                        ))
-          )}
-          </View>
-        </ScrollView>
+            {/* Divider with shadow */}
+            <View style={styles.divider} />
 
-        {/* Add Allergy Modal */}
-        <Modal
-          visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={handleCloseModal}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              onPress={handleCloseModal}
-            />
-            <SafeAreaView style={styles.modalContent}>
-              {/* Modal Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Food Allergy</Text>
+            {/* Allergies List */}
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+              <View style={styles.allergiesContainer}>
+                {allergies.length === 0 ? (
+                  <Text style={{ fontFamily: fonts.regular, textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+                    No Data Available
+                  </Text>
+                ) :
+
+                  (allergies.map((allergy, index) => (
+                    <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                      {renderAllergyCard({ item: allergy })}
+                    </View>
+                  ))
+                  )}
+              </View>
+            </ScrollView>
+
+            {/* Add Allergy Modal */}
+            <Modal
+              visible={modalVisible}
+              animationType="slide"
+              transparent={true}
+              onRequestClose={handleCloseModal}
+            >
+              <View style={styles.modalOverlay}>
                 <TouchableOpacity
+                  style={styles.modalBackdrop}
                   onPress={handleCloseModal}
-                  style={styles.modalCloseButton}
-                >
-                  <Image
-                    source={images.icons.close}
-                    style={styles.modalCloseIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Modal Divider */}
-              <View style={styles.modalDivider} />
-
-              {/* Modal Body */}
-              <View style={styles.modalBody}>
-                {/* Allergen/Food Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Allergen/Food</Text>
-                  <TouchableOpacity
-                    style={styles.searchInputContainer}
-                    onPress={handleOpenSearchModal}
-                  >
-                    <Text
-                      style={[
-                        styles.searchInputText,
-                        newAllergy.allergen
-                          ? styles.searchInputTextSelected
-                          : styles.searchInputTextPlaceholder,
-                      ]}
-                    >
-                      {newAllergy.allergen || "Search for food allergen"}
-                    </Text>
-                    <Text style={styles.searchIcon}>🔍</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Reaction Dropdown */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Reaction</Text>
-                  <View style={styles.dropdownContainer}>
-                    <TouchableOpacity
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setShowReactionDropdown(!showReactionDropdown);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>
-                        {newAllergy.reactions || "Select reaction type"}
-                      </Text>
-                      <Text style={styles.dropdownIcon}>▼</Text>
-                    </TouchableOpacity>
-
-                    {/* Dropdown Options */}
-                    {showReactionDropdown && (
-                      <>
-                        <TouchableOpacity
-                          style={styles.dropdownBackdrop}
-                          onPress={() => setShowReactionDropdown(false)}
-                          activeOpacity={1}
-                        />
-                        <View style={styles.dropdownOptions}>
-                          {reactionOptions.map((option, index) => (
-                            <TouchableOpacity
-                              key={option.masterDataId || index}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setNewAllergy({
-                                  ...newAllergy,
-                                  reactions: option.name,
-                                });
-                                setShowReactionDropdown(false);
-                              }}
-                            >
-                              <Text style={styles.dropdownOptionText}>
-                                {option.name}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </View>
-
-                {/* Status Radio Buttons */}
-                <View style={styles.inputGroup1}>
-                  <Text style={styles.inputLabel}>Status</Text>
-                  <View style={styles.radioGroup}>
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() =>
-                        setNewAllergy({ ...newAllergy, status: "active" })
-                      }
-                    >
-                      <View style={styles.radioButton}>
-                        {newAllergy.status === "active" && (
-                          <View style={styles.radioSelected} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabel}>Active</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() =>
-                        setNewAllergy({ ...newAllergy, status: "inactive" })
-                      }
-                    >
-                      <View style={styles.radioButton}>
-                        {newAllergy.status === "inactive" && (
-                          <View style={styles.radioSelected} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabel}>Inactive</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-
-              {/* Save Button */}
-              <View style={styles.modalFooter}>
-                <PrimaryButton
-                  title="Save"
-                  onPress={handleSaveAllergy}
-                  style={styles.saveButton}
-                  disabled={
-                    !newAllergy.allergen.trim() || !newAllergy.reactions.trim()
-                  }
                 />
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
-
-        {/* Search Modal */}
-        <Modal
-          visible={searchModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={handleCloseSearchModal}
-        >
-          <View style={styles.searchModalOverlay}>
-            <SafeAreaView style={styles.searchModalContent}>
-              <View style={styles.searchModalHeader}>
-                <Text style={styles.searchModalTitle}>
-                  Search of Food Allergies
-                </Text>
-                <TouchableOpacity
-                  onPress={handleCloseSearchModal}
-                  style={styles.searchModalCloseButton}
-                >
-                  <Image
-                    source={images.icons.close}
-                    style={styles.searchModalCloseIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.searchModalBody}>
-                {/* Search Input */}
-                <View style={styles.searchInputContainer}>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search"
-                    placeholderTextColor="#000"
-                    value={searchQuery}
-                    onChangeText={handleSearchQueryChange}
-                    autoFocus
-                    selectionColor="transparent"
-                    underlineColorAndroid="transparent"
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    blurOnSubmit={false}
-                    returnKeyType="search"
-                  />
-                  <Text style={styles.searchInputIcon}>🔍</Text>
-                </View>
-
-                {/* Search Results */}
-                <ScrollView
-                  style={styles.searchResultsContainer}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {searchResults.map((food, index) => (
+                <SafeAreaView style={styles.modalContent}>
+                  {/* Modal Header */}
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Add Food Allergy</Text>
                     <TouchableOpacity
-                      key={food.masterDataId || index}
-                      style={styles.searchResultItem}
-                      onPress={() => handleSelectFood(food)}
+                      onPress={handleCloseModal}
+                      style={styles.modalCloseButton}
                     >
-                      <Text style={styles.searchResultText}>{food.name}</Text>
+                      <Image
+                        source={images.icons.close}
+                        style={styles.modalCloseIcon}
+                      />
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  </View>
+
+                  {/* Modal Divider */}
+                  <View style={styles.modalDivider} />
+
+                  {/* Modal Body */}
+                  <View style={styles.modalBody}>
+                    {/* Allergen/Food Dropdown */}
+                    <View style={[styles.inputGroup, { zIndex: 2 }]}>
+                      <Text style={styles.inputLabel}>Allergen/Food</Text>
+                      <View style={styles.dropdownContainer}>
+                        <TouchableOpacity
+                          style={styles.dropdownButton}
+                          onPress={() => setDropdownVisible(!dropdownVisible)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {newAllergy.allergen || "Select food allergen"}
+                          </Text>
+                          <Text style={styles.dropdownIcon}>▼</Text>
+                        </TouchableOpacity>
+
+                        {/* Dropdown Options */}
+                        {dropdownVisible && (
+                          <>
+                            <TouchableOpacity
+                              style={styles.dropdownBackdrop}
+                              onPress={() => setDropdownVisible(false)}
+                              activeOpacity={1}
+                            />
+                            <View style={styles.dropdownOptions}>
+                              <TextInput
+                                style={styles.dropdownSearchInput}
+                                placeholder="Search food..."
+                                placeholderTextColor="#999"
+                                value={dropdownSearch}
+                                onChangeText={setDropdownSearch}
+                              />
+                              <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                                {dropdownLoading ? (
+                                  <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                  </View>
+                                ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                                  filteredMasterOptions.map((item) => (
+                                    <TouchableOpacity
+                                      key={String(item.id)}
+                                      style={styles.dropdownOption}
+                                      onPress={() => {
+                                        setNewAllergy({ ...newAllergy, allergen: item.name });
+                                        setDropdownVisible(false);
+                                        setDropdownSearch('');
+                                      }}
+                                    >
+                                      <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                                    </TouchableOpacity>
+                                  ))
+                                ) : (
+                                  <View style={styles.noResultsContainer}>
+                                    <Text style={styles.noResultsText}>No options</Text>
+                                  </View>
+                                )}
+                              </ScrollView>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </View>
+
+
+                    {/* Reaction Dropdown */}
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Reaction</Text>
+                      <View style={styles.dropdownContainer}>
+                        <TouchableOpacity
+                          style={styles.dropdownButton}
+                          onPress={() => {
+                            setShowReactionDropdown(!showReactionDropdown);
+                          }}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {newAllergy.reactions || "Select reaction type"}
+                          </Text>
+                          <Text style={styles.dropdownIcon}>▼</Text>
+                        </TouchableOpacity>
+
+                        {/* Dropdown Options */}
+                        {showReactionDropdown && (
+                          <>
+                            <TouchableOpacity
+                              style={styles.dropdownBackdrop}
+                              onPress={() => setShowReactionDropdown(false)}
+                              activeOpacity={1}
+                            />
+                            <View style={styles.dropdownOptions}>
+                              {reactionOptions.map((option, index) => (
+                                <TouchableOpacity
+                                  key={option.masterDataId || index}
+                                  style={styles.dropdownOption}
+                                  onPress={() => {
+                                    setNewAllergy({
+                                      ...newAllergy,
+                                      reactions: option.name,
+                                    });
+                                    setShowReactionDropdown(false);
+                                  }}
+                                >
+                                  <Text style={styles.dropdownOptionText}>
+                                    {option.name}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Status Radio Buttons */}
+                    <View style={styles.inputGroup1}>
+                      <Text style={styles.inputLabel}>Status</Text>
+                      <View style={styles.radioGroup}>
+                        <TouchableOpacity
+                          style={styles.radioOption}
+                          onPress={() =>
+                            setNewAllergy({ ...newAllergy, status: "active" })
+                          }
+                        >
+                          <View style={styles.radioButton}>
+                            {newAllergy.status === "active" && (
+                              <View style={styles.radioSelected} />
+                            )}
+                          </View>
+                          <Text style={styles.radioLabel}>Active</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.radioOption}
+                          onPress={() =>
+                            setNewAllergy({ ...newAllergy, status: "inactive" })
+                          }
+                        >
+                          <View style={styles.radioButton}>
+                            {newAllergy.status === "inactive" && (
+                              <View style={styles.radioSelected} />
+                            )}
+                          </View>
+                          <Text style={styles.radioLabel}>Inactive</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Save Button */}
+                  <View style={styles.modalFooter}>
+                    <PrimaryButton
+                      title={saveLoading ? "Saving..." : "Save"}
+                      onPress={handleSaveAllergy}
+                      style={styles.saveButton}
+                      disabled={
+                        !newAllergy.allergen.trim() || !newAllergy.reactions.trim() || saveLoading
+                      }
+                    />
+                  </View>
+                </SafeAreaView>
               </View>
-            </SafeAreaView>
+            </Modal>
+
+            {/* Search Modal */}
+            <Modal
+              visible={searchModalVisible}
+              animationType="slide"
+              transparent={true}
+              onRequestClose={handleCloseSearchModal}
+            >
+              <View style={styles.searchModalOverlay}>
+                <SafeAreaView style={styles.searchModalContent}>
+                  <View style={styles.searchModalHeader}>
+                    <Text style={styles.searchModalTitle}>
+                      Search of Food Allergies
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleCloseSearchModal}
+                      style={styles.searchModalCloseButton}
+                    >
+                      <Image
+                        source={images.icons.close}
+                        style={styles.searchModalCloseIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.searchModalBody}>
+                    {/* Search Input */}
+                    <View style={styles.searchInputContainer}>
+                      <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search"
+                        placeholderTextColor="#000"
+                        value={searchQuery}
+                        onChangeText={handleSearchQueryChange}
+                        autoFocus
+                        selectionColor="transparent"
+                        underlineColorAndroid="transparent"
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        blurOnSubmit={false}
+                        returnKeyType="search"
+                      />
+                      <Text style={styles.searchInputIcon}>🔍</Text>
+                    </View>
+
+                    {/* Search Results */}
+                    <ScrollView
+                      style={styles.searchResultsContainer}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {suggestions.map((item, index) => (
+                        <TouchableOpacity
+                          key={String(item.id) + '-' + index}
+                          style={styles.searchResultItem}
+                          onPress={() => handleSelectFood(item)}
+                        >
+                          <Text style={styles.searchResultText}>{item.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      {suggestions.length === 0 && (
+                        <View style={styles.noResultsContainer}>
+                          <Text style={styles.noResultsText}>No results found</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  </View>
+                </SafeAreaView>
+              </View>
+            </Modal>
           </View>
-        </Modal>
-        </View>
         </SafeAreaView>
       </>
-         <Toast
-              visible={showToast}
-              title={toastMessage.title}
-              subtitle={toastMessage.subtitle}
-              type={toastMessage.type}
-              onHide={() => setShowToast(false)}
-              duration={3000}
-            />
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </Modal>
-    
+
   );
 }
 
@@ -584,20 +681,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...fontStyles.headercontent,
-    color: "#202427",
+    color: colors.black,
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(6),
     paddingBottom: getResponsiveSpacing(4),
-    backgroundColor: colors.primary,
+    // backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(6),
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: "#fff",
-    fontFamily: fonts.semiBold
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '700',
+    color: colors.primary,
+    fontFamily: fonts.bold,
   },
   divider: {
     color: "#000",
@@ -818,7 +915,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   radioGroup: {
     flexDirection: "row",
@@ -953,6 +1050,25 @@ const styles = StyleSheet.create({
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
+  },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    color: colors.text,
+  },
+  noResultsContainer: {
+    padding: getResponsiveSpacing(20),
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.textSecondary,
+    fontStyle: 'italic',
     fontFamily: fonts.regular,
   },
 });

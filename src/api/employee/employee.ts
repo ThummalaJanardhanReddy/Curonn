@@ -232,6 +232,13 @@ export const AppointmentAPi = {
   save: '/Appointment/save',
 };
 
+export const SurgicalHistoryApi = {
+  save: "/Histories/SaveSurgical",
+  getAll: "/Histories/GetAllSurgical",
+  delete: (id: number | string, deletedBy: number | string) =>
+    `/Histories/DeleteSurgical/${id}?deletedBy=${deletedBy}`,
+} as const;
+
 export const ApiRoutes = {
   Employee: EmployeeApi,
   Auth: AuthApi,
@@ -262,6 +269,7 @@ export const ApiRoutes = {
   Symptoms: SymptomsApi,
   Departments: DepartmentsApi,
   Appointments: AppointmentAPi,
+  SurgicalHistory: SurgicalHistoryApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

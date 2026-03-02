@@ -12,12 +12,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -187,10 +189,21 @@ export default function FamilyHistoryScreen({
 
   const handleSaveMember = async () => {
     if (newMember.relationship.trim() && newMember.condition.trim()) {
+      // Duplicate check
+      const isDuplicate = familyMembers.some(
+        (m: any) =>
+          ((m.relationship || m.relationName || '').toLowerCase().trim() === newMember.relationship.toLowerCase().trim()) &&
+          ((m.historyName || '').toLowerCase().trim() === newMember.condition.toLowerCase().trim())
+      );
+
+      if (isDuplicate) {
+        Alert.alert('Record already exists', 'This family history record is already present.');
+        return;
+      }
+
       const memberData: FamilyMemberData = {
         relationship: newMember.relationship.trim(),
         condition: newMember.condition.trim(),
-        // Add employeeId if needed from user context
       };
 
       const success = await saveFamilyMember(memberData);
@@ -201,8 +214,24 @@ export default function FamilyHistoryScreen({
   };
 
   const handleDeleteMember = useCallback(async (id: string) => {
-    await deleteFamilyMember(id);
-  }, []);
+    Alert.alert(
+      'Delete Record',
+      'Are you sure you want to delete this record?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            await deleteFamilyMember(id);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [userData?.e_id]);
 
   // API Functions
   const fetchAllFamilyMembers = async () => {
@@ -235,11 +264,23 @@ export default function FamilyHistoryScreen({
       console.log('📥 Family History Response:', JSON.stringify(response, null, 2));
 
       if (response?.items && Array.isArray(response.items)) {
-        setFamilyMembers(response.items);
+        const mapped = response.items.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
+        setFamilyMembers(mapped);
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setFamilyMembers(response.data);
+        const mapped = response.data.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
+        setFamilyMembers(mapped);
       } else if (Array.isArray(response)) {
-        setFamilyMembers(response);
+        const mapped = response.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
+        setFamilyMembers(mapped);
       } else {
         setError("Failed to fetch family history");
       }
@@ -397,6 +438,7 @@ export default function FamilyHistoryScreen({
         <View style={styles.headerLeft}>
           <BackButton
             title="Family History"
+            color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
             textStyle={styles.headerTitle}
@@ -407,7 +449,7 @@ export default function FamilyHistoryScreen({
           onPress={handleAddMember}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
@@ -708,20 +750,19 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    ...fontStyles.headercontent,
     color: colors.black,
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: "transparent",
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: "#fff",
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: "700",
+    color: colors.primary,
+    fontFamily: fonts.bold,
   },
   divider: {
     height: 1,
@@ -764,10 +805,11 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(12),
   },
   relationship: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(18),
     fontWeight: "bold",
-    color: colors.text,
+    color: colors.black,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold,
   },
   condition: {
     fontSize: getResponsiveFontSize(14),
