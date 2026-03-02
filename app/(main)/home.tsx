@@ -178,7 +178,7 @@ export default function HomeScreen() {
       const token = await AsyncStorage.getItem("authToken");
       console.log("Setting up SignalR with token:", token ? "Yes" : "No");
       connection = new signalR.HubConnectionBuilder()
-        .withUrl(`https://api.curonn.com/notifications/list?userId=${patientId}&userType=patient`, {
+        .withUrl('https://api.curonn.com/hubs/chat', {
           accessTokenFactory: () => token || "",
         })
         .withAutomaticReconnect()
