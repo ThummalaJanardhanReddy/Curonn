@@ -110,7 +110,7 @@ export default function AddressSelection({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['top','bottom']}>
 
         <View style={styles.container}>
           <View style={styles.header}>
