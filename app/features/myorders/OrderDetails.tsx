@@ -375,6 +375,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 <Text style={styles.radioButtonLabel}>Service required at a different time</Text>
                             </TouchableOpacity>
                         </View>
+                        <View style={styles.datesection}>
                         <Text style={styles.modalLabelBold}>Reschedule Date</Text>
                         <TouchableOpacity
                             style={styles.dateInput}
@@ -405,6 +406,13 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 minimumDate={new Date()}
                             />
                         )}
+                          {errors === "Please select date" && (
+                                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                          {errors}
+                                        </Text>
+                                      )}
+                                      </View>
+
                         <View style={styles.timeSection}>
                             <Text style={styles.modalLabelBold}>Select Time Slot</Text>
                             <View style={styles.timeSlotsContainer}>
@@ -478,16 +486,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         </View>
 
                         <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
-                            // API call for consultation reschedule
+                            // Validation for required fields
                             if (orderDetails?.type === 'consultation') {
+                               
+                                if (!newRescheduleDate) {
+                                    setErrors('Please select reschedule date');
+                                    return;
+                                }
+                                if (!selectedSlot) {
+                                    setErrors('Please select time slot');
+                                    return;
+                                }
                                 const payload: any = {
                                     appointmentId: orderDetails.data.appointmentId,
-                                    scheduleDate: newRescheduleDate ? newRescheduleDate : null,
+                                    scheduleDate: newRescheduleDate,
                                     reason: rescheduleReason,
-                                    scheduleBetween: selectedSlot ? selectedSlot : null,
+                                    scheduleBetween: selectedSlot,
                                     modifiedBy: orderDetails.data.patientId
-                                }
-                                console.log("Payload of  consultation reschedule:", payload);
+                                };
+                                console.log("Payload of consultation reschedule:", payload);
                                 try {
                                     const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.rescheduleAppointment, payload);
                                     console.log("Consultation Reschedule Response:", responsce);
@@ -498,6 +515,12 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         type: 'success',
                                     });
                                     setShowToast(true);
+                                    // Clear fields after success
+                                    setRescheduleReason('');
+                                    setSelectedSlot(null);
+                                    setSelectedDate(null);
+                                    setNewRescheduleDate('');
+                                    setErrors("");
                                     setTimeout(() => {
                                         setShowToast(false);
                                         if (refreshOrders) refreshOrders();
@@ -513,22 +536,27 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 }
                             }
                             if (orderDetails?.type === 'lab') {
+                                
+                                if (!newRescheduleDate) {
+                                    setErrors('Please select service start date');
+                                    return;
+                                }
+                                if (!selectedSlot) {
+                                    setErrors('Please select time slot');
+                                    return;
+                                }
                                 const payload: any = {
                                     labOrderId: order.masterId,
-                                    serviceDate: newRescheduleDate ? newRescheduleDate : null,
-                                    timeSlot: selectedSlot ? selectedSlot : null,
+                                    serviceDate: newRescheduleDate,
+                                    timeSlot: selectedSlot,
                                     modifiedBy: orderDetails.data.patientId,
                                     reason: rescheduleReason
                                 };
                                 console.log("Payload of lab reschedule:", payload);
                                 try {
                                     let responsce;
-                                    if (order.orderType === "Xray") {
-                                        responsce = await axiosClient.put(ApiRoutes.LabOrders.RescheduleLabScanOrders, payload);
-                                    } else {
-                                        responsce = await axiosClient.put(ApiRoutes.LabOrders.RescheduleLabScanOrders, payload);
-                                    }
-                                    console.log("Consultation Reschedule Response:", responsce);
+                                    responsce = await axiosClient.post(ApiRoutes.LabOrders.RescheduleLabScanOrders, payload);
+                                    console.log("Lab Reschedule Response:", responsce);
                                     setShowRescheduleModal(false);
                                     setToastMessage({
                                         title: 'Reschedule Success',
@@ -536,6 +564,12 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         type: 'success',
                                     });
                                     setShowToast(true);
+                                    // Clear fields after success
+                                    setRescheduleReason('');
+                                    setSelectedSlot(null);
+                                    setSelectedDate(null);
+                                    setNewRescheduleDate('');
+                                    setErrors("");
                                     setTimeout(() => {
                                         setShowToast(false);
                                         if (refreshOrders) refreshOrders();
@@ -1131,7 +1165,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "rgba(245, 244, 249, 1)",
     },
-
+datesection:{
+     marginTop: getResponsiveSpacing(0),
+},
     // backButton: {
     //     width: 32,
     //     height: 32,

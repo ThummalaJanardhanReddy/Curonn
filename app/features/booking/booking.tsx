@@ -90,7 +90,7 @@ export default function BookingScreen({
   }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
-  console.log("👤 User Data ID:", userData?.e_id);
+  console.log("👤 User Data ID:", userData?.e_id, userData?.eId);
 
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
@@ -140,6 +140,7 @@ export default function BookingScreen({
   const [discountPercent, setDiscountPercent] = useState(10);
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
   const totalAmount = servicePrice - discountAmount;
+  
   const [statusId, setStatusId] = useState<number>(0);
   const [razorpayOrderId, setRazorpayOrderId] = useState("");
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -192,6 +193,15 @@ export default function BookingScreen({
     "10:00 AM - 11:00 AM",
   ];
 
+
+    // Lab-test date format: YYYY-MM-DD
+  const formatDateLab = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
+
   // Helper to get end time of slot
   function getSlotEndTime(slot: string): Date {
     const [, end] = slot.split("-");
@@ -229,17 +239,18 @@ export default function BookingScreen({
   // ═══════════════════════════════════════════════════════════════════
   // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
   // ═══════════════════════════════════════════════════════════════════
-
+ const patientId = userData?.e_id || userData?.eId;
   // Fetch discount percent from Employee API
   useEffect(() => {
     if (isFromMedicalFlag) return;
     async function fetchDiscount() {
       try {
-       const patientId = userData?.e_id || userData?.eId;
+      
         if (!patientId) return;
         const res: any = await axiosClient.get(
           ApiRoutes.Employee.getById(patientId)
         );
+        console.log("Fetched employee details for discount:", res);
         if (res && typeof res === "object") {
           let discount = 0;
           if (type === "lab-test") {
@@ -268,14 +279,22 @@ export default function BookingScreen({
                 ? res.discountAmbulanceService
                 : 0;
           }
+          else {
+            discount =
+              typeof res.discountMedicineOrder === "number" &&
+                res.discountMedicineOrder != null
+                ? res.discountMedicineOrder
+                : 0;
+          }
           setDiscountPercent(discount);
+          console.log(`Applied discount for ${type}:`, discount, "%");
         }
       } catch (e) {
         console.error("Failed to fetch discount percent", e);
       }
     }
     fetchDiscount();
-  }, [userData?.e_id, type, isFromMedicalFlag]);
+  }, [patientId, type, isFromMedicalFlag]);
 
   // Fetch statusId for 'Requested' from MasterData API (categoryId=7)
   useEffect(() => {
@@ -337,17 +356,17 @@ export default function BookingScreen({
 
   // Fetch addresses and set the default as selectedLocation on mount (shared by both flows)
   useEffect(() => {
-    if (userData?.e_id) {
+    if (patientId) {
       fetchAddresses();
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
 
   useCallback(() => {
-    if (userData?.e_id) {
+    if (patientId) {
       fetchAddresses();
     }
-  }, [userData?.e_id])
+  }, [patientId])
 
   const fetchAddresses = async () => {
     try {
@@ -457,7 +476,7 @@ export default function BookingScreen({
     const payload: any = {
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -470,7 +489,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       labPartnerId: 0,
       statusId: statusId,
       paymentAmount: totalAmount,
@@ -508,7 +527,7 @@ export default function BookingScreen({
 
     return payload;
   };
-
+ console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
   // Save lab order after payment
   const saveLabOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -516,7 +535,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildLabOrderPayload(paymentData);
-    payload.createdBy = userData?.e_id || 1;
+    payload.createdBy = userData?.e_id || userData?.eId;
     payload.req = "web";
     console.log("📤 Lab Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -567,7 +586,7 @@ export default function BookingScreen({
     // Build ambulance order payload (customize as needed)
     const payload: any = {
       ambulanceBookingId: 0,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId,
       serviceName: serviceName,
       serviceId: masterId || 0,
       address: selectedLocation?.address || "",
@@ -581,7 +600,7 @@ export default function BookingScreen({
       isSelfService: patientType === "self",
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       statusId: statusId,
       paymentAmount: totalAmount,
       razorpayOrderId: paymentData?.razorpayOrderId || "",
@@ -634,13 +653,7 @@ export default function BookingScreen({
     }
   };
 
-  // Lab-test date format: YYYY-MM-DD
-  const formatDateLab = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
-  };
+
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
@@ -688,7 +701,7 @@ export default function BookingScreen({
       setErrors("");
     }
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -765,7 +778,7 @@ export default function BookingScreen({
 
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId || 0,
       address: "",
       hNo: "",
       landMark: "",
@@ -773,7 +786,7 @@ export default function BookingScreen({
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
       isSelfService: patientType === "self",
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       xrayMasterId: masterId || 0,
       testType: "Xray",
       diagnosisCenter: selectedDiagCenter.centerName || "",
@@ -923,11 +936,17 @@ export default function BookingScreen({
     return itemsTotal < 500 ? 50 : 0;
   }, [itemsTotal]);
 
-  const displayedTotal = useMemo(
-    () => itemsTotal + deliveryCharges,
-    [itemsTotal, deliveryCharges]
-  );
 
+  const safeItemsTotal = typeof itemsTotal === 'number' && !isNaN(itemsTotal) ? itemsTotal : 0;
+  const safeDiscountPercent = typeof discountPercent === 'number' && !isNaN(discountPercent) ? discountPercent : 0;
+  const medicineDiscountAmount = Math.round((safeItemsTotal * safeDiscountPercent) / 100);
+  console.log("Items Total:", safeItemsTotal, "Discount Percent:", safeDiscountPercent, "Discount Amount:", medicineDiscountAmount);
+  const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
+
+    const displayedTotal = useMemo(
+    () => medicineTotalAmount + deliveryCharges,
+    [medicineTotalAmount, deliveryCharges]
+  );
   // Quantity handlers for medical cart items
   const handleIncreaseQuantity = async (index: number) => {
     const item = cartItems[index];
@@ -974,7 +993,7 @@ export default function BookingScreen({
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => {
-    console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
+   // console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
     const isSelfService = patientType === "self";
 
     // Get current date in yyyy-mm-dd format
@@ -984,7 +1003,7 @@ export default function BookingScreen({
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId || 0,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -996,7 +1015,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: displayedTotal.toFixed(2),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       statusId: statusId,
       handlingFee: 0,
       deliveryCharges: deliveryCharges,
@@ -1010,7 +1029,7 @@ export default function BookingScreen({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
         medicineId: ci.medicineId || 0,
-        patientId: userData?.e_id || 0,
+        patientId: userData?.e_id || userData?.eId,
         medicineName: ci.medicineName || ci.name || "",
         quantity: ci.quantity || 1,
         price: ci.price || 0,
@@ -1033,7 +1052,7 @@ export default function BookingScreen({
     }
     return payload;
   };
-  console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+ // console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -1041,7 +1060,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+   // console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1135,7 +1154,7 @@ export default function BookingScreen({
     }
 
     try {
-      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || userData?.eId}`;
       console.log("📤 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -1391,11 +1410,36 @@ export default function BookingScreen({
               <Text style={styles.sectionTitle}>Pricing Info</Text>
               <View style={styles.deliveryCardNew}>
                 <View style={styles.chargeRow}>
-                  <Text style={styles.chargeLabel}>Delivery Charges</Text>
+                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>Delivery Charges</Text>
                   <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
                 </View>
+                {/* Local discount calculation for Pricing Info only */}
+                {(() => {
+                  return (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        marginBottom: 0,
+                        marginTop: 5,
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
+                        Offer Discount ({safeDiscountPercent}%)
+                      </Text>
+                      <Text style={{ fontSize: 14, color: "#C15E9C", fontFamily: fonts.medium }}>
+                        -{"\u20B9"}
+                        {medicineDiscountAmount}
+                      </Text>
+                    </View>
+                  );
+                })()}
+                {/* <View style={styles.chargeRow}>
+                  <Text style={styles.chargeLabel}>Delivery Charges</Text>
+                  <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
+                </View> */}
                 <View style={styles.dividerSolid} />
-                <View style={[styles.chargeRow, { marginTop: 10 }]}>
+                <View style={[styles.chargeRow, { marginTop: 5 }]}>
                   <Text style={styles.totalLabelNew}>TO PAY</Text>
                   <Text style={styles.totalValueNew}>₹{displayedTotal.toFixed(0)}</Text>
                 </View>
@@ -1562,10 +1606,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {userData?.e_id && (
+          {(userData?.e_id || userData?.eId) && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id}
+              patientId={userData?.e_id || userData?.eId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {
@@ -2247,10 +2291,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {userData?.e_id && (
+          {userData?.e_id || userData?.eId && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id}
+              patientId={userData?.e_id || userData?.eId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {

@@ -1115,11 +1115,13 @@ export default function LabTestsScreen() {
         {/* Booking Modal */}
         {selectedTest && (
           <BookingScreen
-            visible={bookingVisible}
-            onClose={() => {
-              setBookingVisible(false);
-              setdiagsticVisible(true);
-            }}
+              visible={bookingVisible}
+              onClose={() => {
+                setBookingVisible(false);
+                if (selectedTest?.selectedDiagCenter) {
+                  setdiagsticVisible(true);
+                }
+              }}
             onSuccess={() => {
               setdiagsticVisible(false);
               setSelectedDate(null);
@@ -1338,7 +1340,6 @@ export default function LabTestsScreen() {
                   handleBookscanTest(selectedTest.id, center.id);
                 }}
                 style={styles.bookButton}
-                //disabled={!selectedTest}
               />
               {!selectedTest && errors === "No scan selected. Please select a scan before booking." && (
                 <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
