@@ -414,7 +414,7 @@ useEffect(() => {
               <View style={styles.modalBody}>
                 {/* Allergen Dropdown */}
                 <View style={[styles.inputGroup, { zIndex: 2 }]}>
-                  <Text style={styles.inputLabel}>Allergen</Text>
+                  <Text style={styles.inputLabel}>Environmental Name</Text>
                   <View style={styles.dropdownContainer}>
                     <TouchableOpacity
                       style={styles.dropdownButton}

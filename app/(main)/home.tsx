@@ -102,8 +102,7 @@ export default function HomeScreen() {
   //console.log("Home Screen patientId:", patientId);
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-  const [notifications, setNotifications] = useState<any>(null);
-
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [closedOrderIds, setClosedOrderIds] = useState<string[]>([]);
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [faqVisible, setFaqVisible] = useState(false);
@@ -159,9 +158,10 @@ export default function HomeScreen() {
     try {
       console.log("Fetching notifications for patientId:", patientId);
       if (!patientId) return;
-      const data = await axiosClient.get(
+      const response = await axiosClient.get(
         ApiRoutes.Notification.GetList(patientId, "patient")
       );
+       const data = response?.data ?? response;
       console.log("Notifications API response:", data);
       setNotifications(data);
     } catch (error) {
@@ -169,40 +169,49 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    let connection: signalR.HubConnection;
+ useEffect(() => {
+  if (!patientId) return; // 🚨 VERY IMPORTANT
 
-    const setupSignalR = async () => {
-      // Load existing notifications first
-      await loadNotifications();
-      const token = await AsyncStorage.getItem("authToken");
-      console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-      connection = new signalR.HubConnectionBuilder()
-        .withUrl('https://api.curonn.com/hubs/chat', {
-          accessTokenFactory: () => token || "",
-        })
-        .withAutomaticReconnect()
-        .build();
+  let connection: signalR.HubConnection;
+  const setupSignalR = async () => {
+    await loadNotifications();
 
+    const token = await AsyncStorage.getItem("authToken");
+
+    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+
+    connection = new signalR.HubConnectionBuilder()
+      .withUrl("https://api.curonn.com/hubs/video", {
+        accessTokenFactory: () => token || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    try {
       await connection.start();
-
       console.log("✅ SignalR Connected");
 
-      // 🔔 Listen for new notification event
-      connection.on("NewNotification", async () => {
-        console.log("📩 New notification received");
+      connection.on("NewNotification", async (data) => {
+        console.log("📩 New notification received:", data);
 
-        // ⭐ Reload API to update list
+        // ⭐ Refresh notification list
         await loadNotifications();
       });
-    };
+      connection.onclose(() => {
+        console.log("⚠️ SignalR Disconnected");
+      });
 
-    setupSignalR();
+    } catch (err) {
+      console.log("❌ SignalR connection error:", err);
+    }
+  };
 
-    return () => {
-      if (connection) connection.stop();
-    };
-  }, []);
+  setupSignalR();
+
+  return () => {
+    if (connection) connection.stop();
+  };
+}, [patientId]);
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
     useCallback(() => {

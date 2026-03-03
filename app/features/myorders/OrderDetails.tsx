@@ -95,6 +95,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
         evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
     };
+
+    const labTimeSlots =
+        ["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM"];
     // Helper: get reports array from labReports (API)
     function getReports() {
         return labReports;
@@ -141,7 +144,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
     const [errors, setErrors] = useState("");
-      const [selectedSlot, setSelectedSlot] = useState<any>(null);
+    const [selectedSlot, setSelectedSlot] = useState<any>(null);
     // For patient profile
     const [patientProfile, setPatientProfile] = useState<any>(null);
     const [patientId, setPatientId] = useState<number | null>(null);
@@ -312,11 +315,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         }
     }
 
-  const handleSlotSelect = (time: string) => {
-    setSelectedSlot(time);
-  };
+    const handleSlotSelect = (time: string) => {
+        setSelectedSlot(time);
+    };
 
-  
+
     if (!order) return null;
     // Helper: statusName check for button display
     const canReschedule = ["Requested", "Inprogress"].includes(order.statusName);
@@ -372,7 +375,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 <Text style={styles.radioButtonLabel}>Service required at a different time</Text>
                             </TouchableOpacity>
                         </View>
-                        <Text style={styles.modalLabel}>Reschedule Date</Text>
+                        <Text style={styles.modalLabelBold}>Reschedule Date</Text>
                         <TouchableOpacity
                             style={styles.dateInput}
                             onPress={() => setShowDatePicker(true)}
@@ -403,41 +406,69 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             />
                         )}
                         <View style={styles.timeSection}>
-                            <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                            <Text style={styles.modalLabelBold}>Select Time Slot</Text>
                             <View style={styles.timeSlotsContainer}>
-                                <View style={{ marginTop: 20 }}>
-                                    {Object.entries(SLOT_GROUPS).map(([group, times]) => (
-                                        <View key={group} style={{ marginBottom: 16 }}>
-                                            <Text style={styles.slotGroupTitle}>
-                                                {group.toUpperCase()}
-                                            </Text>
+                                {orderDetails?.type === 'consultation' ? (
+                                    <View style={{ marginTop: 0 }}>
+                                        {Object.entries(SLOT_GROUPS).map(([group, times]) => (
+                                            <View key={group} style={{ marginBottom: 16 }}>
+                                                <Text style={styles.slotGroupTitle}>
+                                                    {group.toUpperCase()}
+                                                </Text>
 
-                                            <View style={styles.chipContainer}>
-                                                {times.map((time) => (
-                                                    <TouchableOpacity
-                                                        key={time}
-                                                        style={[
-                                                            styles.slotChip,
-                                                            selectedSlot === time && styles.selectedSlotChip,
-                                                        ]}
-                                                        onPress={() => handleSlotSelect(time)}
-                                                    >
-                                                        <Text
+                                                <View style={styles.chipContainer}>
+                                                    {times.map((time) => (
+                                                        <TouchableOpacity
+                                                            key={time}
                                                             style={[
-                                                                styles.slotText,
-                                                                selectedSlot === time && {
-                                                                    color: "#fff",
-                                                                },
+                                                                styles.slotChip,
+                                                                selectedSlot === time && styles.selectedSlotChip,
                                                             ]}
+                                                            onPress={() => handleSlotSelect(time)}
                                                         >
-                                                            {time}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ))}
+                                                            <Text
+                                                                style={[
+                                                                    styles.slotText,
+                                                                    selectedSlot === time && {
+                                                                        color: "#fff",
+                                                                    },
+                                                                ]}
+                                                            >
+                                                                {time}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
                                             </View>
+                                        ))}
+                                    </View>
+                                ) : (
+                                    <View style={{ marginTop: 0 }}>
+                                        <View style={styles.chipContainer}>
+                                            {labTimeSlots.map((time) => (
+                                                <TouchableOpacity
+                                                    key={time}
+                                                    style={[
+                                                        styles.slotChip,
+                                                        selectedSlot === time && styles.selectedSlotChip,
+                                                    ]}
+                                                    onPress={() => handleSlotSelect(time)}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.slotText,
+                                                            selectedSlot === time && {
+                                                                color: "#fff",
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {time}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
                                         </View>
-                                    ))}
-                                </View>
+                                    </View>
+                                )}
                             </View>
                             {errors === "Please select time slot" && (
                                 <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
@@ -449,15 +480,14 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
                             // API call for consultation reschedule
                             if (orderDetails?.type === 'consultation') {
-                               
                                 const payload: any = {
-                                        appointmentId: orderDetails.data.appointmentId,
-                                        scheduleDate: newRescheduleDate ? newRescheduleDate : null,
-                                        reason: rescheduleReason,
-                                        scheduleBetween: selectedSlot ? selectedSlot : null,
-                                        modifiedBy: orderDetails.data.patientId
+                                    appointmentId: orderDetails.data.appointmentId,
+                                    scheduleDate: newRescheduleDate ? newRescheduleDate : null,
+                                    reason: rescheduleReason,
+                                    scheduleBetween: selectedSlot ? selectedSlot : null,
+                                    modifiedBy: orderDetails.data.patientId
                                 }
-                                 console.log("Payload of  consultation reschedule:", payload);
+                                console.log("Payload of  consultation reschedule:", payload);
                                 try {
                                     const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.rescheduleAppointment, payload);
                                     console.log("Consultation Reschedule Response:", responsce);
@@ -483,41 +513,26 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 }
                             }
                             if (orderDetails?.type === 'lab') {
-                                console.log("Rescheduling consultation with appointmentId:", orderDetails.data.appointmentId, "newDate:", newRescheduleDate);
                                 const payload: any = {
-                                    // labOrderId: 0,
-                                    // testName: serviceName,
-                                    // patientId: userData?.e_id || 0,
-                                    // address: selectedLocation?.address || "",
-                                    // hNo: selectedLocation?.houseNumber || "",
-                                    // landMark: selectedLocation?.landmark || "",
-                                    // addressNickname: selectedLocation?.nickname
-                                    //     ? selectedLocation.nickname.charAt(0).toUpperCase() +
-                                    //     selectedLocation.nickname.slice(1)
-                                    //     : "",
-                                    // serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
-                                    // timeSlot: selectedTimeSlot,
-                                    // paymentDetails: String(totalAmount),
-                                    // isPaymentDone: !!paymentData,
-                                    // createdBy: userData?.e_id || 0,
-                                    // labPartnerId: 0,
-                                    // statusId: statusId,
-                                    // paymentAmount: totalAmount,
-                                    // razorpayOrderId: paymentData?.razorpayOrderId || "",
-                                    // razorpayPaymentId: paymentData?.razorpayPaymentId || "",
-                                    // razorpaySignature: paymentData?.razorpaySignature || "",
+                                    labOrderId: order.masterId,
+                                    serviceDate: newRescheduleDate ? newRescheduleDate : null,
+                                    timeSlot: selectedSlot ? selectedSlot : null,
+                                    modifiedBy: orderDetails.data.patientId,
+                                    reason: rescheduleReason
                                 };
+                                console.log("Payload of lab reschedule:", payload);
                                 try {
-                                    const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.reshduledata, {
-                                        appointmentId: orderDetails.data.appointmentId,
-                                        newDate: newRescheduleDate ? newRescheduleDate : null,
-                                        modifiedBy: orderDetails.data.patientId
-                                    });
+                                    let responsce;
+                                    if (order.orderType === "Xray") {
+                                        responsce = await axiosClient.put(ApiRoutes.LabOrders.RescheduleLabScanOrders, payload);
+                                    } else {
+                                        responsce = await axiosClient.put(ApiRoutes.LabOrders.RescheduleLabScanOrders, payload);
+                                    }
                                     console.log("Consultation Reschedule Response:", responsce);
                                     setShowRescheduleModal(false);
                                     setToastMessage({
                                         title: 'Reschedule Success',
-                                        subtitle: 'Booking rescheduled successfully!',
+                                        subtitle: 'Order rescheduled successfully!',
                                         type: 'success',
                                     });
                                     setShowToast(true);
@@ -1249,10 +1264,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     modalLabelBold: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#000',
         fontFamily: fonts.semiBold,
-        marginBottom: 10,
+        marginBottom: 5,
         fontWeight: '600',
     },
     modalHeading: {
@@ -1268,11 +1283,11 @@ const styles = StyleSheet.create({
         fontFamily: fonts.regular,
     },
     modalLabel: {
-        fontSize: 14,
-        color: '#333',
-        marginTop: 16,
-        marginBottom: 4,
-        fontFamily: fonts.regular,
+        fontSize: 13,
+        fontWeight: "400",
+        color: "#333",
+        marginBottom: 3,
+        fontFamily: fonts.semiBold,
     },
     dateInput: {
         flexDirection: "row",
@@ -1313,74 +1328,74 @@ const styles = StyleSheet.create({
         fontFamily: fonts.semiBold,
         paddingTop: 2,
     },
-     timeSection: {
-    marginTop: 6,
-  },
-   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: "#333",
-    marginBottom: 3,
-    fontFamily: fonts.medium,
-  },
-  timeSlotsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-   /* SLOT */
-    slotGroupTitle: {
-      fontSize: 13,
-      fontWeight: "600",
-      marginBottom: 8,
-      color: "#6B7280",
+    timeSection: {
+        marginTop: 12,
     },
-   /* SYMPTOM CHIP */
-  chipContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+    fieldLabel: {
+        fontSize: 13,
+        fontWeight: "400",
+        color: "#333",
+        marginBottom: 3,
+        fontFamily: fonts.semiBold,
+    },
+    timeSlotsContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 6,
+    },
+    /* SLOT */
+    slotGroupTitle: {
+        fontSize: 13,
+        fontWeight: "600",
+        marginBottom: 8,
+        color: "#6B7280",
+    },
+    /* SYMPTOM CHIP */
+    chipContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
 
- 
+
     slotChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
-      backgroundColor: "#F3F4F6",
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "#F3F4F6",
     },
     selectedSlotChip: {
-    backgroundColor: colors.primary,
-  },
-  
-  
-    slotText: {
-      fontSize: 13,
-      color: "#374151",
+        backgroundColor: colors.primary,
     },
-  
-  timeSlot: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
-    color: "#333",
-    fontFamily: fonts.regular,
-  },
-  selectedTimeSlot: {
-    backgroundColor: "#C15E9C",
-    borderColor: "#C15E9C",
-  },
-  timeSlotText: {
-    fontSize: 11,
-    color: "#333",
-    fontFamily: fonts.regular,
-  },
-  selectedTimeSlotText: {
-    color: "#fff",
-  },
+
+
+    slotText: {
+        fontSize: 13,
+        color: "#374151",
+    },
+
+    timeSlot: {
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        backgroundColor: "#fff",
+        color: "#333",
+        fontFamily: fonts.regular,
+    },
+    selectedTimeSlot: {
+        backgroundColor: "#C15E9C",
+        borderColor: "#C15E9C",
+    },
+    timeSlotText: {
+        fontSize: 11,
+        color: "#333",
+        fontFamily: fonts.regular,
+    },
+    selectedTimeSlotText: {
+        color: "#fff",
+    },
     cancelButton: {
         backgroundColor: '#fff',
         borderRadius: 25,

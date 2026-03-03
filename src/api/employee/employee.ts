@@ -128,6 +128,7 @@ export const LabOrdersApi = {
     `/laborders/GetLabReporsByPatientId?patientId=${patientId}`,
   GetReportsByLabOrderId: (labOrderId: string | number) =>
     `/laborders/GetReportsByLabOrderId?labOrderId=${labOrderId}`,
+  RescheduleLabScanOrders: "/laborders/RescheduleLabScanOrders",
 } as const;
 
 export const MedicalOrdersApi = {

@@ -78,6 +78,7 @@ useEffect(() => {
       };
       restoreUserData();
     }, []);
+    
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -103,6 +104,7 @@ useEffect(() => {
       const payload = {
         patientId: patientId
       };
+      console.log("Fetching all drug allergies with payload:", payload);
       const response: any = await axiosClient.post(
         ApiRoutes.DrugAllergies.getAll, payload
       );
