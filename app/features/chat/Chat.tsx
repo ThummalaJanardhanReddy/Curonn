@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   Image,
+  Linking,
 } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 
@@ -18,13 +19,16 @@ import * as DocumentPicker from "expo-document-picker";
 import dayjs from "dayjs";
 
 import { signalRService } from "../../../src/api/SignalRService";
-import { useChatStore } from "../../../src/store/ChatStore";
+import { Message, useChatStore } from "../../../src/store/ChatStore";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/app/shared/styles/commonStyles";
 import { router } from "expo-router";
 import { useUserStore } from "@/src/store/UserStore";
 import PrimaryButton from "@/app/shared/components/PrimaryButton";
+import axiosClient from "@/src/api/axiosClient";
+import { ChatHistoryItem, ChatMessage } from "@/src/constants/constants";
+import ApiRoutes from "@/src/api/employee/employee";
 // import { KeyboardAwareFlatList } from "react-native-keyboard-aware-scroll-view";
 
 export default function ChatScreen() {
@@ -33,8 +37,11 @@ export default function ChatScreen() {
     setSession,
     typing,
     connectionState,
+    setConnectionState,
     chatEnabled,
     clearChat,
+    chatAcceptDetails,
+    setMessages,
   } = useChatStore();
   const chatStatus = useChatStore((s) => s.chatStatus);
   const chatEndedReason = useChatStore((s) => s.chatEndedReason);
@@ -79,6 +86,9 @@ export default function ChatScreen() {
     if (chatStatus === "ended" && chatEndedReason) {
       Alert.alert("Chat Ended", chatEndedReason);
     }
+    if (chatStatus === "connected") {
+      fetchChatHistory();
+    }
   }, [chatStatus]);
 
   /**
@@ -106,23 +116,7 @@ export default function ChatScreen() {
     if (!input.trim() && !attachment) return;
 
     try {
-      await signalRService.sendMessage(input, 267, 34, 1, attachment);
-
-      setInput("");
-      setAttachment(null);
-    } catch {
-      Alert.alert("Failed", "Message failed to send");
-    }
-  };
-
-  /**
-   * SEND MESSAGE
-   */
-  const sendMessageTest = async () => {
-    if (!input.trim() && !attachment) return;
-
-    try {
-      await signalRService.sendMessage(input, 34, 267, 1, attachment);
+      await signalRService.sendMessage(input, user?.eId, 34, 1, attachment);
 
       setInput("");
       setAttachment(null);
@@ -136,7 +130,7 @@ export default function ChatScreen() {
    */
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images", "videos"],
       quality: 0.7,
     });
 
@@ -179,45 +173,55 @@ export default function ChatScreen() {
     ]);
   };
 
-  /**
-   * TEST BUTTONS
-   */
-  const simulateDoctorMessage = () => {
-    useChatStore.getState().addMessage({
-      id: Date.now().toString(),
-      text: "Hello, I am your doctor. How can I help?",
-      sender: "doctor",
-      timestamp: Date.now(),
-      status: "sent",
-    });
+  const openFile = (url: string) => {
+    Linking.openURL(url);
   };
 
-  const simulateConversation = () => {
-    useChatStore.getState().addMessage({
-      id: Date.now().toString(),
-      text: "I have headache",
-      sender: "user",
-      timestamp: Date.now(),
-      status: "sent",
+  const getDayLabel = (timestamp: number) => {
+    const messageDate = dayjs(timestamp);
+    const today = dayjs();
+    const yesterday = dayjs().subtract(1, "day");
+
+    if (messageDate.isSame(today, "day")) return "Today";
+    if (messageDate.isSame(yesterday, "day")) return "Yesterday";
+
+    return messageDate.format("DD MMM YYYY");
+  };
+  const getMessagesWithDateHeaders = (messages: Message[]) => {
+    const result: (Message | { type: "date"; label: string })[] = [];
+
+    let lastDate: string | null = null;
+
+    messages.forEach((message) => {
+      const currentDate = dayjs(message.timestamp).format("YYYY-MM-DD");
+
+      if (currentDate !== lastDate) {
+        result.push({
+          type: "date",
+          label: getDayLabel(message.timestamp),
+        });
+        lastDate = currentDate;
+      }
+
+      result.push(message);
     });
 
-    setTimeout(() => {
-      useChatStore.getState().addMessage({
-        id: (Date.now() + 1).toString(),
-        text: "Please take rest and drink water",
-        sender: "doctor",
-        timestamp: Date.now(),
-        status: "sent",
-      });
-    }, 1000);
+    return result;
   };
-
+  const formattedMessages = getMessagesWithDateHeaders(messages);
   /**
    * RENDER MESSAGE
    */
   const renderItem = ({ item }: any) => {
+    if (item.type === "date") {
+      return (
+        <View style={styles.dateContainer}>
+          <Text style={styles.dateText}>{item.label}</Text>
+        </View>
+      );
+    }
     const isUser = item.sender === "user";
-
+    const isPdf = item.attachment?.type === "pdf";
     return (
       <View
         style={[
@@ -225,7 +229,23 @@ export default function ChatScreen() {
           isUser ? styles.userMessage : styles.doctorMessage,
         ]}
       >
-        {item.attachment?.uri && (
+        {isPdf && (
+          <TouchableOpacity
+            onPress={() => openFile(item.attachment.uri)}
+            style={styles.pdfButton}
+            activeOpacity={0.8}
+          >
+            <View style={styles.iconContainer}>
+              <Text style={styles.icon}>📄</Text>
+            </View>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.fileSubText}>View PDF</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {item.attachment?.uri && !isPdf && (
           <Image source={{ uri: item.attachment.uri }} style={styles.image} />
         )}
 
@@ -259,15 +279,109 @@ export default function ChatScreen() {
    */
   const renderConnectionBanner = () => {
     if (connectionState === "connected") return null;
+    if (connectionState === "disconnected")
+      return (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>Disconnected</Text>
+          <PrimaryButton title="Exit" onPress={() => router.back()} />
+        </View>
+      );
+    if (connectionState === "connecting") {
+      return (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>Connecting...</Text>
+          <PrimaryButton title="Exit" onPress={() => router.back()} />
+        </View>
+      );
+    }
+  };
 
-    return (
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>
-          {connectionState === "connecting" ? "Connecting..." : "Disconnected"}
-        </Text>
-        <PrimaryButton title="Exit" onPress={()=>router.back()} />
-      </View>
-    );
+  /**
+   * Waiting Banner
+   */
+  const renderWaitingBanner = () => {
+    if (connectionState != "connected") return;
+    if (chatStatus === "connected") return;
+    switch (chatStatus) {
+      case "busy":
+      case "idle":
+        return (
+          <View style={styles.banner}>
+            <Text style={[styles.bannerText, { fontSize: 18 }]}>
+              Please wait. Our doctor will add shortly...
+            </Text>
+            <PrimaryButton
+              title="Cancel Appointment"
+              onPress={() => console.log("doc busy. cancel")}
+            />
+          </View>
+        );
+
+      case "expired":
+        return (
+          <View style={styles.banner}>
+            <Text style={[styles.bannerText, { fontSize: 18 }]}>
+              We are really Sorry, All our Doctors are busy now. Please book an
+              appointment after some time.
+            </Text>
+            <PrimaryButton
+              title="Exit"
+              onPress={() => console.log("doc busy too. exit")}
+            />
+          </View>
+        );
+      default:
+        break;
+    }
+  };
+
+  const fetchChatHistory = async () => {
+    try {
+      if (!user || !chatAcceptDetails) return;
+      // if (!user) return;
+      const response = await axiosClient.get<ChatHistoryItem[]>(
+        ApiRoutes.Chat.history(user.eId, chatAcceptDetails.doctorId),
+      );
+      // const response = await axiosClient.get<ChatHistoryItem[]>(
+      //   ApiRoutes.Chat.history(user.eId, 34),
+      // );
+      const mappedMessages = mapChatHistory(response, user.eId);
+
+      setMessages(mappedMessages);
+    } catch (error) {
+      console.log("Chat history error:", error);
+    }
+  };
+
+  const mapChatHistory = (
+    data: ChatHistoryItem[],
+    currentUserId: number,
+  ): Message[] => {
+    return data
+      .sort(
+        (a, b) => new Date(a.sentOn).getTime() - new Date(b.sentOn).getTime(),
+      )
+      .map((item) => ({
+        id: item.messageId.toString(),
+
+        sender: item.senderId === currentUserId ? "user" : "doctor",
+
+        text: item.messageText ?? undefined,
+
+        attachment: item.fileUrl
+          ? {
+              uri: `https://curonndatabucket.s3.ap-south-1.amazonaws.com/${item.fileUrl}`,
+              name: item.fileUrl.split("/").pop() || "file",
+              type: item.fileUrl.split(".").pop()?.toLowerCase(),
+            }
+          : undefined,
+
+        fileUrl: item.fileUrl ?? undefined,
+
+        timestamp: new Date(item.sentOn).getTime(), // ✅ FIXED
+
+        status: item.isRead ? "received" : "sent", // optional smarter mapping
+      }));
   };
 
   return (
@@ -298,47 +412,20 @@ export default function ChatScreen() {
 
         {/* CONNECTION */}
         {renderConnectionBanner()}
-
-        {/* TEST BUTTONS */}
-        <View style={styles.testRow}>
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={sendMessageTest}
-          >
-            <Text style={styles.testButtonText}>Doctor Msg</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={simulateConversation}
-          >
-            <Text style={styles.testButtonText}>Test Chat</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* CHAT LIST */}
-        {/* <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            padding: 16,
-            paddingBottom: 80,
-          }}
-          keyboardShouldPersistTaps="handled"
-        /> */}
-
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            padding: 16,
-          }}
-        />
+        {renderWaitingBanner()}
+        {chatStatus == "connected" && (
+          <FlatList
+            ref={flatListRef}
+            data={formattedMessages}
+            renderItem={renderItem}
+            keyExtractor={(item, index) =>
+              "type" in item ? `date-${index}` : item.id
+            }
+            contentContainerStyle={{
+              padding: 16,
+            }}
+          />
+        )}
 
         {/* TYPING */}
         {typing && <Text style={styles.typing}>Doctor typing...</Text>}
@@ -405,11 +492,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "white",
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 16,
+    // padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    alignItems: "center",
     borderBottomWidth: 1,
     borderColor: "#ddd",
   },
@@ -425,16 +516,17 @@ const styles = StyleSheet.create({
   },
 
   banner: {
+    flex: 1,
     backgroundColor: "#FFF3CD",
     padding: 6,
     alignItems: "center",
-    justifyContent: 'center',
-    gap: 15
+    justifyContent: "center",
+    gap: 30,
   },
 
   bannerText: {
-    fontSize: 12,
-    color: "#856404",
+    fontSize: 24,
+    color: colors.black,
   },
 
   testRow: {
@@ -525,5 +617,63 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  pdfButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    // backgroundColor: "#2f5cb6",
+    // padding: 12,
+    borderRadius: 12,
+    marginTop: 6,
+    // maxWidth: 260,
+  },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#E53935", // soft medical red
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  icon: {
+    fontSize: 20,
+    color: "#fff",
+  },
+
+  textContainer: {
+    borderColor: colors.primary,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+  },
+
+  fileName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000000",
+  },
+
+  fileSubText: {
+    fontSize: 18,
+    color: "#000000",
+    marginTop: 2,
+  },
+  dateContainer: {
+    alignItems: "center",
+    marginVertical: 12,
+  },
+
+  dateText: {
+    backgroundColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "500",
   },
 });

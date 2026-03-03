@@ -232,6 +232,11 @@ export const AppointmentAPi = {
   save: '/Appointment/save',
 };
 
+export const ChatApi = {
+  history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
+  start: (patientId: number)=> `/chat/start?patientId=${patientId}`,
+}
+
 export const ApiRoutes = {
   Employee: EmployeeApi,
   Auth: AuthApi,
@@ -262,6 +267,7 @@ export const ApiRoutes = {
   Symptoms: SymptomsApi,
   Departments: DepartmentsApi,
   Appointments: AppointmentAPi,
+  Chat: ChatApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

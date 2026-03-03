@@ -41,7 +41,10 @@
       "expo-router",
       "expo-maps",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-document-picker",
+      "expo-file-system"
     ],
     "assetBundlePatterns": [
       "**/*"

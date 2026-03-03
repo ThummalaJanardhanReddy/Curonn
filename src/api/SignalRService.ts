@@ -28,13 +28,13 @@ class SignalRService {
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
+      useChatStore.getState().setChatStatus("connected");
       // 🔥 IMPORTANT: Register listeners BEFORE start
       this.registerListeners();
 
-      await this.connection.start();
+      await this.connection?.start();
 
       console.log("✅ SignalR connected");
-      console.log("Connection state:", this.connection.state);
 
       useChatStore.getState().setConnectionState("connected");
 
@@ -53,6 +53,13 @@ class SignalRService {
   private registerListeners() {
     if (!this.connection) return;
 
+    /**
+     * CHAT ACCEPTED
+     */
+    this.connection.on("ChatAccepted", (response) => {
+      useChatStore.getState().setChatStatus("connected");
+      useChatStore.getState().setChatAcceptDetails(response);
+    });
     /**
      * RECEIVE MESSAGE
      */
@@ -99,6 +106,7 @@ class SignalRService {
      */
     this.connection.on("ChatExpired", () => {
       console.log("ChatExpired");
+      useChatStore.getState().setChatStatus("expired");
       useChatStore
         .getState()
         .endChat("No doctors available. Please try again later.");
@@ -194,9 +202,17 @@ class SignalRService {
       } as any);
     }
 
-    await axiosClient.post("/chat/send", formData, {
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    });
+    if (file) {
+      const _res = await axiosClient.post("/chat/send", formData);
+      console.log('network:', _res);
+    } else {
+      const _res = await axiosClient.post("/chat/send", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log('network file: ', _res);
+    }
   }
 
   /**

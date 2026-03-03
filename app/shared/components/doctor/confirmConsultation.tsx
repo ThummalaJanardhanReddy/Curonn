@@ -174,9 +174,7 @@ export default function ConfirmConsultationScreen() {
         axiosClient.get<any>(MasterApi.getmasterdata(familyRelationTypeId)),
         axiosClient.get<any>(EmployeeApi.GetPatientRelations(user.eId)),
       ]);
-      const [labRelationTypes, setLabRelationTypes] = useState<
-        { masterDataId: number; name: string }[]
-      >([]);
+
       const masterList = masterRes;
       const relationList = relationRes;
       // Create lookup map (O(1) access)
@@ -205,7 +203,7 @@ export default function ConfirmConsultationScreen() {
       });
 
       console.log("Family Members:", familyMembers);
-      setFamilyMembers((prev) => [...prev, ...familyMembers]);
+      setFamilyMembers([self, ...familyMembers]);
       //   if (res) {
       //     console.log("relations : ", res);
       //   }
@@ -291,10 +289,7 @@ export default function ConfirmConsultationScreen() {
   };
 
   const formatDateLab = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
+    return dayjs(date).format("YYYY-MM-DD");
   };
 
   const handleServiceEdit = () => {
@@ -355,7 +350,13 @@ export default function ConfirmConsultationScreen() {
 
           <View style={styles.infoCard}>
             <View style={styles.serviceImageContainer}>
-              <Ionicons name="videocam" size={24} color="#3B5BDB" />
+              <Ionicons
+                name={
+                  consultationTypeId === 1339 ? "videocam" : "phone-portrait"
+                }
+                size={24}
+                color="#3B5BDB"
+              />
             </View>
 
             <View style={{ flex: 1 }}>
@@ -368,7 +369,9 @@ export default function ConfirmConsultationScreen() {
 
               {/* Consultation Type Badge */}
               <View style={styles.consultTypeBadge}>
-                <Text style={styles.consultTypeText}>Video Consultation</Text>
+                <Text style={styles.consultTypeText}>
+                  {consultationType?.toUpperCase()} Consultation
+                </Text>
               </View>
             </View>
             <View
@@ -890,28 +893,28 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
 
-  label: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 10,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: "500",
-    marginTop: 4,
-  },
+  // label: {
+  //   fontSize: 13,
+  //   color: "#888",
+  //   marginTop: 10,
+  // },
+  // value: {
+  //   fontSize: 15,
+  //   fontWeight: "500",
+  //   marginTop: 4,
+  // },
 
   /* CONSULT FOR */
-  consultBox: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  // consultBox: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "center",
+  //   backgroundColor: "#fff",
+  //   padding: 14,
+  //   borderRadius: 10,
+  //   borderWidth: 1,
+  //   borderColor: "#E5E7EB",
+  // },
 
   /* CONFIRM BUTTON */
   confirmButton: {
@@ -1049,17 +1052,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  infoSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 4,
-  },
+  // infoSubtitle: {
+  //   fontSize: 13,
+  //   color: "#6B7280",
+  //   marginTop: 4,
+  // },
 
-  changeText: {
-    fontSize: 14,
-    color: "#3B5BDB",
-    fontWeight: "500",
-  },
+  // changeText: {
+  //   fontSize: 14,
+  //   color: "#3B5BDB",
+  //   fontWeight: "500",
+  // },
 
   /* SLOT */
   slotGroupTitle: {
@@ -1123,23 +1126,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#3B5BDB",
   },
-  dateLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  // dateLeft: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   gap: 8,
+  // },
 
-  dateBox: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  // dateBox: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "center",
+  //   paddingVertical: 14,
+  //   paddingHorizontal: 12,
+  //   borderRadius: 12,
+  //   backgroundColor: "#F9FAFB",
+  //   borderWidth: 1,
+  //   borderColor: "#E5E7EB",
+  // },
 
   // dateText: {
   //   fontSize: 14,
@@ -1205,28 +1208,28 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 6,
   },
-  timeSlot: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
-    color: "#333",
-    fontFamily: fonts.regular,
-  },
-  selectedTimeSlot: {
-    backgroundColor: "#C15E9C",
-    borderColor: "#C15E9C",
-  },
-  timeSlotText: {
-    fontSize: 11,
-    color: "#333",
-    fontFamily: fonts.regular,
-  },
-  selectedTimeSlotText: {
-    color: "#fff",
-  },
+  // timeSlot: {
+  //   paddingHorizontal: 12,
+  //   paddingVertical: 5,
+  //   borderRadius: 20,
+  //   borderWidth: 1,
+  //   borderColor: "#ddd",
+  //   backgroundColor: "#fff",
+  //   color: "#333",
+  //   fontFamily: fonts.regular,
+  // },
+  // selectedTimeSlot: {
+  //   backgroundColor: "#C15E9C",
+  //   borderColor: "#C15E9C",
+  // },
+  // timeSlotText: {
+  //   fontSize: 11,
+  //   color: "#333",
+  //   fontFamily: fonts.regular,
+  // },
+  // selectedTimeSlotText: {
+  //   color: "#fff",
+  // },
   patientCard: {
     backgroundColor: "#fff",
     borderRadius: 12,

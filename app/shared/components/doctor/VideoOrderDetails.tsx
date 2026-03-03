@@ -176,13 +176,13 @@ export default function VideoOrderDetails({
       )}
 
       {/* ---------------- Join Call Button ---------------- */}
-      <TouchableOpacity
+      {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
         style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
         disabled={joinDisabled}
         onPress={handleJoinCall}
       >
         <Text style={styles.primaryButtonText}>Join Video Call</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {/* ---------------- Reschedule & Cancel ---------------- */}
       {/* <View style={styles.rowButtons}>

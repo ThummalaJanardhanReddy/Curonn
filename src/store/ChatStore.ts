@@ -3,24 +3,18 @@ import { create } from "zustand";
 /**
  * Message delivery status
  */
-export type MessageStatus =
-  | "sending"
-  | "sent"
-  | "failed"
-  | "received";
+export type MessageStatus = "sending" | "sent" | "failed" | "received";
 
 /**
  * Connection state
  */
-export type ConnectionState =
-  | "connecting"
-  | "connected"
-  | "disconnected";
+export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 /**
  * Chat lifecycle status
  */
 export type ChatStatus =
+  | "connected"
   | "idle"
   | "active"
   | "busy"
@@ -43,10 +37,19 @@ export interface Message {
   id: string;
   text?: string;
   sender: "user" | "doctor";
-  timestamp: number;
+  timestamp: number; // store as number (Date.now())
   status?: MessageStatus;
   attachment?: Attachment;
   fileUrl?: string;
+}
+
+export interface IAcceptRequest {
+  success: boolean;
+  doctorId: number;
+  doctorName: string;
+  patientId: number;
+  appointmentId: number;
+  message: string;
 }
 
 /**
@@ -66,24 +69,23 @@ interface ChatState {
   chatStatus: ChatStatus;
 
   chatEndedReason?: string;
+  chatAcceptDetails?: IAcceptRequest;
 
   /**
    * Actions
    */
   setSession: (sessionId: string) => void;
+  setChatAcceptDetails: (details: IAcceptRequest) => void;
+
+  setMessages: (messages: Message[]) => void; // ✅ added properly
 
   addMessage: (message: Message) => void;
 
-  updateMessageStatus: (
-    id: string,
-    status: MessageStatus
-  ) => void;
+  updateMessageStatus: (id: string, status: MessageStatus) => void;
 
   setTyping: (typing: boolean) => void;
 
-  setConnectionState: (
-    state: ConnectionState
-  ) => void;
+  setConnectionState: (state: ConnectionState) => void;
 
   setChatStatus: (status: ChatStatus) => void;
 
@@ -101,18 +103,13 @@ interface ChatState {
  */
 export const useChatStore = create<ChatState>((set, get) => ({
   sessionId: undefined,
-
   messages: [],
-
   connectionState: "disconnected",
-
   typing: false,
-
   chatEnabled: false,
-
   chatStatus: "idle",
-
   chatEndedReason: undefined,
+  chatAcceptDetails: undefined,
 
   /**
    * SET SESSION
@@ -121,19 +118,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({
       sessionId,
       chatEnabled: true,
-      chatStatus: "active",
+      chatStatus: "idle",
       chatEndedReason: undefined,
     }),
 
   /**
-   * ADD MESSAGE
+   * SET ACCEPT DETAILS
+   */
+  setChatAcceptDetails: (details) =>
+    set({ chatAcceptDetails: details }),
+
+  /**
+   * SET BULK MESSAGES (History)
+   */
+  setMessages: (messages) =>
+    set({
+      messages,
+    }),
+
+  /**
+   * ADD SINGLE MESSAGE (Realtime)
    */
   addMessage: (message) =>
     set((state) => {
-      const exists = state.messages.some(
-        (m) => m.id === message.id
-      );
-
+      const exists = state.messages.some((m) => m.id === message.id);
       if (exists) return state;
 
       return {
@@ -147,12 +155,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateMessageStatus: (id, status) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
-        msg.id === id
-          ? {
-              ...msg,
-              status,
-            }
-          : msg
+        msg.id === id ? { ...msg, status } : msg
       ),
     })),
 
@@ -179,6 +182,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setChatStatus: (chatStatus) =>
     set({
       chatStatus,
+      chatEnabled: chatStatus === 'connected',
     }),
 
   /**
@@ -223,5 +227,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       chatEnabled: false,
       chatStatus: "idle",
       chatEndedReason: undefined,
+      chatAcceptDetails: undefined,
     }),
 }));
