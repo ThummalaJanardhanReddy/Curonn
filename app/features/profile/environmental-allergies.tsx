@@ -62,20 +62,21 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
   const [reactionOptions, setreactionOptions] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
+  const [environmentDropdownModal, setEnvironmentDropdownModal] = useState(false);
   const { userData } = useUser();
   const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+  const patientId = Number(userData?.e_id || userData?.eId);
 
-useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -345,7 +346,6 @@ useEffect(() => {
       style="light"
       animated
     />
-
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
         {/* Header */}
@@ -364,7 +364,7 @@ useEffect(() => {
             onPress={handleAddAllergy}
             activeOpacity={0.8}
           >
-            <Text style={styles.addButtonText}>+Add</Text>
+            <Text style={styles.addButtonText}>+ADD</Text>
           </TouchableOpacity>
         </View>
 
@@ -418,7 +418,10 @@ useEffect(() => {
                   <View style={styles.dropdownContainer}>
                     <TouchableOpacity
                       style={styles.dropdownButton}
-                      onPress={() => setDropdownVisible(!dropdownVisible)}
+                      onPress={() => {
+                        setEnvironmentDropdownModal(true);
+                        fetchMasterOptions('');
+                      }}
                     >
                       <Text style={styles.dropdownText}>
                         {newAllergy.allergen || 'Select environmental allergen'}
@@ -427,38 +430,56 @@ useEffect(() => {
                     </TouchableOpacity>
 
                     {/* Dropdown Options */}
-                    {dropdownVisible && (
-                      <>
-                        <TouchableOpacity
-                          style={styles.dropdownBackdrop}
-                          onPress={() => setDropdownVisible(false)}
-                          activeOpacity={1}
-                        />
-                        <View style={styles.dropdownOptions}>
+                    <Modal
+                      visible={environmentDropdownModal}
+                      transparent
+                      animationType="fade"
+                      onRequestClose={() => setEnvironmentDropdownModal(false)}
+                    >
+                      <TouchableOpacity
+                        style={styles.dropdownModalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setEnvironmentDropdownModal(false)}
+                      >
+                        <View style={styles.dropdownModalContainer}>
+
                           <TextInput
                             style={styles.dropdownSearchInput}
-                            placeholder="Search allergen..."
+                            placeholder="Search environmental allergen..."
                             placeholderTextColor="#999"
                             value={dropdownSearch}
                             onChangeText={setDropdownSearch}
                           />
-                          <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+                          <ScrollView
+                            style={{ maxHeight: 400 }}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator
+                          >
                             {dropdownLoading ? (
-                              <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                                <ActivityIndicator size="small" color={colors.primary} />
-                              </View>
-                            ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                                style={{ marginTop: 20 }}
+                              />
+                            ) : filteredMasterOptions.length > 0 ? (
                               filteredMasterOptions.map((item) => (
                                 <TouchableOpacity
                                   key={String(item.id)}
                                   style={styles.dropdownOption}
                                   onPress={() => {
-                                    setNewAllergy({ ...newAllergy, allergen: item.name });
-                                    setDropdownVisible(false);
-                                    setDropdownSearch('');
+                                    setNewAllergy({
+                                      ...newAllergy,
+                                      allergen: item.name,
+                                    });
+
+                                    setEnvironmentDropdownModal(false);
+                                    setDropdownSearch("");
                                   }}
                                 >
-                                  <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                                  <Text style={styles.dropdownOptionText}>
+                                    {item.name}
+                                  </Text>
                                 </TouchableOpacity>
                               ))
                             ) : (
@@ -467,9 +488,10 @@ useEffect(() => {
                               </View>
                             )}
                           </ScrollView>
+
                         </View>
-                      </>
-                    )}
+                      </TouchableOpacity>
+                    </Modal>
                   </View>
                 </View>
 
@@ -668,10 +690,23 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
+  dropdownModalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  justifyContent: "center",
+  padding: 20,
+},
+
+dropdownModalContainer: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 10,
+  maxHeight: "70%",
+},
   divider: {
     color: "#000",
     marginHorizontal: getResponsiveSpacing(5),

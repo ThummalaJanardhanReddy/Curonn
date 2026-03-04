@@ -78,9 +78,9 @@ export default function PastProceduresScreen({
   const handleAddProcedure = () => {
     setModalVisible(true);
   };
-
+    const patientId = Number(userData?.e_id || userData?.eId);
   const fetchSurgicalHistory = useCallback(async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     setLoading(true);
     try {
       const today = new Date();
@@ -88,7 +88,7 @@ export default function PastProceduresScreen({
         pageNo: 1,
         pageSize: 100,
         search: "",
-        patientId: userData.e_id,
+        patientId: patientId,
         fromDate: "1900-01-01",
         toDate: today.toISOString().split("T")[0],
         groupName: "",
@@ -112,7 +112,7 @@ export default function PastProceduresScreen({
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   React.useEffect(() => {
     fetchSurgicalHistory();
@@ -232,7 +232,7 @@ export default function PastProceduresScreen({
   };
 
   const handleSaveProcedure = async () => {
-    if (!newProcedure.procedureName.trim() || !userData?.e_id) return;
+    if (!newProcedure.procedureName.trim() || !patientId) return;
 
     // Duplicate check
     const isDuplicate = procedures.some(
@@ -265,7 +265,7 @@ export default function PastProceduresScreen({
 
       const payload = {
         surgicalHistoryId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         historyName: newProcedure.procedureName.trim(),
         historyId: newProcedure.procedureId, // Added historyId as requested "bind like historyname"
         surgeryDate: finalSurgeryDate, // Ensuring YYYY-MM-DD
@@ -278,7 +278,7 @@ export default function PastProceduresScreen({
         notes: "",
         appointmentId: 0,
         createdOn: new Date().toISOString(),
-        createdBy: userData.e_id,
+        createdBy: patientId,
         totalCount: 0,
       };
 
@@ -310,8 +310,8 @@ export default function PastProceduresScreen({
 
   const handleDeleteProcedure = useCallback((id: number) => {
     console.log(`🗑️ Attempting to delete procedure with ID: ${id}`);
-    if (!userData?.e_id) {
-      console.warn("⚠️ Cannot delete record: userData.e_id is missing");
+    if (!patientId) {
+      console.warn("⚠️ Cannot delete record: patientId is missing");
       return;
     }
 
@@ -325,7 +325,7 @@ export default function PastProceduresScreen({
           onPress: async () => {
             console.log(`🔥 User confirmed deletion of ID: ${id}`);
             try {
-              const url = ApiRoutes.SurgicalHistory.delete(id, userData.e_id || 0);
+              const url = ApiRoutes.SurgicalHistory.delete(id, patientId || 0);
               console.log('📤 Delete Surgical History Request URL:', url);
               const response: any = await axiosClient.delete(url);
               console.log('📥 Delete Surgical History Response:', JSON.stringify(response, null, 2));
@@ -349,7 +349,7 @@ export default function PastProceduresScreen({
         },
       ]
     );
-  }, [userData?.e_id, fetchSurgicalHistory]);
+  }, [patientId, fetchSurgicalHistory]);
 
   const renderProcedureCard = useCallback(
     ({ item }: { item: Procedure }) => (
@@ -437,7 +437,7 @@ export default function PastProceduresScreen({
           />
           <SafeAreaView style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>ADD SURGICAL HISTORY</Text>
+              <Text style={styles.modalTitle}>Add Surgical History</Text>
               <TouchableOpacity
                 onPress={handleCloseModal}
                 style={styles.closeButton}
@@ -633,9 +633,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -737,10 +737,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
-    color: colors.black,
-    fontFamily: fonts.bold,
+     fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
+    color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -756,11 +756,11 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(20),
   },
   inputLabel: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: colors.primary,
+     fontSize: getResponsiveFontSize(14),
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.medium,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -918,8 +918,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontFamily: fonts.regular,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });

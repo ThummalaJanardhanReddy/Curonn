@@ -1165,9 +1165,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "rgba(245, 244, 249, 1)",
     },
-datesection:{
-     marginTop: getResponsiveSpacing(0),
-},
+
     // backButton: {
     //     width: 32,
     //     height: 32,
@@ -1608,6 +1606,7 @@ datesection:{
     datesection: {
         paddingHorizontal: 20,
         paddingBottom: 5,
+         marginTop: getResponsiveSpacing(0),
     },
     addressection: {
         paddingHorizontal: 20,

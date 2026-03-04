@@ -81,7 +81,7 @@ export const images = {
 
   appIcon: require('./AppIcons/appIcon.png'),
   // Splash Screen
-  splashScreen: require('./images/Splash Screen.png'),
+  splashScreen: require('./images/Splash_Screen.png'),
   splashScreenImg: require('./images/welcome.png'),
 
   // Welcome Screen

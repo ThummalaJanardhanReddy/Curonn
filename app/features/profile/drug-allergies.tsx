@@ -65,20 +65,21 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
+  const [drugDropdownModal, setDrugDropdownModal] = useState(false);
   const { userData } = useUser();
-   const { setUserData } = useUser();
+  const { setUserData } = useUser();
   const patientId = userData?.e_id || userData?.eId;
-useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
-    
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -385,7 +386,7 @@ useEffect(() => {
             onPress={handleAddAllergy}
             activeOpacity={0.8}
           >
-            <Text style={styles.addButtonText}>+Add</Text>
+            <Text style={styles.addButtonText}>+ADD</Text>
           </TouchableOpacity>
         </View>
 
@@ -439,7 +440,7 @@ useEffect(() => {
                   <View style={styles.dropdownContainer}>
                     <TouchableOpacity
                       style={styles.dropdownButton}
-                      onPress={() => setDropdownVisible(!dropdownVisible)}
+                      onPress={() => setDrugDropdownModal(true)}
                     >
                       <Text style={styles.dropdownText}>
                         {newAllergy.allergen || 'Select drug name'}
@@ -448,13 +449,9 @@ useEffect(() => {
                     </TouchableOpacity>
 
                     {/* Dropdown Options */}
-                    {dropdownVisible && (
+                    {/* {dropdownVisible && (
                       <>
-                        <TouchableOpacity
-                          style={styles.dropdownBackdrop}
-                          onPress={() => setDropdownVisible(false)}
-                          activeOpacity={1}
-                        />
+
                         <View style={styles.dropdownOptions}>
                           <TextInput
                             style={styles.dropdownSearchInput}
@@ -463,7 +460,12 @@ useEffect(() => {
                             value={dropdownSearch}
                             onChangeText={setDropdownSearch}
                           />
-                          <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                          <ScrollView
+                            style={{ maxHeight: 350 }}
+                            nestedScrollEnabled={true}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={true}
+                          >
                             {dropdownLoading ? (
                               <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
                                 <ActivityIndicator size="small" color={colors.primary} />
@@ -489,8 +491,57 @@ useEffect(() => {
                             )}
                           </ScrollView>
                         </View>
+                        <TouchableOpacity
+                          style={styles.dropdownBackdrop}
+                          onPress={() => setDropdownVisible(false)}
+                          activeOpacity={1}
+                        />
                       </>
-                    )}
+                    )} */}
+
+                    <Modal
+                      visible={drugDropdownModal}
+                      transparent
+                      animationType="fade"
+                      onRequestClose={() => setDrugDropdownModal(false)}
+                    >
+                      <TouchableOpacity
+                        style={styles.dropdownModalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setDrugDropdownModal(false)}
+                      >
+                        <View style={styles.dropdownModalContainer}>
+
+                          <TextInput
+                            style={styles.dropdownSearchInput}
+                            placeholder="Search drug..."
+                            value={dropdownSearch}
+                            onChangeText={setDropdownSearch}
+                          />
+
+                          <ScrollView
+                            style={{ maxHeight: 400 }}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator
+                          >
+                            {filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  setNewAllergy({ ...newAllergy, allergen: item.name });
+                                  setDrugDropdownModal(false);
+                                  setDropdownSearch("");
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+
+                        </View>
+                      </TouchableOpacity>
+                    </Modal>
                   </View>
                 </View>
 
@@ -664,6 +715,19 @@ const styles = StyleSheet.create({
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
   },
+  dropdownModalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  justifyContent: "center",
+  padding: 20,
+},
+
+dropdownModalContainer: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 10,
+  maxHeight: "70%",
+},
   headerLeft: {
     flex: 1,
     flexDirection: 'row',
@@ -685,9 +749,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     color: "#000",
@@ -767,22 +831,17 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
-    maxHeight: '80%',
-    overflow: 'hidden',
+    maxHeight: "80%",
   },
   modalHeader: {
     flexDirection: 'row',
@@ -806,7 +865,8 @@ const styles = StyleSheet.create({
     tintColor: colors.textSecondary,
   },
   modalBody: {
-    padding: getResponsiveSpacing(20),
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(20),
   },
   inputGroup: {
     marginBottom: getResponsiveSpacing(10),
@@ -865,13 +925,12 @@ const styles = StyleSheet.create({
     zIndex: 10000,
   },
   dropdownBackdrop: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
-    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    zIndex: 1,
   },
   dropdownOptions: {
     position: 'absolute',
@@ -881,21 +940,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderBottomWidth: 0,
-    borderTopLeftRadius: getResponsiveSpacing(8),
-    borderTopRightRadius: getResponsiveSpacing(8),
-    //maxHeight: getResponsiveSpacing(150),
-    zIndex: 100001,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 1,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    marginBottom: getResponsiveSpacing(2),
-    flexDirection: 'column-reverse',
+    borderRadius: getResponsiveSpacing(8),
+    maxHeight: 450,
+    zIndex: 10001,
+    elevation: 5,
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),

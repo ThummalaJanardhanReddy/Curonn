@@ -22,6 +22,8 @@ import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg'
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import * as signalR from "@microsoft/signalr";
+import HomeScreen from '@/app/(main)/home';
 
 interface CommonHeaderProps {
   title?: string;
@@ -62,7 +64,7 @@ export default function CommonHeader({
   const { userData } = useUser();
   const { cartCount } = useCart();
    const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+  const patientId = Number(userData?.e_id || userData?.eId);
 
    useEffect(() => {
       const restoreUserData = async () => {
@@ -74,6 +76,17 @@ export default function CommonHeader({
       };
       restoreUserData();
     }, []);
+
+     const fetchNotiCounts = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log("[CommonHeader] Notification count response:", response);
+        setCount(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
 
   React.useEffect(() => {
     if (!patientId) return;
@@ -93,18 +106,47 @@ export default function CommonHeader({
     };
     fetchProfile();
 
-     const fetchNotiCounts = async () => {
-      try {
-        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
-        const data = response?.data ?? response;
-        console.log("[CommonHeader] Notification count response:", response);
-        setCount(data);
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
-    };
+    
     fetchNotiCounts();
   }, [patientId]);
+
+  
+ useEffect(() => {
+  if (!patientId) return; 
+  let connection: signalR.HubConnection;
+  const setupSignalR = async () => {
+    await fetchNotiCounts();
+    const token = await AsyncStorage.getItem("authToken");
+    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+    connection = new signalR.HubConnectionBuilder()
+      .withUrl("https://api.curonn.com/hubs/video", {
+        accessTokenFactory: () => token || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    try {
+      await connection.start();
+      console.log("✅ SignalR Connected");
+      connection.on("NewNotification", async (data) => {
+        console.log("📩 New notification received:", data);
+        // ⭐ Refresh notification list
+        await fetchNotiCounts();
+      });
+      connection.onclose(() => {
+        console.log("⚠️ SignalR Disconnected");
+      });
+
+    } catch (err) {
+      console.log("❌ SignalR connection error:", err);
+    }
+  };
+  setupSignalR();
+
+  return () => {
+    if (connection) connection.stop();
+  };
+}, [patientId, isHomePage]);
 
   useEffect(() => {
     // Fetch current address on mount

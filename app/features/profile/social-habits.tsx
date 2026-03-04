@@ -119,11 +119,11 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   // Dropdown visibility
   const [showSmokingFreqDropdown, setShowSmokingFreqDropdown] = useState(false);
   const [showAlcoholFreqDropdown, setShowAlcoholFreqDropdown] = useState(false);
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   // ── API calls ────────────────────────────────────────────────────────────────
 
   const fetchHabits = useCallback(async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     setLoading(true);
     try {
       const today = new Date();
@@ -133,8 +133,8 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
         pageNo: 1,
         pageSize: 100,
         search: '',
-        createdBy: userData.e_id,
-        patientId: userData.e_id,
+        createdBy: patientId,
+        patientId: patientId,
         fromDate: '1900-01-01',
         toDate: formattedDate,
         groupName: '',
@@ -158,7 +158,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchHabits();
@@ -193,7 +193,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   };
 
   const handleSave = async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
 
     // Duplicate check
     if (selectedTab === 'smoking' && smokingStatus !== 3) {
@@ -225,7 +225,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
       const now = new Date().toISOString();
       const payload = {
         socialHistoryId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         smokingHistory: smokingStatus !== 3,
         alcoholHistory: alcoholStatus !== 3,
         dietHistory: false,
@@ -239,7 +239,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
         alcoholStatus: alcoholStatus,
         appointmentId: 0,
         createdOn: now,
-        createdBy: userData.e_id,
+        createdBy: patientId,
         totalCount: 0,
       };
 
@@ -271,7 +271,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   };
 
   const handleDelete = async (id: number) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     Alert.alert(
       "Delete Record",
       "Are you sure you want to delete this record?",
@@ -281,9 +281,9 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
           text: "Yes",
           onPress: async () => {
             try {
-              console.log(`📤 DeleteSocial id=${id}, deletedBy=${userData.e_id}`);
+              console.log(`📤 DeleteSocial id=${id}, deletedBy=${patientId}`);
               const response: any = await axiosClient.delete(
-                ApiRoutes.SocialHistory.delete(id, userData.e_id || 0)
+                ApiRoutes.SocialHistory.delete(id, patientId || 0)
               );
               console.log('📥 DeleteSocial Response:', JSON.stringify(response, null, 2));
               setToastMessage({
@@ -519,13 +519,14 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
               </TouchableOpacity>
               {showAlcoholFreqDropdown && (
                 <>
-                  <TouchableOpacity
+                 <TouchableOpacity
                     style={styles.dropdownBackdrop}
                     onPress={() => setShowAlcoholFreqDropdown(false)}
                     activeOpacity={1}
                   />
-                  <View style={styles.dropdownOptions}>
-                    {frequencyOptions.map((option) => (
+                   <View style={styles.dropdownOptions}>
+                 <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                  {frequencyOptions.map((option) => (
                       <TouchableOpacity
                         key={option.value}
                         style={styles.dropdownOption}
@@ -537,7 +538,9 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
                         <Text style={styles.dropdownOptionText}>{option.label}</Text>
                       </TouchableOpacity>
                     ))}
-                  </View>
+                 
+                  </ScrollView>
+                   </View>
                 </>
               )}
             </View>
@@ -567,7 +570,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
           onPress={handleOpenModal}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
@@ -722,9 +725,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -1023,23 +1026,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 9998,
+    zIndex: 9999,
+    backgroundColor: 'transparent',
   },
   dropdownOptions: {
     position: 'absolute',
-    top: '100%',
+    bottom: '100%',
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    borderRadius: getResponsiveSpacing(8),
     borderWidth: 1,
     borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 10,
+    borderRadius: getResponsiveSpacing(8),
+    maxHeight: getResponsiveSpacing(200),
     zIndex: 10001,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginBottom: getResponsiveSpacing(4),
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(16),
@@ -1070,8 +1079,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontFamily: fonts.regular,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });

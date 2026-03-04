@@ -33,6 +33,11 @@
       },
       "googleServicesFile": "./google-services.json"
     },
+    "splash": {
+      "image": "./assets/Splash_Screen.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "web": {
       "bundler": "metro",
       "output": "static",

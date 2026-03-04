@@ -59,7 +59,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [dropdownSearch, setDropdownSearch] = useState('');
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -68,7 +68,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   }, [masterOptions, dropdownSearch]);
 
   const fetchMedicalHistory = useCallback(async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     setLoading(true);
     try {
       const today = new Date();
@@ -81,7 +81,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         pageNo: 1,
         pageSize: 100,
         search: "",
-        patientId: userData.e_id,
+        patientId: patientId,
         fromDate: "1900-01-01",
         toDate: formattedDate,
         groupName: "",
@@ -103,7 +103,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchMedicalHistory();
@@ -213,7 +213,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   };
 
   const handleSaveCondition = async () => {
-    if (!newCondition.condition.trim() || !userData?.e_id) return;
+    if (!newCondition.condition.trim() || !patientId) return;
 
     // Duplicate check
     const isDuplicate = conditions.some(
@@ -279,7 +279,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   };
 
   const handleDeleteCondition = async (id: number) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
 
     Alert.alert(
       'Delete Record',
@@ -293,8 +293,8 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
           text: 'Yes',
           onPress: async () => {
             try {
-              console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id!}`);
-              const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id!));
+              console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${patientId!}`);
+              const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, patientId!));
               console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
 
               if (response || response === "OK") {
@@ -639,9 +639,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,

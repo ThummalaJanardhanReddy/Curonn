@@ -27,6 +27,7 @@ import {
 } from "../../shared/utils/responsive";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from '@/app/shared/components/Toast';
+import * as SecureStore from 'expo-secure-store';
 
 interface MenstrualRecord {
   id: string;
@@ -48,6 +49,7 @@ export default function MenstrualHistoryScreen({
   const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
   // fetch user id from context
   const { userData } = useUser();
+   const { setUserData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
@@ -58,6 +60,18 @@ export default function MenstrualHistoryScreen({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
+  useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+  
+const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -78,16 +92,16 @@ export default function MenstrualHistoryScreen({
   };
 
   const handleSaveRecord = async () => {
-    if (!userData || !userData.e_id) return;
+    if (!userData || !patientId) return;
     setSaveLoading(true);
     try {
       const payload = {
         menstralId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         frequencyId: newRecord.frequency === "regular" ? 1 : 2,
         isMenorrhagia: newRecord.menorrhagia === "yes",
         menorrhagiaAge: parseInt(newRecord.menopauseAge) || 0,
-        createdBy: userData.e_id,
+        createdBy: patientId,
         appointmentId: 0,
       };
 
@@ -118,7 +132,7 @@ export default function MenstrualHistoryScreen({
   };
 
   const handleDeleteRecord = async (id: string) => {
-    if (!userData || !userData.e_id) return;
+    if (!userData || !patientId) return;
 
     Alert.alert(
       "Delete Record",
@@ -129,9 +143,9 @@ export default function MenstrualHistoryScreen({
           text: "Yes",
           onPress: async () => {
             try {
-              console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
+              console.log(`📤 DeleteMenstral id=${id}, deletedBy=${patientId}`);
               const res: any = await axiosClient.delete(
-                ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id || 0)
+                ApiRoutes.MenstrualHistory.delete(Number(id), patientId || 0)
               );
               console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
               setToastMessage({
@@ -159,15 +173,15 @@ export default function MenstrualHistoryScreen({
   const fetchHistory = useCallback(async () => {
     let mounted = true;
     try {
-      if (!userData || !userData.e_id) return;
+      if (!userData || !patientId) return;
       setLoading(true);
       setError(null);
       const payload = {
         pageNo: 1,
         pageSize: 100,
         search: "",
-        createdBy: userData.e_id,
-        patientId: userData.e_id,
+        createdBy: patientId,
+        patientId: patientId,
         fromDate: null,
         toDate: null,
         groupName: "",
@@ -192,7 +206,7 @@ export default function MenstrualHistoryScreen({
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchHistory();
@@ -243,12 +257,12 @@ export default function MenstrualHistoryScreen({
           onPress={handleAddRecord}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Records List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -435,9 +449,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -673,11 +687,11 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   recordTitle: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-    fontFamily: fonts.bold
+    fontFamily: fonts.semiBold
   },
   recordDetails: {
     fontSize: getResponsiveFontSize(14),
@@ -717,8 +731,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontFamily: fonts.regular,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });

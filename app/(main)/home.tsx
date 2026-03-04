@@ -82,10 +82,6 @@ export default function HomeScreen() {
   const { setUserData } = useUser();
   const { userData } = useUser();
 
-  //     useEffect(() => {
-  //   console.log("Home Screen userData121212:", userData);
-  //   console.log("Home Screen patientId top:", patientId);
-  // }, [userData]);
 
   useEffect(() => {
     const restoreUserData = async () => {
@@ -97,7 +93,21 @@ export default function HomeScreen() {
     };
     restoreUserData();
   }, []);
-  const patientId = userData?.e_id || userData?.eId;
+  const patientId = Number(userData?.e_id || userData?.eId);
+  
+    const fetchNotifications = async () => {
+      // Ensure patientId is string or number, fallback to empty string
+      const response = await axiosClient.get(
+        ApiRoutes.Notification.GetList(patientId, "patient")
+      );
+      console.log("Notifications API response:", response);
+      const data = response?.data ?? response;
+      setNotifications(data);
+    };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [patientId]);
 
   //console.log("Home Screen patientId:", patientId);
   const [articles, setArticles] = useState<any[]>([]);
@@ -138,48 +148,14 @@ export default function HomeScreen() {
 
 
 
-  useEffect(() => {
-    //const token = await AsyncStorage.getItem('authToken');
-    console.log("Fetching notifications for patientId:", patientId);
-    if (!patientId) return;
-    const fetchNotifications = async () => {
-      const response = await axiosClient.get(
-        ApiRoutes.Notification.GetList(patientId, "patient")
-      );
-      console.log("Notifications API response:", response);
-      const data = response?.data ?? response;
-      setNotifications(data);
-    };
-    fetchNotifications();
-  }, [patientId]);
-
-
-  const loadNotifications = async () => {
-    try {
-      console.log("Fetching notifications for patientId:", patientId);
-      if (!patientId) return;
-      const response = await axiosClient.get(
-        ApiRoutes.Notification.GetList(patientId, "patient")
-      );
-       const data = response?.data ?? response;
-      console.log("Notifications API response:", data);
-      setNotifications(data);
-    } catch (error) {
-      console.log("Error loading notifications", error);
-    }
-  };
-
  useEffect(() => {
   if (!patientId) return; // 🚨 VERY IMPORTANT
 
   let connection: signalR.HubConnection;
   const setupSignalR = async () => {
-    await loadNotifications();
-
+    await fetchNotifications();
     const token = await AsyncStorage.getItem("authToken");
-
     console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-
     connection = new signalR.HubConnectionBuilder()
       .withUrl("https://api.curonn.com/hubs/video", {
         accessTokenFactory: () => token || "",
@@ -193,9 +169,8 @@ export default function HomeScreen() {
 
       connection.on("NewNotification", async (data) => {
         console.log("📩 New notification received:", data);
-
         // ⭐ Refresh notification list
-        await loadNotifications();
+        await fetchNotifications();
       });
       connection.onclose(() => {
         console.log("⚠️ SignalR Disconnected");
@@ -212,6 +187,7 @@ export default function HomeScreen() {
     if (connection) connection.stop();
   };
 }, [patientId]);
+
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
     useCallback(() => {

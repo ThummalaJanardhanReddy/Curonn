@@ -65,20 +65,21 @@ export default function FoodAllergiesModal({
   const [reactionOptions, setreactionOptionss] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
+  const [foodDropdownModal, setFoodDropdownModal] = useState(false);
   const { userData } = useUser();
   const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+  const patientId = Number(userData?.e_id || userData?.eId);
 
   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
 
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
@@ -369,7 +370,7 @@ export default function FoodAllergiesModal({
                 onPress={handleAddAllergy}
                 activeOpacity={0.8}
               >
-                <Text style={styles.addButtonText}>+Add</Text>
+                <Text style={styles.addButtonText}>+ADD</Text>
               </TouchableOpacity>
             </View>
 
@@ -427,12 +428,15 @@ export default function FoodAllergiesModal({
                   {/* Modal Body */}
                   <View style={styles.modalBody}>
                     {/* Allergen/Food Dropdown */}
-                    <View style={[styles.inputGroup, { zIndex: 2 }]}>
+                    <View style={[styles.inputGroup]}>
                       <Text style={styles.inputLabel}>Allergen/Food</Text>
                       <View style={styles.dropdownContainer}>
                         <TouchableOpacity
                           style={styles.dropdownButton}
-                          onPress={() => setDropdownVisible(!dropdownVisible)}
+                          onPress={() => {
+                            setFoodDropdownModal(true);
+                            fetchMasterOptions('');
+                          }}
                         >
                           <Text style={styles.dropdownText}>
                             {newAllergy.allergen || "Select food allergen"}
@@ -441,38 +445,56 @@ export default function FoodAllergiesModal({
                         </TouchableOpacity>
 
                         {/* Dropdown Options */}
-                        {dropdownVisible && (
-                          <>
-                            <TouchableOpacity
-                              style={styles.dropdownBackdrop}
-                              onPress={() => setDropdownVisible(false)}
-                              activeOpacity={1}
-                            />
-                            <View style={styles.dropdownOptions}>
+                        <Modal
+                          visible={foodDropdownModal}
+                          transparent
+                          animationType="fade"
+                          onRequestClose={() => setFoodDropdownModal(false)}
+                        >
+                          <TouchableOpacity
+                            style={styles.dropdownModalOverlay}
+                            activeOpacity={1}
+                            onPress={() => setFoodDropdownModal(false)}
+                          >
+                            <View style={styles.dropdownModalContainer}>
+
                               <TextInput
                                 style={styles.dropdownSearchInput}
-                                placeholder="Search food..."
+                                placeholder="Search food allergen..."
                                 placeholderTextColor="#999"
                                 value={dropdownSearch}
                                 onChangeText={setDropdownSearch}
                               />
-                              <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+                              <ScrollView
+                                style={{ maxHeight: 400 }}
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator
+                              >
                                 {dropdownLoading ? (
-                                  <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                                    <ActivityIndicator size="small" color={colors.primary} />
-                                  </View>
-                                ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                                  <ActivityIndicator
+                                    size="small"
+                                    color={colors.primary}
+                                    style={{ marginTop: 20 }}
+                                  />
+                                ) : filteredMasterOptions.length > 0 ? (
                                   filteredMasterOptions.map((item) => (
                                     <TouchableOpacity
                                       key={String(item.id)}
                                       style={styles.dropdownOption}
                                       onPress={() => {
-                                        setNewAllergy({ ...newAllergy, allergen: item.name });
-                                        setDropdownVisible(false);
-                                        setDropdownSearch('');
+                                        setNewAllergy({
+                                          ...newAllergy,
+                                          allergen: item.name,
+                                        });
+
+                                        setFoodDropdownModal(false);
+                                        setDropdownSearch("");
                                       }}
                                     >
-                                      <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                                      <Text style={styles.dropdownOptionText}>
+                                        {item.name}
+                                      </Text>
                                     </TouchableOpacity>
                                   ))
                                 ) : (
@@ -481,9 +503,10 @@ export default function FoodAllergiesModal({
                                   </View>
                                 )}
                               </ScrollView>
+
                             </View>
-                          </>
-                        )}
+                          </TouchableOpacity>
+                        </Modal>
                       </View>
                     </View>
 
@@ -705,10 +728,23 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
+  dropdownModalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  justifyContent: "center",
+  padding: 20,
+},
+
+dropdownModalContainer: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 10,
+  maxHeight: "70%",
+},
   divider: {
     color: "#000",
     marginHorizontal: getResponsiveSpacing(5),
@@ -885,7 +921,7 @@ const styles = StyleSheet.create({
     zIndex: 10000,
   },
   dropdownBackdrop: {
-    position: "fixed",
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -894,28 +930,25 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   dropdownOptions: {
-    position: "absolute",
-    bottom: "100%",
+    position: 'absolute',
+    bottom: '100%',
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderBottomWidth: 0,
-    borderTopLeftRadius: getResponsiveSpacing(8),
-    borderTopRightRadius: getResponsiveSpacing(8),
-    maxHeight: getResponsiveSpacing(150),
+    borderColor: '#ddd',
+    borderRadius: getResponsiveSpacing(8),
+    maxHeight: 450,
     zIndex: 10001,
-    elevation: 20,
-    shadowColor: "#000",
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    marginBottom: getResponsiveSpacing(2),
-    flexDirection: "column-reverse",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginTop: getResponsiveSpacing(4),
   },
   dropdownOption: {
     paddingHorizontal: getResponsiveSpacing(12),

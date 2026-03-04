@@ -100,7 +100,7 @@ export default function FamilyHistoryScreen({
     "Cousin",
     "Other",
   ];
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -200,7 +200,7 @@ export default function FamilyHistoryScreen({
         Alert.alert('Record already exists', 'This family history record is already present.');
         return;
       }
-
+      console.log('Saving family member with data:', newMember);
       const memberData: FamilyMemberData = {
         relationship: newMember.relationship.trim(),
         condition: newMember.condition.trim(),
@@ -231,11 +231,11 @@ export default function FamilyHistoryScreen({
       ],
       { cancelable: true }
     );
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   // API Functions
   const fetchAllFamilyMembers = async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setIsLoading(true);
       setError("");
@@ -250,7 +250,7 @@ export default function FamilyHistoryScreen({
         pageNo: 1,
         pageSize: 100,
         search: "",
-        patientId: userData.e_id,
+        patientId: patientId,
         fromDate: "1900-01-01",
         toDate: formattedDate,
         groupName: ""
@@ -293,7 +293,7 @@ export default function FamilyHistoryScreen({
   };
 
   const saveFamilyMember = async (memberData: FamilyMemberData) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setIsSaving(true);
       setError("");
@@ -306,14 +306,14 @@ export default function FamilyHistoryScreen({
 
       const payload = {
         familyHistoryId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         historyName: memberData.condition,
         relationId: 0,
         onsetDate: formattedDate,
         appointmentId: 0,
         isActive: true,
         createdOn: formattedDate,
-        createdBy: userData.e_id,
+        createdBy: patientId,
         deletedOn: formattedDate,
         deletedBy: 0,
         modifiedOn: formattedDate,
@@ -365,12 +365,12 @@ export default function FamilyHistoryScreen({
   };
 
   const deleteFamilyMember = async (id: string) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setError("");
-      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${userData.e_id}`);
+      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${patientId}`);
       const response: any = await axiosClient.delete(
-        ApiRoutes.FamilyHistory.delete(id, userData.e_id)
+        ApiRoutes.FamilyHistory.delete(id, patientId)
       );
       console.log('📥 Delete Family History Response:', JSON.stringify(response, null, 2));
 
@@ -760,9 +760,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -853,9 +853,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -874,9 +875,10 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium,
   },
   textInput: {
     borderWidth: 1,
@@ -904,6 +906,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular,
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -1113,9 +1116,9 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(5),
     marginRight: getResponsiveSpacing(6),
   },
-  deleteButtonText: {
-    fontSize: getResponsiveFontSize(14),
+ deleteButtonText: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });
