@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
-    color: '#202427',
+    color: colors.black,
   },
   // closeButton: {
   //   width: 36,

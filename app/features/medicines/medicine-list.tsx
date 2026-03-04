@@ -473,9 +473,9 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   headerTitle: {
-    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
     color: colors.black,
-    fontFamily: fonts.semiBold
   },
   cartButton: {
     padding: getResponsiveSpacing(3),
