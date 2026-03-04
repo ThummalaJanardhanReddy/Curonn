@@ -1707,7 +1707,7 @@ export default function BookingScreen({
                   <Text style={styles.serviceName}>{serviceName}</Text>
                   {(type !== "ambulance") && (
                     <Text style={styles.serviceLocation}>
-                      {isAtHome ? "AT HOME" : "AT Lab"}
+                      {isAtHome ? "AT-HOME" : "AT Lab"}
                     </Text>
                   )}
                 </View>
@@ -2451,7 +2451,7 @@ const styles = StyleSheet.create({
   },
   servicePrice: {
     fontSize: 16,
-    color: colors.primary,
+    color: '#000',
     fontFamily: fonts.semiBold
   },
   serviceCenter: {

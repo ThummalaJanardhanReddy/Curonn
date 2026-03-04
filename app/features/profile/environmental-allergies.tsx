@@ -729,14 +729,7 @@ dropdownModalContainer: {
     borderColor: "#B4B6B9",
     flexDirection: "row",
     alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+   
   },
   allergyContent: {
     flex: 1,

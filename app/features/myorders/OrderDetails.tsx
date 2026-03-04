@@ -736,7 +736,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <Text style={styles.labelheader}>{orderDetails.data.testName}</Text>
                                                         <Text style={styles.labelinner}>
-                                                            {order.orderType === "Single Test" ? "AT Home" : "AT Lab"}
+                                                            {(order.orderType === "Single Test" || order.orderType === "Package") ? "AT-HOME" : "AT Lab"}
                                                         </Text>
                                                     </View>
                                                     <Text style={styles.labelinner}>

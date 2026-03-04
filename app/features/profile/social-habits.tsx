@@ -384,9 +384,9 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   const renderSmokingForm = () => (
     <View style={styles.formCard}>
       <View style={styles.cardHeader}>
-        <View style={styles.placeholderIcon}>
+        {/* <View style={styles.placeholderIcon}>
           <Text style={styles.placeholderText}>🚬</Text>
-        </View>
+        </View> */}
         <Text style={styles.habitTitle}>Smoking</Text>
       </View>
 
@@ -467,9 +467,9 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   const renderAlcoholForm = () => (
     <View style={styles.formCard}>
       <View style={styles.cardHeader}>
-        <View style={styles.placeholderIcon}>
+        {/* <View style={styles.placeholderIcon}>
           <Text style={styles.placeholderText}>🍷</Text>
-        </View>
+        </View> */}
         <Text style={styles.habitTitle}>Alcohol</Text>
       </View>
 
@@ -644,7 +644,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.habitsContainer}>
+              <View style={styles.habitsContainer1}>
                 {selectedTab === 'smoking' && renderSmokingForm()}
                 {selectedTab === 'alcohol' && renderAlcoholForm()}
               </View>
@@ -749,6 +749,9 @@ const styles = StyleSheet.create({
   },
   habitsContainer: {
     padding: getResponsiveSpacing(20),
+  },
+  habitsContainer1: {
+    paddingHorizontal: getResponsiveSpacing(20),
   },
   habitCardWrapper: {
     marginBottom: getResponsiveSpacing(12),
@@ -890,10 +893,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: getResponsiveSpacing(14),
     paddingHorizontal: getResponsiveSpacing(12),
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(8),
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#ddd',
   },
   tabCardSelected: {
     backgroundColor: colors.primary,
@@ -906,7 +909,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: getResponsiveFontSize(12),
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: "#000",
     textAlign: 'center',
     fontFamily: fonts.medium
   },
@@ -918,11 +921,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 3,
+    // elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',

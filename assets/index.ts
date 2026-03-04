@@ -78,6 +78,7 @@ export const images = {
   labicon: require('./AppIcons/Curonn_icons/labicon.png'),
   medicalicon: require('./AppIcons/Curonn_icons/medicalicon.png'),
   consultationicon: require('./AppIcons/Curonn_icons/consultation.png'),
+  ambulanceicon: require('./AppIcons/Curonn_icons/ambulance_order.png'),
 
   appIcon: require('./AppIcons/appIcon.png'),
   // Splash Screen

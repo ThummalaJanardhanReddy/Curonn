@@ -24,6 +24,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { useUser } from "../../shared/context/UserContext"; // adjust path as needed
 import { useLocalSearchParams } from "expo-router";
+import * as SecureStore from 'expo-secure-store';
 import Toast from "@/app/shared/components/Toast";
 interface LocationData {
   latitude: number;
@@ -83,7 +84,18 @@ export default function LocationSelection({
     subtitle: "",
     color: "#4BB543", // default to success green
   });
-
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+ const { setUserData } = useUser();
+  const patientId = Number(userData?.e_id || userData?.eId);
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
     Animated.timing(slideAnim, {
@@ -229,13 +241,13 @@ export default function LocationSelection({
     console.log("userData:", userData);
     console.log("isDefault:", fetchedIsDefault);
     const payload: any = {
-      patientId: userData?.e_id,
+      patientId: patientId,
       address: locationData.address,
       hNo: locationData.houseNumber,
       landMark: locationData.landmark,
       addressNickname: locationData.nickname,
       isDefault: isEditMode ? fetchedIsDefault : false, // fetchedIsDefault from API response
-      userId: userData?.e_id,
+      userId: patientId,
     };
 
     if (isEditMode && addressId) {
@@ -295,6 +307,8 @@ export default function LocationSelection({
           <GooglePlacesAutocomplete
             placeholder="Search location"
             fetchDetails={true}
+            debounce={300}
+            enablePoweredByContainer={false}
             onPress={(data, details = null) => {
               if (!details || !details.geometry || !details.geometry.location) {
                 Alert.alert("Could not get location details. Please try again.");
@@ -323,6 +337,8 @@ export default function LocationSelection({
             query={{
               key: "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic",
               language: "en",
+              //location: `${currentLocation?.coords.latitude},${currentLocation?.coords.longitude}`,
+              components: 'country:in',
             }}
             styles={{
               container: {
@@ -347,6 +363,7 @@ export default function LocationSelection({
                 paddingLeft: 40, // space for search icon
                 fontSize: 16,
                 color: "#333",
+                paddingRight: 40, // space for clear icon
               },
               listView: {
                 borderRadius: 8,
@@ -370,6 +387,26 @@ export default function LocationSelection({
                 />
               </View>
             )}
+            // renderRightButton={(props) => (
+            //   <TouchableOpacity
+            //     style={{ position: "absolute", right: 12, top: 17, zIndex: 1 }}
+            //     onPress={() => {
+            //       if (props?.clear) {
+            //         props.clear();
+            //       } else {
+            //         // fallback: manually clear text if clear() not available
+            //         if (props?.textInputRef && props.textInputRef.current) {
+            //           props.textInputRef.current.clear();
+            //         }
+            //       }
+            //     }}
+            //   >
+            //     <Image
+            //       source={images.icons.close}
+            //       style={{ width: 18, height: 18, tintColor: "#999" }}
+            //     />
+            //   </TouchableOpacity>
+            // )}
           />
           <View style={styles.mapContainer}>
             <TouchableOpacity

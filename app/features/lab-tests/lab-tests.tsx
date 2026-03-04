@@ -452,6 +452,7 @@ export default function LabTestsScreen() {
         testsList: item.testsList,
         testCount: getTestCount(item.testsList),
         reportTime: "48 to 72 hours",
+        isAtHome: true,
       }));
 
       return {
@@ -805,9 +806,9 @@ export default function LabTestsScreen() {
           <View style={styles.testActioncard}>
             <Button
               mode="outlined"
-              style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
+              style={{ width: 130, height: 35, borderColor: '#BDBABA', backgroundColor: '#fff' }}
               contentStyle={{
-                height: 40,
+                height: 35,
                 paddingVertical: 0,
                 justifyContent: 'center',
               }}
@@ -1773,7 +1774,7 @@ const styles = StyleSheet.create({
   bookButton: {
     marginBottom: 4,
     width: 130,
-    height: 40,
+    height: 35,
   },
   atHomeText: {
     fontSize: 10,

@@ -172,7 +172,7 @@ export default function OrdersScreen() {
       }
       const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
       if (response.isSuccess && Array.isArray(response.data)) {
-        // console.log("Orders of :", response.data);
+        console.log("Orders of :", response.data);
         return response.data;
       } else {
         console.log("No orders found or error:", response.message);
@@ -252,6 +252,10 @@ export default function OrdersScreen() {
         case "Consultation":
           category = "Consultation";
           iconSource = images.consultationicon;
+          break;
+           case "Ambulance":
+          category = "Ambulance";
+          iconSource = images.ambulanceicon;
           break;
         default:
           category = item.orderType;
@@ -345,8 +349,8 @@ export default function OrdersScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff"}}>
+      <View style={[styles.container]}> // ensure container is also black and fills height
         <StatusBar
           barStyle="dark-content"
           translucent={false}
@@ -446,8 +450,7 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
-    paddingBottom: 0,
+     backgroundColor: colors.white, // removed to allow black background
   },
 
   header: {

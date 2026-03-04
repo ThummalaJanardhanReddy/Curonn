@@ -24,6 +24,7 @@ import {
 import { fonts } from '@/app/shared/styles/fonts';
 import UploadIcon from '../../../assets/AppIcons/Curonn_icons/uploadmore.svg';
 import TakeaphotoIcon from '../../../assets/AppIcons/Curonn_icons/takeaphoto.svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export interface PrescriptionUploadModalProps {
   visible: boolean;
@@ -104,6 +105,7 @@ export default function PrescriptionUploadModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1}} edges={['top','bottom']}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContentLarge}>
           {/* Header */}
@@ -212,6 +214,7 @@ export default function PrescriptionUploadModal({
           
         </View>
       </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -426,7 +429,7 @@ const styles = StyleSheet.create({
   nextBtn: {
     backgroundColor: colors.primary,
     width: '100%',
-    paddingVertical: getResponsiveSpacing(14), 
+    paddingVertical: getResponsiveSpacing(12), 
     borderRadius: getResponsiveSpacing(30), 
     alignItems: 'center'
 

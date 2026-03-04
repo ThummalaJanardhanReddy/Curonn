@@ -436,7 +436,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
                     onPress={() => setDropdownVisible(!dropdownVisible)}
                   >
                     <Text style={styles.dropdownText}>
-                      {newCondition.condition || 'Select medical condition'}
+                      {newCondition.condition || 'Select'}
                     </Text>
                     <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>

@@ -378,7 +378,7 @@ export default function PastProceduresScreen({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <BackButton
-            title="Surgical History"
+            title="Past Procedures"
             color={colors.black}
             onPress={handleBack}
             style={styles.backButton}

@@ -108,6 +108,7 @@ export default function BookingPayLaterScreen() {
     }
   }, []);
 
+   const patientId = Number(userData?.e_id || userData?.eId);
   // ── fetchAddresses (identical to booking.tsx) ─────────────────────────
   const fetchAddresses = async () => {
     try {
@@ -228,17 +229,17 @@ export default function BookingPayLaterScreen() {
   }, []);
 
   useEffect(() => {
-    if (userData?.e_id) {
+    if (patientId) {
       fetchAddresses();
     }
     fetchStatusId();
     fetchRelationTypes();
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id || userData?.eId;
+     
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)
@@ -464,7 +465,7 @@ export default function BookingPayLaterScreen() {
       const payload = {
         medicineOrderId: 0,
         orderType: 'Medicine',
-        patientId: userData?.e_id ?? 0,
+        patientId: patientId,
         address: selectedLocation.address,
         hNo: selectedLocation.houseNumber,
         landMark: selectedLocation.landmark,
@@ -482,7 +483,7 @@ export default function BookingPayLaterScreen() {
 
         paymentDetails: 'pay_later',
         isPaymentDone: false,
-        createdBy: userData?.e_id ?? 0,
+        createdBy:patientId,
         statusId: 2867,
         // Send numeric fees (Swagger shows numbers, not strings)
         handlingFee: 0,
@@ -831,10 +832,10 @@ export default function BookingPayLaterScreen() {
       </Modal>
 
       {/* ── All Address View Modal (identical to booking.tsx) ────────── */}
-      {userData?.e_id && (
+      {patientId && (
         <AddressSelection
           visible={addressVisible}
-          patientId={userData?.e_id}
+          patientId={patientId}
           onSelect={(addressId) => {
             setAddressVisible(false);
             if (addressId) {
