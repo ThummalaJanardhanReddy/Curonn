@@ -406,7 +406,13 @@ export default function MedicineListScreen() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    if (groupNameInParams) {
+                      handleBack();
+                    } else {
+                      setSearchQuery('');
+                    }
+                  }}
                 >
                   <Image
                     source={images.icons.close}
