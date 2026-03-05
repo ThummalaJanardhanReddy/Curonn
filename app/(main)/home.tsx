@@ -898,54 +898,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Wellness Program Section */}
-        <View style={styles.section}>
-          <View style={styles.featureCard}>
-            <Image
-              source={images.panels.wellness}
-              style={styles.featureBackground}
-              resizeMode="cover"
-            />
-            <images.home.book_wellness
-              style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'20%'}
-            // height={'80%'}
-            />
-            <View style={styles.featureContent}>
-              <Text style={[styles.featureTitle, { color: "#fff" }]}>
-                Wellness Program
-              </Text>
-              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
-                at your doorstep
-              </Text>
-              <Button
-                mode="contained"
-                style={[
-                  styles.featureButton,
-                  {
-                    backgroundColor: "#EFBC73",
-                    height: 36,
-                    justifyContent: "center",
-                  },
-                ]}
-                labelStyle={{
-                  color: "#000",
-                  fontSize: 14,
-                  fontFamily: fonts.medium,
-                  lineHeight: 18, // Ensures text is vertically centered
-                }}
-                contentStyle={{
-                  height: 36,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              // onPress={() => router.push("/")}
-              >
-                Get Now
-              </Button>
-            </View>
-          </View>
-        </View>
+       
 
         {/* Ambulance Booking Section */}
         <View style={styles.section}>
@@ -995,6 +948,55 @@ export default function HomeScreen() {
                   Book Now
                 </Button>
               </View>
+            </View>
+          </View>
+        </View>
+
+         {/* Wellness Program Section */}
+        <View style={styles.section}>
+          <View style={styles.featureCard}>
+            <Image
+              source={images.panels.wellness}
+              style={styles.featureBackground}
+              resizeMode="cover"
+            />
+            <images.home.book_wellness
+              style={{ position: "absolute", right: 20, bottom: 0 }}
+            // width={'20%'}
+            // height={'80%'}
+            />
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: "#fff" }]}>
+                Wellness Program
+              </Text>
+              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
+                at your doorstep
+              </Text>
+              <Button
+                mode="contained"
+                style={[
+                  styles.featureButton,
+                  {
+                    backgroundColor: "#EFBC73",
+                    height: 36,
+                    justifyContent: "center",
+                  },
+                ]}
+                labelStyle={{
+                  color: "#000",
+                  fontSize: 14,
+                  fontFamily: fonts.medium,
+                  lineHeight: 18, // Ensures text is vertically centered
+                }}
+                contentStyle={{
+                  height: 36,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              // onPress={() => router.push("/")}
+              >
+                Get Now
+              </Button>
             </View>
           </View>
         </View>

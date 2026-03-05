@@ -2,7 +2,7 @@ import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator, Modal, TouchableWithoutFeedback } from "react-native";
 import { AntDesign } from '@expo/vector-icons';
- 
+
 import { Button } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useState, useEffect } from "react";
@@ -129,7 +129,7 @@ export default function LabTestsScreen() {
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
   const [diagCenters, setDiagCenters] = useState<any[]>([]);
   const [diagLoading, setDiagLoading] = useState(false);
-   const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<number | null>(null);
+  const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<number | null>(null);
   // Lab Test Groups
   const [subTestTypes, setSubTestTypes] = useState<SubTestType[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -158,7 +158,7 @@ export default function LabTestsScreen() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
-    const [errors, setErrors] = useState("");
+  const [errors, setErrors] = useState("");
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS === 'android') {
@@ -169,7 +169,7 @@ export default function LabTestsScreen() {
         return () => clearTimeout(timeout);
       }
       // Always reset diagsticVisible when leaving LabTestsScreen
-      
+
     }, [])
   );
 
@@ -263,7 +263,7 @@ export default function LabTestsScreen() {
 
 
   useEffect(() => {
-     
+
     const delayDebounce = setTimeout(() => {
       if (searchQuery.trim().length > 2) {
         fetchGlobalSearch(searchQuery);
@@ -507,20 +507,20 @@ export default function LabTestsScreen() {
     setLoadingTests(false);
   };
 
-    const formatDateLab = (date: Date) => {
+  const formatDateLab = (date: Date) => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
   };
 
-    const handleMedDateChange = (event: any, selectedDate?: Date) => {
-      setShowDatePicker(Platform.OS === "ios");
-      if (selectedDate) {
-        setSelectedDate(selectedDate);
-        if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
-      }
-    };
+  const handleMedDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+      if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
+    }
+  };
   // Fetch Scans
   const fetchScans = async (
     pageNo = 1,
@@ -606,7 +606,7 @@ export default function LabTestsScreen() {
     setTestItems([]);
   };
 
-  
+
 
   const handleBookTest = (id: string) => {
     const testItem = getDisplayedData().find(
@@ -619,7 +619,7 @@ export default function LabTestsScreen() {
     }
   };
 
-   const handleBookscanTest = (testId: string, centerId: string) => {
+  const handleBookscanTest = (testId: string, centerId: string) => {
     if (!selectedTest) {
       setErrors("No scan selected. Please select a scan before booking.");
       return;
@@ -672,7 +672,7 @@ export default function LabTestsScreen() {
       }
       // Call DiagCenter API
       const payload = {
-         latitude,
+        latitude,
         longitude,
         radiusKm: 10,
       }
@@ -804,15 +804,8 @@ export default function LabTestsScreen() {
             </View>
           </View>
           <View style={styles.testActioncard}>
-            <Button
-              mode="outlined"
-              style={{ width: 130, height: 35, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-              contentStyle={{
-                height: 35,
-                paddingVertical: 0,
-                justifyContent: 'center',
-              }}
-              textColor="#000000"
+            <TouchableOpacity
+              style={styles.viewdetailsbutton}
               onPress={() =>
                 router.push({
                   pathname: "/viewdetails",
@@ -822,14 +815,14 @@ export default function LabTestsScreen() {
                   },
                 })
               }
-            >
-              View Details
-            </Button>
-            <PrimaryButton
-              title="Book Now"
-              onPress={() => handleBookTest(item.id)}
+            > <Text style={styles.viewdetailstext}>View Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.bookButton}
-            />
+              onPress={() => handleBookTest(item.id)}
+            > <Text style={styles.bookButtontext}>Book Now</Text>
+            </TouchableOpacity>
 
           </View> </View>
         {/* <View style={styles.testAction}>
@@ -864,7 +857,7 @@ export default function LabTestsScreen() {
 
 
               </View>
-             
+
               <View style={styles.healthprice}>
                 <Text style={styles.priceRow}>
                   <Text style={styles.originalPrice}>
@@ -876,19 +869,12 @@ export default function LabTestsScreen() {
                   </Text>
                 </Text>
               </View>
-              
+
             </View>
 
             <View style={styles.testActioncard}>
-              <Button
-                mode="outlined"
-                style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-                contentStyle={{
-                  height: 40,
-                  paddingVertical: 0,
-                  justifyContent: 'center',
-                }}
-                textColor="#000000"
+              <TouchableOpacity
+                style={styles.viewdetailsbutton}
                 onPress={() =>
                   router.push({
                     pathname: "/viewdetails",
@@ -898,21 +884,25 @@ export default function LabTestsScreen() {
                     },
                   })
                 }
-              >
-                View Details
-              </Button>
-            { selectedCategory !== 'scans' ?(  <PrimaryButton
-                title="Book Now"
-                onPress={() => handleBookTest(item.id)}
-                style={styles.bookButton}
-              />
-            ):
-            (<PrimaryButton
-                title="Book Now"
-                onPress={() => handleBookScan(item.id)}
-                style={styles.bookButton}
-              />)
-            }
+              > <Text style={styles.viewdetailstext}>View Details</Text>
+              </TouchableOpacity>
+
+
+              {selectedCategory !== 'scans' ? (
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={() => handleBookTest(item.id)}
+                > <Text style={styles.bookButtontext}>Book Now</Text>
+                </TouchableOpacity>
+              ) :
+                (
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={() => handleBookScan(item.id)}
+                > <Text style={styles.bookButtontext}>Book Now</Text>
+                </TouchableOpacity>
+                )
+              }
             </View>
           </View>
         </>)
@@ -944,7 +934,7 @@ export default function LabTestsScreen() {
 
         {/* Search Bar */}
 
-        <LinearGradient
+        {/* <LinearGradient
           colors={[
             "rgba(255, 255, 255, 1)",
             "rgba(247, 84, 10, 0.2)",
@@ -955,61 +945,61 @@ export default function LabTestsScreen() {
             paddingHorizontal: 20, // ✅ works
             paddingVertical: 5,
           }}
-        >
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
-              {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search for lab tests"
-                placeholderTextColor="#000"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => setSearchQuery("")}
-                >
-                  <Image source={images.icons.close} style={styles.clearIcon} />
-                </TouchableOpacity>
-              )}
-            </View>
+        > */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+            {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for lab tests"
+              placeholderTextColor="#000"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => setSearchQuery("")}
+              >
+                <Image source={images.icons.close} style={styles.clearIcon} />
+              </TouchableOpacity>
+            )}
           </View>
+        </View>
 
-          {/* Test Categories */}
-          {searchQuery.trim().length === 0 && (
-            <View style={styles.categoriesContainer}>
+        {/* Test Categories */}
+        {searchQuery.trim().length === 0 && (
+          <View style={styles.categoriesContainer}>
+            <FlatList
+              data={testCategories}
+              renderItem={renderTestCategory}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+            />
+          </View>
+        )}
+
+        {/* Sub Test Types for Lab Test */}
+        {selectedCategory === "lab-test" &&
+          searchQuery.trim().length === 0 && (
+            <View style={styles.subTestTypesContainer}>
               <FlatList
-                data={testCategories}
-                renderItem={renderTestCategory}
-                keyExtractor={(item) => item.id}
+                data={subTestTypes}
+                renderItem={renderSubTestType}
+                keyExtractor={(item) => item.groupName}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoriesList}
+                contentContainerStyle={styles.subTestTypesList}
               />
             </View>
           )}
 
-          {/* Sub Test Types for Lab Test */}
-          {selectedCategory === "lab-test" &&
-            searchQuery.trim().length === 0 && (
-              <View style={styles.subTestTypesContainer}>
-                <FlatList
-                  data={subTestTypes}
-                  renderItem={renderSubTestType}
-                  keyExtractor={(item) => item.groupName}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.subTestTypesList}
-                />
-              </View>
-            )}
-
-        </LinearGradient>
+        {/* </LinearGradient> */}
         <View style={styles.containercontent}>
-          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 5 }}>
+          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 0 }}>
             <View style={styles.testItemsContainer}>
               <FlatList
                 data={getDisplayedData()}
@@ -1107,22 +1097,21 @@ export default function LabTestsScreen() {
             </View>
           </ScrollView>
 
-          <View style={styles.backgroundImageContainer}>
-            {/* ...existing code... */}
-          </View>
+          {/* <View style={styles.backgroundImageContainer}>
+          </View> */}
         </View>
         {/* </LinearGradient> */}
 
         {/* Booking Modal */}
         {selectedTest && (
           <BookingScreen
-              visible={bookingVisible}
-              onClose={() => {
-                setBookingVisible(false);
-                if (selectedTest?.selectedDiagCenter) {
-                  setdiagsticVisible(true);
-                }
-              }}
+            visible={bookingVisible}
+            onClose={() => {
+              setBookingVisible(false);
+              if (selectedTest?.selectedDiagCenter) {
+                setdiagsticVisible(true);
+              }
+            }}
             onSuccess={() => {
               setdiagsticVisible(false);
               setSelectedDate(null);
@@ -1148,7 +1137,7 @@ export default function LabTestsScreen() {
         <Modal
           visible={diagsticVisible}
           animationType="slide"
-           presentationStyle="pageSheet"
+          presentationStyle="pageSheet"
           onRequestClose={() => {
             setdiagsticVisible(false);
             setSelectedDate(null);
@@ -1156,204 +1145,204 @@ export default function LabTestsScreen() {
             setErrors("");
           }}
         >
-           <SafeAreaView style={{ flex: 1, backgroundColor:  colors.white }}>
-                    
-        <View style={[styles.defaultHeader, { flexDirection: 'row',position:'relative', alignItems: 'center', justifyContent: 'space-between' }]}> 
-          <CommonHeader
-            currentLocation={currentLocation}
-            onProfilePress={() => console.log("Profile pressed")}
-            showCart={false}
-          />
-          <TouchableOpacity onPress={() => {
-            setdiagsticVisible(false);
-            setSelectedDate(null);
-            setSelectedTimeSlot("");
-            setErrors("");
-          }} style={styles.closeButton}>
-            <Image source={images.icons.close} style={styles.closeIcon} />
-          </TouchableOpacity>
-        </View>
-       
-         
-         
-             <ScrollView  style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
-               <View style={styles.content}>
-              {/* Sample Pickup Date & Time */}
-                         <View style={styles.section}>
-                           <Text style={styles.sectionTitle}>
-                            Date & Time
-                           </Text>
-                           <View style={styles.dateTimeCard}>
-                             <View style={styles.dateSection}>
-                               <Text style={styles.fieldLabel}>Service Start Date</Text>
-                               <TouchableOpacity
-                                 style={styles.dateInput}
-                                 onPress={() => setShowDatePicker(true)}
-                               >
-                                 <Text
-                                   style={[
-                                     styles.dateText,
-                                     !selectedDate && styles.placeholderText,
-                                   ]}
-                                 >
-                                   {selectedDate
-                                     ? formatDateLab(selectedDate)
-                                     : "dd/mm/yyyy"}
-                                 </Text>
-                                 <Image
-                                   source={images.icons.calendar}
-                                   style={styles.calendarIcon}
-                                 />
-                               </TouchableOpacity>
-                               {(!selectedDate && errors === "Please select service start date") && (
-                                 <Text
-                                   style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                                 >
-                                   {errors}
-                                 </Text>
-                               )}
-                              
-                             </View>
-             
-                             <View style={styles.timeSection}>
-                               <Text style={styles.fieldLabel}>Select Time Slot</Text>
-                               <View style={styles.timeSlotsContainer}>
-                                 {labTimeSlots.map((slot, index) => (
-                                   <TouchableOpacity
-                                     key={index}
-                                     style={[
-                                       styles.timeSlot,
-                                       selectedTimeSlot === slot && styles.selectedTimeSlot,
-                                     ]}
-                                     onPress={() => {
-                                       setSelectedTimeSlot(slot);
-                                       if (errors === "Please select time slot")
-                                         setErrors("");
-                                     }}
-                                   >
-                                     <Text
-                                       style={[
-                                         styles.timeSlotText,
-                                         selectedTimeSlot === slot &&
-                                         styles.selectedTimeSlotText,
-                                       ]}
-                                     >
-                                       {slot}
-                                     </Text>
-                                   </TouchableOpacity>
-                                 ))}
-                               </View>
-                               {errors === "Please select time slot" && (
-                                 <Text
-                                   style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                                 >
-                                   {errors}
-                                 </Text>
-                               )}
-                             </View>
-                           </View>
-                         </View>
-            <View style={styles.modalHeader}>
-             
+          <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+
+            <View style={[styles.defaultHeader, { flexDirection: 'row', position: 'relative', alignItems: 'center', justifyContent: 'space-between' }]}>
+              <CommonHeader
+                currentLocation={currentLocation}
+                onProfilePress={() => console.log("Profile pressed")}
+                showCart={false}
+              />
+              <TouchableOpacity onPress={() => {
+                setdiagsticVisible(false);
+                setSelectedDate(null);
+                setSelectedTimeSlot("");
+                setErrors("");
+              }} style={styles.closeButton}>
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
             </View>
-            {diagLoading ? (
-              <View style={{ alignItems: 'center', padding: 20 }}>
-                <ActivityIndicator size="large" color="#694664" />
-              </View>
-            ) : (
-              <View style={styles.modalScrollableContent}>
-                {diagCenters.length === 0 ? (
-                  <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
-                ) : (
-                  <>
-                   
-                      {diagCenters.map((center: any) => (
-                        <LinearGradient
-                          key={center.id}
-                          colors={['#fff', '#D5CDDA']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.testCard}
+
+
+
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
+              <View style={styles.content}>
+                {/* Sample Pickup Date & Time */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    Date & Time
+                  </Text>
+                  <View style={styles.dateTimeCard}>
+                    <View style={styles.dateSection}>
+                      <Text style={styles.fieldLabel}>Service Start Date</Text>
+                      <TouchableOpacity
+                        style={styles.dateInput}
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <Text
+                          style={[
+                            styles.dateText,
+                            !selectedDate && styles.placeholderText,
+                          ]}
                         >
-                         
+                          {selectedDate
+                            ? formatDateLab(selectedDate)
+                            : "dd/mm/yyyy"}
+                        </Text>
+                        <Image
+                          source={images.icons.calendar}
+                          style={styles.calendarIcon}
+                        />
+                      </TouchableOpacity>
+                      {(!selectedDate && errors === "Please select service start date") && (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                        >
+                          {errors}
+                        </Text>
+                      )}
+
+                    </View>
+
+                    <View style={styles.timeSection}>
+                      <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                      <View style={styles.timeSlotsContainer}>
+                        {labTimeSlots.map((slot, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.timeSlot,
+                              selectedTimeSlot === slot && styles.selectedTimeSlot,
+                            ]}
+                            onPress={() => {
+                              setSelectedTimeSlot(slot);
+                              if (errors === "Please select time slot")
+                                setErrors("");
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.timeSlotText,
+                                selectedTimeSlot === slot &&
+                                styles.selectedTimeSlotText,
+                              ]}
+                            >
+                              {slot}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {errors === "Please select time slot" && (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                        >
+                          {errors}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.modalHeader}>
+
+                </View>
+                {diagLoading ? (
+                  <View style={{ alignItems: 'center', padding: 20 }}>
+                    <ActivityIndicator size="large" color="#694664" />
+                  </View>
+                ) : (
+                  <View style={styles.modalScrollableContent}>
+                    {diagCenters.length === 0 ? (
+                      <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
+                    ) : (
+                      <>
+
+                        {diagCenters.map((center: any) => (
+                          <LinearGradient
+                            key={center.id}
+                            colors={['#fff', '#D5CDDA']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.testCard}
+                          >
+
                             {/* <View style={styles.radioOuter}>
                               {selectedDiagCenterId === center.id && <View style={styles.radioInner} />}
                             </View> */}
                             <View style={styles.cardContainer}>
-                               <View style={styles.testCard1}>
-              <View style={styles.testInfo}>
-                <Text style={styles.testName}>{center.centerName}</Text>
-               
-
-              
-                  <Text style={styles.testReportTime}>
-                    {center.address}
-                  </Text>
+                              <View style={styles.testCard1}>
+                                <View style={styles.testInfo}>
+                                  <Text style={styles.testName}>{center.centerName}</Text>
 
 
-              </View>
-             
-              <View style={styles.healthprice}>
-                <Text style={styles.priceRow}>
-                  <Text style={styles.originalPrice}>
-                    ₹{selectedTest?.price}
-                  </Text>
-                  {' '}
-                  <Text style={styles.finalPrice1}>
-                    ₹{selectedTest?.curonnPrice}
-                  </Text>
-                  {/* <Text style={styles.finalPrice1}>
+
+                                  <Text style={styles.testReportTime}>
+                                    {center.address}
+                                  </Text>
+
+
+                                </View>
+
+                                <View style={styles.healthprice}>
+                                  <Text style={styles.priceRow}>
+                                    <Text style={styles.originalPrice}>
+                                      ₹{selectedTest?.price}
+                                    </Text>
+                                    {' '}
+                                    <Text style={styles.finalPrice1}>
+                                      ₹{selectedTest?.curonnPrice}
+                                    </Text>
+                                    {/* <Text style={styles.finalPrice1}>
                      ₹{selectedTest?.curonnPrice || center.price}
                   </Text> */}
-                </Text>
-              </View>
-              </View>
-              
-           <View style={styles.testActioncard}>
-            <Button
-              mode="outlined"
-              style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-              contentStyle={{
-                height: 40,
-                paddingVertical: 0,
-                justifyContent: 'center',
-              }}
-              textColor="#000000"
-              onPress={() =>
-                router.push({
-                  pathname: "/viewdetails",
-                  params: {
-                    id: center.id,
-                    type: 'diagncenter',
-                  },
-                })
-              }
-            >
-              View Details
-            </Button>
-              <PrimaryButton
-                title="Book Now"
-                onPress={() => {
-                  if (!selectedTest) {
-                    setErrors("No scan selected. Please select a scan before booking.");
-                    return;
-                  }
-                  handleBookscanTest(selectedTest.id, center.id);
-                }}
-                style={styles.bookButton}
-              />
-              {!selectedTest && errors === "No scan selected. Please select a scan before booking." && (
-                <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
-              )}
+                                  </Text>
+                                </View>
+                              </View>
 
-          </View>
+                              <View style={styles.testActioncard}>
+                                <Button
+                                  mode="outlined"
+                                  style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
+                                  contentStyle={{
+                                    height: 40,
+                                    paddingVertical: 0,
+                                    justifyContent: 'center',
+                                  }}
+                                  textColor="#000000"
+                                  onPress={() =>
+                                    router.push({
+                                      pathname: "/viewdetails",
+                                      params: {
+                                        id: center.id,
+                                        type: 'diagncenter',
+                                      },
+                                    })
+                                  }
+                                >
+                                  View Details
+                                </Button>
+                                <PrimaryButton
+                                  title="Book Now"
+                                  onPress={() => {
+                                    if (!selectedTest) {
+                                      setErrors("No scan selected. Please select a scan before booking.");
+                                      return;
+                                    }
+                                    handleBookscanTest(selectedTest.id, center.id);
+                                  }}
+                                  style={styles.bookButton}
+                                />
+                                {!selectedTest && errors === "No scan selected. Please select a scan before booking." && (
+                                  <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                                )}
+
+                              </View>
                             </View>
-                         
-                        </LinearGradient>
-                      ))}
-                      
-                   
-                    {/* <PrimaryButton
+
+                          </LinearGradient>
+                        ))}
+
+
+                        {/* <PrimaryButton
                       title="Next"
                       style={styles.nextButton}
                       disabled={selectedDiagCenterId === null}
@@ -1367,25 +1356,25 @@ export default function LabTestsScreen() {
                         }
                       }}
                     /> */}
-                  </>
+                      </>
+                    )}
+                  </View>
                 )}
               </View>
-            )}
-            </View>
             </ScrollView>
-          
-           </SafeAreaView>
+
+          </SafeAreaView>
         </Modal>
-         {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate || new Date()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleMedDateChange}
-              minimumDate={new Date()}
-            />
-          )}
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate || new Date()}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleMedDateChange}
+            minimumDate={new Date()}
+          />
+        )}
       </View>
     </>);
 }
@@ -1395,19 +1384,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
-    closeButton: {
+  closeButton: {
     padding: 8,
     position: 'absolute',
     right: 20,
     top: 20,
-     zIndex: 1,
+    zIndex: 1,
   },
   closeIcon: {
     width: 24,
     height: 24,
     tintColor: "#000000",
   },
-    content: {
+  content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
     backgroundColor: colors.bg_primary,
@@ -1428,10 +1417,10 @@ const styles = StyleSheet.create({
     elevation: 10,
     minHeight: 200,
   },
-    section: {
+  section: {
     marginTop: getResponsiveSpacing(10),
   },
-    sectionTitle: {
+  sectionTitle: {
     fontSize: 13,
     color: "#000000",
     marginBottom: getResponsiveSpacing(2),
@@ -1580,27 +1569,29 @@ const styles = StyleSheet.create({
   },
   container: {
     ...commonStyles.containercontent_layout,
-    backgroundColor: colors.white, // colors.bg_secondary,
+    backgroundColor: colors.bg_primary, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingBottom: 0,
   },
 
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
-     borderBottomWidth: 1,
+    borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   containercontent: {
-    ...commonStyles.containercontent_layout,
-    backgroundColor: colors.white, // colors.bg_secondary,
+    //...commonStyles.containercontent_layout,
+    backgroundColor: 'colors.bg_primary', // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
-    paddingTop: 0,
-    paddingVertical: 7,
+    paddingTop: 7,
+    flex: 1,
   },
-  
+
   searchContainer: {
     marginBottom: 20,
+    paddingHorizontal: 20,
+    marginTop: 5,
   },
   cardContainer: {
     width: '100%',
@@ -1640,6 +1631,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   categoriesList: {
     gap: 12,
@@ -1670,6 +1662,7 @@ const styles = StyleSheet.create({
   },
   subTestTypesContainer: {
     marginBottom: 10,
+    paddingHorizontal: 20,
   },
   subTestTypesList: {
     gap: 3,
@@ -1771,10 +1764,36 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginTop: 12,
   },
+  viewdetailsbutton: {
+    borderColor: "#BDBABA",
+    borderWidth: 1,
+    backgroundColor: '#fff',
+    width: 130,
+    height: 35,
+    justifyContent: 'center',
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  viewdetailstext: {
+    color: "#000000",
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    paddingTop: 2,
+  },
   bookButton: {
     marginBottom: 4,
     width: 130,
     height: 35,
+    backgroundColor: '#C35E9C',
+    borderRadius: getResponsiveSpacing(23),
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: fonts.semiBold,
+  },
+  bookButtontext: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
   },
   atHomeText: {
     fontSize: 10,
@@ -1794,7 +1813,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   sampleCollectionContainer: {
-    marginBottom: 0,
+    marginBottom: 10,
     justifyContent: "flex-start",
     // alignItems: 'center',
   },

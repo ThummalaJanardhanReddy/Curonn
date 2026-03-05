@@ -30,13 +30,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic"
         }
-      },
-      "googleServicesFile": "./google-services.json"
+      }
     },
     "splash": {
       "image": "./assets/Splash_Screen.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#C35E9C"
     },
     "web": {
       "bundler": "metro",
