@@ -19,7 +19,7 @@ export default function ProfileScreenModal({ visible, onClose, children }: Profi
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
