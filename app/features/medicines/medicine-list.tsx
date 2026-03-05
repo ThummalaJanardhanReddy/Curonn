@@ -406,7 +406,13 @@ export default function MedicineListScreen() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    if (groupNameInParams) {
+                      handleBack();
+                    } else {
+                      setSearchQuery('');
+                    }
+                  }}
                 >
                   <Image
                     source={images.icons.close}
@@ -473,9 +479,9 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   headerTitle: {
-    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
     color: colors.black,
-    fontFamily: fonts.semiBold
   },
   cartButton: {
     padding: getResponsiveSpacing(3),

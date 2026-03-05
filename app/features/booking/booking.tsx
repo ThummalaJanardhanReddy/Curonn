@@ -101,16 +101,16 @@ export default function BookingScreen({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
   const { setUserData } = useUser();
- useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -140,7 +140,7 @@ export default function BookingScreen({
   const [discountPercent, setDiscountPercent] = useState(10);
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
   const totalAmount = servicePrice - discountAmount;
-  
+
   const [statusId, setStatusId] = useState<number>(0);
   const [razorpayOrderId, setRazorpayOrderId] = useState("");
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -194,7 +194,7 @@ export default function BookingScreen({
   ];
 
 
-    // Lab-test date format: YYYY-MM-DD
+  // Lab-test date format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -239,13 +239,13 @@ export default function BookingScreen({
   // ═══════════════════════════════════════════════════════════════════
   // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
   // ═══════════════════════════════════════════════════════════════════
- const patientId = userData?.e_id || userData?.eId;
+  const patientId = userData?.e_id || userData?.eId;
   // Fetch discount percent from Employee API
   useEffect(() => {
     if (isFromMedicalFlag) return;
     async function fetchDiscount() {
       try {
-      
+
         if (!patientId) return;
         const res: any = await axiosClient.get(
           ApiRoutes.Employee.getById(patientId)
@@ -527,7 +527,7 @@ export default function BookingScreen({
 
     return payload;
   };
- console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
+  console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
   // Save lab order after payment
   const saveLabOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -943,7 +943,7 @@ export default function BookingScreen({
   console.log("Items Total:", safeItemsTotal, "Discount Percent:", safeDiscountPercent, "Discount Amount:", medicineDiscountAmount);
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
-    const displayedTotal = useMemo(
+  const displayedTotal = useMemo(
     () => medicineTotalAmount + deliveryCharges,
     [medicineTotalAmount, deliveryCharges]
   );
@@ -993,7 +993,7 @@ export default function BookingScreen({
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => {
-   // console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
+    // console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
     const isSelfService = patientType === "self";
 
     // Get current date in yyyy-mm-dd format
@@ -1052,7 +1052,7 @@ export default function BookingScreen({
     }
     return payload;
   };
- // console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+  // console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -1060,7 +1060,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-   // console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    // console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1711,11 +1711,11 @@ export default function BookingScreen({
                     </Text>
                   )}
                 </View>
-                 {(type !== "ambulance") && (
-                <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
-                  Report within {reportTime}
-                </Text>
-                 )}
+                {(type !== "ambulance") && (
+                  <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
+                    Report within {reportTime}
+                  </Text>
+                )}
 
                 <View style={styles.serviceDivider} />
 
@@ -2367,7 +2367,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
-    color: '#202427',
+    color: colors.black,
   },
   closeButton: {
     padding: 4,

@@ -49,6 +49,7 @@ interface FamilyHistoryResponse {
 interface FamilyMemberData {
   id?: string;
   relationship: string;
+  relationshipId?: number;
   condition: string;
   employeeId?: string;
 }
@@ -73,6 +74,7 @@ export default function FamilyHistoryScreen({
     );
   }, [masterOptions, dropdownSearch]);
   const [newMember, setNewMember] = useState({
+    relationshipId: 0,
     relationship: "",
     condition: "",
   });
@@ -86,20 +88,21 @@ export default function FamilyHistoryScreen({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
-  const relationshipOptions = [
-    "Father",
-    "Mother",
-    "Brother",
-    "Sister",
-    "Grandfather (Paternal)",
-    "Grandmother (Paternal)",
-    "Grandfather (Maternal)",
-    "Grandmother (Maternal)",
-    "Uncle",
-    "Aunt",
-    "Cousin",
-    "Other",
-  ];
+  const [relationshipOptions, setRelationshipOptions] = useState<Array<{ id: number; name: string }>>([
+    { id: 0, name: "Father" },
+    { id: 0, name: "Mother" },
+    { id: 0, name: "Brother" },
+    { id: 0, name: "Sister" },
+    { id: 0, name: "Grand Father" },
+    { id: 0, name: "Grand Mother" },
+    { id: 0, name: "Son" },
+    { id: 0, name: "Daughter" },
+    { id: 0, name: "Wife" },
+    { id: 0, name: "Uncle" },
+    { id: 0, name: "Aunt" },
+    { id: 0, name: "Cousin" },
+    { id: 0, name: "Other" },
+  ]);
   const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
@@ -116,6 +119,51 @@ export default function FamilyHistoryScreen({
     console.log('[FamilyHistory] Opening search modal - prefetch master options');
     setSearchModalVisible(true);
     fetchMasterOptions('');
+  };
+
+  const fetchRelationTypes = async () => {
+    try {
+      console.log('[FamilyHistory] fetching relationship types from master data (categoryId=5)');
+      const response: any = await axiosClient.get(
+        ApiRoutes.Master.getmasterdata(5)
+      );
+      console.log('[FamilyHistory] master relation types response:', response);
+
+      let items: any[] = [];
+      if (Array.isArray(response)) {
+        items = response;
+      } else if (response.isSuccess && Array.isArray(response.data)) {
+        items = response.data;
+      }
+
+      const filtered = (items || [])
+        .filter((item: any) => item.isActive)
+        .map((item: any) => ({
+          id: item.masterDataId || item.id || 0,
+          name: item.name
+        }));
+
+      if (filtered.length > 0) {
+        setRelationshipOptions(prev => {
+          // Robust normalization: remove spaces, lowercase, remove "paternal/maternal" descriptors
+          const normalize = (name: string) =>
+            name.toLowerCase()
+              .replace(/\([^)]*\)/g, '')
+              .replace(/\s+/g, '')
+              .replace(/grand/g, 'grand') // handle potential variations
+              .trim();
+
+          const apiNames = new Set(filtered.map(f => normalize(f.name)));
+
+          // Only keep defaults that aren't fundamentally covered by the API
+          const uniqueDefaults = prev.filter(p => !apiNames.has(normalize(p.name)));
+
+          return [...filtered, ...uniqueDefaults];
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch relation types for family history:', err);
+    }
   };
 
   const fetchMasterOptions = async (q: string = '') => {
@@ -180,7 +228,9 @@ export default function FamilyHistoryScreen({
     setModalVisible(false);
     setShowRelationshipDropdown(false);
     setShowConditionDropdown(false);
+    setRelationshipOptions(prev => [...prev]); // trigger refresh
     setNewMember({
+      relationshipId: 0,
       relationship: "",
       condition: "",
     });
@@ -204,6 +254,7 @@ export default function FamilyHistoryScreen({
       const memberData: FamilyMemberData = {
         relationship: newMember.relationship.trim(),
         condition: newMember.condition.trim(),
+        relationshipId: newMember.relationshipId,
       };
 
       const success = await saveFamilyMember(memberData);
@@ -308,7 +359,7 @@ export default function FamilyHistoryScreen({
         familyHistoryId: 0,
         patientId: patientId,
         historyName: memberData.condition,
-        relationId: 0,
+        relationId: memberData.relationshipId || 0,
         onsetDate: formattedDate,
         appointmentId: 0,
         isActive: true,
@@ -410,6 +461,8 @@ export default function FamilyHistoryScreen({
   // Load family members on component mount
   useEffect(() => {
     fetchAllFamilyMembers();
+    fetchRelationTypes();
+    fetchMasterOptions(''); // Initial load for medical conditions (cat 13)
   }, []);
 
   const renderMemberCard = useCallback(
@@ -550,13 +603,14 @@ export default function FamilyHistoryScreen({
                             onPress={() => {
                               setNewMember({
                                 ...newMember,
-                                relationship: option,
+                                relationship: option.name,
+                                relationshipId: option.id,
                               });
                               setShowRelationshipDropdown(false);
                             }}
                           >
                             <Text style={styles.dropdownOptionText}>
-                              {option}
+                              {option.name}
                             </Text>
                           </TouchableOpacity>
                         ))}
@@ -1116,7 +1170,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(5),
     marginRight: getResponsiveSpacing(6),
   },
- deleteButtonText: {
+  deleteButtonText: {
     fontFamily: fonts.regular,
     fontSize: getResponsiveFontSize(12),
     color: colors.error,
