@@ -445,7 +445,8 @@ export default function LocationSelection({
             >
               <Text style={{ color: "#fff" }}>📍</Text>
             </TouchableOpacity>
-            {mapLoading && (
+            {/* Only show map loading indicator if map is loading AND not typing in address fields */}
+            {mapLoading && !overlayVisible && (
               <View style={styles.mapLoader}>
                 <ActivityIndicator size="large" color="#6200ee" />
                 <Text style={{ marginTop: 10 }}>Loading map...</Text>
@@ -491,19 +492,15 @@ export default function LocationSelection({
                 { transform: [{ translateY: slideAnim }] }
               ]}
             >
-              <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-                style={{ flex: 1 }}
-              >
+            
                 <SafeAreaView style={{ flex: 1 }}>
-                  <KeyboardAwareScrollView
+                   <KeyboardAwareScrollView
                     enableOnAndroid
                     extraScrollHeight={120}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 0 }}
-                  >
+                  > 
                     <View style={styles.overlayContent}>
                       {/* Current Location Info */}
                       <View style={styles.locationInfo}>
@@ -588,9 +585,8 @@ export default function LocationSelection({
                         {isEditMode ? "Update Address" : "Confirm Address"}
                       </Button>
                     </View>
-                  </KeyboardAwareScrollView>
+                   </KeyboardAwareScrollView> 
                 </SafeAreaView>
-              </KeyboardAvoidingView>
             </Animated.View>
           )}
         </View>

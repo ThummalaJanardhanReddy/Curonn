@@ -113,6 +113,7 @@ export default function BookingScreen({
     };
     restoreUserData();
   }, []);
+  
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -186,7 +187,7 @@ export default function BookingScreen({
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -241,7 +242,7 @@ export default function BookingScreen({
   // ═══════════════════════════════════════════════════════════════════
   // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
   // ═══════════════════════════════════════════════════════════════════
-  const patientId = userData?.e_id || userData?.eId;
+
   // Fetch discount percent from Employee API
   useEffect(() => {
     if (isFromMedicalFlag) return;
@@ -373,7 +374,6 @@ export default function BookingScreen({
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) throw new Error("Patient ID is not available");
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId)
@@ -434,7 +434,6 @@ export default function BookingScreen({
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)
@@ -478,7 +477,7 @@ export default function BookingScreen({
     const payload: any = {
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || userData?.eId,
+      patientId: patientId,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -491,7 +490,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || userData?.eId,
+      createdBy: patientId,
       labPartnerId: 0,
       statusId: statusId,
       paymentAmount: totalAmount,
@@ -537,7 +536,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildLabOrderPayload(paymentData);
-    payload.createdBy = userData?.e_id || userData?.eId;
+    payload.createdBy = patientId;
     payload.req = "web";
     console.log("📤 Lab Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -588,7 +587,7 @@ export default function BookingScreen({
     // Build ambulance order payload (customize as needed)
     const payload: any = {
       ambulanceBookingId: 0,
-      patientId: userData?.e_id || userData?.eId,
+      patientId: patientId,
       serviceName: serviceName,
       serviceId: masterId || 0,
       address: selectedLocation?.address || "",
@@ -602,7 +601,7 @@ export default function BookingScreen({
       isSelfService: patientType === "self",
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || userData?.eId,
+      createdBy: patientId,
       statusId: statusId,
       paymentAmount: totalAmount,
       razorpayOrderId: paymentData?.razorpayOrderId || "",
@@ -665,10 +664,10 @@ export default function BookingScreen({
     const payload: any = {
       programId: masterId,
       programName: serviceName,
-      patientId: Number(userData?.e_id || userData?.eId),
+      patientId: patientId,
       address: "",
       timeSlot: "",
-      createdBy: userData?.e_id || userData?.eId,
+      createdBy: patientId,
       paymentAmount: totalAmount,
       razorpayOrderId: paymentData?.razorpayOrderId || "",
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
@@ -762,7 +761,7 @@ export default function BookingScreen({
       setErrors("");
     }
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -793,7 +792,7 @@ export default function BookingScreen({
    // Lab-test: handleBookNow
   const handleBookWellness = async () => {
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -869,7 +868,7 @@ export default function BookingScreen({
 
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || userData?.eId || 0,
+      patientId: patientId || 0,
       address: "",
       hNo: "",
       landMark: "",
@@ -877,7 +876,7 @@ export default function BookingScreen({
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
       isSelfService: patientType === "self",
-      createdBy: userData?.e_id || userData?.eId,
+      createdBy: patientId,
       xrayMasterId: masterId || 0,
       testType: "Xray",
       diagnosisCenter: selectedDiagCenter.centerName || "",
@@ -1094,7 +1093,7 @@ export default function BookingScreen({
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
-      patientId: userData?.e_id || userData?.eId || 0,
+      patientId: patientId || 0,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -1106,7 +1105,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: displayedTotal.toFixed(2),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || userData?.eId,
+      createdBy: patientId,
       statusId: statusId,
       handlingFee: 0,
       deliveryCharges: deliveryCharges,
@@ -1120,7 +1119,7 @@ export default function BookingScreen({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
         medicineId: ci.medicineId || 0,
-        patientId: userData?.e_id || userData?.eId,
+        patientId: patientId,
         medicineName: ci.medicineName || ci.name || "",
         quantity: ci.quantity || 1,
         price: ci.price || 0,
@@ -1245,7 +1244,7 @@ export default function BookingScreen({
     }
 
     try {
-      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || userData?.eId}`;
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${patientId}`;
       console.log("📤 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -1450,7 +1449,7 @@ export default function BookingScreen({
                     style={styles.addnewaddressButton}
                     onPress={handleViewAddress}
                   >
-                    <Text style={styles.AddressText}>+ Add New Address</Text>
+                    <Text style={styles.AddressText}>+ Add New Address1</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1697,10 +1696,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {(userData?.e_id || userData?.eId) && (
+          {(patientId) && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id || userData?.eId || 0}
+              patientId={patientId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {
@@ -1896,7 +1895,7 @@ export default function BookingScreen({
                       style={styles.addnewaddressButton}
                       onPress={handleViewAddress}
                     >
-                      <Text style={styles.AddressText}>+ Add New Address</Text>
+                      <Text style={styles.AddressText}>+ Add New Address1</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -2415,10 +2414,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {userData?.e_id || userData?.eId && (
+          {patientId && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id || userData?.eId || 0}
+              patientId={patientId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {
