@@ -21,11 +21,13 @@ import Toast from "@/app/shared/components/Toast";
 import { fontStyles, fonts, fontWeights } from "../../shared/styles/fonts";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import { router } from "expo-router";
+import { RadioButton } from "react-native-paper";
 
 interface SavedAddress {
   landMark: any;
   hNo: string;
   patientId: number;
+  selectedAddressId?: number;
   isDefault: boolean;
   addressId: number;
   addressNickname: string;
@@ -37,6 +39,7 @@ interface SavedAddress {
 interface AddressSelectionProps {
   visible: boolean;
   patientId: number; // 🔥 pass dynamically
+  selectedAddressId?: number | null; // Pass the currently selected address ID
   onSelect: (addressId: number) => void;
   onAddNew: () => void;
   onEdit: (addressId: number) => void;
@@ -58,11 +61,17 @@ export default function AddressSelection({
   const [loading, setLoading] = useState(false);
   const [defaultAddressId, setDefaultAddressId] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+
   const [toastMessage, setToastMessage] = useState({
     title: "",
     subtitle: "",
     color: "#4BB543", // default to success green
   });
+  const handleSelectAddress = (addressId: number) => {
+    setSelectedAddressId(addressId);
+    onSelect(addressId);
+  };
   useEffect(() => {
     // Set default addressId when addresses are fetched
     const defaultAddr = addresses.find(addr => addr.isDefault);
@@ -79,7 +88,18 @@ export default function AddressSelection({
       console.log("Fetched addresses:", responcedata);
       if (responcedata.isSuccess) {
         console.log("Address data:", responcedata.data);
-        setAddresses(responcedata.data ?? []);
+        const addressList = responcedata.data ?? [];
+        setAddresses(addressList);
+        // ⭐ Priority 1: previously selected address
+        if (selectedAddressId) {
+          setSelectedAddressId(selectedAddressId);
+        } else {
+          // ⭐ Priority 2: default address
+          const defaultAddr = addressList.find(a => a.isDefault);
+          if (defaultAddr) {
+            setSelectedAddressId(defaultAddr.addressId);
+          }
+        }
       }
     } catch (error) {
       console.error("Fetch address error:", error);
@@ -110,7 +130,7 @@ export default function AddressSelection({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <SafeAreaView style={styles.safeArea} edges={['top','bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
 
         <View style={styles.container}>
           <View style={styles.header}>
@@ -134,9 +154,22 @@ export default function AddressSelection({
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <Text style={styles.nickname}>
-                          {item.addressNickname?.toUpperCase()}
-                        </Text>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                          <RadioButton
+                            value={item.addressId.toString()}
+                            status={selectedAddressId === item.addressId ? "checked" : "unchecked"}
+                            onPress={() => {
+                              setSelectedAddressId(item.addressId);
+                              onSelect(item.addressId);
+                            }}
+                            color="#C35E9C"
+                            uncheckedColor="#C35E9C"
+                          />
+
+                          <Text style={styles.nickname}>
+                            {item.addressNickname?.toUpperCase()}
+                          </Text>
+                        </View>
 
                         {item.isDefault ? (
                           <Text style={{ color: "#4BB543", fontFamily: fonts.medium, fontWeight: "bold" }}>Default</Text>
@@ -245,9 +278,9 @@ export default function AddressSelection({
                     </View>
 
 
-                    <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
+                    {/* <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
                       <Text style={{ color: "#fff", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Select this address</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
                     {/* <PrimaryButton
                       title="Select"

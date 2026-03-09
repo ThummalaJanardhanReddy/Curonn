@@ -88,6 +88,16 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     branch: "",
     noFamilyMembers: ""
   });
+  const [profileStatus, setProfileStatus] = useState({
+    medicalHistory: false,
+    familyHistory: false,
+    pastProcedures: false,
+    socialHabits: false,
+    foodAllergies: false,
+    drugAllergies: false,
+    environmentalAllergies: false,
+    menstrualHistory: false,
+  });
   // Track original values for edit detection
   const [originalProfile, setOriginalProfile] = useState({
     fullName: "",
@@ -95,20 +105,20 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     gender: ""
   });
   const { userData } = useUser();
-   const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+  const { setUserData } = useUser();
+  const patientId = Number(userData?.e_id || userData?.eId);
 
   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
-    
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+
   React.useEffect(() => {
     if (!visible || !patientId) return;
     // console.log("[ProfileModal] userData:", userData);
@@ -219,6 +229,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     }, [])
   );
 
+
+
   // Profile data
   const baseProfileItems: ProfileItem[] = [
     {
@@ -235,7 +247,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     },
     {
       id: 3,
-      title: "Past Procedures",
+      title: "Surgical History",
       subtext: "Your past surgeries",
       image: images.profileModal.pastProcedures_png,
     },
@@ -352,6 +364,54 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     }
   };
 
+
+useEffect(() => {
+  if (!visible || !patientId) return;
+  fetchProfileStatus();
+}, [visible, patientId]);
+
+  const fetchProfileStatus = async () => {
+    try {
+      const [
+        medical,
+        family,
+        past,
+        social,
+        food,
+        drug,
+        environment,
+        menstrual
+      ] = await Promise.all([
+        axiosClient.post(ApiRoutes.MedicalHistory.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.FamilyHistory.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.SurgicalHistory.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.SocialHistory.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.FoodAllergies.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.DrugAllergies.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.EnvAllergies.getAll, { patientId }),
+        axiosClient.post(ApiRoutes.MenstrualHistory.getAll, {
+          patientId,
+          pageNo: 1,
+          pageSize: 10
+        }),
+      ]);
+
+      setProfileStatus({
+        medicalHistory: medical?.items?.length > 0,
+        familyHistory: family?.items?.length > 0,
+        pastProcedures: past?.items?.length > 0,
+        socialHabits: social?.items?.length > 0,
+        foodAllergies: food?.items?.length > 0,
+        drugAllergies: drug?.items?.length > 0,
+        environmentalAllergies: environment?.items?.length > 0,
+        menstrualHistory: menstrual?.items?.length > 0,
+      });
+
+    } catch (error) {
+      console.log("Profile status fetch error:", error);
+    }
+  };
+
   const showLogoutConfirmation = () => {
     setLogoutConfirmVisible(true);
   };
@@ -464,6 +524,28 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     hideLocationSelection();
   };
 
+  const getButtonLabel = (id: number) => {
+    switch (id) {
+      case 1:
+        return profileStatus.medicalHistory ? "Update" : "Add";
+      case 2:
+        return profileStatus.familyHistory ? "Update" : "Add";
+      case 3:
+        return profileStatus.pastProcedures ? "Update" : "Add";
+      case 4:
+        return profileStatus.socialHabits ? "Update" : "Add";
+      case 5:
+        return profileStatus.foodAllergies ? "Update" : "Add";
+      case 6:
+        return profileStatus.drugAllergies ? "Update" : "Add";
+      case 7:
+        return profileStatus.environmentalAllergies ? "Update" : "Add";
+      case 8:
+        return profileStatus.menstrualHistory ? "Update" : "Add";
+      default:
+        return "Add";
+    }
+  };
   const renderProfileItem = ({ item }: { item: ProfileItem }) => (
     <TouchableOpacity
       style={styles.profileItemCard}
@@ -511,8 +593,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       {/* <TouchableOpacity style={styles.addButton}>
         <IconButton icon="plus" size={20} iconColor="#6200ee" />
       </TouchableOpacity> */}
-      <Button
-        mode="outlined"
+      <TouchableOpacity style={styles.addupdateButton}
         onPress={() => {
           if (item.id === 1) {
             // Medical History
@@ -542,20 +623,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             console.log("Pressed");
           }
         }}
-        style={[commonStyles.buttonSecondary, { height: 32, borderRadius: 15 }]}
-        contentStyle={{ height: 35 }}
-        labelStyle={[
-          commonStyles.buttonTextPrimary,
-          { fontSize: 14, lineHeight: 18, fontWeight: "700" },
-        ]}
       >
-        Add
-      </Button>
+        <Text style={styles.addupdatetext}>{getButtonLabel(item.id)}</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   const renderProfileTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.tabContent1} showsVerticalScrollIndicator={false}>
       {/* Profile Items */}
       <View style={styles.profileItemsContainer}>
         {profileItems.map((item) => (
@@ -1013,6 +1088,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           <FoodAllergiesModal
             visible={foodAllergiesModalVisible}
             onClose={() => setFoodAllergiesModalVisible(false)}
+            onDataStatusChange={(hasData) =>
+              setProfileStatus(prev => ({
+                ...prev,
+                foodAllergies: hasData
+              }))
+            }
           />
 
           {/* Medical History Modal */}
@@ -1020,7 +1101,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={medicalHistoryModalVisible}
             onClose={() => setMedicalHistoryModalVisible(false)}
           >
-            <MedicalHistoryScreen />
+            <MedicalHistoryScreen
+              onClose={() => setMedicalHistoryModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  medicalHistory: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* Family History Modal */}
@@ -1028,7 +1117,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={familyHistoryModalVisible}
             onClose={() => setFamilyHistoryModalVisible(false)}
           >
-            <FamilyHistoryScreen />
+            <FamilyHistoryScreen
+              onClose={() => setFamilyHistoryModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  familyHistory: hasData
+                }))
+              } />
           </ProfileScreenModal>
 
           {/* Past Procedures Modal */}
@@ -1036,7 +1132,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={pastProceduresModalVisible}
             onClose={() => setPastProceduresModalVisible(false)}
           >
-            <PastProceduresScreen />
+            <PastProceduresScreen
+              onClose={() => setPastProceduresModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  pastProcedures: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* Social Habits Modal */}
@@ -1044,7 +1148,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={socialHabitsModalVisible}
             onClose={() => setSocialHabitsModalVisible(false)}
           >
-            <SocialHabitsScreen />
+            <SocialHabitsScreen
+              onClose={() => setSocialHabitsModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  socialHabits: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* Drug Allergies Modal */}
@@ -1052,7 +1164,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={drugAllergiesModalVisible}
             onClose={() => setDrugAllergiesModalVisible(false)}
           >
-            <DrugAllergiesScreen />
+            <DrugAllergiesScreen
+              onClose={() => setSocialHabitsModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  drugAllergies: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* Environmental Allergies Modal */}
@@ -1060,7 +1180,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={environmentalAllergiesModalVisible}
             onClose={() => setEnvironmentalAllergiesModalVisible(false)}
           >
-            <EnvironmentalAllergiesScreen />
+            <EnvironmentalAllergiesScreen
+              onClose={() => setEnvironmentalAllergiesModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  environmentalAllergies: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* Menstrual History Modal */}
@@ -1068,7 +1196,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             visible={menstrualHistoryModalVisible}
             onClose={() => setMenstrualHistoryModalVisible(false)}
           >
-            <MenstrualHistoryScreen />
+            <MenstrualHistoryScreen
+              onClose={() => setMenstrualHistoryModalVisible(false)}
+              onDataStatusChange={(hasData) =>
+                setProfileStatus(prev => ({
+                  ...prev,
+                  menstrualHistory: hasData
+                }))
+              }
+            />
           </ProfileScreenModal>
 
           {/* My Orders Modal */}
@@ -1433,6 +1569,13 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     backgroundColor: "#fff",
   },
+    tabContent1: {
+    flex: 1,
+    // backgroundColor: 'blue',
+    paddingTop: 10,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
   userCard: {
     backgroundColor: "#B0A3B1",
     borderRadius: 18,
@@ -1483,6 +1626,7 @@ const styles = StyleSheet.create({
   },
   profileItemsContainer: {
     gap: 1,
+    marginBottom: 15,
   },
   profileItemWrapper: {
     paddingHorizontal: getResponsivePadding(20),
@@ -1498,8 +1642,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     lineHeight: 22,
     alignItems: "center",
-    elevation: 2,
+    //elevation: 2,
     height: 68,
+    marginBottom: 0,
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 1 },
     // shadowOpacity: 0.1,
@@ -1531,6 +1676,20 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#f0f0f0",
     borderRadius: 20,
+  },
+  addupdateButton: {
+    paddingHorizontal: 15,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#C35E9C",
+    paddingVertical: 3,
+  },
+  addupdatetext: {
+    fontFamily: fonts.regular,
+    color: "#C35E9C",
+    fontSize: 13,
+    paddingTop: 2,
   },
   settingsContainer: {
     // padding: 20,

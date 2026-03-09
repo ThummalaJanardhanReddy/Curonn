@@ -389,7 +389,6 @@ export default function MedicineListScreen() {
             paddingHorizontal: 20,
             paddingTop: 5,
             paddingBottom: 5,
-            backgroundColor: '#ffffff'
           }}
         >
           {/* Search Field */}
@@ -453,9 +452,10 @@ export default function MedicineListScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.bg_primary,
     // ...commonStyles.containercontent_layout,
     flex: 1,
-    backgroundColor: colors.white,
+    //backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',

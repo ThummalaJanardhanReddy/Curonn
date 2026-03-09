@@ -38,10 +38,12 @@ interface Procedure {
 
 interface PastProceduresScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 export default function PastProceduresScreen({
   onClose,
+  onDataStatusChange
 }: PastProceduresScreenProps) {
   const { userData } = useUser();
   const [procedures, setProcedures] = useState<Procedure[]>([]);
@@ -53,6 +55,7 @@ export default function PastProceduresScreen({
   const [showNativeDatePicker, setShowNativeDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tempDate, setTempDate] = useState(new Date());
+  const [procedureModalVisible, setProcedureModalVisible] = useState(false);
   const [newProcedure, setNewProcedure] = useState({
     procedureName: "",
     procedureId: 0,
@@ -78,7 +81,7 @@ export default function PastProceduresScreen({
   const handleAddProcedure = () => {
     setModalVisible(true);
   };
-    const patientId = Number(userData?.e_id || userData?.eId);
+  const patientId = Number(userData?.e_id || userData?.eId);
   const fetchSurgicalHistory = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -100,12 +103,21 @@ export default function PastProceduresScreen({
         payload
       );
       console.log('📥 Surgical History Response:', JSON.stringify(response, null, 2));
+      let list: Procedure[] = [];
+
       if (response?.items && Array.isArray(response.items)) {
-        setProcedures(response.items);
+        list = response.items;
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setProcedures(response.data);
+        list = response.data;
       } else if (Array.isArray(response)) {
-        setProcedures(response);
+        list = response;
+      }
+
+      setProcedures(list);
+
+      // ⭐ notify Profile screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
       }
     } catch (error) {
       console.error("Error fetching surgical history:", error);
@@ -378,7 +390,7 @@ export default function PastProceduresScreen({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <BackButton
-            title="Past Procedures"
+            title="Surgical History"
             color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
@@ -395,7 +407,7 @@ export default function PastProceduresScreen({
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Procedures List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -454,9 +466,8 @@ export default function PastProceduresScreen({
                   <TouchableOpacity
                     style={styles.dropdownButton}
                     onPress={() => {
-                      const willBeVisible = !dropdownVisible;
-                      setDropdownVisible(willBeVisible);
-                      if (willBeVisible) fetchMasterOptions("");
+                      setProcedureModalVisible(true);
+                      fetchMasterOptions("");
                     }}
                   >
                     <Text style={styles.dropdownText}>
@@ -466,14 +477,21 @@ export default function PastProceduresScreen({
                   </TouchableOpacity>
 
                   {/* Dropdown Options */}
-                  {dropdownVisible && (
-                    <>
+                  <Modal
+                    visible={procedureModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setProcedureModalVisible(false)}
+                  >
+                    <View style={styles.centerModalOverlay}>
+
                       <TouchableOpacity
-                        style={styles.dropdownBackdrop}
-                        onPress={() => setDropdownVisible(false)}
+                        style={styles.centerModalBackdrop}
                         activeOpacity={1}
+                        onPress={() => setProcedureModalVisible(false)}
                       />
-                      <View style={styles.dropdownOptions}>
+
+                      <View style={styles.centerModalContainer}>
                         <TextInput
                           style={styles.dropdownSearchInput}
                           placeholder="Search procedure..."
@@ -481,17 +499,23 @@ export default function PastProceduresScreen({
                           value={dropdownSearch}
                           onChangeText={handleSearchChange}
                         />
-                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+                        <ScrollView
+                          style={{ maxHeight: 400 }}
+                          keyboardShouldPersistTaps="handled"
+                          showsVerticalScrollIndicator
+                        >
                           {dropdownLoading ? (
-                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                              <ActivityIndicator size="small" color={colors.primary} />
-                            </View>
-                          ) : masterOptions && masterOptions.length > 0 ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : masterOptions.length > 0 ? (
                             masterOptions.map((item) => (
                               <TouchableOpacity
                                 key={String(item.id)}
                                 style={styles.dropdownOption}
-                                onPress={() => handleSelectProcedure(item)}
+                                onPress={() => {
+                                  handleSelectProcedure(item);
+                                  setProcedureModalVisible(false);
+                                }}
                               >
                                 <Text style={styles.dropdownOptionText}>{item.name}</Text>
                               </TouchableOpacity>
@@ -503,8 +527,9 @@ export default function PastProceduresScreen({
                           )}
                         </ScrollView>
                       </View>
-                    </>
-                  )}
+
+                    </View>
+                  </Modal>
                 </View>
               </View>
 
@@ -613,6 +638,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -622,6 +649,29 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
   },
+  centerModalOverlay: {
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(0,0,0,0.4)",
+},
+
+centerModalBackdrop: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+},
+
+centerModalContainer: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 10,
+  maxHeight: "70%",
+  elevation: 6,
+},
   headerTitle: {
     ...fontStyles.headercontent,
     color: colors.black,
@@ -662,15 +712,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
+    borderWidth: 1,
+    borderColor: '#DADADA',
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: 'flex-start',
   },
   procedureContent: {
@@ -737,7 +789,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-     fontSize: getResponsiveFontSize(15),
+    fontSize: getResponsiveFontSize(15),
     fontWeight: '600',
     color: colors.text,
     fontFamily: fonts.semiBold,
@@ -756,7 +808,7 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(20),
   },
   inputLabel: {
-     fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),

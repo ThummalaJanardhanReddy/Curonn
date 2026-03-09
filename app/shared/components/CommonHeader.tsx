@@ -23,7 +23,6 @@ import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as signalR from "@microsoft/signalr";
-import HomeScreen from '@/app/(main)/home';
 
 interface CommonHeaderProps {
   title?: string;
@@ -55,15 +54,14 @@ export default function CommonHeader({
   const [locationVisible, setLocationVisible] = useState(false);
   const [count, setCount] = useState(0);
   
-  const [selectedLocation, setSelectedLocation] = useState(currentLocation);
+  const [selectedLocation, setSelectedLocation] = useState("Fetching location...");
   const [profileForm, setProfileForm] = useState({
     gender: "",
     image: "",
   });
   const { getCurrentAddress, address } = useLocation();
-  const { userData } = useUser();
+  const { userData, setUserData } = useUser();
   const { cartCount } = useCart();
-   const { setUserData } = useUser();
   const patientId = Number(userData?.e_id || userData?.eId);
 
    useEffect(() => {
@@ -148,19 +146,43 @@ export default function CommonHeader({
   };
 }, [patientId, isHomePage]);
 
-  useEffect(() => {
-    // Fetch current address on mount
-    const fetchAddress = async () => {
-      const address = await getCurrentAddress();
-      if (address) {
-        setSelectedLocation(address);
-        if (onLocationChange) {
-          onLocationChange(address);
-        }
-      };
+useEffect(() => {
+  const fetchAddress = async () => {
+    try {
+
+      // ⭐ Check saved address first
+      const storedAddress = await AsyncStorage.getItem("userAddress");
+
+      if (storedAddress) {
+        setSelectedLocation(storedAddress);
+        onLocationChange?.(storedAddress);
+        return;
+      }
+
+      // ⭐ Try getting GPS location
+      const addr = await getCurrentAddress();
+
+      if (addr) {
+        setSelectedLocation(addr);
+        onLocationChange?.(addr);
+      } else {
+        // ⭐ If permission denied or GPS failed
+        setSelectedLocation("Select your address");
+        setLocationVisible(true);
+      }
+
+    } catch (error) {
+      console.log("Location load error:", error);
+
+      // ⭐ fallback to manual location selection
+      setSelectedLocation("Select your address");
+      setLocationVisible(true);
     }
-    fetchAddress();
-  }, []);
+  };
+
+  fetchAddress();
+}, []);
+
       const [latLng, setLatLng] = useState<{ latitude: string; longitude: string } | null>(null);
 
       // Fetch lat/lng from AsyncStorage
@@ -175,9 +197,9 @@ export default function CommonHeader({
         getLatLng();
       }, [selectedLocation]);
 
-  useEffect(() => {
-    setSelectedLocation(address);
-  }, [address]);
+  // useEffect(() => {
+  //   setSelectedLocation(address);
+  // }, [address]);
 
   const handleProfilePress = () => {
     console.log('Profile button pressed');
@@ -208,15 +230,13 @@ export default function CommonHeader({
     setLocationVisible(true);
   };
 
-  const handleLocationSelected = (locationData: any) => {
-    console.log('Location selected:', locationData);
-    const locationString = `${locationData.address}, ${locationData.houseNumber}`;
-    setSelectedLocation(locationString);
-    if (onLocationChange) {
-      onLocationChange(locationString);
-    }
-  };
-
+const handleLocationSelected = async (locationData: any) => {
+  const locationString = `${locationData.address}, ${locationData.houseNumber}`;
+  setSelectedLocation(locationString);
+  await AsyncStorage.setItem("userAddress", locationString);
+  onLocationChange?.(locationString);
+  setLocationVisible(false); // ⭐ close modal
+};
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
@@ -292,12 +312,7 @@ export default function CommonHeader({
       </>
     );
   }
-                    {/* Show lat/lng below address */}
-                    {latLng && (
-                      <Text style={{ color: 'white', fontSize: 12 }}>
-                        Lat: {latLng.latitude} | Lng: {latLng.longitude}
-                      </Text>
-                    )}
+               
 
   // Default style for other pages (like lab-tests)
   return (

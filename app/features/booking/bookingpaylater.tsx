@@ -755,7 +755,7 @@ export default function BookingPayLaterScreen() {
           </View>
         </View>
 
-        <View style={{ height: getResponsiveSpacing(120) }} />
+        <View style={{ height: getResponsiveSpacing(20) }} />
       </ScrollView>
 
       {/* ── Footer button ────────────────────────────────────────────── */}
@@ -906,9 +906,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontFamily: fonts.bold,
-    fontSize: getResponsiveFontSize(20),
-    color: '#333',
+   fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
+    color: colors.black,
   },
   closeButton: {
     width: 36,
@@ -927,22 +927,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
     backgroundColor: '#F5F5F9',
+    paddingVertical: getResponsiveSpacing(10),
   },
   section: {
-    marginTop: getResponsiveSpacing(20),
+    marginTop: getResponsiveSpacing(5),
   },
   sectionTitle: {
-    fontSize: getResponsiveFontSize(14),
-    fontFamily: fonts.bold,
-    color: '#000',
-    marginBottom: getResponsiveSpacing(8),
+   fontSize: 14,
+    color: "#000000",
+    marginBottom: getResponsiveSpacing(5),
+    marginTop: getResponsiveSpacing(0),
+    fontFamily: fonts.semiBold
   },
   prescriptionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    padding: getResponsiveSpacing(16),
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(10),
   },
   prescriptionRow: {
     flexDirection: 'row',
@@ -1005,7 +1008,7 @@ const styles = StyleSheet.create({
   editPillButton: {
     alignSelf: 'flex-start',
     paddingHorizontal: 30,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
     height: 30,
@@ -1045,14 +1048,14 @@ const styles = StyleSheet.create({
   editAddressButtonNew: {
     alignSelf: 'flex-start',
     paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#C35E9C',
+    borderColor: '#C15E9C',
   },
   editAddressTextNew: {
-    fontSize: 13,
-    color: '#C35E9C',
+  fontSize: 13,
+    color: '#C15E9C',
     fontFamily: fonts.medium,
   },
   addnewaddressButton: {
@@ -1064,11 +1067,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
   },
   patientCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbdbdb",
+    marginBottom: getResponsiveSpacing(10),
   },
   radioGroup: {
     flexDirection: 'row',
@@ -1080,7 +1084,7 @@ const styles = StyleSheet.create({
     borderColor: '#D9DEE6',
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     width: '48%',
   },
@@ -1173,47 +1177,50 @@ const styles = StyleSheet.create({
     tintColor: '#666',
   },
   policyTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontFamily: fonts.regular,
-    color: '#333',
-    marginBottom: getResponsiveSpacing(8),
+        fontSize: 14,
+    color: "#000000",
+    marginBottom: getResponsiveSpacing(5),
+    marginTop: getResponsiveSpacing(10),
+    fontFamily: fonts.semiBold
   },
   policyCard: {
-    marginTop: 4,
+    marginTop: 0,
   },
   policyTextNew: {
-    fontSize: 13,
-    color: '#333',
+     fontSize: 12,
+    color: "#666",
     lineHeight: 20,
-    fontFamily: fonts.regular,
-    marginBottom: getResponsiveSpacing(12),
+    marginBottom: 8,
+    fontFamily: fonts.regular
   },
   learnMoreButton: {
     alignSelf: 'flex-start',
   },
   learnMoreTextNew: {
-    fontSize: 14,
-    color: '#0881FC',
-    fontFamily: fonts.medium,
-    textDecorationLine: 'underline',
+    fontSize: 13,
+    color: "#0881FC",
+    fontWeight: "500",
+    textDecorationLine: "underline",
+    fontFamily: fonts.medium
   },
   footer: {
     padding: 20,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#E0E0E0',
+    
   },
   bottomButton: {
     width: '100%',
     backgroundColor: '#C35E9C',
     borderRadius: getResponsiveSpacing(30),
-    paddingVertical: getResponsiveSpacing(14),
+    paddingVertical: getResponsiveSpacing(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   bottomButtonText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: getResponsiveFontSize(15),
     fontFamily: fonts.semiBold,
   },

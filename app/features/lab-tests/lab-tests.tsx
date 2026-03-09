@@ -917,7 +917,7 @@ export default function LabTestsScreen() {
         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffffff"
+          backgroundColor="#ffffff"
         />
         {/* Header */}
         <View style={styles.defaultHeader}>
@@ -946,6 +946,7 @@ export default function LabTestsScreen() {
             paddingVertical: 5,
           }}
         > */}
+        <View style={styles.boxcolor}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
@@ -1099,6 +1100,7 @@ export default function LabTestsScreen() {
 
           {/* <View style={styles.backgroundImageContainer}>
           </View> */}
+        </View>
         </View>
         {/* </LinearGradient> */}
 
@@ -1569,7 +1571,7 @@ const styles = StyleSheet.create({
   },
   container: {
     ...commonStyles.containercontent_layout,
-    backgroundColor: colors.bg_primary, // colors.bg_secondary,
+    backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingBottom: 0,
   },
@@ -1587,11 +1589,15 @@ const styles = StyleSheet.create({
     paddingTop: 7,
     flex: 1,
   },
-
+  boxcolor:{
+ backgroundColor:colors.bg_primary,
+ flex:1
+  },
   searchContainer: {
     marginBottom: 20,
     paddingHorizontal: 20,
     marginTop: 5,
+    backgroundColor:colors.bg_primary
   },
   cardContainer: {
     width: '100%',

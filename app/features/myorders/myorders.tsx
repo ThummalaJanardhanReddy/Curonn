@@ -49,7 +49,7 @@ export default function OrdersScreen() {
   useEffect(() => {
     console.log('[OrdersScreen] userData changed:', userData);
   }, [userData]);
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
     try {
       const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
@@ -78,7 +78,6 @@ export default function OrdersScreen() {
       const map = await getOrderStatusIdMap();
       setStatusIdMap(map);
       // Fetch all orders initially
-      const patientId = userData?.e_id || userData?.eId;
       if (patientId) {
         const ordersData = await fetchAllOrders(patientId, 0);
         setOrders(ordersData);
@@ -86,7 +85,7 @@ export default function OrdersScreen() {
       setLoading(false);
     }
     fetchStatusMapAndOrders();
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,7 +103,6 @@ export default function OrdersScreen() {
   // Refresh orders from API when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const patientId = userData?.e_id || userData?.eId;
       if (patientId) {
         setLoading(true);
         fetchAllOrders(patientId, 0).then((ordersData) => {
@@ -112,7 +110,7 @@ export default function OrdersScreen() {
           setLoading(false);
         });
       }
-    }, [userData?.e_id])
+    }, [patientId])
   );
 
   // Add some sample orders if none exist (for demo purposes)
@@ -133,7 +131,7 @@ export default function OrdersScreen() {
 
   // Fetch orders when filter changes or search is performed
   useEffect(() => {
-    const patientId = userData?.e_id || userData?.eId;
+    
     let statusId = 0;
     console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
     
@@ -159,7 +157,7 @@ export default function OrdersScreen() {
       setOrders(ordersData);
       setLoading(false);
     });
-  }, [selectedFilter, statusIdMap, userData?.e_id, searchQuery]);
+  }, [selectedFilter, statusIdMap, patientId, searchQuery]);
 
   const filteredOrders = [...orders].sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
 
@@ -349,12 +347,12 @@ export default function OrdersScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff"}}>
-      <View style={[styles.container]}> // ensure container is also black and fills height
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff"}} edges={['top']}>
+      <View style={[styles.container]}> 
         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffffff" />
+          backgroundColor="#ffffff" />
 
         {/* Header */}
         <View style={styles.header}>
@@ -365,7 +363,6 @@ export default function OrdersScreen() {
           style={{
             paddingHorizontal: 0,
             paddingVertical: 5,
-            backgroundColor: '#ffffff',
             borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
           }}
@@ -403,7 +400,7 @@ export default function OrdersScreen() {
                 keyExtractor={(item) => item.key}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filtersList, { paddingLeft: 20, paddingRight: 20 }]} />
+                contentContainerStyle={[styles.filtersList, { paddingBottom:0,paddingLeft: 20, paddingRight: 20 }]} />
             </View>
           )}
         </View>
@@ -422,8 +419,8 @@ export default function OrdersScreen() {
               <FlatList
                 data={filteredOrders}
                 renderItem={renderOrderCard}
-                keyExtractor={(item) => item.orderNo}
-                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15 }]}
+                keyExtractor={(item, index) => item.orderNo ? String(item.orderNo) : `order-${index}`}
+                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 0 }]}
                 showsVerticalScrollIndicator={true}
                 style={{ flex: 1, backgroundColor: '#F5F4F9' }} />
 
@@ -438,8 +435,8 @@ export default function OrdersScreen() {
         statusName={selectedOrder?.statusName || ''}
         onClose={() => setOrderDetailsVisible(false)}
         refreshOrders={async () => {
-          if (userData?.e_id) {
-            const ordersData = await fetchAllOrders(userData.e_id, 0);
+          if (patientId) {
+            const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);
           }
         }} />
@@ -450,7 +447,10 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-     backgroundColor: colors.white, // removed to allow black background
+    backgroundColor: colors.white,
+    // Remove border to avoid shrinking height
+    // borderWidth: 1,
+    // borderColor: '#E0E0E0',
   },
 
   header: {
@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
   },
   ordersdataContainer: {
     flex: 1,
-    marginHorizontal: getResponsiveSpacing(20),
-    marginTop: 10,
+    marginHorizontal: 0,
+    marginTop: 0,
     minHeight: 0,
   },
   filtersList: {
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     height: 40,
-    marginTop: 5
+    marginTop: 0
   },
   searchIcon: {
     width: 16,

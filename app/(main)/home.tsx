@@ -193,8 +193,8 @@ export default function HomeScreen() {
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        if (userData?.e_id) {
-          const data = await fetchAllOrders(userData.e_id, 0);
+        if (patientId) {
+          const data = await fetchAllOrders(patientId, 0);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
@@ -222,7 +222,7 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id]),
+    }, [patientId]),
   );
   // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
@@ -255,12 +255,13 @@ export default function HomeScreen() {
   );
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] =
     useState(false);
+   
   // Always fetch latest orders on mount and when page is focused
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        const patientId = userData?.eId || userData?.e_id;
+        
         if (patientId) {
           const data = await fetchAllOrders(patientId);
           if (isActive) {
@@ -281,7 +282,7 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id]),
+    }, [patientId]),
   );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
@@ -1367,7 +1368,7 @@ export default function HomeScreen() {
         statusName={selectedOrderDetails?.statusName || ""}
         onClose={() => setOrderDetailsModalVisible(false)}
         refreshOrders={async () => {
-          const patientId = userData?.eId || userData?.e_id;
+          //const patientId = userData?.eId || userData?.e_id;
           if (patientId) {
             const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);

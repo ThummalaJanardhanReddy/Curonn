@@ -38,10 +38,13 @@ interface MenstrualRecord {
 
 interface MenstrualHistoryScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 export default function MenstrualHistoryScreen({
   onClose,
+  onDataStatusChange
+
 }: MenstrualHistoryScreenProps) {
   const [records, setRecords] = useState<MenstrualRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,7 @@ export default function MenstrualHistoryScreen({
   const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
   // fetch user id from context
   const { userData } = useUser();
-   const { setUserData } = useUser();
+  const { setUserData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
@@ -61,17 +64,17 @@ export default function MenstrualHistoryScreen({
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
-  
-const patientId = Number(userData?.e_id || userData?.eId);
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+
+  const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -200,6 +203,10 @@ const patientId = Number(userData?.e_id || userData?.eId);
       }));
 
       setRecords(mapped);
+
+      if (onDataStatusChange) {
+        onDataStatusChange(mapped.length > 0);
+      }
     } catch (err: any) {
       console.error("Failed to fetch menstrual history:", err);
       setError("Failed to load menstrual history");
@@ -429,6 +436,8 @@ const styles = StyleSheet.create({
     paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -479,14 +488,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: "flex-start",
   },
   recordContent: {

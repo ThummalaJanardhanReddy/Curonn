@@ -63,7 +63,7 @@ export default function MedicinesScreen() {
       restoreUserData();
     }, []);
   const { setUserData } = useUser();
-const patientId = userData?.e_id || userData?.eId;
+const patientId = Number(userData?.e_id || userData?.eId);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 3) {
@@ -331,18 +331,7 @@ const patientId = userData?.e_id || userData?.eId;
       </View>
 
 
-      <LinearGradient
-        colors={[
-          "rgba(255, 255, 255, 1)",
-          "rgba(247, 84, 10, 0.2)",
-        ]}
-        start={{ x: 0.1, y: 0.4 }}
-        end={{ x: 0.1, y: 0.1 }}
-        style={{
-          paddingHorizontal: 20, // ✅ works
-          paddingVertical: 5,
-        }}
-      >
+     <View style={styles.boxcolor}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
@@ -366,7 +355,7 @@ const patientId = userData?.e_id || userData?.eId;
             )}
           </View>
         </View>
-      </LinearGradient>
+
       <View style={styles.containercontent}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -411,6 +400,7 @@ const patientId = userData?.e_id || userData?.eId;
         initialOption={initialModalOption}
       />
     </View>
+    </View>
   );
 }
 
@@ -428,14 +418,21 @@ const styles = StyleSheet.create({
   containercontent: {
     flex: 1,
     backgroundColor: colors.white,
-    paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: 0,
   },
+   boxcolor:{
+ backgroundColor:colors.bg_primary,
+ flex:1
+  },
   content: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: colors.bg_primary,
     flex: 1,
   },
   searchContainer: {
     marginBottom: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(20),
+     marginTop: 5,
   },
   searchInputContainer: {
     flexDirection: "row",

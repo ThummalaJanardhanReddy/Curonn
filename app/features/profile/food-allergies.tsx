@@ -40,11 +40,13 @@ interface FoodAllergy {
 interface FoodAllergiesModalProps {
   visible: boolean;
   onClose: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 export default function FoodAllergiesModal({
   visible,
   onClose,
+  onDataStatusChange
 }: FoodAllergiesModalProps) {
   const [allergies, setAllergies] = useState<FoodAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -99,7 +101,11 @@ export default function FoodAllergiesModal({
       );
       console.log('DEBUG: fetch All Allergies response:', response);
       // If response is an array, use it directly
-      setAllergies(Array.isArray(response) ? response : response.items || []);
+      const list = Array.isArray(response) ? response : response.items || [];
+      setAllergies(list);
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
+      }
     } catch (error) {
       console.error("Failed to fetch relation types", error);
     }
@@ -375,7 +381,7 @@ export default function FoodAllergiesModal({
             </View>
 
             {/* Divider with shadow */}
-            <View style={styles.divider} />
+            {/* <View style={styles.divider} /> */}
 
             {/* Allergies List */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -704,6 +710,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(15),
     // paddingBottom: getResponsiveSpacing(15),
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
     backgroundColor: "#fff",
   },
   headerLeft: {
@@ -733,18 +741,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   dropdownModalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.3)",
-  justifyContent: "center",
-  padding: 20,
-},
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 20,
+  },
 
-dropdownModalContainer: {
-  backgroundColor: "#fff",
-  borderRadius: 12,
-  padding: 10,
-  maxHeight: "70%",
-},
+  dropdownModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    maxHeight: "70%",
+  },
   divider: {
     color: "#000",
     marginHorizontal: getResponsiveSpacing(5),
@@ -764,8 +772,8 @@ dropdownModalContainer: {
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    borderWidth: 1,
-    borderColor: "#B4B6B9",
+   borderWidth: 1,
+        borderColor: '#DADADA',
     flexDirection: "row",
     alignItems: "flex-start",
     // shadowColor: "#000",

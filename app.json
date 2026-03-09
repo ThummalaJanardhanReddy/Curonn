@@ -34,7 +34,7 @@
     },
     "splash": {
       "image": "./assets/Splash_Screen.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#C35E9C"
     },
     "web": {

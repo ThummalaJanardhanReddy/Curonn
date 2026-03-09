@@ -37,9 +37,10 @@ interface MedicalCondition {
 interface MedicalHistoryScreenProps {
   onClose?: () => void;
   showAddModal?: boolean;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalHistoryScreenProps) {
+export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStatusChange }: MedicalHistoryScreenProps) {
   const { userData } = useUser();
   const [conditions, setConditions] = useState<MedicalCondition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,12 +92,21 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
       const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.getAll, payload);
       console.log('📥 Medical History Response:', JSON.stringify(response, null, 2));
 
+      let list: MedicalCondition[] = [];
+
       if (response?.items && Array.isArray(response.items)) {
-        setConditions(response.items);
+        list = response.items;
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setConditions(response.data);
+        list = response.data;
       } else if (Array.isArray(response)) {
-        setConditions(response);
+        list = response;
+      }
+
+      setConditions(list);
+
+      // ⭐ inform parent screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
       }
     } catch (error) {
       console.error('Fetch medical history error:', error);
@@ -377,7 +387,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Conditions List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -619,6 +629,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
     backgroundColor: colors.white,
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -666,12 +678,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
+     borderWidth: 1,
+        borderColor: '#DADADA',
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: 'flex-start',
   },
   conditionContent: {

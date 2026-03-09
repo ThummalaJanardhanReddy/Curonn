@@ -16,6 +16,7 @@ import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import Toast from "../../shared/components/Toast";
 import { colors } from "../..//shared/styles/commonStyles";
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
+import { Linking } from 'react-native';
 interface OrderDetailsProps {
     visible: boolean;
     order: any;
@@ -123,6 +124,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 category = "Medicine";
                 iconSource = images.medicalicon;
                 break;
+
             case "Consultation":
                 category = "Consultation";
                 iconSource = images.consultationicon;
@@ -173,6 +175,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         return `${year}-${month}-${day}`;
     };
 
+
     const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
         Completed: "#ccface",
@@ -195,6 +198,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const statusKey = (order && (order.serviceName || order.statusName)) || "N/A";
     const statusColor = statusColors[statusKey] || "#666";
     const statusTextColor = statusTextColors[statusKey] || "#000";
+    const selectedFile = orderDetails?.data?.prescriptions?.find(
+        (p: any) => p.fileUrl === selectedPdfUrl
+    );
+
+    const isImageFile = selectedFile?.mimeType?.startsWith("image");
     useEffect(() => {
         console.log("Order in useEffect1:", order);
         if (!order) return;
@@ -213,22 +221,39 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             });
         } else if (order.orderType === "Medicine") {
             fetchMedicineOrderById(order.masterId).then((data) => {
-                setOrderDetails({ type: "medicine", data: data.data || data || {} });
-                // Get patientId from first medicine item (all have same patientId)
-                let medArr = Array.isArray(data) ? data : [];
-                if (medArr.length > 0 && medArr[0].patientId) {
-                    const pid = medArr[0].patientId;
-                    setPatientId(pid);
-                    axiosClient.get(ApiRoutes.Employee.getById(pid)).then((response) => {
-                        const data = response?.data ?? response;
-                        setPatientProfile(data);
-                    }).catch(() => setPatientProfile(null));
+
+                const details = data?.data ? data.data : data;
+
+                // Detect if prescription exists
+                if (Array.isArray(details.prescriptions) && details.prescriptions.length > 0) {
+                    setOrderDetails({
+                        type: "prescription",
+                        data: details
+                    });
                 } else {
-                    setPatientProfile(null);
+                    setOrderDetails({
+                        type: "medicine",
+                        data: details
+                    });
                 }
+
+                if (details?.patientId) {
+                    const pid = details.patientId;
+                    setPatientId(pid);
+
+                    axiosClient
+                        .get(ApiRoutes.Employee.getById(pid))
+                        .then((response) => {
+                            const pdata = response?.data ?? response;
+                            setPatientProfile(pdata);
+                        })
+                        .catch(() => setPatientProfile(null));
+                }
+
                 setLoading(false);
             });
-        } else if (order.orderType === "Consultation") {
+        }
+        else if (order.orderType === "Consultation") {
             fetchConsultationById(order.masterId).then((data) => {
                 setOrderDetails({ type: "consultation", data: data.data || data || {} });
                 setLoading(false);
@@ -325,6 +350,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const canReschedule = ["Requested", "Inprogress"].includes(order.statusName);
     const canCancel = ["Requested", "Inprogress"].includes(order.statusName);
     const canCompleted = ["Completed"].includes(order.statusName);
+    const canOngoing = ["Ongoing", "ongoing"].includes(order.statusName);
 
     // Removed patientId effect; now handled after fetchMedicineOrderById resolves
     // Helper: Render Reschedule Modal
@@ -376,42 +402,42 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </TouchableOpacity>
                         </View>
                         <View style={styles.datesection}>
-                        <Text style={styles.modalLabelBold}>Reschedule Date</Text>
-                        <TouchableOpacity
-                            style={styles.dateInput}
-                            onPress={() => setShowDatePicker(true)}
-                        >
-                            <Text
-                                style={[
-                                    styles.dateText,
-                                    !selectedDate && styles.placeholderText,
-                                ]}
+                            <Text style={styles.modalLabelBold}>Reschedule Date</Text>
+                            <TouchableOpacity
+                                style={styles.dateInput}
+                                onPress={() => setShowDatePicker(true)}
                             >
-                                {selectedDate
-                                    ? formatDateLab(selectedDate)
-                                    : "dd/mm/yyyy"}
-                            </Text>
-                            <Image
-                                source={images.icons.calendar}
-                                style={styles.calendarIcon}
-                            />
-                        </TouchableOpacity>
-                        {/* DateTimePicker rendered inside modal */}
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={selectedDate || new Date()}
-                                mode="date"
-                                display={Platform.OS === "ios" ? "spinner" : "default"}
-                                onChange={handleLabDateChange}
-                                minimumDate={new Date()}
-                            />
-                        )}
-                          {errors === "Please select date" && (
-                                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
-                                          {errors}
-                                        </Text>
-                                      )}
-                                      </View>
+                                <Text
+                                    style={[
+                                        styles.dateText,
+                                        !selectedDate && styles.placeholderText,
+                                    ]}
+                                >
+                                    {selectedDate
+                                        ? formatDateLab(selectedDate)
+                                        : "dd/mm/yyyy"}
+                                </Text>
+                                <Image
+                                    source={images.icons.calendar}
+                                    style={styles.calendarIcon}
+                                />
+                            </TouchableOpacity>
+                            {/* DateTimePicker rendered inside modal */}
+                            {showDatePicker && (
+                                <DateTimePicker
+                                    value={selectedDate || new Date()}
+                                    mode="date"
+                                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                                    onChange={handleLabDateChange}
+                                    minimumDate={new Date()}
+                                />
+                            )}
+                            {errors === "Please select date" && (
+                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                    {errors}
+                                </Text>
+                            )}
+                        </View>
 
                         <View style={styles.timeSection}>
                             <Text style={styles.modalLabelBold}>Select Time Slot</Text>
@@ -488,7 +514,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
                             // Validation for required fields
                             if (orderDetails?.type === 'consultation') {
-                               
+
                                 if (!newRescheduleDate) {
                                     setErrors('Please select reschedule date');
                                     return;
@@ -536,7 +562,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 }
                             }
                             if (orderDetails?.type === 'lab') {
-                                
+
                                 if (!newRescheduleDate) {
                                     setErrors('Please select service start date');
                                     return;
@@ -657,7 +683,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             `${ApiRoutes.LabOrders.cancelOrder}?labOrderId=${order.masterId}&cancelReason=${encodeURIComponent(cancelReason)}`,
                                             {}
                                         );
-                                    } else if (orderDetails?.type === 'medicine') {
+                                    } else if (orderDetails?.type === 'medicine' || orderDetails?.type === 'prescription') {
                                         await axiosClient.post(ApiRoutes.MedicalOrders.medicineCancel, {
                                             medicineOrderId: order.masterId,
                                             cancelReason: cancelReason
@@ -781,7 +807,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             </>)}
 
                                             {/* Patient Details */}
-                                            <Text style={styles.sectionTitle}>Address Info</Text>
+                                            {order.orderType === "Xray" ? (
+                                            <Text style={styles.sectionTitle}>Patient Info</Text>
+                                            ):(
+                                                <Text style={styles.sectionTitle}>Address Info</Text>
+                                            )}
                                             <View style={styles.databox}>
                                                 <View style={{ padding: 16 }}>
                                                     <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
@@ -798,6 +828,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         }
                                                     </Text>
                                                 </View>
+                                                 {order.orderType !== "Xray" && (<>
                                                 <View style={styles.divider} />
                                                 <View style={{ padding: 16 }}>
                                                     <Text style={styles.itemSubText}>
@@ -808,7 +839,38 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         ].filter(Boolean).join(', ') || 'N/A'}
                                                     </Text>
                                                 </View>
+                                                 </>)}
                                             </View>
+                                            {canOngoing && (<>
+                                                <View style={styles.databox}>
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Delivery Notes</Text>
+                                                        <Text style={styles.ongoingLabel}>
+                                                            {orderDetails.data.deliveryNotes || "N/A"}</Text>
+
+                                                    </View>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Traking</Text>
+                                                        <TouchableOpacity
+                                                            disabled={!orderDetails.data.trackingLink}
+                                                            onPress={() => {
+                                                                let url = orderDetails.data.trackingLink;
+                                                                if (url && !/^https?:\/\//i.test(url)) {
+                                                                    url = 'https://' + url;
+                                                                }
+                                                                if (url) {
+                                                                    Linking.openURL(url);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Text style={styles.trackingLabel}>
+                                                                {orderDetails.data.trackingLink || "N/A"}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            </>)}
 
                                             {/* Reports Section (Lab)*/}
                                             {(() => {
@@ -865,7 +927,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     )}
                                     {orderDetails.type === "medicine" && (
                                         <View style={styles.servicepage}>
-                                            <Text style={styles.sectionTitle}>Order Information</Text>
+                                            {
+                                                <Text style={styles.sectionTitle}>Order Information</Text>
+                                            }
                                             <View style={styles.databox}>
                                                 {Array.isArray(orderDetails.data.medicines) ? (
                                                     orderDetails.data.medicines.map((med: any, idx: any) => (
@@ -924,7 +988,138 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     </Text>
                                                 </View>
                                             </View>
+                                            {canOngoing && (<>
+                                                <View style={styles.databox}>
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Delivery Notes</Text>
+                                                        <Text style={styles.ongoingLabel}>
+                                                            {orderDetails.data.deliveryNotes || "N/A"}</Text>
 
+                                                    </View>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Traking</Text>
+                                                        <TouchableOpacity
+                                                            disabled={!orderDetails.data.trackingLink}
+                                                            onPress={() => {
+                                                                let url = orderDetails.data.trackingLink;
+                                                                if (url && !/^https?:\/\//i.test(url)) {
+                                                                    url = 'https://' + url;
+                                                                }
+                                                                if (url) {
+                                                                    Linking.openURL(url);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Text style={styles.trackingLabel}>
+                                                                {orderDetails.data.trackingLink || "N/A"}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            </>)}
+                                        </View>
+                                    )}
+                                    {orderDetails.type === "prescription" && (
+                                        <View style={styles.servicepage}>
+                                            <Text style={styles.sectionTitle}>Prescriptions</Text>
+                                            <View style={styles.databox1}>
+                                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                                                    {Array.isArray(orderDetails.data.prescriptions) && orderDetails.data.prescriptions.length > 0 ? (
+                                                        orderDetails.data.prescriptions.map((presc: any, idx: number) => {
+                                                            const isImage = presc.mimeType && presc.mimeType.startsWith('image');
+                                                            const isPdf = presc.mimeType && presc.mimeType === 'application/pdf';
+                                                            return (
+                                                                <View key={presc.prescriptionId || idx} style={{ marginRight: 16, alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <TouchableOpacity
+                                                                        style={{ borderWidth: 1, borderColor: '#E1E8F1', borderRadius: 6, padding: 8, alignItems: 'center', backgroundColor: '#fff', width: 140 }}
+                                                                        onPress={() => {
+                                                                            setSelectedPdfUrl(presc.fileUrl);
+
+                                                                            if (isImage) {
+                                                                                setPdfModalVisible(true);
+                                                                            } else {
+                                                                                setPdfLoading(true);
+                                                                                setEncodedPdfUrl(presc.fileUrl);
+                                                                                setPdfModalVisible(true);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        {isImage ? (
+                                                                            <Image source={{ uri: presc.fileUrl }} style={{ width: 120, height: 120, resizeMode: 'cover', marginBottom: 6 }} onError={() => console.log('Image load error:', presc.fileUrl)} />
+                                                                        ) : (
+                                                                            <Image source={images.icons.pdf} style={{ width: 40, height: 40, marginBottom: 6 }} />
+                                                                        )}
+                                                                        <Text style={{ color: '#000', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
+                                                                    </TouchableOpacity>
+                                                                </View>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <Text style={styles.itemSubText}>No prescriptions found.</Text>
+                                                    )}
+                                                </ScrollView>
+                                               
+                                                {/* Status Section */}
+                                                <View style={styles.paidAmountRow}>
+                                                    <Text style={styles.paidAmountLabel}>Status</Text>
+                                                    <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "In Progress"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {/* Patient Details */}
+                                            <Text style={styles.sectionTitle}>Address Info</Text>
+                                            <View style={styles.databox}>
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
+                                                    <Text style={styles.itemSubText}>
+                                                        {orderDetails.data.age ? orderDetails.data.age + ' years' : 'N/A'}, {orderDetails.data.gender || 'N/A'}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.divider} />
+                                                <View style={{ padding: 16 }}>
+                                                    <Text style={styles.itemSubText}>
+                                                        {[
+                                                            orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                            orderDetails.data.address ? orderDetails.data.address : null,
+                                                            orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {canOngoing && (<>
+                                                <View style={styles.databox}>
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Delivery Notes</Text>
+                                                        <Text style={styles.ongoingLabel}>
+                                                            {orderDetails.data.deliveryNotes || "N/A"}</Text>
+
+                                                    </View>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Traking</Text>
+                                                        <TouchableOpacity
+                                                            disabled={!orderDetails.data.trackingLink}
+                                                            onPress={() => {
+                                                                let url = orderDetails.data.trackingLink;
+                                                                if (url && !/^https?:\/\//i.test(url)) {
+                                                                    url = 'https://' + url;
+                                                                }
+                                                                if (url) {
+                                                                    Linking.openURL(url);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Text style={styles.trackingLabel}>
+                                                                {orderDetails.data.trackingLink || "N/A"}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            </>)}
                                         </View>
                                     )}
                                     {orderDetails.type === "consultation" && (
@@ -1004,6 +1199,37 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 </View>
                                             </View>
 
+                                            {canOngoing && (<>
+                                                <View style={styles.databox}>
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Delivery Notes</Text>
+                                                        <Text style={styles.ongoingLabel}>
+                                                            {orderDetails.data.deliveryNotes || "N/A"}</Text>
+
+                                                    </View>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Traking</Text>
+                                                        <TouchableOpacity
+                                                            disabled={!orderDetails.data.trackingLink}
+                                                            onPress={() => {
+                                                                let url = orderDetails.data.trackingLink;
+                                                                if (url && !/^https?:\/\//i.test(url)) {
+                                                                    url = 'https://' + url;
+                                                                }
+                                                                if (url) {
+                                                                    Linking.openURL(url);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Text style={styles.trackingLabel}>
+                                                                {orderDetails.data.trackingLink || "N/A"}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            </>)}
+
                                             {/* Reports Section (Lab)*/}
                                             {(() => {
                                                 // Debug logs to help diagnose why Reports section is not displaying
@@ -1057,6 +1283,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             })()}
                                         </View>
                                     )}
+
                                 </>
                             ) : (
                                 <>
@@ -1070,14 +1297,17 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
 
                         {/* Footer Buttons */}
-                        <View style={styles.footerRow}>
+                        
                             {/* Lab & Medicine: Cancel Order only */}
                             {orderDetails?.type === 'medicine' && canCancel && (
+                                <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
                                     <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
                                 </TouchableOpacity>
+                                </View>
                             )}
                             {orderDetails?.type === 'lab' && canCancel && (<>
+                            <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
                                         <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
@@ -1086,12 +1316,15 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         <Text style={styles.rescheduleBtnText}>Reschedule</Text>
                                     </TouchableOpacity>
                                 </View>
+                                </View>
                             </>)}
                             {/* Consultation: Reschedule only */}
                             {orderDetails?.type === 'consultation' && canReschedule && (
+                                 <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
                                     <Text style={styles.rescheduleBtnText}>Reschedule Consultation</Text>
                                 </TouchableOpacity>
+                                </View>
                             )}
 
                             {/* {canCompleted && (
@@ -1111,7 +1344,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 </TouchableOpacity>
                             </>
                         )} */}
-                        </View>
+                       
 
                     </View>
                     {renderRescheduleModal()}
@@ -1125,8 +1358,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         onRequestClose={() => setPdfModalVisible(false)}
                     >
                         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-                                <Text style={{ fontSize: 16, fontFamily: fonts.semiBold, color: '#333' }}>PDF Preview</Text>
+                                <Text style={{ fontSize: 16, fontFamily: fonts.semiBold, color: '#333' }}>{isImageFile ? "Image Preview" : "PDF Preview"}</Text>
                                 <TouchableOpacity onPress={() => setPdfModalVisible(false)} style={{ padding: 4 }}>
                                     <Image source={images.icons.close} style={{ width: 24, height: 24, tintColor: '#333' }} />
                                 </TouchableOpacity>
@@ -1137,12 +1371,21 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 </View>
                             )}
                             {selectedPdfUrl && (
-                                <WebView
-                                    source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
-                                    style={{ flex: 1 }}
-                                    onLoadEnd={() => setPdfLoading(false)}
-                                    onError={() => setPdfLoading(true)}
-                                />
+                                orderDetails?.data?.prescriptions?.some(
+                                    (p: any) => p.fileUrl === selectedPdfUrl && p.mimeType?.startsWith("image")
+                                ) ? (
+                                    <Image
+                                        source={{ uri: selectedPdfUrl }}
+                                        style={{ flex: 1, resizeMode: "contain" }}
+                                    />
+                                ) : (
+                                    <WebView
+                                        source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
+                                        style={{ flex: 1 }}
+                                        onLoadEnd={() => setPdfLoading(false)}
+                                        onError={() => setPdfLoading(true)}
+                                    />
+                                )
                             )}
 
                         </SafeAreaView>
@@ -1453,15 +1696,14 @@ const styles = StyleSheet.create({
         borderBottomColor: '#E0E0E0',
     },
     headerTitle: {
-        fontSize: 16,
-        color: '#000',
         fontFamily: fonts.semiBold,
-        fontWeight: '600',
+        fontSize: 16,
+        color: colors.black,
     },
     servicepage: {
         flex: 1,
         padding: 20,
-        paddingTop: 15,
+        paddingTop: 5,
         backgroundColor: "rgba(245, 244, 249, 1)"
     },
     reportspage: {
@@ -1469,7 +1711,7 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(245, 244, 249, 1)"
     },
     sectionTitle: {
-        fontSize: 15,
+        fontSize: 16,
         color: "#000",
         fontFamily: fonts.semiBold,
         fontWeight: '600',
@@ -1483,6 +1725,19 @@ const styles = StyleSheet.create({
         borderColor: '#E1E8F1',
         marginBottom: 20,
         overflow: 'hidden',
+    },
+    databox1: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E1E8F1',
+        marginBottom: 20,
+        overflow: 'hidden',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     itemRow: {
         paddingHorizontal: 16,
@@ -1503,6 +1758,16 @@ const styles = StyleSheet.create({
     itemSubText: {
         fontSize: 12,
         color: '#000',
+        fontFamily: fonts.regular,
+    },
+    ongoingLabel: {
+        fontSize: 13,
+        color: '#000',
+        fontFamily: fonts.regular,
+    },
+    trackingLabel: {
+        fontSize: 13,
+        color: '#2A4EC6',
         fontFamily: fonts.regular,
     },
     itemQty: {
@@ -1527,6 +1792,11 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#000',
         fontFamily: fonts.bold,
+    },
+    DeliveryLabel: {
+        fontSize: 15,
+        color: '#000',
+        fontFamily: fonts.semiBold,
     },
     paidAmountValue: {
         fontSize: 17,
@@ -1606,7 +1876,7 @@ const styles = StyleSheet.create({
     datesection: {
         paddingHorizontal: 20,
         paddingBottom: 5,
-         marginTop: getResponsiveSpacing(0),
+        marginTop: getResponsiveSpacing(0),
     },
     addressection: {
         paddingHorizontal: 20,

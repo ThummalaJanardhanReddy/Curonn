@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
+  fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },

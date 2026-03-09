@@ -43,9 +43,10 @@ interface DrugAllergy {
 
 interface DrugAllergiesScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProps) {
+export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: DrugAllergiesScreenProps) {
   const [allergies, setAllergies] = useState<DrugAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [reactionOptions, setreactionOptions] = useState<any[]>([]);
@@ -111,7 +112,22 @@ export default function DrugAllergiesScreen({ onClose }: DrugAllergiesScreenProp
       );
       console.log('DEBUG: fetch All Drug Allergies response:', response);
       // If response is an array, use it directly
-      setAllergies(Array.isArray(response) ? response : response.items || []);
+      let list: DrugAllergy[] = [];
+
+      if (Array.isArray(response)) {
+        list = response;
+      } else if (Array.isArray(response?.items)) {
+        list = response.items;
+      } else if (Array.isArray(response?.data)) {
+        list = response.data;
+      }
+
+      setAllergies(list);
+
+      // ⭐ notify parent
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
+      }
     } catch (error) {
       console.error("Failed to fetch relation types", error);
     }
@@ -714,20 +730,22 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(20),
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#DADADA',
   },
   dropdownModalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.3)",
-  justifyContent: "center",
-  padding: 20,
-},
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 20,
+  },
 
-dropdownModalContainer: {
-  backgroundColor: "#fff",
-  borderRadius: 12,
-  padding: 10,
-  maxHeight: "70%",
-},
+  dropdownModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    maxHeight: "70%",
+  },
   headerLeft: {
     flex: 1,
     flexDirection: 'row',
@@ -772,7 +790,7 @@ dropdownModalContainer: {
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     borderWidth: 1,
-    borderColor: "#B4B6B9",
+    borderColor: '#DADADA',
     flexDirection: "row",
     alignItems: "flex-start",
   },

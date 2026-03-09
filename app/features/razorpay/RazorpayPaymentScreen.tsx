@@ -95,7 +95,7 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   `;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#C15E9C" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <StatusBar barStyle="light-content" backgroundColor="#C15E9C" />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <WebView

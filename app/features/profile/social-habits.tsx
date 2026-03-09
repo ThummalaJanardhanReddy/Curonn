@@ -54,6 +54,7 @@ interface SocialHabit {
 
 interface SocialHabitsScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ const frequencyOptions = [
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps) {
+export default function SocialHabitsScreen({ onClose, onDataStatusChange }: SocialHabitsScreenProps) {
   const { userData } = useUser();
 
   // List state
@@ -122,6 +123,12 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
   const patientId = Number(userData?.e_id || userData?.eId);
   // ── API calls ────────────────────────────────────────────────────────────────
 
+  useEffect(() => {
+    if (onDataStatusChange) {
+      onDataStatusChange(habits.length > 0);
+    }
+  }, [habits]);
+
   const fetchHabits = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -144,14 +151,21 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
       const response: any = await axiosClient.post(ApiRoutes.SocialHistory.getAll, payload);
       console.log('📥 GetAllSocial Response:', JSON.stringify(response, null, 2));
 
+      let list: SocialHabit[] = [];
       if (Array.isArray(response)) {
-        setHabits(response);
+        list = response;
       } else if (response?.items && Array.isArray(response.items)) {
-        setHabits(response.items);
+        list = response.items;
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setHabits(response.data);
+        list = response.data;
       } else if (Array.isArray(response?.data)) {
-        setHabits(response.data);
+        list = response.data;
+      }
+      setHabits(list);
+
+      // ⭐ notify Profile screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
       }
     } catch (error) {
       console.error('GetAllSocial error:', error);
@@ -519,28 +533,28 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
               </TouchableOpacity>
               {showAlcoholFreqDropdown && (
                 <>
-                 <TouchableOpacity
+                  <TouchableOpacity
                     style={styles.dropdownBackdrop}
                     onPress={() => setShowAlcoholFreqDropdown(false)}
                     activeOpacity={1}
                   />
-                   <View style={styles.dropdownOptions}>
-                 <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                  {frequencyOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          setAlcoholFrequencyId(option.value);
-                          setShowAlcoholFreqDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.dropdownOptionText}>{option.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                 
-                  </ScrollView>
-                   </View>
+                  <View style={styles.dropdownOptions}>
+                    <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                      {frequencyOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setAlcoholFrequencyId(option.value);
+                            setShowAlcoholFreqDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+
+                    </ScrollView>
+                  </View>
                 </>
               )}
             </View>
@@ -574,7 +588,7 @@ export default function SocialHabitsScreen({ onClose }: SocialHabitsScreenProps)
         </TouchableOpacity>
       </View>
 
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -693,6 +707,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
     backgroundColor: '#fff',
+     borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -772,11 +788,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: 'flex-start',
   },
   habitContent: {

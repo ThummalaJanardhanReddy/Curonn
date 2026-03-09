@@ -2351,7 +2351,7 @@ export default function BookingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.bg_primary,
   },
   headerRow: {
     flexDirection: 'row',
@@ -2365,7 +2365,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
+fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -2381,7 +2381,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: '#fff',
+   // backgroundColor: '#fff',
   },
   section: {
     marginTop: getResponsiveSpacing(0),
