@@ -11,7 +11,10 @@ import {
   Image,
   Linking,
 } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
+import {
+  KeyboardStickyView,
+  useKeyboardState,
+} from "react-native-keyboard-controller";
 
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -29,7 +32,10 @@ import PrimaryButton from "@/app/shared/components/PrimaryButton";
 import axiosClient from "@/src/api/axiosClient";
 import { ChatHistoryItem, ChatMessage } from "@/src/constants/constants";
 import ApiRoutes from "@/src/api/employee/employee";
+import { openURL } from "expo-linking";
 // import { KeyboardAwareFlatList } from "react-native-keyboard-aware-scroll-view";
+
+const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;
 
 export default function ChatScreen() {
   const {
@@ -52,6 +58,8 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   const { user } = useUserStore();
+  const { isVisible } = useKeyboardState();
+  const isNearBottom = useRef(true);
 
   /**
    * INIT CONNECTION
@@ -73,19 +81,24 @@ export default function ChatScreen() {
    * AUTOSCROLL
    */
   useEffect(() => {
-    setTimeout(() => {
+    if (messages.length && isNearBottom.current) {
       flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages]);
+    }
+  }, [messages.length]);
+  useEffect(() => {
+    if (isVisible) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [isVisible]);
 
   useEffect(() => {
-    if (chatStatus === "busy") {
-      Alert.alert("Doctors Busy", "Doctors are busy. Please wait...");
-    }
+    // if (chatStatus === "busy") {
+    //   Alert.alert("Doctors Busy", "Doctors are busy. Please wait...");
+    // }
 
-    if (chatStatus === "ended" && chatEndedReason) {
-      Alert.alert("Chat Ended", chatEndedReason);
-    }
+    // if (chatStatus === "ended" && chatEndedReason) {
+    //   Alert.alert("Chat Ended", chatEndedReason);
+    // }
     if (chatStatus === "connected") {
       fetchChatHistory();
     }
@@ -116,7 +129,13 @@ export default function ChatScreen() {
     if (!input.trim() && !attachment) return;
 
     try {
-      await signalRService.sendMessage(input, user?.eId, 34, 1, attachment);
+      await signalRService.sendMessage(
+        input,
+        chatAcceptDetails?.patientId,
+        chatAcceptDetails?.doctorId,
+        chatAcceptDetails?.appointmentId,
+        attachment,
+      );
 
       setInput("");
       setAttachment(null);
@@ -174,10 +193,10 @@ export default function ChatScreen() {
   };
 
   const openFile = (url: string) => {
-    Linking.openURL(url);
+    Linking.openURL(S3Link + url);
   };
 
-  const getDayLabel = (timestamp: number) => {
+  const getDayLabel = React.useCallback((timestamp: number) => {
     const messageDate = dayjs(timestamp);
     const today = dayjs();
     const yesterday = dayjs().subtract(1, "day");
@@ -186,7 +205,8 @@ export default function ChatScreen() {
     if (messageDate.isSame(yesterday, "day")) return "Yesterday";
 
     return messageDate.format("DD MMM YYYY");
-  };
+  }, []);
+
   const getMessagesWithDateHeaders = (messages: Message[]) => {
     const result: (Message | { type: "date"; label: string })[] = [];
 
@@ -208,11 +228,12 @@ export default function ChatScreen() {
 
     return result;
   };
-  const formattedMessages = getMessagesWithDateHeaders(messages);
-  /**
-   * RENDER MESSAGE
-   */
-  const renderItem = ({ item }: any) => {
+
+  const formattedMessages = React.useMemo(() => {
+    return getMessagesWithDateHeaders(messages);
+  }, [messages]);
+
+  const renderItem = React.useCallback(({ item }: any) => {
     if (item.type === "date") {
       return (
         <View style={styles.dateContainer}>
@@ -220,59 +241,16 @@ export default function ChatScreen() {
         </View>
       );
     }
-    const isUser = item.sender === "user";
-    const isPdf = item.attachment?.type === "pdf";
-    return (
-      <View
-        style={[
-          styles.message,
-          isUser ? styles.userMessage : styles.doctorMessage,
-        ]}
-      >
-        {isPdf && (
-          <TouchableOpacity
-            onPress={() => openFile(item.attachment.uri)}
-            style={styles.pdfButton}
-            activeOpacity={0.8}
-          >
-            <View style={styles.iconContainer}>
-              <Text style={styles.icon}>📄</Text>
-            </View>
+    // else if (item.fileUrl) {
+    //   return (
+    //     <TouchableOpacity onPress={() => openFile(item.fileUrl)}>
+    //       <Text>{item.fileName || "Attachment"}</Text>
+    //     </TouchableOpacity>
+    //   );
+    // }
 
-            <View style={styles.textContainer}>
-              <Text style={styles.fileSubText}>View PDF</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {item.attachment?.uri && !isPdf && (
-          <Image source={{ uri: item.attachment.uri }} style={styles.image} />
-        )}
-
-        {item.text && (
-          <Text style={{ color: isUser ? "white" : "black" }}>{item.text}</Text>
-        )}
-
-        <View style={styles.metaRow}>
-          <Text style={styles.time}>
-            {dayjs(item.timestamp).format("HH:mm")}
-          </Text>
-
-          {isUser && (
-            <Text style={styles.status}>
-              {item.status === "sending"
-                ? "⏳"
-                : item.status === "sent"
-                  ? "✓✓"
-                  : item.status === "failed"
-                    ? "⚠️"
-                    : ""}
-            </Text>
-          )}
-        </View>
-      </View>
-    );
-  };
+    return <MessageItem item={item} onOpenFile={openFile} />;
+  }, []);
 
   /**
    * CONNECTION BANNER
@@ -337,14 +315,14 @@ export default function ChatScreen() {
 
   const fetchChatHistory = async () => {
     try {
-      if (!user || !chatAcceptDetails) return;
-      // if (!user) return;
-      const response = await axiosClient.get<ChatHistoryItem[]>(
-        ApiRoutes.Chat.history(user.eId, chatAcceptDetails.doctorId),
-      );
+      // if (!user || !chatAcceptDetails) return;
+      if (!user) return;
       // const response = await axiosClient.get<ChatHistoryItem[]>(
-      //   ApiRoutes.Chat.history(user.eId, 34),
+      //   ApiRoutes.Chat.history(user.eId, chatAcceptDetails.doctorId),
       // );
+      const response = await axiosClient.get<ChatHistoryItem[]>(
+        ApiRoutes.Chat.history(user.eId, 36),
+      );
       const mappedMessages = mapChatHistory(response, user.eId);
 
       setMessages(mappedMessages);
@@ -370,12 +348,12 @@ export default function ChatScreen() {
 
         attachment: item.fileUrl
           ? {
-              uri: `https://curonndatabucket.s3.ap-south-1.amazonaws.com/${item.fileUrl}`,
+              uri: `${S3Link}${item.fileUrl}`,
               name: item.fileUrl.split("/").pop() || "file",
               type: item.fileUrl.split(".").pop()?.toLowerCase(),
             }
           : undefined,
-
+        type: item.fileUrl ? "image" : "text",
         fileUrl: item.fileUrl ?? undefined,
 
         timestamp: new Date(item.sentOn).getTime(), // ✅ FIXED
@@ -384,15 +362,30 @@ export default function ChatScreen() {
       }));
   };
 
+  const handleScroll = React.useCallback((event) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 50;
+
+    isNearBottom.current =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
+  }, []);
+
+  const keyExtractor = React.useCallback((item: any) => {
+    return item.type === "date" ? `date-${item.label}` : item.id;
+  }, []);
+
   return (
     <View
       style={{
         flex: 1,
         backgroundColor: colors.bg_secondary,
         paddingTop: insets.top,
+        paddingBottom: isVisible ? 0 : insets.bottom,
       }}
     >
-      <View
+      <KeyboardStickyView
+        offset={{ closed: 0, opened: 0 }}
         style={{
           flex: 1,
           backgroundColor: colors.bg_primary,
@@ -401,7 +394,9 @@ export default function ChatScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Janardhan</Text>
+            <Text style={styles.title}>
+              {chatAcceptDetails?.doctorName || "Dr. "}
+            </Text>
             <Text style={styles.subtitle}>Chat Consultation</Text>
           </View>
 
@@ -413,19 +408,46 @@ export default function ChatScreen() {
         {/* CONNECTION */}
         {renderConnectionBanner()}
         {renderWaitingBanner()}
-        {chatStatus == "connected" && (
-          <FlatList
-            ref={flatListRef}
-            data={formattedMessages}
-            renderItem={renderItem}
-            keyExtractor={(item, index) =>
-              "type" in item ? `date-${index}` : item.id
-            }
-            contentContainerStyle={{
-              padding: 16,
-            }}
-          />
-        )}
+        {
+          // chatStatus == "connected" &&
+          // <FlatList
+          //   ref={flatListRef}
+          //   data={formattedMessages}
+          //   renderItem={renderItem}
+          //   keyExtractor={(item, index) =>
+          //     "type" in item ? `date-${index}` : item.id
+          //   }
+          //   contentContainerStyle={{
+          //     padding: 16,
+          //   }}
+          //   scrollEventThrottle={16}
+          //   onScroll={(event) => {
+          //     const { layoutMeasurement, contentOffset, contentSize } =
+          //       event.nativeEvent;
+          //     const paddingToBottom = 50;
+          //     isNearBottom.current =
+          //       layoutMeasurement.height + contentOffset.y >=
+          //       contentSize.height - paddingToBottom;
+          //   }}
+          // />
+          connectionState === "connected" && chatStatus === "connected" && (
+            <FlatList
+              ref={flatListRef}
+              data={formattedMessages}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={{ padding: 16 }}
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
+              initialNumToRender={20}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+              removeClippedSubviews
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+            />
+          )
+        }
 
         {/* TYPING */}
         {typing && <Text style={styles.typing}>Doctor typing...</Text>}
@@ -442,47 +464,40 @@ export default function ChatScreen() {
         )}
 
         {/* INPUT */}
-        <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                paddingBottom: insets.bottom,
-              },
-            ]}
-          >
-            <View style={styles.inputRow}>
-              <TouchableOpacity
-                onPress={openAttachmentMenu}
-                disabled={!chatEnabled}
-              >
-                <Ionicons
-                  name="attach"
-                  size={26}
-                  color={chatEnabled ? "black" : "#ccc"}
-                />
-              </TouchableOpacity>
-
-              <TextInput
-                value={input}
-                onChangeText={setInput}
-                placeholder="Message"
-                editable={chatEnabled}
-                style={styles.input}
-                multiline
+        {/* <KeyboardStickyView offset={{ closed: 0, opened: 0 }}> */}
+        <View style={[styles.inputContainer]}>
+          <View style={styles.inputRow}>
+            <TouchableOpacity
+              onPress={openAttachmentMenu}
+              disabled={!chatEnabled}
+            >
+              <Ionicons
+                name="attach"
+                size={26}
+                color={chatEnabled ? "black" : "#ccc"}
               />
+            </TouchableOpacity>
 
-              <TouchableOpacity onPress={sendMessage} disabled={!chatEnabled}>
-                <Ionicons
-                  name="send"
-                  size={26}
-                  color={chatEnabled ? colors.primary : "#ccc"}
-                />
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Message"
+              editable={chatEnabled}
+              style={styles.input}
+              multiline
+            />
+
+            <TouchableOpacity onPress={sendMessage} disabled={!chatEnabled}>
+              <Ionicons
+                name="send"
+                size={26}
+                color={chatEnabled ? colors.primary : "#ccc"}
+              />
+            </TouchableOpacity>
           </View>
-        </KeyboardStickyView>
-      </View>
+        </View>
+        {/* </KeyboardStickyView> */}
+      </KeyboardStickyView>
     </View>
   );
 }
@@ -521,6 +536,7 @@ const styles = StyleSheet.create({
     padding: 6,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 25,
     gap: 30,
   },
 
@@ -677,3 +693,71 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
+
+const MessageItem = React.memo(
+  ({
+    item,
+    onOpenFile,
+  }: {
+    item: Message;
+    onOpenFile: (file: string) => void;
+  }) => {
+    const isUser = item.sender === "user";
+    const isPdf = item.attachment?.name?.toLowerCase().endsWith(".pdf");
+    const isImage = item.attachment?.type === "image";
+
+    return (
+      <View
+        style={[
+          styles.message,
+          isUser ? styles.userMessage : styles.doctorMessage,
+        ]}
+      >
+        {isPdf && (
+          <TouchableOpacity
+            style={styles.pdfButton}
+            onPress={() => {
+              if (item?.fileUrl || item?.attachment) {
+                const url = item.fileUrl || item.attachment?.uri;
+                if (url) onOpenFile(url);
+              }
+            }}
+          >
+            <View style={styles.iconContainer}>
+              <Text style={styles.icon}>📄</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.fileSubText}>View PDF</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {item.attachment?.uri && !isPdf && (
+          <Image source={{ uri: item.attachment.uri }} style={styles.image} />
+        )}
+
+        {item.text && (
+          <Text style={{ color: isUser ? "white" : "black" }}>{item.text}</Text>
+        )}
+
+        <View style={styles.metaRow}>
+          <Text style={styles.time}>
+            {dayjs(item.timestamp).format("HH:mm")}
+          </Text>
+
+          {isUser && (
+            <Text style={styles.status}>
+              {item.status === "sending"
+                ? "⏳"
+                : item.status === "sent"
+                  ? "✓✓"
+                  : item.status === "failed"
+                    ? "⚠️"
+                    : ""}
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  },
+);

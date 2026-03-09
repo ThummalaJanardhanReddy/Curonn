@@ -167,8 +167,8 @@ export default function MyDoctorScreen() {
   const handleChatStart = async () => {
     if (!user) return;
     try {
-      // const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
-      // console.log("chat appointment created: ", res);
+      const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
+      console.log("chat appointment created: ", res);
       router.push("/features/chat/Chat");
     } catch (error) {
       Alert.alert(

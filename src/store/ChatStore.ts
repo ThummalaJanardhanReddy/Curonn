@@ -33,6 +33,8 @@ export interface Attachment {
 /**
  * Message model
  */
+type MessageType = "text" | "image" | "pdf";
+
 export interface Message {
   id: string;
   text?: string;
@@ -41,6 +43,7 @@ export interface Message {
   status?: MessageStatus;
   attachment?: Attachment;
   fileUrl?: string;
+  type: MessageType;
 }
 
 export interface IAcceptRequest {
@@ -119,6 +122,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       sessionId,
       chatEnabled: true,
       chatStatus: "idle",
+      // chatStatus: 'connected',
       chatEndedReason: undefined,
     }),
 
