@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -19,12 +20,16 @@ import { images } from "../../../assets";
 const { height: screenHeight } = Dimensions.get("window");
 import MapView, { Marker } from "react-native-maps";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
-import { fontStyles } from "../../shared/styles/fonts";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { useUser } from "../../shared/context/UserContext"; // adjust path as needed
 import { useLocalSearchParams } from "expo-router";
+import * as SecureStore from 'expo-secure-store';
 import Toast from "@/app/shared/components/Toast";
+import { KeyboardAvoidingView, ScrollView } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { fontStyles, fonts } from "../../shared/styles/fonts";
+import { colors } from "@/app/shared/styles/commonStyles";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -56,7 +61,7 @@ export default function LocationSelection({
   const { userData } = useUser();
 
   const isEditMode = !!addressId;
-  const headerTitle = isEditMode ? "Update Address" : "Add sample collection Location";
+  const headerTitle = isEditMode ? "Update Address" : "Add New Address";
   const [currentLocation, setCurrentLocation] =
     useState<Location.LocationObject | null>(null);
   const [address, setAddress] = useState("");
@@ -83,7 +88,18 @@ export default function LocationSelection({
     subtitle: "",
     color: "#4BB543", // default to success green
   });
-
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+  const { setUserData } = useUser();
+  const patientId = Number(userData?.e_id || userData?.eId);
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
     Animated.timing(slideAnim, {
@@ -229,13 +245,13 @@ export default function LocationSelection({
     console.log("userData:", userData);
     console.log("isDefault:", fetchedIsDefault);
     const payload: any = {
-      patientId: userData?.e_id,
+      patientId: patientId,
       address: locationData.address,
       hNo: locationData.houseNumber,
       landMark: locationData.landmark,
       addressNickname: locationData.nickname,
       isDefault: isEditMode ? fetchedIsDefault : false, // fetchedIsDefault from API response
-      userId: userData?.e_id,
+      userId: patientId,
     };
 
     if (isEditMode && addressId) {
@@ -243,7 +259,7 @@ export default function LocationSelection({
     }
 
 
-    const responsedata:any = await axiosClient.post(
+    const responsedata: any = await axiosClient.post(
       ApiRoutes.Address.saveAddress,
       payload
     );
@@ -279,6 +295,7 @@ export default function LocationSelection({
       animationType="fade"
       transparent={false}
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
@@ -295,6 +312,8 @@ export default function LocationSelection({
           <GooglePlacesAutocomplete
             placeholder="Search location"
             fetchDetails={true}
+            debounce={300}
+            enablePoweredByContainer={false}
             onPress={(data, details = null) => {
               if (!details || !details.geometry || !details.geometry.location) {
                 Alert.alert("Could not get location details. Please try again.");
@@ -323,6 +342,8 @@ export default function LocationSelection({
             query={{
               key: "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic",
               language: "en",
+              //location: `${currentLocation?.coords.latitude},${currentLocation?.coords.longitude}`,
+              components: 'country:in',
             }}
             styles={{
               container: {
@@ -345,8 +366,10 @@ export default function LocationSelection({
                 borderColor: "#d1d1d2",
                 backgroundColor: "#fff",
                 paddingLeft: 40, // space for search icon
-                fontSize: 16,
+                fontSize: 14,
                 color: "#333",
+                fontFamily:fonts.regular,
+                paddingRight: 40, // space for clear icon
               },
               listView: {
                 borderRadius: 8,
@@ -370,6 +393,26 @@ export default function LocationSelection({
                 />
               </View>
             )}
+          // renderRightButton={(props) => (
+          //   <TouchableOpacity
+          //     style={{ position: "absolute", right: 12, top: 17, zIndex: 1 }}
+          //     onPress={() => {
+          //       if (props?.clear) {
+          //         props.clear();
+          //       } else {
+          //         // fallback: manually clear text if clear() not available
+          //         if (props?.textInputRef && props.textInputRef.current) {
+          //           props.textInputRef.current.clear();
+          //         }
+          //       }
+          //     }}
+          //   >
+          //     <Image
+          //       source={images.icons.close}
+          //       style={{ width: 18, height: 18, tintColor: "#999" }}
+          //     />
+          //   </TouchableOpacity>
+          // )}
           />
           <View style={styles.mapContainer}>
             <TouchableOpacity
@@ -445,94 +488,109 @@ export default function LocationSelection({
             <Animated.View
               style={[
                 styles.overlay,
-                {
-                  transform: [{ translateY: slideAnim }],
-                },
+                { transform: [{ translateY: slideAnim }] }
               ]}
             >
-              <View style={styles.overlayContent}>
-                {/* Current Location Info */}
-                <View style={styles.locationInfo}>
-                  <View style={styles.locationHeader}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+                style={{ flex: 1 }}
+              >
+                <SafeAreaView style={{ flex: 1 }}>
+                  <KeyboardAwareScrollView
+                    enableOnAndroid
+                    extraScrollHeight={120}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 0 }}
+                  >
+                    <View style={styles.overlayContent}>
+                      {/* Current Location Info */}
+                      <View style={styles.locationInfo}>
+                        <View style={styles.locationHeader}>
 
-                    <images.icons.locationfill width={20} height={20} fill="#6200ee" style={styles.locationIcon} />
+                          <images.icons.locationfill width={20} height={20} fill="#6200ee" style={styles.locationIcon} />
 
-                    <Text style={styles.locationTitle}>Current Address</Text>
-                  </View>
-                  <Text style={styles.locationAddress}>
-                    {address || "Getting address..."}
-                  </Text>
-                </View>
+                          <Text style={styles.locationTitle}>Current Address</Text>
+                        </View>
+                        <Text style={styles.locationAddress}>
+                          {address || "Getting address..."}
+                        </Text>
+                      </View>
 
-                {/* Address Fields */}
-                <View style={styles.addressFields}>
-                  <TextInput
-                    style={styles.inputhouse}
-                    placeholder="House/Flat Number"
-                    value={houseNumber}
-                    onChangeText={text => {
-                      setHouseNumber(text);
-                      if (errors && text.trim()) setErrors(""); // Clear error on input
-                    }}
-                  />
-                  {errors ? (
-                    <Text style={styles.errortext}>{errors}</Text>
-                  ) : null}
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Landmark (Optional)"
-                    value={landmark}
-                    onChangeText={setLandmark}
-                  />
-                  {!address && (
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your address manually"
-                      value={address}
-                      onChangeText={setAddress}
-                    />
-                  )}
-                </View>
+                      {/* Address Fields */}
+                      <View style={styles.addressFields}>
+                        <TextInput
+                          style={styles.inputhouse}
+                          placeholder="House/Flat Number"
+                          value={houseNumber}
+                          onChangeText={text => {
+                            setHouseNumber(text);
+                            if (errors && text.trim()) setErrors(""); // Clear error on input
+                          }}
+                        />
+                        {errors ? (
+                          <Text style={styles.errortext}>{errors}</Text>
+                        ) : null}
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Landmark (Optional)"
+                          value={landmark}
+                          onChangeText={setLandmark}
+                        />
+                        {!address && (
+                          <TextInput
+                            style={styles.input}
+                            placeholder="Enter your address manually"
+                            value={address}
+                            onChangeText={setAddress}
+                          />
+                        )}
+                      </View>
 
-                {/* Nickname Chips */}
-                <View style={styles.nicknameSection}>
-                  <Text style={styles.nicknameLabel}>
-                    Choose nickname for this address
-                  </Text>
-                  <View style={styles.chipsContainer}>
-                    {(["home", "office", "other"] as const).map((nickname) => (
-                      <Chip
-                        key={nickname}
-                        selected={selectedNickname === nickname}
-                        onPress={() => setSelectedNickname(nickname)}
-                        style={[
-                          styles.chip,
-                          selectedNickname === nickname && styles.chipSelected,
-                        ]}
-                        selectedColor="#C35E9C"
-                        textStyle={[
-                          styles.chipText,
-                          selectedNickname === nickname &&
-                          styles.chipTextSelected,
-                        ]}
+                      {/* Nickname Chips */}
+                      <View style={styles.nicknameSection}>
+                        <Text style={styles.nicknameLabel}>
+                          Choose nickname for this address
+                        </Text>
+                        <View style={styles.chipsContainer}>
+                          {(["home", "office", "other"] as const).map((nickname) => (
+                            <Chip
+                              key={nickname}
+                              selected={selectedNickname === nickname}
+                              onPress={() => setSelectedNickname(nickname)}
+                              style={[
+                                styles.chip,
+                                selectedNickname === nickname && styles.chipSelected,
+                              ]}
+                              selectedColor="#C35E9C"
+                              textStyle={[
+                                styles.chipText,
+                                selectedNickname === nickname &&
+                                styles.chipTextSelected,
+                              ]}
+                            >
+                              {nickname.charAt(0).toUpperCase() + nickname.slice(1)}
+                            </Chip>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* Confirm Button */}
+                      <Button
+                        mode="contained"
+                        onPress={handleConfirmLocation}
+                        style={styles.confirmButton}
+                        contentStyle={styles.confirmButtonContent}
+                        buttonColor="#C35E9C"
+                        labelStyle={styles.buttonText}
                       >
-                        {nickname.charAt(0).toUpperCase() + nickname.slice(1)}
-                      </Chip>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Confirm Button */}
-                <Button
-                  mode="contained"
-                  onPress={handleConfirmLocation}
-                  style={styles.confirmButton}
-                  contentStyle={styles.confirmButtonContent}
-                  buttonColor="#C35E9C"
-                >
-                  {isEditMode ? "Update Address" : "Confirm Address"}
-                </Button>
-              </View>
+                        {isEditMode ? "Update Address" : "Confirm Address"}
+                      </Button>
+                    </View>
+                  </KeyboardAwareScrollView>
+                </SafeAreaView>
+              </KeyboardAvoidingView>
             </Animated.View>
           )}
         </View>
@@ -556,6 +614,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+ 
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -576,9 +635,9 @@ const styles = StyleSheet.create({
     tintColor: "#333",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 16,
+    color: colors.black,
+    fontFamily: fonts.semiBold,
   },
   headerSpacer: {
     width: 40,
@@ -642,6 +701,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: screenHeight * 0.7,
+    //height: screenHeight * 0.7,
   },
   overlayContent: {
     padding: 20,
@@ -662,13 +722,19 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontFamily:fonts.semiBold,
     color: "#333",
   },
+   buttonText: {
+   fontFamily:fonts.semiBold,
+  fontSize: 14,
+},
   locationAddress: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
     lineHeight: 20,
+    fontFamily:fonts.regular
   },
   addressFields: {
     marginBottom: 20,
@@ -679,15 +745,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 13,
     marginBottom: 5,
     backgroundColor: "#fff",
+    fontFamily:fonts.regular
 
   },
   errortext: {
     ...fontStyles.errortext,
     color: "red",
     marginBottom: 8,
+    fontFamily:fonts.regular,
     marginTop: 0,
 
   },
@@ -697,18 +765,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 13,
     marginBottom: 12,
     backgroundColor: "#fff",
+    fontFamily:fonts.regular,
   },
   nicknameSection: {
     marginBottom: 20,
   },
   nicknameLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#333",
     marginBottom: 12,
+    fontFamily:fonts.semiBold
   },
   chipsContainer: {
     flexDirection: "row",
@@ -725,15 +795,18 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: "#666",
+     fontFamily:fonts.medium
   },
   chipTextSelected: {
     color: "#C35E9C",
   },
   confirmButton: {
     borderRadius: 50,
+     fontFamily:fonts.regular
   },
   confirmButtonContent: {
     paddingVertical: 5,
+    fontFamily:fonts.regular
   },
   mapLoader: {
     position: "absolute",

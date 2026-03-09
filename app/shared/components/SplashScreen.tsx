@@ -2,8 +2,10 @@ import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { images } from '../../../assets';
-
+import { Dimensions } from 'react-native';
+ const { width, height } = Dimensions.get('window');
 export default function AppSplashScreen() {
+ 
   useEffect(() => {
     console.log('SplashScreen component mounted');
 
@@ -47,8 +49,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#C35E9C',
-    justifyContent: 'center',
-    alignItems: 'center',
+    // justifyContent: 'center',
+    // alignItems: 'center',
     // paddingTop: 0,
   },
   logoContainer: {
@@ -59,8 +61,8 @@ const styles = StyleSheet.create({
     // height: hp(100),
   },
   logo: {
-    // width: wp(100),
-    // height: hp(100),
-    resizeMode: 'stretch',
+     width: width,
+  height: height,
+    resizeMode: 'contain',
   },
 });

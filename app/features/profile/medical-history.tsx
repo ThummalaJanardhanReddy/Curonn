@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
@@ -36,9 +37,10 @@ interface MedicalCondition {
 interface MedicalHistoryScreenProps {
   onClose?: () => void;
   showAddModal?: boolean;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalHistoryScreenProps) {
+export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStatusChange }: MedicalHistoryScreenProps) {
   const { userData } = useUser();
   const [conditions, setConditions] = useState<MedicalCondition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [dropdownSearch, setDropdownSearch] = useState('');
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -67,7 +69,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   }, [masterOptions, dropdownSearch]);
 
   const fetchMedicalHistory = useCallback(async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     setLoading(true);
     try {
       const today = new Date();
@@ -80,7 +82,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         pageNo: 1,
         pageSize: 100,
         search: "",
-        patientId: userData.e_id,
+        patientId: patientId,
         fromDate: "1900-01-01",
         toDate: formattedDate,
         groupName: "",
@@ -90,19 +92,28 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
       const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.getAll, payload);
       console.log('📥 Medical History Response:', JSON.stringify(response, null, 2));
 
+      let list: MedicalCondition[] = [];
+
       if (response?.items && Array.isArray(response.items)) {
-        setConditions(response.items);
+        list = response.items;
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setConditions(response.data);
+        list = response.data;
       } else if (Array.isArray(response)) {
-        setConditions(response);
+        list = response;
+      }
+
+      setConditions(list);
+
+      // ⭐ inform parent screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
       }
     } catch (error) {
       console.error('Fetch medical history error:', error);
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchMedicalHistory();
@@ -212,7 +223,17 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   };
 
   const handleSaveCondition = async () => {
-    if (!newCondition.condition.trim() || !userData?.e_id) return;
+    if (!newCondition.condition.trim() || !patientId) return;
+
+    // Duplicate check
+    const isDuplicate = conditions.some(
+      (c) => (c.historyName || '').toLowerCase().trim() === newCondition.condition.toLowerCase().trim()
+    );
+
+    if (isDuplicate) {
+      Alert.alert('Record already exists', 'This medical condition is already in your history.');
+      return;
+    }
 
     setSaveLoading(true);
     try {
@@ -268,31 +289,47 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
   };
 
   const handleDeleteCondition = async (id: number) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
 
-    try {
-      console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${userData.e_id}`);
-      const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, userData.e_id));
-      console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
+    Alert.alert(
+      'Delete Record',
+      'Are you sure you want to delete this record?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            try {
+              console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${patientId!}`);
+              const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, patientId!));
+              console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
 
-      if (response || response === "OK") {
-        setToastMessage({
-          title: "Condition Deleted Successfully",
-          subtitle: "Deleted successfully!",
-          type: "success"
-        });
-        setShowToast(true);
-        await fetchMedicalHistory();
-      }
-    } catch (error: any) {
-      console.error('Delete medical history error:', error);
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-    }
+              if (response || response === "OK") {
+                setToastMessage({
+                  title: "Condition Deleted Successfully",
+                  subtitle: "Deleted successfully!",
+                  type: "success"
+                });
+                setShowToast(true);
+                await fetchMedicalHistory();
+              }
+            } catch (error: any) {
+              console.error('Delete medical history error:', error);
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -310,20 +347,14 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         <View style={styles.conditionContent}>
           <Text style={styles.conditionName}>{item.historyName}</Text>
           <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: getStatusColor(item.status) },
-              ]}
-            />
-            <Text style={styles.statusText}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
               {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A'}
             </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteCondition(item.medicalHistoryId)}
+          onPress={() => item.medicalHistoryId && handleDeleteCondition(item.medicalHistoryId)}
         >
           {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
           <Text style={styles.deleteButtonText}>Delete</Text>
@@ -340,6 +371,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
         <View style={styles.headerLeft}>
           <BackButton
             title="Medical History"
+            color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
             textStyle={styles.headerTitle}
@@ -350,12 +382,12 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
           onPress={handleAddCondition}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Conditions List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -414,7 +446,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal }: MedicalH
                     onPress={() => setDropdownVisible(!dropdownVisible)}
                   >
                     <Text style={styles.dropdownText}>
-                      {newCondition.condition || 'Select medical condition'}
+                      {newCondition.condition || 'Select'}
                     </Text>
                     <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>
@@ -597,6 +629,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
     backgroundColor: colors.white,
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -613,13 +647,12 @@ const styles = StyleSheet.create({
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(16),
     fontWeight: '600',
-    color: '#fff',
+    color: colors.primary,
     fontFamily: fonts.semiBold,
   },
   divider: {
@@ -633,6 +666,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: "#F5F4F9"
   },
   conditionsContainer: {
     padding: getResponsiveSpacing(20),
@@ -644,12 +678,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
+     borderWidth: 1,
+        borderColor: '#DADADA',
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: 'flex-start',
   },
   conditionContent: {
@@ -657,9 +693,9 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(12),
   },
   conditionName: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(18),
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.black,
     marginBottom: getResponsiveSpacing(4),
     fontFamily: fonts.bold,
   },
@@ -674,10 +710,10 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(6),
   },
   statusText: {
-    fontSize: getResponsiveFontSize(12),
-    color: colors.textSecondary,
-    fontWeight: '500',
-    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(14),
+    color: colors.success,
+    fontWeight: '600',
+    fontFamily: fonts.medium,
   },
   deleteButton: {
     padding: getResponsiveSpacing(8),

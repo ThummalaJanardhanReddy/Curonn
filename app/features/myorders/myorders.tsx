@@ -49,7 +49,7 @@ export default function OrdersScreen() {
   useEffect(() => {
     console.log('[OrdersScreen] userData changed:', userData);
   }, [userData]);
-
+  const patientId = Number(userData?.e_id || userData?.eId);
   const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
     try {
       const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
@@ -78,7 +78,6 @@ export default function OrdersScreen() {
       const map = await getOrderStatusIdMap();
       setStatusIdMap(map);
       // Fetch all orders initially
-      const patientId = userData?.e_id || 0;
       if (patientId) {
         const ordersData = await fetchAllOrders(patientId, 0);
         setOrders(ordersData);
@@ -86,7 +85,7 @@ export default function OrdersScreen() {
       setLoading(false);
     }
     fetchStatusMapAndOrders();
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,7 +103,6 @@ export default function OrdersScreen() {
   // Refresh orders from API when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const patientId = userData?.e_id || 0;
       if (patientId) {
         setLoading(true);
         fetchAllOrders(patientId, 0).then((ordersData) => {
@@ -112,7 +110,7 @@ export default function OrdersScreen() {
           setLoading(false);
         });
       }
-    }, [userData?.e_id])
+    }, [patientId])
   );
 
   // Add some sample orders if none exist (for demo purposes)
@@ -133,9 +131,15 @@ export default function OrdersScreen() {
 
   // Fetch orders when filter changes or search is performed
   useEffect(() => {
-    const patientId = userData?.e_id || 0;
+
     let statusId = 0;
     console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
+
+    if (!patientId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     // If searching by order number
     if (searchQuery.trim().length > 0) {
@@ -153,7 +157,7 @@ export default function OrdersScreen() {
       setOrders(ordersData);
       setLoading(false);
     });
-  }, [selectedFilter, statusIdMap, userData?.e_id, searchQuery]);
+  }, [selectedFilter, statusIdMap, patientId, searchQuery]);
 
   const filteredOrders = [...orders].sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
 
@@ -166,7 +170,7 @@ export default function OrdersScreen() {
       }
       const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
       if (response.isSuccess && Array.isArray(response.data)) {
-        // console.log("Orders of :", response.data);
+        console.log("Orders of :", response.data);
         return response.data;
       } else {
         console.log("No orders found or error:", response.message);
@@ -179,36 +183,36 @@ export default function OrdersScreen() {
   };
 
 
-    const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
-      const date = new Date(isoDate);
+  const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
+    const date = new Date(isoDate);
 
-      // Add extra hours and minutes
-      date.setHours(date.getUTCHours() + extraHours);
-      date.setMinutes(date.getUTCMinutes() + extraMinutes);
+    // Add extra hours and minutes
+    date.setHours(date.getUTCHours() + extraHours);
+    date.setMinutes(date.getUTCMinutes() + extraMinutes);
 
-      const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-      ];
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
 
-      const getOrdinal = (n: number) => {
-        const s = ["th", "st", "nd", "rd"];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
-      };
-
-      const month = months[date.getMonth()];
-      const day = getOrdinal(date.getDate());
-      const year = date.getFullYear();
-
-      let hours = date.getUTCHours(); // Use UTC hours
-      const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
-
-      const ampm = hours >= 12 ? "pm" : "am";
-      hours = hours % 12 || 12;
-
-      return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+    const getOrdinal = (n: number) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
+
+    const month = months[date.getMonth()];
+    const day = getOrdinal(date.getDate());
+    const year = date.getFullYear();
+
+    let hours = date.getUTCHours(); // Use UTC hours
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
+
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12 || 12;
+
+    return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+  };
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -247,13 +251,21 @@ export default function OrdersScreen() {
           category = "Consultation";
           iconSource = images.consultationicon;
           break;
+        case "Ambulance":
+          category = "Ambulance";
+          iconSource = images.ambulanceicon;
+          break;
+        case "Wellness Program":
+          category = "Wellness Program";
+          iconSource = images.wellnessicon;
+          break;
         default:
           category = item.orderType;
           iconSource = null;
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4): "";
+      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4) : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
@@ -339,12 +351,12 @@ export default function OrdersScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['top']}>
+      <View style={[styles.container]}>
         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffffff" />
+          backgroundColor="#ffffff" />
 
         {/* Header */}
         <View style={styles.header}>
@@ -355,9 +367,8 @@ export default function OrdersScreen() {
           style={{
             paddingHorizontal: 0,
             paddingVertical: 5,
-            backgroundColor: '#ffffff',
             borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+            borderBottomColor: '#E0E0E0',
           }}
         >
           <View style={styles.searchContainer}>
@@ -393,7 +404,7 @@ export default function OrdersScreen() {
                 keyExtractor={(item) => item.key}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filtersList, { paddingLeft: 20, paddingRight: 20 }]} />
+                contentContainerStyle={[styles.filtersList, { paddingBottom: 0, paddingLeft: 20, paddingRight: 20 }]} />
             </View>
           )}
         </View>
@@ -412,8 +423,8 @@ export default function OrdersScreen() {
               <FlatList
                 data={filteredOrders}
                 renderItem={renderOrderCard}
-                keyExtractor={(item) => item.orderNo}
-                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15 }]}
+                keyExtractor={(item, index) => item.orderNo ? String(item.orderNo) : `order-${index}`}
+                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 0 }]}
                 showsVerticalScrollIndicator={true}
                 style={{ flex: 1, backgroundColor: '#F5F4F9' }} />
 
@@ -428,8 +439,8 @@ export default function OrdersScreen() {
         statusName={selectedOrder?.statusName || ''}
         onClose={() => setOrderDetailsVisible(false)}
         refreshOrders={async () => {
-          if (userData?.e_id) {
-            const ordersData = await fetchAllOrders(userData.e_id, 0);
+          if (patientId) {
+            const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);
           }
         }} />
@@ -441,7 +452,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
-    paddingBottom: 0,
+    // Remove border to avoid shrinking height
+    // borderWidth: 1,
+    // borderColor: '#E0E0E0',
   },
 
   header: {
@@ -464,8 +477,8 @@ const styles = StyleSheet.create({
   },
   ordersdataContainer: {
     flex: 1,
-    marginHorizontal: getResponsiveSpacing(20),
-    marginTop: 10,
+    marginHorizontal: 0,
+    marginTop: 0,
     minHeight: 0,
   },
   filtersList: {
@@ -674,7 +687,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     height: 40,
-    marginTop: 5
+    marginTop: 0
   },
   searchIcon: {
     width: 16,

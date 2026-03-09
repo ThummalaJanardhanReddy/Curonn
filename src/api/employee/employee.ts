@@ -128,6 +128,7 @@ export const LabOrdersApi = {
     `/laborders/GetLabReporsByPatientId?patientId=${patientId}`,
   GetReportsByLabOrderId: (labOrderId: string | number) =>
     `/laborders/GetReportsByLabOrderId?labOrderId=${labOrderId}`,
+  RescheduleLabScanOrders: "/laborders/RescheduleLabScanOrders",
 } as const;
 
 export const MedicalOrdersApi = {
@@ -155,6 +156,7 @@ export const ConsultationApi = {
   getappointmentById: (appointmentId: string | number) =>
     `Appointment/get-by-id/?appointmentId=${appointmentId}`,
   reshduledata: "/Appointment/reschedule",
+  rescheduleAppointment: "/Appointment/RescheduleAppointment",
 } as const;
 
 export const MyOrdersApi = {
@@ -163,6 +165,14 @@ export const MyOrdersApi = {
 
 export const ArticlesApi = {
   Allarticles: "/Article/get-by-status?status=published",
+} as const;
+
+export const WellnessApi = {
+  GetAllwellness: "/WellnessProgram/GetAll",
+  getdataById: (id: string | number) => `/WellnessProgram/GetById/${id}`,
+  saveUpdate: "/wellnessBooking/create",
+  getwellnessId: (id: string | number) => `/wellnessBooking/${id}`,
+  wellnessCancel: "wellnessBooking/cancel"
 } as const;
 
 export const PrescriptionOrdersApi = {
@@ -232,6 +242,13 @@ export const AppointmentAPi = {
   save: '/Appointment/save',
 };
 
+export const SurgicalHistoryApi = {
+  save: "/Histories/SaveSurgical",
+  getAll: "/Histories/GetAllSurgical",
+  delete: (id: number | string, deletedBy: number | string) =>
+    `/Histories/DeleteSurgical/${id}?deletedBy=${deletedBy}`,
+} as const;
+
 export const ChatApi = {
   history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
   start: (patientId: number)=> `/chat/start?patientId=${patientId}`,
@@ -256,6 +273,7 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
+  WellnessData: WellnessApi,
   Ambulance: AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
   FoodAllergies: FoodAllergiesApi,
@@ -268,6 +286,7 @@ export const ApiRoutes = {
   Symptoms: SymptomsApi,
   Departments: DepartmentsApi,
   Appointments: AppointmentAPi,
+  SurgicalHistory: SurgicalHistoryApi,
   Chat: ChatApi,
 } as const;
 

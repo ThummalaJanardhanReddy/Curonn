@@ -35,14 +35,14 @@ import type { PrescriptionImage } from '../shared/utils/prescriptionStore';
 import SeacrchIcon from '../../assets/AppIcons/Curonn_icons/search.svg';
 import GalleryIcon from '../../assets/AppIcons/Curonn_icons/gallery.svg';
 import CameraIcon from '../../assets/AppIcons/Curonn_icons/camera.svg';
+import * as SecureStore from 'expo-secure-store';
 
 export default function MedicinesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentLocation] = useState('New York, NY');
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const { userData } = useUser();
-  const patientId = userData?.e_id ?? undefined;
-
+ 
   const [drugGroups, setDrugGroups] = useState<any[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
@@ -52,6 +52,18 @@ export default function MedicinesScreen() {
   // State for edit back-flow: pre-fill modal with previously entered data
   const [initialModalNotes, setInitialModalNotes] = useState('');
   const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+  const { setUserData } = useUser();
+const patientId = Number(userData?.e_id || userData?.eId);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 3) {
@@ -319,18 +331,7 @@ export default function MedicinesScreen() {
       </View>
 
 
-      <LinearGradient
-        colors={[
-          "rgba(255, 255, 255, 1)",
-          "rgba(247, 84, 10, 0.2)",
-        ]}
-        start={{ x: 0.1, y: 0.4 }}
-        end={{ x: 0.1, y: 0.1 }}
-        style={{
-          paddingHorizontal: 20, // ✅ works
-          paddingVertical: 5,
-        }}
-      >
+     <View style={styles.boxcolor}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
@@ -354,7 +355,7 @@ export default function MedicinesScreen() {
             )}
           </View>
         </View>
-      </LinearGradient>
+
       <View style={styles.containercontent}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -399,6 +400,7 @@ export default function MedicinesScreen() {
         initialOption={initialModalOption}
       />
     </View>
+    </View>
   );
 }
 
@@ -416,14 +418,21 @@ const styles = StyleSheet.create({
   containercontent: {
     flex: 1,
     backgroundColor: colors.white,
-    paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: 0,
   },
+   boxcolor:{
+ backgroundColor:colors.bg_primary,
+ flex:1
+  },
   content: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: colors.bg_primary,
     flex: 1,
   },
   searchContainer: {
     marginBottom: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(20),
+     marginTop: 5,
   },
   searchInputContainer: {
     flexDirection: "row",

@@ -9,6 +9,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
@@ -26,6 +28,7 @@ import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import Toast from '@/app/shared/components/Toast';
 import { StatusBar } from "expo-status-bar";
+import * as SecureStore from 'expo-secure-store';
 
 interface EnvironmentalAllergy {
   id: string;
@@ -37,9 +40,10 @@ interface EnvironmentalAllergy {
 
 interface EnvironmentalAllergiesScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalAllergiesScreenProps) {
+export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChange }: EnvironmentalAllergiesScreenProps) {
   const [allergies, setAllergies] = useState<EnvironmentalAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -49,14 +53,37 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
     status: 'active' as 'active' | 'inactive',
   });
   const [showReactionDropdown, setShowReactionDropdown] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [environmentalSearchOptions, setenvironmentalSearchOptions] = useState<any[]>([]);
   const [reactionOptions, setreactionOptions] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
+  const [environmentDropdownModal, setEnvironmentDropdownModal] = useState(false);
   const { userData } = useUser();
-  const patientId = userData?.e_id;
+  const { setUserData } = useUser();
+  const patientId = Number(userData?.e_id || userData?.eId);
+
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+  const filteredMasterOptions = React.useMemo(() => {
+    if (!dropdownSearch) return masterOptions;
+    return masterOptions.filter(item =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    );
+  }, [masterOptions, dropdownSearch]);
 
 
   const fetchallallergies = async () => {
@@ -70,13 +97,76 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
       );
       console.log('DEBUG: fetch All Drug Allergies response:', response);
       // If response is an array, use it directly
-      setAllergies(Array.isArray(response) ? response : response.items || []);
+      let list: EnvironmentalAllergy[] = [];
+
+      if (Array.isArray(response)) {
+        list = response;
+      } else if (Array.isArray(response?.items)) {
+        list = response.items;
+      } else if (Array.isArray(response?.data)) {
+        list = response.data;
+      }
+
+      setAllergies(list);
+
+      // ⭐ notify Profile screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
+      }
     } catch (error) {
       console.error("Failed to fetch relation types", error);
     }
   };
-  React.useEffect(() => {
+  useEffect(() => {
+    if (modalVisible) {
+      fetchMasterOptions('');
+    }
+  }, [modalVisible]);
 
+  const fetchMasterOptions = useCallback(async (q: string = '') => {
+    try {
+      setDropdownLoading(true);
+      const url = `${ApiRoutes.Master.getmasterdata(10)}&search=${encodeURIComponent(q || '')}`;
+      console.log('[EnvironmentalAllergies] fetching master options URL:', url);
+      const response: any = await axiosClient.get(url);
+
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (Array.isArray(response?.data?.data)) items = response.data.data;
+      else if (Array.isArray(response?.data?.result)) items = response.data.result;
+      else if (Array.isArray(response?.items)) items = response.items;
+      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+
+      const mapped = (items || []).map((it: any) => ({
+        id: it.masterDataId ?? it.id ?? it.value ?? Math.random(),
+        name: it.name ?? it.displayName ?? String(it),
+      }));
+      setMasterOptions(mapped);
+    } catch (err) {
+      console.error('Failed to fetch master options:', err);
+      setMasterOptions([]);
+    } finally {
+      setDropdownLoading(false);
+    }
+  }, []);
+
+  const suggestions = React.useMemo(() => {
+    const fromMaster = masterOptions.map((m) => ({ id: m.id, name: m.name }));
+    const fromHistory = (allergies || []).map((a) => ({ id: `h-${a.environmentId}`, name: a.allergen }));
+    const map = new Map<string, { id: any; name: string }>();
+    [...fromMaster, ...fromHistory].forEach((it) => {
+      const key = (it.name || '').toString().toLowerCase().trim();
+      if (!map.has(key)) map.set(key, it);
+    });
+    const arr = Array.from(map.values());
+    const q = (searchQuery || '').toLowerCase();
+    if (!q) return arr;
+    return arr.filter((it) => it.name.toLowerCase().includes(q));
+  }, [masterOptions, allergies, searchQuery]);
+
+  useEffect(() => {
+    fetchallallergies();
     const fetchreactions = async () => {
       try {
         const response: any = await axiosClient.get(
@@ -102,34 +192,6 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
         console.error("Failed to fetch reactions", error);
       }
     };
-
-    const fetchEnvDrugallergies = async () => {
-      try {
-        const response: any = await axiosClient.get(
-          ApiRoutes.Master.getmasterdata(10)
-        );
-        console.log('DEBUG: fetch Env Allergies response:', response);
-        // If response is an array, use it directly
-        if (Array.isArray(response)) {
-          const filtered = response
-            .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setenvironmentalSearchOptions(filtered);
-          console.log('DEBUG: Environmental Allergies:', filtered);
-        } else if (response.isSuccess && Array.isArray(response.data)) {
-          // fallback for old API shape
-          const filtered = response.data
-            .filter((item: any) => item.isActive)
-            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
-          setenvironmentalSearchOptions(filtered);
-          console.log('DEBUG: Env Allergies:', filtered);
-        }
-      } catch (error) {
-        console.error("Failed to fetch Env Alergies", error);
-      }
-    };
-    fetchEnvDrugallergies();
-    fetchallallergies();
     fetchreactions();
   }, []);
 
@@ -148,7 +210,8 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
   const handleOpenSearchModal = () => {
     setSearchModalVisible(true);
     setSearchQuery('');
-    setSearchResults(environmentalSearchOptions);
+    setDropdownVisible(false);
+    fetchMasterOptions('');
   };
 
   const handleCloseSearchModal = () => {
@@ -159,14 +222,6 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
 
   const handleSearchQueryChange = (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      const filtered = environmentalSearchOptions.filter(allergen =>
-        allergen.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setSearchResults(filtered);
-    } else {
-      setSearchResults(environmentalSearchOptions);
-    }
   };
 
   const handleSelectAllergen = (allergen: string) => {
@@ -176,6 +231,8 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
 
   const handleCloseModal = () => {
     setModalVisible(false);
+    setDropdownVisible(false);
+    setDropdownSearch('');
     setShowReactionDropdown(false);
     setNewAllergy({
       allergen: '',
@@ -186,6 +243,17 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
 
   const handleSaveAllergy = () => {
     if (newAllergy.allergen.trim() && newAllergy.reactions.trim()) {
+      // Duplicate check
+      const isDuplicate = allergies.some(
+        (a) => (a.allergen || '').toLowerCase().trim() === newAllergy.allergen.toLowerCase().trim()
+      );
+
+      if (isDuplicate) {
+        Alert.alert('Record already exists', 'This environmental allergen is already recorded in your allergies.');
+        return;
+      }
+
+      setSaveLoading(true);
       const payload = {
         environmentId: 0,
         patientId: patientId,
@@ -220,34 +288,48 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
             type: "error"
           });
           setShowToast(true);
+        })
+        .finally(() => {
+          setSaveLoading(false);
         });
       handleCloseModal();
     }
   };
 
   const handleDeleteAllergy = async (id: string) => {
-    try {
-      const response: any = await axiosClient.delete(ApiRoutes.EnvAllergies.getdeleteById(id));
-      console.log("Delete allergy response:", response);
-      // If response is true, show toast and refresh
-      if (response === true || (response && response.data === true)) {
-        setToastMessage({
-          title: "Envirinmental Allergy Deleted Successfully",
-          subtitle: "Deleted successfully!",
-          type: "success"
-        });
-        setShowToast(true);
-        fetchallallergies();
-      }
-    } catch (error) {
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-      console.error("Delete allergy error:", error);
-    }
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              const response: any = await axiosClient.delete(ApiRoutes.EnvAllergies.getdeleteById(id));
+              console.log("Delete allergy response:", response);
+              if (response === true || (response && response.data === true)) {
+                setToastMessage({
+                  title: "Environmental Allergy Deleted Successfully",
+                  subtitle: "Deleted successfully!",
+                  type: "success"
+                });
+                setShowToast(true);
+                fetchallallergies();
+              }
+            } catch (error) {
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+              console.error("Delete allergy error:", error);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderAllergyCard = useCallback(
@@ -256,12 +338,12 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
         <View style={styles.allergyContent}>
           <Text style={styles.allergenName}>{item.allergen}</Text>
           <View style={styles.statusContainer}>
-          <Text style={styles.reactionText}>{item.reactions}</Text>
-           <Text style={styles.divider}>|</Text>
-          
-             <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
-                                    {item.status === "active" ? "Active" : "Inactive"}
-                                  </Text>
+            <Text style={styles.reactionText}>{item.reactions}</Text>
+            <Text style={styles.divider}>|</Text>
+
+            <Text style={[styles.statusText, { color: item.status === "active" ? colors.success : colors.textLight }]}>
+              {item.status === "active" ? "Active" : "Inactive"}
+            </Text>
           </View>
         </View>
         <TouchableOpacity
@@ -276,238 +358,311 @@ export default function EnvironmentalAllergiesScreen({ onClose }: EnvironmentalA
   );
 
   return (<>
-     <StatusBar
-                  style="light"
-                  animated
-                />
-           
-     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <StatusBar
+      style="light"
+      animated
+    />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <BackButton
-            title=""
-            onPress={handleBack}
-            style={styles.backButton}
-            color='#000'
-          />
-          <Text style={styles.headerTitle}>Environmental Allergies</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddAllergy}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addButtonText}>+Add</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Divider with shadow */}
-      <View style={styles.divider} />
-
-      {/* Allergies List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.allergiesContainer}>
-          {allergies.length === 0 ? (
-            <Text style={{ fontFamily: fonts.regular, textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
-              No Data Available
-            </Text>
-          ) : (
-            allergies.map((allergy, index) => (
-              <View key={allergy.id || index} style={styles.allergyCardWrapper}>
-                {renderAllergyCard({ item: allergy })}
-              </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Add Allergy Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalOverlay}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <BackButton
+              title=""
+              onPress={handleBack}
+              style={styles.backButton}
+              color='#000'
+            />
+            <Text style={styles.headerTitle}>Environmental Allergies</Text>
+          </View>
           <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={handleCloseModal}
-          />
-          <SafeAreaView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Environmental Allergy</Text>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
+            style={styles.addButton}
+            onPress={handleAddAllergy}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addButtonText}>+ADD</Text>
+          </TouchableOpacity>
+        </View>
 
-            <View style={styles.modalBody}>
-              {/* Allergen Search Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Allergen</Text>
+        {/* Divider with shadow */}
+        <View style={styles.divider} />
+
+        {/* Allergies List */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.allergiesContainer}>
+            {allergies.length === 0 ? (
+              <Text style={{ fontFamily: fonts.regular, textAlign: 'center', color: '#737274', marginTop: 32, fontSize: 16 }}>
+                No Data Available
+              </Text>
+            ) : (
+              allergies.map((allergy, index) => (
+                <View key={allergy.id || index} style={styles.allergyCardWrapper}>
+                  {renderAllergyCard({ item: allergy })}
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Add Allergy Modal */}
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={handleCloseModal}
+        >
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              onPress={handleCloseModal}
+            />
+            <SafeAreaView style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Environmental Allergy</Text>
                 <TouchableOpacity
-                  style={styles.searchInputContainer}
-                  onPress={handleOpenSearchModal}
+                  onPress={handleCloseModal}
+                  style={styles.closeButton}
                 >
-                  <Text style={[styles.searchInputText, newAllergy.allergen ? styles.searchInputTextSelected : styles.searchInputTextPlaceholder]}>
-                    {newAllergy.allergen || 'Search for environmental allergen'}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
+                  <Image source={images.icons.close} style={styles.closeIcon} />
                 </TouchableOpacity>
               </View>
 
-              {/* Reaction Dropdown */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Reaction</Text>
-                <View style={styles.dropdownContainer}>
-                  <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setShowReactionDropdown(!showReactionDropdown);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>
-                      {newAllergy.reactions || 'Select reaction'}
-                    </Text>
-                    <Text style={styles.dropdownIcon}>▼</Text>
-                  </TouchableOpacity>
+              <View style={styles.modalBody}>
+                {/* Allergen Dropdown */}
+                <View style={[styles.inputGroup, { zIndex: 2 }]}>
+                  <Text style={styles.inputLabel}>Environmental Name</Text>
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setEnvironmentDropdownModal(true);
+                        fetchMasterOptions('');
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>
+                        {newAllergy.allergen || 'Select environmental allergen'}
+                      </Text>
+                      <Text style={styles.dropdownIcon}>▼</Text>
+                    </TouchableOpacity>
 
-                  {/* Dropdown Options */}
-                  {showReactionDropdown && (
-                    <>
+                    {/* Dropdown Options */}
+                    <Modal
+                      visible={environmentDropdownModal}
+                      transparent
+                      animationType="fade"
+                      onRequestClose={() => setEnvironmentDropdownModal(false)}
+                    >
                       <TouchableOpacity
-                        style={styles.dropdownBackdrop}
-                        onPress={() => setShowReactionDropdown(false)}
+                        style={styles.dropdownModalOverlay}
                         activeOpacity={1}
-                      />
-                      <View style={styles.dropdownOptions}>
-                        {reactionOptions.map((option, index) => (
-                          <TouchableOpacity
-                            key={option.masterDataId || index}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setNewAllergy({ ...newAllergy, reactions: option.name });
-                              setShowReactionDropdown(false);
-                            }}
+                        onPress={() => setEnvironmentDropdownModal(false)}
+                      >
+                        <View style={styles.dropdownModalContainer}>
+
+                          <TextInput
+                            style={styles.dropdownSearchInput}
+                            placeholder="Search environmental allergen..."
+                            placeholderTextColor="#999"
+                            value={dropdownSearch}
+                            onChangeText={setDropdownSearch}
+                          />
+
+                          <ScrollView
+                            style={{ maxHeight: 400 }}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator
                           >
-                            <Text style={styles.dropdownOptionText}>{option.name}</Text>
-                          </TouchableOpacity>
-                        ))}
+                            {dropdownLoading ? (
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                                style={{ marginTop: 20 }}
+                              />
+                            ) : filteredMasterOptions.length > 0 ? (
+                              filteredMasterOptions.map((item) => (
+                                <TouchableOpacity
+                                  key={String(item.id)}
+                                  style={styles.dropdownOption}
+                                  onPress={() => {
+                                    setNewAllergy({
+                                      ...newAllergy,
+                                      allergen: item.name,
+                                    });
+
+                                    setEnvironmentDropdownModal(false);
+                                    setDropdownSearch("");
+                                  }}
+                                >
+                                  <Text style={styles.dropdownOptionText}>
+                                    {item.name}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))
+                            ) : (
+                              <View style={styles.noResultsContainer}>
+                                <Text style={styles.noResultsText}>No options</Text>
+                              </View>
+                            )}
+                          </ScrollView>
+
+                        </View>
+                      </TouchableOpacity>
+                    </Modal>
+                  </View>
+                </View>
+
+                {/* Reaction Dropdown */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Reaction</Text>
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setShowReactionDropdown(!showReactionDropdown);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>
+                        {newAllergy.reactions || 'Select reaction'}
+                      </Text>
+                      <Text style={styles.dropdownIcon}>▼</Text>
+                    </TouchableOpacity>
+
+                    {/* Dropdown Options */}
+                    {showReactionDropdown && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.dropdownBackdrop}
+                          onPress={() => setShowReactionDropdown(false)}
+                          activeOpacity={1}
+                        />
+                        <View style={styles.dropdownOptions}>
+                          {reactionOptions.map((option, index) => (
+                            <TouchableOpacity
+                              key={option.masterDataId || index}
+                              style={styles.dropdownOption}
+                              onPress={() => {
+                                setNewAllergy({ ...newAllergy, reactions: option.name });
+                                setShowReactionDropdown(false);
+                              }}
+                            >
+                              <Text style={styles.dropdownOptionText}>{option.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </View>
+
+                {/* Status Radio Buttons */}
+                <View style={styles.inputGroup1}>
+                  <Text style={styles.inputLabel}>Status</Text>
+                  <View style={styles.radioGroup}>
+                    <TouchableOpacity
+                      style={styles.radioOption}
+                      onPress={() => setNewAllergy({ ...newAllergy, status: 'active' })}
+                    >
+                      <View style={styles.radioButton}>
+                        {newAllergy.status === 'active' && <View style={styles.radioSelected} />}
                       </View>
-                    </>
-                  )}
+                      <Text style={styles.radioLabel}>Active</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.radioOption}
+                      onPress={() => setNewAllergy({ ...newAllergy, status: 'inactive' })}
+                    >
+                      <View style={styles.radioButton}>
+                        {newAllergy.status === 'inactive' && <View style={styles.radioSelected} />}
+                      </View>
+                      <Text style={styles.radioLabel}>Inactive</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
 
-              {/* Status Radio Buttons */}
-              <View style={styles.inputGroup1}>
-                <Text style={styles.inputLabel}>Status</Text>
-                <View style={styles.radioGroup}>
-                  <TouchableOpacity
-                    style={styles.radioOption}
-                    onPress={() => setNewAllergy({ ...newAllergy, status: 'active' })}
-                  >
-                    <View style={styles.radioButton}>
-                      {newAllergy.status === 'active' && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Active</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.radioOption}
-                    onPress={() => setNewAllergy({ ...newAllergy, status: 'inactive' })}
-                  >
-                    <View style={styles.radioButton}>
-                      {newAllergy.status === 'inactive' && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Inactive</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Save Button */}
-            <View style={styles.modalFooter}>
-              <PrimaryButton
-                title="Save"
-                onPress={handleSaveAllergy}
-                style={styles.saveButton}
-                disabled={!newAllergy.allergen.trim() || !newAllergy.reactions.trim()}
-              />
-            </View>
-            
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* Search Modal */}
-      <Modal
-        visible={searchModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={handleCloseSearchModal}
-      >
-        <View style={styles.searchModalOverlay}>
-          <SafeAreaView style={styles.searchModalContent}>
-            <View style={styles.searchModalHeader}>
-              <Text style={styles.searchModalTitle}>Search of Environmental Allergies</Text>
-              <TouchableOpacity
-                onPress={handleCloseSearchModal}
-                style={styles.searchModalCloseButton}
-              >
-                <Image source={images.icons.close} style={styles.searchModalCloseIcon} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.searchModalBody}>
-              {/* Search Input */}
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search"
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={handleSearchQueryChange}
-                  autoFocus
-                  selectionColor="transparent"
-                  underlineColorAndroid="transparent"
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  blurOnSubmit={false}
-                  returnKeyType="search"
+              {/* Save Button */}
+              <View style={styles.modalFooter}>
+                <PrimaryButton
+                  title={saveLoading ? "Saving..." : "Save"}
+                  onPress={handleSaveAllergy}
+                  style={styles.saveButton}
+                  disabled={!newAllergy.allergen.trim() || !newAllergy.reactions.trim() || saveLoading}
                 />
-                <Text style={styles.searchInputIcon}>🔍</Text>
               </View>
 
-              {/* Search Results */}
-              <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
-                {searchResults.map((allergen, index) => (
-                  <TouchableOpacity
-                    key={allergen.masterDataId || index}
-                    style={styles.searchResultItem}
-                    onPress={() => handleSelectAllergen(allergen.name)}
-                  >
-                    <Text style={styles.searchResultText}>{allergen.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-      <Toast
-        visible={showToast}
-        title={toastMessage.title}
-        subtitle={toastMessage.subtitle}
-        type={toastMessage.type}
-        onHide={() => setShowToast(false)}
-        duration={3000}
-      />
+            </SafeAreaView>
+          </View>
+        </Modal>
+
+        {/* Search Modal */}
+        <Modal
+          visible={searchModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={handleCloseSearchModal}
+        >
+          <View style={styles.searchModalOverlay}>
+            <SafeAreaView style={styles.searchModalContent}>
+              <View style={styles.searchModalHeader}>
+                <Text style={styles.searchModalTitle}>Search of Environmental Allergies</Text>
+                <TouchableOpacity
+                  onPress={handleCloseSearchModal}
+                  style={styles.searchModalCloseButton}
+                >
+                  <Image source={images.icons.close} style={styles.searchModalCloseIcon} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.searchModalBody}>
+                {/* Search Input */}
+                <View style={styles.searchInputContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search"
+                    placeholderTextColor="#999"
+                    value={searchQuery}
+                    onChangeText={handleSearchQueryChange}
+                    autoFocus
+                    selectionColor="transparent"
+                    underlineColorAndroid="transparent"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    blurOnSubmit={false}
+                    returnKeyType="search"
+                  />
+                  <Text style={styles.searchInputIcon}>🔍</Text>
+                </View>
+
+                {/* Search Results */}
+                <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
+                  {suggestions.map((item, index) => (
+                    <TouchableOpacity
+                      key={String(item.id) + '-' + index}
+                      style={styles.searchResultItem}
+                      onPress={() => handleSelectAllergen(item.name)}
+                    >
+                      <Text style={styles.searchResultText}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {suggestions.length === 0 && (
+                    <View style={styles.noResultsContainer}>
+                      <Text style={styles.noResultsText}>No results found</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </SafeAreaView>
+          </View>
+        </Modal>
+        <Toast
+          visible={showToast}
+          title={toastMessage.title}
+          subtitle={toastMessage.subtitle}
+          type={toastMessage.type}
+          onHide={() => setShowToast(false)}
+          duration={3000}
+        />
       </View>
     </SafeAreaView>
   </>);
@@ -531,6 +686,8 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(20),
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -542,28 +699,39 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...fontStyles.headercontent,
-    color: "#202427",
+    color: colors.black,
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(6),
-    paddingBottom: getResponsiveSpacing(4),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    paddingVertical: getResponsiveSpacing(8),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: "#fff",
-    fontFamily: fonts.semiBold
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '600',
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+  },
+  dropdownModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 20,
+  },
+
+  dropdownModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    maxHeight: "70%",
   },
   divider: {
-   color: "#000",
+    color: "#000",
     marginHorizontal: getResponsiveSpacing(5),
   },
   content: {
     flex: 1,
-     backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_primary,
   },
   allergiesContainer: {
     padding: getResponsiveSpacing(20),
@@ -572,34 +740,27 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(12),
   },
   allergyCard: {
-backgroundColor: "#fff",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     borderWidth: 1,
-    borderColor: "#B4B6B9",
+    borderColor: '#DADADA',
     flexDirection: "row",
     alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+
   },
   allergyContent: {
     flex: 1,
     marginRight: getResponsiveSpacing(12),
   },
   allergenName: {
- fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(14),
     color: colors.text,
     marginBottom: getResponsiveSpacing(4),
     fontFamily: fonts.bold
   },
   reactionText: {
-  fontSize: getResponsiveFontSize(13),
+    fontSize: getResponsiveFontSize(13),
     color: '#000000',
     marginTop: getResponsiveSpacing(2),
     fontFamily: fonts.regular
@@ -904,6 +1065,25 @@ backgroundColor: "#fff",
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
+    fontFamily: fonts.regular,
+  },
+  dropdownSearchInput: {
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    color: colors.text,
+  },
+  noResultsContainer: {
+    padding: getResponsiveSpacing(20),
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.textSecondary,
+    fontStyle: 'italic',
     fontFamily: fonts.regular,
   },
 });

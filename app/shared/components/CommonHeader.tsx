@@ -21,7 +21,8 @@ import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import * as SecureStore from 'expo-secure-store';
+import * as signalR from "@microsoft/signalr";
 
 interface CommonHeaderProps {
   title?: string;
@@ -53,15 +54,37 @@ export default function CommonHeader({
   const [locationVisible, setLocationVisible] = useState(false);
   const [count, setCount] = useState(0);
   
-  const [selectedLocation, setSelectedLocation] = useState(currentLocation);
+  const [selectedLocation, setSelectedLocation] = useState("Fetching location...");
   const [profileForm, setProfileForm] = useState({
     gender: "",
     image: "",
   });
   const { getCurrentAddress, address } = useLocation();
-  const { userData } = useUser();
+  const { userData, setUserData } = useUser();
   const { cartCount } = useCart();
-  const patientId = userData?.e_id;
+  const patientId = Number(userData?.e_id || userData?.eId);
+
+   useEffect(() => {
+      const restoreUserData = async () => {
+        const userData = await SecureStore.getItemAsync('userData');
+        console.log("Restoring userData on Home Screen:", userData);
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      };
+      restoreUserData();
+    }, []);
+
+     const fetchNotiCounts = async () => {
+      try {
+        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
+        const data = response?.data ?? response;
+        console.log("[CommonHeader] Notification count response:", response);
+        setCount(data);
+      } catch (error) {
+        console.error("[ProfileModal] Failed to fetch profile data:", error);
+      }
+    };
 
   React.useEffect(() => {
     if (!patientId) return;
@@ -81,32 +104,85 @@ export default function CommonHeader({
     };
     fetchProfile();
 
-     const fetchNotiCounts = async () => {
-      try {
-        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
-        const data = response?.data ?? response;
-        console.log("[CommonHeader] Notification count response:", response);
-        setCount(data);
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
-    };
+    
     fetchNotiCounts();
   }, [patientId]);
 
-  useEffect(() => {
-    // Fetch current address on mount
-    const fetchAddress = async () => {
-      const address = await getCurrentAddress();
-      if (address) {
-        setSelectedLocation(address);
-        if (onLocationChange) {
-          onLocationChange(address);
-        }
-      };
+  
+ useEffect(() => {
+  if (!patientId) return; 
+  let connection: signalR.HubConnection;
+  const setupSignalR = async () => {
+    await fetchNotiCounts();
+    const token = await AsyncStorage.getItem("authToken");
+    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+    connection = new signalR.HubConnectionBuilder()
+      .withUrl("https://api.curonn.com/hubs/video", {
+        accessTokenFactory: () => token || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    try {
+      await connection.start();
+      console.log("✅ SignalR Connected");
+      connection.on("NewNotification", async (data) => {
+        console.log("📩 New notification received:", data);
+        // ⭐ Refresh notification list
+        await fetchNotiCounts();
+      });
+      connection.onclose(() => {
+        console.log("⚠️ SignalR Disconnected");
+      });
+
+    } catch (err) {
+      console.log("❌ SignalR connection error:", err);
     }
-    fetchAddress();
-  }, []);
+  };
+  setupSignalR();
+
+  return () => {
+    if (connection) connection.stop();
+  };
+}, [patientId, isHomePage]);
+
+useEffect(() => {
+  const fetchAddress = async () => {
+    try {
+
+      // ⭐ Check saved address first
+      const storedAddress = await AsyncStorage.getItem("userAddress");
+
+      if (storedAddress) {
+        setSelectedLocation(storedAddress);
+        onLocationChange?.(storedAddress);
+        return;
+      }
+
+      // ⭐ Try getting GPS location
+      const addr = await getCurrentAddress();
+
+      if (addr) {
+        setSelectedLocation(addr);
+        onLocationChange?.(addr);
+      } else {
+        // ⭐ If permission denied or GPS failed
+        setSelectedLocation("Select your address");
+        setLocationVisible(true);
+      }
+
+    } catch (error) {
+      console.log("Location load error:", error);
+
+      // ⭐ fallback to manual location selection
+      setSelectedLocation("Select your address");
+      setLocationVisible(true);
+    }
+  };
+
+  fetchAddress();
+}, []);
+
       const [latLng, setLatLng] = useState<{ latitude: string; longitude: string } | null>(null);
 
       // Fetch lat/lng from AsyncStorage
@@ -121,9 +197,9 @@ export default function CommonHeader({
         getLatLng();
       }, [selectedLocation]);
 
-  useEffect(() => {
-    setSelectedLocation(address);
-  }, [address]);
+  // useEffect(() => {
+  //   setSelectedLocation(address);
+  // }, [address]);
 
   const handleProfilePress = () => {
     console.log('Profile button pressed');
@@ -154,15 +230,13 @@ export default function CommonHeader({
     setLocationVisible(true);
   };
 
-  const handleLocationSelected = (locationData: any) => {
-    console.log('Location selected:', locationData);
-    const locationString = `${locationData.address}, ${locationData.houseNumber}`;
-    setSelectedLocation(locationString);
-    if (onLocationChange) {
-      onLocationChange(locationString);
-    }
-  };
-
+const handleLocationSelected = async (locationData: any) => {
+  const locationString = `${locationData.address}, ${locationData.houseNumber}`;
+  setSelectedLocation(locationString);
+  await AsyncStorage.setItem("userAddress", locationString);
+  onLocationChange?.(locationString);
+  setLocationVisible(false); // ⭐ close modal
+};
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
@@ -238,12 +312,7 @@ export default function CommonHeader({
       </>
     );
   }
-                    {/* Show lat/lng below address */}
-                    {latLng && (
-                      <Text style={{ color: 'white', fontSize: 12 }}>
-                        Lat: {latLng.latitude} | Lng: {latLng.longitude}
-                      </Text>
-                    )}
+               
 
   // Default style for other pages (like lab-tests)
   return (

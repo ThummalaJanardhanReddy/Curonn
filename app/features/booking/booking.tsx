@@ -35,6 +35,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from '@/app/shared/styles/fonts';
+import * as SecureStore from 'expo-secure-store';
 // Guarded access to expo-router's useSearchParams hook (for medicine flow).
 let maybeUseSearchParams: any = null;
 try {
@@ -45,7 +46,7 @@ try {
   maybeUseSearchParams = null;
 }
 
-type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance";
+type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance" | "wellness";
 
 interface BookingScreenProps {
   visible: boolean;
@@ -57,11 +58,12 @@ interface BookingScreenProps {
   /** Lab-test flow only */
   masterId?: number;
   /** Lab-test flow only */
+  programeId?: number;
   type?: ServiceType;
   /** Lab-test flow only */
   reportTime?: string;
   serviceId?: number;
-
+  duration?: string;
   selectedDiagCenter?: any;
   selectedDate?: Date;
   selectedTimeSlot?: string;
@@ -80,6 +82,7 @@ export default function BookingScreen({
   reportTime,
   selectedDiagCenter,
   serviceId,
+  duration,
   selectedDate: propSelectedDate,
   selectedTimeSlot: propSelectedTimeSlot,
 }: BookingScreenProps) {
@@ -89,7 +92,7 @@ export default function BookingScreen({
   }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
-  console.log("👤 User Data ID:", userData?.e_id);
+  console.log("👤 User Data ID:", userData?.e_id, userData?.eId);
 
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
@@ -99,7 +102,17 @@ export default function BookingScreen({
   const [selectedDate, setSelectedDate] = useState<Date | null>(propSelectedDate || null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
-
+  const { setUserData } = useUser();
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -129,6 +142,7 @@ export default function BookingScreen({
   const [discountPercent, setDiscountPercent] = useState(10);
   const discountAmount = Math.round((servicePrice * discountPercent) / 100);
   const totalAmount = servicePrice - discountAmount;
+
   const [statusId, setStatusId] = useState<number>(0);
   const [razorpayOrderId, setRazorpayOrderId] = useState("");
   const [showConfirmExit, setShowConfirmExit] = useState(false);
@@ -181,6 +195,15 @@ export default function BookingScreen({
     "10:00 AM - 11:00 AM",
   ];
 
+
+  // Lab-test date format: YYYY-MM-DD
+  const formatDateLab = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
+
   // Helper to get end time of slot
   function getSlotEndTime(slot: string): Date {
     const [, end] = slot.split("-");
@@ -218,17 +241,18 @@ export default function BookingScreen({
   // ═══════════════════════════════════════════════════════════════════
   // LAB-TEST FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === false)
   // ═══════════════════════════════════════════════════════════════════
-
+  const patientId = userData?.e_id || userData?.eId;
   // Fetch discount percent from Employee API
   useEffect(() => {
     if (isFromMedicalFlag) return;
     async function fetchDiscount() {
       try {
-        const patientId = userData?.e_id;
+
         if (!patientId) return;
         const res: any = await axiosClient.get(
           ApiRoutes.Employee.getById(patientId)
         );
+        console.log("Fetched employee details for discount:", res);
         if (res && typeof res === "object") {
           let discount = 0;
           if (type === "lab-test") {
@@ -257,14 +281,22 @@ export default function BookingScreen({
                 ? res.discountAmbulanceService
                 : 0;
           }
+          else if (type !== "wellness") {
+            discount =
+              typeof res.discountMedicineOrder === "number" &&
+                res.discountMedicineOrder != null
+                ? res.discountMedicineOrder
+                : 0;
+          }
           setDiscountPercent(discount);
+          console.log(`Applied discount for ${type}:`, discount, "%");
         }
       } catch (e) {
         console.error("Failed to fetch discount percent", e);
       }
     }
     fetchDiscount();
-  }, [userData?.e_id, type, isFromMedicalFlag]);
+  }, [patientId, type, isFromMedicalFlag]);
 
   // Fetch statusId for 'Requested' from MasterData API (categoryId=7)
   useEffect(() => {
@@ -326,22 +358,22 @@ export default function BookingScreen({
 
   // Fetch addresses and set the default as selectedLocation on mount (shared by both flows)
   useEffect(() => {
-    if (userData?.e_id) {
+    if (patientId) {
       fetchAddresses();
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
 
   useCallback(() => {
-    if (userData?.e_id) {
+    if (patientId) {
       fetchAddresses();
     }
-  }, [userData?.e_id])
+  }, [patientId])
 
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) throw new Error("Patient ID is not available");
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId)
@@ -402,7 +434,7 @@ export default function BookingScreen({
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-      const patientId = userData?.e_id;
+      const patientId = userData?.e_id || userData?.eId;
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)
@@ -446,7 +478,7 @@ export default function BookingScreen({
     const payload: any = {
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -459,7 +491,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       labPartnerId: 0,
       statusId: statusId,
       paymentAmount: totalAmount,
@@ -497,7 +529,7 @@ export default function BookingScreen({
 
     return payload;
   };
-
+  //console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
   // Save lab order after payment
   const saveLabOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -505,7 +537,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildLabOrderPayload(paymentData);
-    payload.createdBy = userData?.e_id || 1;
+    payload.createdBy = userData?.e_id || userData?.eId;
     payload.req = "web";
     console.log("📤 Lab Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -556,7 +588,7 @@ export default function BookingScreen({
     // Build ambulance order payload (customize as needed)
     const payload: any = {
       ambulanceBookingId: 0,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId,
       serviceName: serviceName,
       serviceId: masterId || 0,
       address: selectedLocation?.address || "",
@@ -570,7 +602,7 @@ export default function BookingScreen({
       isSelfService: patientType === "self",
       paymentDetails: String(totalAmount),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       statusId: statusId,
       paymentAmount: totalAmount,
       razorpayOrderId: paymentData?.razorpayOrderId || "",
@@ -623,13 +655,66 @@ export default function BookingScreen({
     }
   };
 
-  // Lab-test date format: YYYY-MM-DD
-  const formatDateLab = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
+
+  const saveWellnessOrder = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    // Build ambulance order payload (customize as needed)
+    const payload: any = {
+      programId: masterId,
+      programName: serviceName,
+      patientId: Number(userData?.e_id || userData?.eId),
+      address: "",
+      timeSlot: "",
+      createdBy: userData?.e_id || userData?.eId,
+      paymentAmount: totalAmount,
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
+    };
+    // Add relation info if for others
+    console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
+    try {
+      const response: any = await axiosClient.post(
+        ApiRoutes.WellnessData.saveUpdate,
+        payload
+      );
+      console.log("📥 Wellness Save Order Response:", JSON.stringify(response, null, 2));
+      if ((typeof response === "number" && response > 0) || (response && (response.success || response.isSuccess))) {
+        setToastMessageLab({
+          title: "Your wellness booking has been completed successfully",
+          subtitle: response.message || "Your wellness order was placed successfully!",
+          type: "success",
+        });
+        setShowToastLab(true);
+        setTimeout(() => {
+          setShowToastLab(false);
+          setShowPayment(false);
+          if (onClose) onClose();
+          router.replace("/(main)/orders");
+        }, 1500);
+      } else {
+        setToastMessageLab({
+          title: "Order Failed",
+          subtitle: response?.message || "Failed to place ambulance order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (error) {
+      console.error("[Booking] saveAmbulanceOrder error:", error);
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
   };
+
+
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
@@ -677,7 +762,7 @@ export default function BookingScreen({
       setErrors("");
     }
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -705,6 +790,36 @@ export default function BookingScreen({
   };
 
 
+   // Lab-test: handleBookNow
+  const handleBookWellness = async () => {
+    try {
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
+      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Wellness Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+  
   const handleBookNowScan = async () => {
     // Validate address, date, timeSlot as string errors
     if (!selectedLocation) {
@@ -754,7 +869,7 @@ export default function BookingScreen({
 
       labOrderId: 0,
       testName: serviceName,
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId || 0,
       address: "",
       hNo: "",
       landMark: "",
@@ -762,7 +877,7 @@ export default function BookingScreen({
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
       isSelfService: patientType === "self",
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       xrayMasterId: masterId || 0,
       testType: "Xray",
       diagnosisCenter: selectedDiagCenter.centerName || "",
@@ -912,11 +1027,17 @@ export default function BookingScreen({
     return itemsTotal < 500 ? 50 : 0;
   }, [itemsTotal]);
 
-  const displayedTotal = useMemo(
-    () => itemsTotal + deliveryCharges,
-    [itemsTotal, deliveryCharges]
-  );
 
+  const safeItemsTotal = typeof itemsTotal === 'number' && !isNaN(itemsTotal) ? itemsTotal : 0;
+  const safeDiscountPercent = typeof discountPercent === 'number' && !isNaN(discountPercent) ? discountPercent : 0;
+  const medicineDiscountAmount = Math.round((safeItemsTotal * safeDiscountPercent) / 100);
+  console.log("Items Total:", safeItemsTotal, "Discount Percent:", safeDiscountPercent, "Discount Amount:", medicineDiscountAmount);
+  const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
+
+  const displayedTotal = useMemo(
+    () => medicineTotalAmount + deliveryCharges,
+    [medicineTotalAmount, deliveryCharges]
+  );
   // Quantity handlers for medical cart items
   const handleIncreaseQuantity = async (index: number) => {
     const item = cartItems[index];
@@ -963,7 +1084,7 @@ export default function BookingScreen({
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => {
-    console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
+    // console.log("🛠️ buildMedOrderPayload called with paymentData:", !!paymentData);
     const isSelfService = patientType === "self";
 
     // Get current date in yyyy-mm-dd format
@@ -973,7 +1094,7 @@ export default function BookingScreen({
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
-      patientId: userData?.e_id || 0,
+      patientId: userData?.e_id || userData?.eId || 0,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -985,7 +1106,7 @@ export default function BookingScreen({
       isSelfService,
       paymentDetails: displayedTotal.toFixed(2),
       isPaymentDone: !!paymentData,
-      createdBy: userData?.e_id || 0,
+      createdBy: userData?.e_id || userData?.eId,
       statusId: statusId,
       handlingFee: 0,
       deliveryCharges: deliveryCharges,
@@ -999,7 +1120,7 @@ export default function BookingScreen({
         cartId: ci.cartId || 0,
         medicineOrderId: 0,
         medicineId: ci.medicineId || 0,
-        patientId: userData?.e_id || 0,
+        patientId: userData?.e_id || userData?.eId,
         medicineName: ci.medicineName || ci.name || "",
         quantity: ci.quantity || 1,
         price: ci.price || 0,
@@ -1022,7 +1143,7 @@ export default function BookingScreen({
     }
     return payload;
   };
-  console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
+  // console.log("buildMedOrderPayload:", JSON.stringify(buildMedOrderPayload(), null, 2));
   // Medicine: save order after payment
   const saveMedOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -1030,7 +1151,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    // console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1124,7 +1245,7 @@ export default function BookingScreen({
     }
 
     try {
-      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || 0}`;
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${userData?.e_id || userData?.eId}`;
       console.log("📤 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
@@ -1380,11 +1501,36 @@ export default function BookingScreen({
               <Text style={styles.sectionTitle}>Pricing Info</Text>
               <View style={styles.deliveryCardNew}>
                 <View style={styles.chargeRow}>
-                  <Text style={styles.chargeLabel}>Delivery Charges</Text>
+                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>Delivery Charges</Text>
                   <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
                 </View>
+                {/* Local discount calculation for Pricing Info only */}
+                {(() => {
+                  return (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        marginBottom: 0,
+                        marginTop: 5,
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
+                        Offer Discount ({safeDiscountPercent}%)
+                      </Text>
+                      <Text style={{ fontSize: 14, color: "#C15E9C", fontFamily: fonts.medium }}>
+                        -{"\u20B9"}
+                        {medicineDiscountAmount}
+                      </Text>
+                    </View>
+                  );
+                })()}
+                {/* <View style={styles.chargeRow}>
+                  <Text style={styles.chargeLabel}>Delivery Charges</Text>
+                  <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
+                </View> */}
                 <View style={styles.dividerSolid} />
-                <View style={[styles.chargeRow, { marginTop: 10 }]}>
+                <View style={[styles.chargeRow, { marginTop: 5 }]}>
                   <Text style={styles.totalLabelNew}>TO PAY</Text>
                   <Text style={styles.totalValueNew}>₹{displayedTotal.toFixed(0)}</Text>
                 </View>
@@ -1551,10 +1697,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {userData?.e_id && (
+          {(userData?.e_id || userData?.eId) && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id}
+              patientId={userData?.e_id || userData?.eId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {
@@ -1650,17 +1796,17 @@ export default function BookingScreen({
               <View style={styles.serviceCard}>
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
-                  {(type !== "ambulance") && (
+                  {(type !== "ambulance" && type !== "wellness") && (
                     <Text style={styles.serviceLocation}>
-                      {isAtHome ? "AT HOME" : "AT Lab"}
+                      {isAtHome ? "AT-HOME" : "AT Lab"}
                     </Text>
                   )}
                 </View>
-                 {(type !== "ambulance") && (
-                <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
-                  Report within {reportTime}
-                </Text>
-                 )}
+                {(type !== "ambulance" && type !== "wellness") && (
+                  <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
+                    Report within {reportTime}
+                  </Text>
+                )}
 
                 <View style={styles.serviceDivider} />
 
@@ -1690,18 +1836,13 @@ export default function BookingScreen({
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
                   </>)}
-                  {/* <SecondaryButton
-                    title="Edit"
-                    onPress={handleEdit}
-                    width={50}
-                    height={25}
-                  /> */}
+
                 </View>
               </View>
             </View>
 
             {/* Service Address */}
-            {(type !== "scans") && (
+            {(type !== "scans" && type !== "wellness") && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Service Address</Text>
                 {selectedLocation ? (
@@ -1769,184 +1910,206 @@ export default function BookingScreen({
               </View>
             )}
 
+            {(type == "wellness") && (<>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Patient Details
+                </Text>
+                <View style={styles.addressCard}>
+                  <View style={styles.addressInfoNew}>
+                    <Text style={styles.addressNameBold}>
+                      {userData?.fullName}
+                    </Text>
+                    <Text style={styles.addressTextNew}>
+                      {userData?.address} | {userData?.gender} | {userData?.age} yrs
+                    </Text>
 
-            {/* Sample Pickup Date & Time */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Sample Pickup Date & Time
-              </Text>
-              <View style={styles.dateTimeCard}>
-                <View style={styles.dateSection}>
-                  <Text style={styles.fieldLabel}>Service Start Date</Text>
-                  <TouchableOpacity
-                    style={styles.dateInput}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !selectedDate && styles.placeholderText,
-                      ]}
-                    >
-                      {selectedDate
-                        ? formatDateLab(selectedDate)
-                        : "dd/mm/yyyy"}
-                    </Text>
-                    <Image
-                      source={images.icons.calendar}
-                      style={styles.calendarIcon}
-                    />
-                  </TouchableOpacity>
-                  {errors === "Please select service start date" && (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                    >
-                      {errors}
-                    </Text>
-                  )}
+                  </View>
                 </View>
+              </View>
 
-                <View style={styles.timeSection}>
-                  <Text style={styles.fieldLabel}>Select Time Slot</Text>
-                  <View style={styles.timeSlotsContainer}>
-                    {labTimeSlots.map((slot, index) => (
-                      <TouchableOpacity
-                        key={index}
+            </>)}
+
+            {(type !== "wellness") && (<>
+              {/* Sample Pickup Date & Time */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Sample Pickup Date & Time
+                </Text>
+                <View style={styles.dateTimeCard}>
+                  <View style={styles.dateSection}>
+                    <Text style={styles.fieldLabel}>Service Start Date</Text>
+                    <TouchableOpacity
+                      style={styles.dateInput}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text
                         style={[
-                          styles.timeSlot,
-                          selectedTimeSlot === slot && styles.selectedTimeSlot,
+                          styles.dateText,
+                          !selectedDate && styles.placeholderText,
                         ]}
-                        onPress={() => {
-                          setSelectedTimeSlot(slot);
-                          if (errors === "Please select time slot")
-                            setErrors("");
-                        }}
                       >
-                        <Text
-                          style={[
-                            styles.timeSlotText,
-                            selectedTimeSlot === slot && styles.selectedTimeSlotText,
-                          ]}
-                        >
-                          {selectedTimeSlot === slot ? `${slot}` : slot}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                        {selectedDate
+                          ? formatDateLab(selectedDate)
+                          : "dd/mm/yyyy"}
+                      </Text>
+                      <Image
+                        source={images.icons.calendar}
+                        style={styles.calendarIcon}
+                      />
+                    </TouchableOpacity>
+                    {errors === "Please select service start date" && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
                   </View>
-                  {errors === "Please select time slot" && (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {errors}
-                    </Text>
+
+                  <View style={styles.timeSection}>
+                    <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                    <View style={styles.timeSlotsContainer}>
+                      {labTimeSlots.map((slot, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.timeSlot,
+                            selectedTimeSlot === slot && styles.selectedTimeSlot,
+                          ]}
+                          onPress={() => {
+                            setSelectedTimeSlot(slot);
+                            if (errors === "Please select time slot")
+                              setErrors("");
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.timeSlotText,
+                              selectedTimeSlot === slot && styles.selectedTimeSlotText,
+                            ]}
+                          >
+                            {selectedTimeSlot === slot ? `${slot}` : slot}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {errors === "Please select time slot" && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+
+              {/* Patient Details */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Patient Details</Text>
+                <View style={styles.patientCard}>
+                  <View style={styles.radioGroup}>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="self"
+                        status={patientType === "self" ? "checked" : "unchecked"}
+                        onPress={() => setPatientType("self")}
+                        color="#C15E9C"
+
+                      />
+                      <Text style={styles.radioLabel}>Self Service</Text>
+                    </View>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="others"
+                        status={
+                          patientType === "others" ? "checked" : "unchecked"
+                        }
+                        onPress={() => setPatientType("others")}
+                        color="#C15E9C"
+                      />
+                      <Text style={styles.radioLabel}>For Others</Text>
+                    </View>
+                  </View>
+
+                  {patientType === "others" && (
+                    <View style={styles.othersForm}>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Relation Type</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowRelationDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {selectedRelation
+                              ? selectedRelation.name
+                              : "Select"}
+                          </Text>
+                          <View style={styles.dropdownIcon} />
+                        </TouchableOpacity>
+                        {fieldErrors.relation ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Full Name</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={fullName}
+                          onChangeText={(text) => {
+                            setFullName(text);
+                            if (fieldErrors.fullName) {
+                              setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                        />
+                        {fieldErrors.fullName ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Age</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={age}
+                          onChangeText={(text) => {
+                            setAge(text);
+                            if (fieldErrors.age) {
+                              setFieldErrors((prev) => ({ ...prev, age: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                          keyboardType="numeric"
+                        />
+                        {fieldErrors.age ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Gender</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowGenderDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {gender || "Select"}
+                          </Text>
+                          <View style={styles.dropdownIcon} />
+                        </TouchableOpacity>
+                        {fieldErrors.gender ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                        ) : null}
+                      </View>
+                    </View>
                   )}
                 </View>
               </View>
-            </View>
-
-            {/* Patient Details */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Patient Details</Text>
-              <View style={styles.patientCard}>
-                <View style={styles.radioGroup}>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="self"
-                      status={patientType === "self" ? "checked" : "unchecked"}
-                      onPress={() => setPatientType("self")}
-                      color="#C15E9C"
-
-                    />
-                    <Text style={styles.radioLabel}>Self Service</Text>
-                  </View>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="others"
-                      status={
-                        patientType === "others" ? "checked" : "unchecked"
-                      }
-                      onPress={() => setPatientType("others")}
-                      color="#C15E9C"
-                    />
-                    <Text style={styles.radioLabel}>For Others</Text>
-                  </View>
-                </View>
-
-                {patientType === "others" && (
-                  <View style={styles.othersForm}>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Relation Type</Text>
-                      <TouchableOpacity
-                        style={styles.dropdown}
-                        onPress={() => setShowRelationDropdown(true)}
-                      >
-                        <Text style={styles.dropdownText}>
-                          {selectedRelation
-                            ? selectedRelation.name
-                            : "Select"}
-                        </Text>
-                        <View style={styles.dropdownIcon} />
-                      </TouchableOpacity>
-                      {fieldErrors.relation ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Full Name</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={fullName}
-                        onChangeText={(text) => {
-                          setFullName(text);
-                          if (fieldErrors.fullName) {
-                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                          }
-                        }}
-                        placeholder="Enter"
-                        placeholderTextColor="#999"
-                      />
-                      {fieldErrors.fullName ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Age</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={age}
-                        onChangeText={(text) => {
-                          setAge(text);
-                          if (fieldErrors.age) {
-                            setFieldErrors((prev) => ({ ...prev, age: "" }));
-                          }
-                        }}
-                        placeholder="Enter"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                      />
-                      {fieldErrors.age ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Gender</Text>
-                      <TouchableOpacity
-                        style={styles.dropdown}
-                        onPress={() => setShowGenderDropdown(true)}
-                      >
-                        <Text style={styles.dropdownText}>
-                          {gender || "Select"}
-                        </Text>
-                        <View style={styles.dropdownIcon} />
-                      </TouchableOpacity>
-                      {fieldErrors.gender ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                )}
-              </View>
-            </View>
+            </>)}
 
             {/* Order Summary */}
 
@@ -2039,19 +2202,27 @@ export default function BookingScreen({
           </ScrollView>
 
           {/* Book Now Button */}
-          {(type !== "scans") ? (
+          {type === "scans" ? (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm &  Pay \u20B9${totalAmount}`}
-                onPress={handleBookNowLab}
+                title={`Confirm & Book Now`}
+                onPress={handleBookNowScan}
+                style={{ width: "100%" }}
+              />
+            </View>
+          ) : type === "wellness" ? (
+            <View style={styles.footer}>
+              <PrimaryButton
+                title={`Confirm & Pay wellness \u20B9${totalAmount}`}
+                onPress={handleBookWellness}
                 style={{ width: "100%" }}
               />
             </View>
           ) : (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm &  Book Now`}
-                onPress={handleBookNowScan}
+                title={`Confirm & Pay \u20B9${totalAmount}`}
+                onPress={handleBookNowLab}
                 style={{ width: "100%" }}
               />
             </View>
@@ -2172,6 +2343,14 @@ export default function BookingScreen({
                       razorpayPaymentId: data.razorpay_payment_id || "",
                       razorpaySignature: data.razorpay_signature || "",
                     });
+                  }
+                  else if (type === "wellness") {
+                    saveWellnessOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
                   } else {
                     saveLabOrder({
                       razorpayOrderId:
@@ -2236,10 +2415,10 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {userData?.e_id && (
+          {userData?.e_id || userData?.eId && (
             <AddressSelection
               visible={addressVisible}
-              patientId={userData?.e_id}
+              patientId={userData?.e_id || userData?.eId || 0}
               onSelect={(addressId) => {
                 setAddressVisible(false);
                 if (addressId) {
@@ -2296,7 +2475,7 @@ export default function BookingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.bg_primary,
   },
   headerRow: {
     flexDirection: 'row',
@@ -2312,7 +2491,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
-    color: '#202427',
+    color: colors.black,
   },
   closeButton: {
     padding: 4,
@@ -2326,7 +2505,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
   },
   section: {
     marginTop: getResponsiveSpacing(0),
@@ -2396,7 +2575,7 @@ const styles = StyleSheet.create({
   },
   servicePrice: {
     fontSize: 16,
-    color: colors.primary,
+    color: '#000',
     fontFamily: fonts.semiBold
   },
   serviceCenter: {

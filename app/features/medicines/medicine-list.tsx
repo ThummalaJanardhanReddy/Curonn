@@ -389,7 +389,6 @@ export default function MedicineListScreen() {
             paddingHorizontal: 20,
             paddingTop: 5,
             paddingBottom: 5,
-            backgroundColor: '#ffffff'
           }}
         >
           {/* Search Field */}
@@ -406,7 +405,13 @@ export default function MedicineListScreen() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    if (groupNameInParams) {
+                      handleBack();
+                    } else {
+                      setSearchQuery('');
+                    }
+                  }}
                 >
                   <Image
                     source={images.icons.close}
@@ -447,9 +452,10 @@ export default function MedicineListScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.bg_primary,
     // ...commonStyles.containercontent_layout,
     flex: 1,
-    backgroundColor: colors.white,
+    //backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -473,9 +479,9 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   headerTitle: {
-    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
     color: colors.black,
-    fontFamily: fonts.semiBold
   },
   cartButton: {
     padding: getResponsiveSpacing(3),

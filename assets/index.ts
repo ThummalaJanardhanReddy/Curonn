@@ -31,6 +31,16 @@ import profile_menstrual_history from './AppIcons/Curonn_icons/Profile/menstrual
 import profile_past_procedures from './AppIcons/Curonn_icons/Profile/Past_Procedures.svg';
 import profile_social_habits from './AppIcons/Curonn_icons/Profile/social_history.svg';
 
+// New History PNG Icons (no spaces in filenames for Metro compatibility)
+const env_allergy_png = require('./AppIcons/Curonn_icons/History_icons/environmental_allergies.png');
+const family_history_png = require('./AppIcons/Curonn_icons/History_icons/family_history.png');
+const food_allergy_png = require('./AppIcons/Curonn_icons/History_icons/food_allergies.png');
+const drug_allergy_png = require('./AppIcons/Curonn_icons/History_icons/drug_allergies.png');
+const medical_history_png = require('./AppIcons/Curonn_icons/History_icons/medical_history.png');
+const past_procedures_png = require('./AppIcons/Curonn_icons/History_icons/past_procedures.png');
+const social_habits_png = require('./AppIcons/Curonn_icons/History_icons/social_habits.png');
+const menstrual_history_png = require('./AppIcons/Curonn_icons/History_icons/menstrual_history.png');
+
 // Settings
 import about from './AppIcons/Curonn_icons/Profile/about_curron.svg';
 import addFamily from './AppIcons/Curonn_icons/Profile/add_my_family.svg';
@@ -65,13 +75,15 @@ import vitamins_iron from './AppIcons/Curonn_icons/lab_orders/vitamins_iron.svg'
 
 // Images
 export const images = {
-  labicon:require('./AppIcons/Curonn_icons/labicon.png'),
-  medicalicon:require('./AppIcons/Curonn_icons/medicalicon.png'),
- consultationicon:require('./AppIcons/Curonn_icons/consultation.png'),
+  labicon: require('./AppIcons/Curonn_icons/labicon.png'),
+  medicalicon: require('./AppIcons/Curonn_icons/medicalicon.png'),
+  consultationicon: require('./AppIcons/Curonn_icons/consultation.png'),
+  ambulanceicon: require('./AppIcons/Curonn_icons/ambulance_order.png'),
+   wellnessicon: require('./AppIcons/Curonn_icons/wellness_orders.png'),
 
   appIcon: require('./AppIcons/appIcon.png'),
   // Splash Screen
-  splashScreen: require('./images/Splash Screen.png'),
+  splashScreen: require('./images/Splash_Screen.png'),
   splashScreenImg: require('./images/welcome.png'),
 
   // Welcome Screen
@@ -104,6 +116,7 @@ export const images = {
   sampleCollectionStep3: require('./images/sampleCollectionProcess3.png'),
   labdefault: require('./AppIcons/Curonn_icons/lab_detault_ic.png'),
   healthpackage: require('./images/healthpackage.jpg'),
+  wellnesspackage: require('./images/wellnesspackage.png'),
   //home
   home: {
     arrow_card: arrow_card,
@@ -118,7 +131,9 @@ export const images = {
   panels: {
     ambulance: require('./AppIcons/panels/panel_ambulance.png'),
     labTest: require('./AppIcons/panels/panel_labtest.png'),
+
     wellness: require('./AppIcons/panels/panel_wellness.png'),
+    panel_card2: require('./AppIcons/panels/panel_card2.png'),
     medicalCondition: require('./images/panels/medicalCondition.png'),
     landingPage: require('./images/panels/landingPage.png'),
     happyLife: require('./images/panels/happyLife.png'),
@@ -139,6 +154,7 @@ export const images = {
   },
   // Profile
   profileModal: {
+    // SVG versions (kept for backward compatibility)
     medicalHistory: profile_medical_history,
     familyHistory: profile_family_history,
     pastProcedures: profile_past_procedures,
@@ -148,6 +164,16 @@ export const images = {
     environmentalAllergies: profile_environmental_allergies,
     menstrualHistory: profile_menstrual_history,
     familyHistory_png: require('./AppIcons/Curonn_icons/Profile/family_history.png'),
+
+    // PNG versions from History_icons (used in profile list)
+    medicalHistory_png: medical_history_png,
+    familyHistory_png_new: family_history_png,
+    pastProcedures_png: past_procedures_png,
+    socialHabits_png: social_habits_png,
+    foodAllergies_png: food_allergy_png,
+    drugAllergies_png: drug_allergy_png,
+    environmentalAllergies_png: env_allergy_png,
+    menstrualHistory_png: menstrual_history_png,
   },
 
   //lab orders

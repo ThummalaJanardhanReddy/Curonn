@@ -12,12 +12,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -35,6 +37,7 @@ interface FamilyMember {
 
 interface FamilyHistoryScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 // API Response interfaces
@@ -47,12 +50,14 @@ interface FamilyHistoryResponse {
 interface FamilyMemberData {
   id?: string;
   relationship: string;
+  relationshipId?: number;
   condition: string;
   employeeId?: string;
 }
 
 export default function FamilyHistoryScreen({
   onClose,
+  onDataStatusChange
 }: FamilyHistoryScreenProps) {
   const { userData } = useUser();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -63,7 +68,7 @@ export default function FamilyHistoryScreen({
   // Master data options for conditions (categoryId=13)
   const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
   const [dropdownSearch, setDropdownSearch] = useState('');
-
+  const [medicalconditionModal, setmedicalconditionModal] = useState(false);
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -71,6 +76,7 @@ export default function FamilyHistoryScreen({
     );
   }, [masterOptions, dropdownSearch]);
   const [newMember, setNewMember] = useState({
+    relationshipId: 0,
     relationship: "",
     condition: "",
   });
@@ -84,21 +90,10 @@ export default function FamilyHistoryScreen({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
-  const relationshipOptions = [
-    "Father",
-    "Mother",
-    "Brother",
-    "Sister",
-    "Grandfather (Paternal)",
-    "Grandmother (Paternal)",
-    "Grandfather (Maternal)",
-    "Grandmother (Maternal)",
-    "Uncle",
-    "Aunt",
-    "Cousin",
-    "Other",
-  ];
+  const [relationshipOptions, setRelationshipOptions] = useState<Array<{ masterDataId: number; name: string }>>([
 
+  ]);
+  const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -110,10 +105,87 @@ export default function FamilyHistoryScreen({
     fetchMasterOptions('');
   };
 
+  React.useEffect(() => {
+    //console.log('DEBUG: useEffect for relationTypes called');
+    // Fetch relationship types from MasterData API (categoryId=5)
+    const fetchRelationTypes = async () => {
+      try {
+        //console.log('DEBUG: fetchRelationTypes called');
+        const response: any = await axiosClient.get(
+          ApiRoutes.Master.getmasterdata(5)
+        );
+        //console.log('DEBUG: fetchRelationTypes response:', response);
+        // If response is an array, use it directly
+        if (Array.isArray(response)) {
+          const filtered = response
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setRelationshipOptions(filtered);
+          // console.log('DEBUG: setRelationTypes:', filtered);
+        } else if (response.isSuccess && Array.isArray(response.data)) {
+          // fallback for old API shape
+          const filtered = response.data
+            .filter((item: any) => item.isActive)
+            .map((item: any) => ({ masterDataId: item.masterDataId, name: item.name }));
+          setRelationshipOptions(filtered);
+          // console.log('DEBUG: setRelationTypes:', filtered);
+        }
+      } catch (error) {
+        console.error("Failed to fetch relation types", error);
+      }
+    };
+    fetchRelationTypes();
+  }, []);
+
   const handleOpenSearchModal = () => {
     console.log('[FamilyHistory] Opening search modal - prefetch master options');
     setSearchModalVisible(true);
     fetchMasterOptions('');
+  };
+
+  const fetchRelationTypes = async () => {
+    try {
+      console.log('[FamilyHistory] fetching relationship types from master data (categoryId=5)');
+      const response: any = await axiosClient.get(
+        ApiRoutes.Master.getmasterdata(5)
+      );
+      console.log('[FamilyHistory] master relation types response:', response);
+
+      let items: any[] = [];
+      if (Array.isArray(response)) {
+        items = response;
+      } else if (response.isSuccess && Array.isArray(response.data)) {
+        items = response.data;
+      }
+
+      const filtered = (items || [])
+        .filter((item: any) => item.isActive)
+        .map((item: any) => ({
+          id: item.masterDataId || item.id || 0,
+          name: item.name
+        }));
+
+      if (filtered.length > 0) {
+        setRelationshipOptions(prev => {
+          // Robust normalization: remove spaces, lowercase, remove "paternal/maternal" descriptors
+          const normalize = (name: string) =>
+            name.toLowerCase()
+              .replace(/\([^)]*\)/g, '')
+              .replace(/\s+/g, '')
+              .replace(/grand/g, 'grand') // handle potential variations
+              .trim();
+
+          const apiNames = new Set(filtered.map(f => normalize(f.name)));
+
+          // Only keep defaults that aren't fundamentally covered by the API
+          const uniqueDefaults = prev.filter(p => !apiNames.has(normalize(p.name)));
+
+          return [...filtered, ...uniqueDefaults];
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch relation types for family history:', err);
+    }
   };
 
   const fetchMasterOptions = async (q: string = '') => {
@@ -178,7 +250,9 @@ export default function FamilyHistoryScreen({
     setModalVisible(false);
     setShowRelationshipDropdown(false);
     setShowConditionDropdown(false);
+    setRelationshipOptions(prev => [...prev]); // trigger refresh
     setNewMember({
+      relationshipId: 0,
       relationship: "",
       condition: "",
     });
@@ -187,10 +261,22 @@ export default function FamilyHistoryScreen({
 
   const handleSaveMember = async () => {
     if (newMember.relationship.trim() && newMember.condition.trim()) {
+      // Duplicate check
+      const isDuplicate = familyMembers.some(
+        (m: any) =>
+          ((m.relationship || m.relationName || '').toLowerCase().trim() === newMember.relationship.toLowerCase().trim()) &&
+          ((m.historyName || '').toLowerCase().trim() === newMember.condition.toLowerCase().trim())
+      );
+
+      if (isDuplicate) {
+        Alert.alert('Record already exists', 'This family history record is already present.');
+        return;
+      }
+      console.log('Saving family member with data:', newMember);
       const memberData: FamilyMemberData = {
         relationship: newMember.relationship.trim(),
         condition: newMember.condition.trim(),
-        // Add employeeId if needed from user context
+        relationshipId: newMember.relationshipId,
       };
 
       const success = await saveFamilyMember(memberData);
@@ -201,12 +287,28 @@ export default function FamilyHistoryScreen({
   };
 
   const handleDeleteMember = useCallback(async (id: string) => {
-    await deleteFamilyMember(id);
-  }, []);
+    Alert.alert(
+      'Delete Record',
+      'Are you sure you want to delete this record?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            await deleteFamilyMember(id);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [patientId]);
 
   // API Functions
   const fetchAllFamilyMembers = async () => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setIsLoading(true);
       setError("");
@@ -221,7 +323,7 @@ export default function FamilyHistoryScreen({
         pageNo: 1,
         pageSize: 100,
         search: "",
-        patientId: userData.e_id,
+        patientId: patientId,
         fromDate: "1900-01-01",
         toDate: formattedDate,
         groupName: ""
@@ -234,14 +336,30 @@ export default function FamilyHistoryScreen({
       );
       console.log('📥 Family History Response:', JSON.stringify(response, null, 2));
 
+      let list: FamilyMember[] = [];
+
       if (response?.items && Array.isArray(response.items)) {
-        setFamilyMembers(response.items);
+        list = response.items.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
       } else if (response?.isSuccess && Array.isArray(response.data)) {
-        setFamilyMembers(response.data);
+        list = response.data.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
       } else if (Array.isArray(response)) {
-        setFamilyMembers(response);
-      } else {
-        setError("Failed to fetch family history");
+        list = response.map((it: any) => ({
+          ...it,
+          relationship: it.relationName || it.relationship || ""
+        }));
+      }
+
+      setFamilyMembers(list);
+
+      // ⭐ notify parent screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
       }
     } catch (error: any) {
       console.error("Error fetching family members:", error);
@@ -252,7 +370,7 @@ export default function FamilyHistoryScreen({
   };
 
   const saveFamilyMember = async (memberData: FamilyMemberData) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setIsSaving(true);
       setError("");
@@ -265,14 +383,14 @@ export default function FamilyHistoryScreen({
 
       const payload = {
         familyHistoryId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         historyName: memberData.condition,
-        relationId: 0,
+        relationId: memberData.relationshipId || 0,
         onsetDate: formattedDate,
         appointmentId: 0,
         isActive: true,
         createdOn: formattedDate,
-        createdBy: userData.e_id,
+        createdBy: patientId,
         deletedOn: formattedDate,
         deletedBy: 0,
         modifiedOn: formattedDate,
@@ -324,12 +442,12 @@ export default function FamilyHistoryScreen({
   };
 
   const deleteFamilyMember = async (id: string) => {
-    if (!userData?.e_id) return;
+    if (!patientId) return;
     try {
       setError("");
-      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${userData.e_id}`);
+      console.log(`📤 Deleting Family History item: ${id}, deletedBy: ${patientId}`);
       const response: any = await axiosClient.delete(
-        ApiRoutes.FamilyHistory.delete(id, userData.e_id)
+        ApiRoutes.FamilyHistory.delete(id, patientId)
       );
       console.log('📥 Delete Family History Response:', JSON.stringify(response, null, 2));
 
@@ -369,6 +487,8 @@ export default function FamilyHistoryScreen({
   // Load family members on component mount
   useEffect(() => {
     fetchAllFamilyMembers();
+    fetchRelationTypes();
+    fetchMasterOptions(''); // Initial load for medical conditions (cat 13)
   }, []);
 
   const renderMemberCard = useCallback(
@@ -397,6 +517,7 @@ export default function FamilyHistoryScreen({
         <View style={styles.headerLeft}>
           <BackButton
             title="Family History"
+            color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
             textStyle={styles.headerTitle}
@@ -407,12 +528,12 @@ export default function FamilyHistoryScreen({
           onPress={handleAddMember}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Error Display */}
       {error ? (
@@ -508,13 +629,14 @@ export default function FamilyHistoryScreen({
                             onPress={() => {
                               setNewMember({
                                 ...newMember,
-                                relationship: option,
+                                relationship: option.name,
+                                relationshipId: option.id,
                               });
                               setShowRelationshipDropdown(false);
                             }}
                           >
                             <Text style={styles.dropdownOptionText}>
-                              {option}
+                              {option.name}
                             </Text>
                           </TouchableOpacity>
                         ))}
@@ -530,10 +652,7 @@ export default function FamilyHistoryScreen({
                 <View style={styles.dropdownContainer}>
                   <TouchableOpacity
                     style={styles.dropdownButton}
-                    onPress={() => {
-                      setShowConditionDropdown(!showConditionDropdown);
-                      setShowRelationshipDropdown(false);
-                    }}
+                    onPress={() => setmedicalconditionModal(true)}
                   >
                     <Text style={styles.dropdownText}>
                       {newMember.condition || "Select medical condition"}
@@ -542,14 +661,19 @@ export default function FamilyHistoryScreen({
                   </TouchableOpacity>
 
                   {/* Dropdown Options */}
-                  {showConditionDropdown && (
-                    <>
-                      <TouchableOpacity
-                        style={styles.dropdownBackdrop}
-                        onPress={() => setShowConditionDropdown(false)}
-                        activeOpacity={1}
-                      />
-                      <View style={styles.dropdownOptions}>
+                  <Modal
+                    visible={medicalconditionModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setmedicalconditionModal(false)}
+                  >
+                    <TouchableOpacity
+                      style={styles.dropdownModalOverlay}
+                      activeOpacity={1}
+                      onPress={() => setmedicalconditionModal(false)}
+                    >
+                      <View style={styles.dropdownModalContainer}>
+
                         <TextInput
                           style={styles.dropdownSearchInput}
                           placeholder="Search condition..."
@@ -557,12 +681,15 @@ export default function FamilyHistoryScreen({
                           value={dropdownSearch}
                           onChangeText={setDropdownSearch}
                         />
-                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+                        <ScrollView
+                          style={{ maxHeight: 400 }}
+                          keyboardShouldPersistTaps="handled"
+                          showsVerticalScrollIndicator
+                        >
                           {dropdownLoading ? (
-                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                              <ActivityIndicator size="small" color={colors.primary} />
-                            </View>
-                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : (
                             filteredMasterOptions.map((item) => (
                               <TouchableOpacity
                                 key={String(item.id)}
@@ -572,24 +699,20 @@ export default function FamilyHistoryScreen({
                                     ...newMember,
                                     condition: item.name,
                                   });
-                                  setShowConditionDropdown(false);
                                   setDropdownSearch('');
+                                  setmedicalconditionModal(false);
                                 }}
                               >
-                                <Text style={styles.dropdownOptionText}>
-                                  {item.name}
-                                </Text>
+                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
                               </TouchableOpacity>
                             ))
-                          ) : (
-                            <View style={styles.noResultsContainer}>
-                              <Text style={styles.noResultsText}>No options</Text>
-                            </View>
                           )}
                         </ScrollView>
+
                       </View>
-                    </>
-                  )}
+                    </TouchableOpacity>
+                  </Modal>
+
                 </View>
               </View>
             </View>
@@ -700,6 +823,8 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(20),
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -707,21 +832,34 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
   },
+  dropdownModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  dropdownModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 15,
+    maxHeight: "70%",
+    elevation: 6,
+    width: '90%',
+  },
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    ...fontStyles.headercontent,
     color: colors.black,
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: "transparent",
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(16),
     fontWeight: "600",
-    color: "#fff",
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -748,15 +886,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
+    borderWidth: 1,
+    borderColor: '#DADADA',
     padding: getResponsiveSpacing(16),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: "flex-start",
   },
   memberContent: {
@@ -764,10 +904,11 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(12),
   },
   relationship: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(18),
     fontWeight: "bold",
-    color: colors.text,
+    color: colors.black,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.bold,
   },
   condition: {
     fontSize: getResponsiveFontSize(14),
@@ -811,9 +952,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -832,9 +974,10 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
+    fontFamily: fonts.medium,
   },
   textInput: {
     borderWidth: 1,
@@ -862,6 +1005,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
+    fontFamily: fonts.regular,
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
@@ -873,7 +1017,7 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   dropdownBackdrop: {
-    position: "fixed",
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -924,6 +1068,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -1072,8 +1217,8 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSpacing(6),
   },
   deleteButtonText: {
-    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });

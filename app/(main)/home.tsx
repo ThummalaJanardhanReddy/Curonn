@@ -9,7 +9,9 @@ import React, {
   useState,
 } from "react";
 import { useUser } from "../shared/context/UserContext";
+import * as SecureStore from 'expo-secure-store';
 import { Dimensions } from "react-native";
+import * as signalR from "@microsoft/signalr";
 // Carousel slider for orders
 
 import {
@@ -33,6 +35,7 @@ import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
 import commonStyles, { colors } from "../shared/styles/commonStyles";
 import axiosClient from "../../src/api/axiosClient";
+import { ArticlesApi } from "../../src/api/employee/employee";
 import ApiRoutes from "../../src/api/employee/employee";
 import {
   getResponsiveFontSize,
@@ -41,6 +44,8 @@ import {
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
 const SCREEN_WIDTH = Dimensions.get("window").width;
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // FAQ data
 const faqs = [
@@ -73,12 +78,62 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
+  
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const secureUserData = await SecureStore.getItemAsync('userData');
+      if (secureUserData) {
+        setUserData(JSON.parse(secureUserData));
+      }
+      // If not found in SecureStore, context will be used
+    };
+    restoreUserData();
+  }, []);
+  // Restore userData from SecureStore on mount
+  const { userData,setUserData } = useUser();
+   const patientId = Number(userData?.e_id || userData?.eId);
+    // Render wellness program cards
+   
+
+
+ 
+  
+    const fetchNotifications = async () => {
+      console.log("Fetching notifications for patientId:", patientId);
+      // Ensure patientId is string or number, fallback to empty string
+      const response = await axiosClient.get(
+        ApiRoutes.Notification.GetList(patientId, "patient")
+      );
+      console.log("Notifications API response:", response);
+      const data = response?.data ?? response;
+      setNotifications(data);
+    };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [patientId]);
+
+  //console.log("Home Screen patientId:", patientId);
+  const [wellnessall, setWellnessall] = useState<any[]>([]);
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-  const [notifications, setNotifications] = useState<any>(null);
-  const { userData } = useUser();
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [closedOrderIds, setClosedOrderIds] = useState<string[]>([]);
-  const patientId = userData?.e_id;
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [faqVisible, setFaqVisible] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
+  // Lock the visible set of 3 orders per session
+  const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const bottomSlideAnim = useRef(new Animated.Value(400)).current;
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
+
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     try {
@@ -96,33 +151,113 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    if (!patientId) return;
-    const fetchNotifications = async () => {
-      try {
-        const response = await axiosClient.get(
-          ApiRoutes.Notification.GetList(patientId, "patient"),
-        );
-        const data = response?.data ?? response;
-        console.log(" Notification  response:", data);
-        setNotifications(data);
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
-    };
-    fetchNotifications();
-  }, [patientId]);
 
-  const [orders, setOrders] = useState<any[]>([]);
-  // Lock the visible set of 3 orders per session
-  const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
+   const renderWellnessCard = useCallback(
+      ({ item, index }: { item: any; index: number }) => {
+        const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
+        const isLast = index === wellnessall.length - 1;
+        return (
+          <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
+            <Image
+              source={bgImage}
+              style={styles.featureBackground}
+              resizeMode="cover"
+            />
+            <images.home.book_wellness
+              style={{ position: "absolute", right: 20, bottom: 0 }}
+            />
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: "#fff" }]}>
+                {item.programName}
+              </Text>
+              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>Duration: {item.duration}</Text>
+              <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
+                ₹{item.price}
+              </Text>
+              <Button
+                mode="contained"
+                style={[
+                  styles.featureButton,
+                  {
+                    backgroundColor: "#EFBC73",
+                    height: 36,
+                    justifyContent: "center",
+                  },
+                ]}
+                labelStyle={{
+                  color: "#000",
+                  fontSize: 14,
+                  fontFamily: fonts.medium,
+                  lineHeight: 18,
+                }}
+                contentStyle={{
+                  height: 36,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onPress={() => {
+                  router.push({
+                    pathname: "/wellnessdetails",
+                    params: { wellnessMasterId: item.wellnessMasterId || item.id }
+                  });
+                }}
+              >
+                Get Now
+              </Button>
+            </View>
+          </View>
+        );
+      },
+      [wellnessall],
+    );
+
+ useEffect(() => {
+  if (!patientId) return; // 🚨 VERY IMPORTANT
+
+  let connection: signalR.HubConnection;
+  const setupSignalR = async () => {
+    await fetchNotifications();
+    const token = await AsyncStorage.getItem("authToken");
+    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+    connection = new signalR.HubConnectionBuilder()
+      .withUrl("https://api.curonn.com/hubs/video", {
+        accessTokenFactory: () => token || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    try {
+      await connection.start();
+      console.log("✅ SignalR Connected");
+
+      connection.on("NewNotification", async (data) => {
+        console.log("📩 New notification received:", data);
+        // ⭐ Refresh notification list
+        await fetchNotifications();
+      });
+      connection.onclose(() => {
+        console.log("⚠️ SignalR Disconnected");
+      });
+
+    } catch (err) {
+      console.log("❌ SignalR connection error:", err);
+    }
+  };
+
+  setupSignalR();
+
+  return () => {
+    if (connection) connection.stop();
+  };
+}, [patientId]);
+
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        if (userData?.e_id) {
-          const data = await fetchAllOrders(userData.e_id, 0);
+        if (patientId) {
+          const data = await fetchAllOrders(patientId, 0);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
@@ -150,7 +285,7 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id]),
+    }, [patientId]),
   );
   // Only show locked orders, not closed for this session
   const latestOrders = useMemo(() => {
@@ -183,13 +318,15 @@ export default function HomeScreen() {
   );
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] =
     useState(false);
+   
   // Always fetch latest orders on mount and when page is focused
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        if (userData?.e_id) {
-          const data = await fetchAllOrders(userData.e_id, 0);
+        
+        if (patientId) {
+          const data = await fetchAllOrders(patientId);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
@@ -208,7 +345,7 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, [userData?.e_id]),
+    }, [patientId]),
   );
   // Order slider card
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
@@ -293,23 +430,23 @@ export default function HomeScreen() {
     let iconSource = null;
     switch (item.orderType) {
       case "Single Test":
-        category = "Lab Test";
+        category = "Lab Order";
         iconSource = images.labicon;
         break;
       case "Package":
-        category = "Health Check Up";
+        category = "Health Check Up Order";
         iconSource = images.labicon;
         break;
       case "Xray":
-        category = "Xray";
+        category = "Scan Order";
         iconSource = images.labicon;
         break;
       case "Medicine":
-        category = "Medicine";
+        category = "Medicine Order";
         iconSource = images.medicalicon;
         break;
       case "Consultation":
-        category = "Consultation";
+        category = "Doctor Consultation";
         iconSource = images.consultationicon;
         break;
       default:
@@ -380,7 +517,8 @@ export default function HomeScreen() {
                 fontFamily: fonts.bold,
               }}
             >
-              {item.title}
+              {/* {item.title} */}
+              {category}
             </Text>
           </View>
           <Text
@@ -467,8 +605,8 @@ export default function HomeScreen() {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n,
-            )
+            n.notificationId === notificationId ? { ...n, isRead: true } : n,
+          )
           : prev,
       );
     } catch (error) {
@@ -479,7 +617,9 @@ export default function HomeScreen() {
   useEffect(() => {
     async function fetchArticles() {
       try {
+        console.log("Request URL:", ApiRoutes.ArticlesData.Allarticles);
         const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
+        console.log("Articles API response:", res);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res)) {
           setArticles(res);
@@ -489,17 +629,23 @@ export default function HomeScreen() {
       }
     }
     fetchArticles();
+
+        async function fetchWelness() {
+      try {
+        console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
+        const res = await axiosClient.get(ApiRoutes.WellnessData.GetAllwellness);
+        console.log("Wellness API response:", res.data);
+        // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
+        if (Array.isArray(res.data.items)) {
+          setWellnessall(res.data.items);
+        }
+      } catch (e) {
+        console.error("Failed to fetch articles", e);
+      }
+    }
+    fetchWelness();
   }, []);
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [faqVisible, setFaqVisible] = useState(false);
-  const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [feedbackForm, setFeedbackForm] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
-  const bottomSlideAnim = useRef(new Animated.Value(400)).current;
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS === "android") {
@@ -796,8 +942,8 @@ export default function HomeScreen() {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-              // width={'60%'}
-              // height={'60%'}
+            // width={'60%'}
+            // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -831,54 +977,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Wellness Program Section */}
-        <View style={styles.section}>
-          <View style={styles.featureCard}>
-            <Image
-              source={images.panels.wellness}
-              style={styles.featureBackground}
-              resizeMode="cover"
-            />
-            <images.home.book_wellness
-              style={{ position: "absolute", right: 20, bottom: 0 }}
-              // width={'20%'}
-              // height={'80%'}
-            />
-            <View style={styles.featureContent}>
-              <Text style={[styles.featureTitle, { color: "#fff" }]}>
-                Wellness Program
-              </Text>
-              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
-                at your doorstep
-              </Text>
-              <Button
-                mode="contained"
-                style={[
-                  styles.featureButton,
-                  {
-                    backgroundColor: "#EFBC73",
-                    height: 36,
-                    justifyContent: "center",
-                  },
-                ]}
-                labelStyle={{
-                  color: "#000",
-                  fontSize: 14,
-                  fontFamily: fonts.medium,
-                  lineHeight: 18, // Ensures text is vertically centered
-                }}
-                contentStyle={{
-                  height: 36,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                // onPress={() => router.push("/")}
-              >
-                Get Now
-              </Button>
-            </View>
-          </View>
-        </View>
+       
 
         {/* Ambulance Booking Section */}
         <View style={styles.section}>
@@ -930,6 +1029,24 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+         {/* Wellness Program Section */}
+        <View style={styles.section}>
+          {wellnessall.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center' }}>
+              <Text style={{ color: '#ff0000', fontSize: 16 }}>Data is not available</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={wellnessall}
+              renderItem={renderWellnessCard}
+              keyExtractor={(item, idx) => item.wellnessMasterId?.toString?.() || idx.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 0 }}
+            />
+          )}
         </View>
 
         {/* Health Articles Section */}
@@ -1039,7 +1156,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}
@@ -1298,8 +1415,9 @@ export default function HomeScreen() {
         statusName={selectedOrderDetails?.statusName || ""}
         onClose={() => setOrderDetailsModalVisible(false)}
         refreshOrders={async () => {
-          if (userData?.e_id) {
-            const ordersData = await fetchAllOrders(userData.e_id, 0);
+          //const patientId = userData?.eId || userData?.e_id;
+          if (patientId) {
+            const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);
           }
         }}

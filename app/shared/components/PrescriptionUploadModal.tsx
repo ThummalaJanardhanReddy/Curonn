@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import {
   Alert,
@@ -24,6 +25,8 @@ import {
 import { fonts } from '@/app/shared/styles/fonts';
 import UploadIcon from '../../../assets/AppIcons/Curonn_icons/uploadmore.svg';
 import TakeaphotoIcon from '../../../assets/AppIcons/Curonn_icons/takeaphoto.svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 export interface PrescriptionUploadModalProps {
   visible: boolean;
@@ -104,6 +107,12 @@ export default function PrescriptionUploadModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1}} edges={['top','bottom']}>
+         <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -33}
+        >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContentLarge}>
           {/* Header */}
@@ -212,6 +221,8 @@ export default function PrescriptionUploadModal({
           
         </View>
       </View>
+      </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -229,7 +240,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: getResponsiveSpacing(16),
     width: '100%',
     alignSelf: 'stretch',
-    paddingBottom: getResponsiveSpacing(24),
+    paddingBottom: getResponsiveSpacing(8),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -260,7 +271,9 @@ const styles = StyleSheet.create({
      fontSize: getResponsiveFontSize(11),
   },
   modalBodyLarge: {
-    padding: getResponsiveSpacing(18),
+    
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(8),
   },
   actionRow: {
     flexDirection: 'row',
@@ -426,7 +439,7 @@ const styles = StyleSheet.create({
   nextBtn: {
     backgroundColor: colors.primary,
     width: '100%',
-    paddingVertical: getResponsiveSpacing(14), 
+    paddingVertical: getResponsiveSpacing(12), 
     borderRadius: getResponsiveSpacing(30), 
     alignItems: 'center'
 

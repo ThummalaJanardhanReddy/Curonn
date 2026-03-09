@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import type { TextInput as TextInputType } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import * as SecureStore from 'expo-secure-store';
+
 
 import { Dimensions } from "react-native";
 
@@ -128,6 +130,8 @@ export default function OTPVerifyScreen() {
 
       // If OTP verification is successful, update user data and navigate
       if (otpResponse?.isSuccess && otpResponse.e_id) {
+         await SecureStore.setItemAsync('isLoggedIn', 'true');
+         await SecureStore.setItemAsync('mobile_details_updated', otpResponse.mobile_details_updated ? 'true' : 'false');
         getEmployeeDetails(otpResponse.e_id);
         console.log(
           "OTP verified successfully. Employee ID:",
@@ -140,6 +144,7 @@ export default function OTPVerifyScreen() {
         });
         // Pass mobile_details_updated to username page via query param
         router.push({
+           // if you have a token  
           pathname: "/username",
           params: {
             mobile_details_updated: otpResponse.mobile_details_updated
@@ -190,9 +195,12 @@ export default function OTPVerifyScreen() {
       const response = await axiosClient.get(ApiRoutes.Employee.getById(id));
       const employee = response?.data ?? response;
       console.log("employee: ", employee);
-      setUserData({ ...(userData ?? {}), ...employee });
+      const newUserData = { ...(userData ?? {}), ...employee };
+      setUserData(newUserData);
       setUser(employee);
+      // Store userData in SecureStore for later restoration
       registerForPushNotifications(employee.eId);
+       await SecureStore.setItemAsync('userData', JSON.stringify(newUserData));
     } catch (err) {
       console.error("Failed to fetch employee details:", err);
       showSnackbar("Failed to fetch employee details.");

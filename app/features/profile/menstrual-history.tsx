@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
@@ -26,6 +27,7 @@ import {
 } from "../../shared/utils/responsive";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from '@/app/shared/components/Toast';
+import * as SecureStore from 'expo-secure-store';
 
 interface MenstrualRecord {
   id: string;
@@ -36,10 +38,13 @@ interface MenstrualRecord {
 
 interface MenstrualHistoryScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
 export default function MenstrualHistoryScreen({
   onClose,
+  onDataStatusChange
+
 }: MenstrualHistoryScreenProps) {
   const [records, setRecords] = useState<MenstrualRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +52,7 @@ export default function MenstrualHistoryScreen({
   const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
   // fetch user id from context
   const { userData } = useUser();
+  const { setUserData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
@@ -57,6 +63,18 @@ export default function MenstrualHistoryScreen({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+
+  const patientId = Number(userData?.e_id || userData?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -77,16 +95,16 @@ export default function MenstrualHistoryScreen({
   };
 
   const handleSaveRecord = async () => {
-    if (!userData || !userData.e_id) return;
+    if (!userData || !patientId) return;
     setSaveLoading(true);
     try {
       const payload = {
         menstralId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         frequencyId: newRecord.frequency === "regular" ? 1 : 2,
         isMenorrhagia: newRecord.menorrhagia === "yes",
         menorrhagiaAge: parseInt(newRecord.menopauseAge) || 0,
-        createdBy: userData.e_id,
+        createdBy: patientId,
         appointmentId: 0,
       };
 
@@ -117,44 +135,56 @@ export default function MenstrualHistoryScreen({
   };
 
   const handleDeleteRecord = async (id: string) => {
-    if (!userData || !userData.e_id) return;
-    try {
-      console.log(`📤 DeleteMenstral id=${id}, deletedBy=${userData.e_id}`);
-      const res: any = await axiosClient.delete(
-        ApiRoutes.MenstrualHistory.delete(Number(id), userData.e_id)
-      );
-      console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
-      setToastMessage({
-        title: "Record Deleted Successfully",
-        subtitle: "Deleted successfully!",
-        type: "success"
-      });
-      setShowToast(true);
-      await fetchHistory();
-    } catch (err: any) {
-      console.error("Failed to delete menstrual history:", err);
-      // setError("Failed to delete menstrual record");
-      setToastMessage({
-        title: "Delete Failed",
-        subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
-        type: "error"
-      });
-      setShowToast(true);
-    }
+    if (!userData || !patientId) return;
+
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              console.log(`📤 DeleteMenstral id=${id}, deletedBy=${patientId}`);
+              const res: any = await axiosClient.delete(
+                ApiRoutes.MenstrualHistory.delete(Number(id), patientId || 0)
+              );
+              console.log("📥 DeleteMenstral Response:", JSON.stringify(res, null, 2));
+              setToastMessage({
+                title: "Record Deleted Successfully",
+                subtitle: "Deleted successfully!",
+                type: "success"
+              });
+              setShowToast(true);
+              await fetchHistory();
+            } catch (err: any) {
+              console.error("Failed to delete menstrual history:", err);
+              setToastMessage({
+                title: "Delete Failed",
+                subtitle: err?.response?.data?.message || err?.message || "Something went wrong",
+                type: "error"
+              });
+              setShowToast(true);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const fetchHistory = useCallback(async () => {
     let mounted = true;
     try {
-      if (!userData || !userData.e_id) return;
+      if (!userData || !patientId) return;
       setLoading(true);
       setError(null);
       const payload = {
         pageNo: 1,
         pageSize: 100,
         search: "",
-        createdBy: userData.e_id,
-        patientId: userData.e_id,
+        createdBy: patientId,
+        patientId: patientId,
         fromDate: null,
         toDate: null,
         groupName: "",
@@ -173,13 +203,17 @@ export default function MenstrualHistoryScreen({
       }));
 
       setRecords(mapped);
+
+      if (onDataStatusChange) {
+        onDataStatusChange(mapped.length > 0);
+      }
     } catch (err: any) {
       console.error("Failed to fetch menstrual history:", err);
       setError("Failed to load menstrual history");
     } finally {
       setLoading(false);
     }
-  }, [userData?.e_id]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchHistory();
@@ -222,7 +256,7 @@ export default function MenstrualHistoryScreen({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton title="" onPress={handleBack} style={styles.backButton} />
+          <BackButton title="" onPress={handleBack} style={styles.backButton} color={colors.black} />
           <Text style={styles.headerTitle}>Menstrual History</Text>
         </View>
         <TouchableOpacity
@@ -230,12 +264,12 @@ export default function MenstrualHistoryScreen({
           onPress={handleAddRecord}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Records List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -402,6 +436,8 @@ const styles = StyleSheet.create({
     paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -414,19 +450,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...fontStyles.headercontent,
     color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: 'transparent',
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: "600",
-    color: "#fff",
-    fontFamily: fonts.semiBold
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: '600',
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -454,14 +488,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: "flex-start",
   },
   recordContent: {
@@ -662,11 +698,11 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   recordTitle: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-    fontFamily: fonts.bold
+    fontFamily: fonts.semiBold
   },
   recordDetails: {
     fontSize: getResponsiveFontSize(14),
@@ -706,8 +742,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontFamily: fonts.regular,
-    fontSize: getResponsiveFontSize(14),
+    fontSize: getResponsiveFontSize(12),
     color: colors.error,
-    fontWeight: "500",
   },
 });

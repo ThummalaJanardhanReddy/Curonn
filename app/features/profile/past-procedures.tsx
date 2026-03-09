@@ -11,52 +11,66 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
-import { colors } from '../../shared/styles/commonStyles';
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
-  getResponsiveSpacing
-} from '../../shared/utils/responsive';
+  getResponsiveSpacing,
+} from "../../shared/utils/responsive";
+import { colors } from "../../shared/styles/commonStyles";
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from "@/app/shared/components/Toast";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 
 interface Procedure {
-  id: string;
-  procedureName: string;
-  date: string;
+  surgicalHistoryId: number;
+  historyName: string;
+  surgeryDate: string;
 }
 
 interface PastProceduresScreenProps {
   onClose?: () => void;
+  onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function PastProceduresScreen({ onClose }: PastProceduresScreenProps) {
-  const [procedures, setProcedures] = useState<Procedure[]>([
-    {
-      id: '1',
-      procedureName: 'Appendectomy',
-      date: '2020-03-15',
-    },
-    {
-      id: '2',
-      procedureName: 'Knee Arthroscopy',
-      date: '2019-08-22',
-    },
-  ]);
+export default function PastProceduresScreen({
+  onClose,
+  onDataStatusChange
+}: PastProceduresScreenProps) {
+  const { userData } = useUser();
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [searchModalVisible, setSearchModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<string[]>([]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState("");
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
   const [showNativeDatePicker, setShowNativeDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [tempDate, setTempDate] = useState(new Date());
+  const [procedureModalVisible, setProcedureModalVisible] = useState(false);
   const [newProcedure, setNewProcedure] = useState({
-    procedureName: '',
-    date: '',
+    procedureName: "",
+    procedureId: 0,
+    date: "",
   });
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{
+    title: string;
+    subtitle: string;
+    type: "success" | "error";
+  }>({ title: "", subtitle: "", type: "success" });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [masterOptions, setMasterOptions] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
 
   const handleBack = () => {
     if (onClose) {
@@ -67,90 +81,307 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
   const handleAddProcedure = () => {
     setModalVisible(true);
   };
+  const patientId = Number(userData?.e_id || userData?.eId);
+  const fetchSurgicalHistory = useCallback(async () => {
+    if (!patientId) return;
+    setLoading(true);
+    try {
+      const today = new Date();
+      const payload = {
+        pageNo: 1,
+        pageSize: 100,
+        search: "",
+        patientId: patientId,
+        fromDate: "1900-01-01",
+        toDate: today.toISOString().split("T")[0],
+        groupName: "",
+      };
 
-  const handleOpenSearchModal = () => {
-    setSearchModalVisible(true);
-    // Simulate API call to fetch surgical procedures
-    setSearchResults(['Appendectomy', 'Knee Arthroscopy', 'Gallbladder Removal', 'Hernia Repair', 'Cataract Surgery', 'Heart Bypass', 'Hip Replacement', 'Knee Replacement', 'Spine Surgery', 'Brain Surgery', 'Lung Surgery', 'Liver Surgery', 'Kidney Surgery', 'Prostate Surgery', 'Hysterectomy', 'C-Section']);
-  };
+      console.log('📤 Surgical History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.SurgicalHistory.getAll,
+        payload
+      );
+      console.log('📥 Surgical History Response:', JSON.stringify(response, null, 2));
+      let list: Procedure[] = [];
 
-  const handleCloseSearchModal = () => {
-    setSearchModalVisible(false);
-    setSearchQuery('');
-  };
+      if (response?.items && Array.isArray(response.items)) {
+        list = response.items;
+      } else if (response?.isSuccess && Array.isArray(response.data)) {
+        list = response.data;
+      } else if (Array.isArray(response)) {
+        list = response;
+      }
 
-  const handleSelectProcedure = (procedure: string) => {
-    setNewProcedure({ ...newProcedure, procedureName: procedure });
-    handleCloseSearchModal();
-  };
+      setProcedures(list);
 
-  const filteredResults = searchResults.filter(result =>
-    result.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleDateSelect = (date: string) => {
-    setNewProcedure({ ...newProcedure, date });
-    setShowDatePicker(false);
-  };
-
-  const handleNativeDateChange = (event: any, selectedDate?: Date) => {
-    setShowNativeDatePicker(false);
-    if (selectedDate) {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      setNewProcedure({ ...newProcedure, date: dateString });
+      // ⭐ notify Profile screen
+      if (onDataStatusChange) {
+        onDataStatusChange(list.length > 0);
+      }
+    } catch (error) {
+      console.error("Error fetching surgical history:", error);
+    } finally {
+      setLoading(false);
     }
+  }, [patientId]);
+
+  React.useEffect(() => {
+    fetchSurgicalHistory();
+  }, [fetchSurgicalHistory]);
+
+  const fetchMasterOptions = async (q: string = "") => {
+    try {
+      setDropdownLoading(true);
+      const url = `${ApiRoutes.Master.getmasterdata(
+        14
+      )}&search=${encodeURIComponent(q || "")}`;
+      console.log('📤 Fetch Master Options URL:', url);
+      const response: any = await axiosClient.get(url);
+      console.log('📥 Fetch Master Options Response:', JSON.stringify(response, null, 2));
+      let items: any[] = [];
+      if (Array.isArray(response)) items = response;
+      else if (Array.isArray(response?.data)) items = response.data;
+      else if (response?.isSuccess && Array.isArray(response.data))
+        items = response.data;
+
+      const mapped = items.map((it: any) => ({
+        id: it.masterDataId ?? it.id ?? 0,
+        name: it.name ?? it.displayName ?? String(it),
+      }));
+      setMasterOptions(mapped);
+    } catch (err) {
+      console.error("Failed to fetch master data:", err);
+    } finally {
+      setDropdownLoading(false);
+    }
+  };
+
+  const handleSearchChange = (query: string) => {
+    setDropdownSearch(query);
+    fetchMasterOptions(query);
+  };
+
+  const handleDateInputChange = (text: string) => {
+    // Remove non-numeric characters for easier processing
+    const cleanText = text.replace(/[^0-9]/g, "");
+    let formattedDate = cleanText;
+
+    if (cleanText.length > 4) {
+      formattedDate = `${cleanText.substring(0, 4)}-${cleanText.substring(4, 6)}`;
+    }
+    if (cleanText.length > 6) {
+      formattedDate = `${cleanText.substring(0, 4)}-${cleanText.substring(
+        4,
+        6
+      )}-${cleanText.substring(6, 8)}`;
+    }
+
+    setNewProcedure({ ...newProcedure, date: formattedDate });
+  };
+
+  const handleSelectProcedure = (item: { id: number; name: string }) => {
+    setNewProcedure({ ...newProcedure, procedureName: item.name, procedureId: item.id });
+    setDropdownVisible(false);
+    setDropdownSearch("");
+  };
+
+  const handleNativeDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowNativeDatePicker(false);
+      if (date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        setNewProcedure({ ...newProcedure, date: dateString });
+        setSelectedDate(date);
+      }
+    } else {
+      // iOS
+      if (date) {
+        setTempDate(date);
+      }
+    }
+  };
+
+  const handleDoneDatePicker = () => {
+    const year = tempDate.getFullYear();
+    const month = String(tempDate.getMonth() + 1).padStart(2, '0');
+    const day = String(tempDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    setNewProcedure({ ...newProcedure, date: dateString });
+    setSelectedDate(tempDate);
+    setShowNativeDatePicker(false);
+  };
+
+  const handleCancelDatePicker = () => {
+    setShowNativeDatePicker(false);
   };
 
   const handleOpenNativeDatePicker = () => {
-    // Set the selected date to the current date value if it exists, otherwise use today
+    let initialDate = new Date();
     if (newProcedure.date) {
-      setSelectedDate(new Date(newProcedure.date));
-    } else {
-      setSelectedDate(new Date());
+      const parts = newProcedure.date.split('-');
+      if (parts.length === 3) {
+        initialDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
     }
+    setSelectedDate(initialDate);
+    setTempDate(initialDate);
     setShowNativeDatePicker(true);
   };
 
   const handleCloseModal = () => {
     setModalVisible(false);
+    setDropdownVisible(false);
+    setDropdownSearch("");
     setNewProcedure({
       procedureName: '',
+      procedureId: 0,
       date: '',
     });
   };
 
-  const handleSaveProcedure = () => {
-    if (newProcedure.procedureName.trim() && newProcedure.date.trim()) {
-      const procedure: Procedure = {
-        id: Date.now().toString(),
-        procedureName: newProcedure.procedureName.trim(),
-        date: newProcedure.date.trim(),
+  const handleSaveProcedure = async () => {
+    if (!newProcedure.procedureName.trim() || !patientId) return;
+
+    // Duplicate check
+    const isDuplicate = procedures.some(
+      (p) =>
+        (p.historyName || "").toLowerCase().trim() ===
+        newProcedure.procedureName.toLowerCase().trim()
+    );
+
+    if (isDuplicate) {
+      Alert.alert(
+        "Record already exists",
+        "This procedure is already in your history."
+      );
+      return;
+    }
+
+    setSaveLoading(true);
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedToday = `${yyyy}-${mm}-${dd}`;
+
+      // Normalize date format if user typed it without hyphens (YYYYMMDD -> YYYY-MM-DD)
+      let finalSurgeryDate = newProcedure.date || formattedToday;
+      if (finalSurgeryDate && finalSurgeryDate.length === 8 && !finalSurgeryDate.includes('-')) {
+        finalSurgeryDate = `${finalSurgeryDate.substring(0, 4)}-${finalSurgeryDate.substring(4, 6)}-${finalSurgeryDate.substring(6, 8)}`;
+      }
+
+      const payload = {
+        surgicalHistoryId: 0,
+        patientId: patientId,
+        historyName: newProcedure.procedureName.trim(),
+        historyId: newProcedure.procedureId, // Added historyId as requested "bind like historyname"
+        surgeryDate: finalSurgeryDate, // Ensuring YYYY-MM-DD
+        bodySite: "",
+        anesthesiaType: "",
+        ischemicHh: 0,
+        ischemicMm: 0,
+        coldHh: 0,
+        coldMm: 0,
+        notes: "",
+        appointmentId: 0,
+        createdOn: new Date().toISOString(),
+        createdBy: patientId,
+        totalCount: 0,
       };
-      setProcedures((prev) => [...prev, procedure]);
+
+      console.log('📤 Save Surgical History Request Payload:', JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.SurgicalHistory.save,
+        payload
+      );
+      console.log('📥 Save Surgical History Response:', JSON.stringify(response, null, 2));
+      setToastMessage({
+        title: "Success",
+        subtitle: response?.message || "Record saved successfully!",
+        type: "success",
+      });
+      setShowToast(true);
+      fetchSurgicalHistory();
       handleCloseModal();
+    } catch (error) {
+      setToastMessage({
+        title: "Error",
+        subtitle: "Failed to save record",
+        type: "error",
+      });
+      setShowToast(true);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
-  const handleDeleteProcedure = (id: string) => {
-    setProcedures((prev) => prev.filter((procedure) => procedure.id !== id));
-  };
+  const handleDeleteProcedure = useCallback((id: number) => {
+    console.log(`🗑️ Attempting to delete procedure with ID: ${id}`);
+    if (!patientId) {
+      console.warn("⚠️ Cannot delete record: patientId is missing");
+      return;
+    }
+
+    Alert.alert(
+      "Delete Record",
+      "Are you sure you want to delete this record?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            console.log(`🔥 User confirmed deletion of ID: ${id}`);
+            try {
+              const url = ApiRoutes.SurgicalHistory.delete(id, patientId || 0);
+              console.log('📤 Delete Surgical History Request URL:', url);
+              const response: any = await axiosClient.delete(url);
+              console.log('📥 Delete Surgical History Response:', JSON.stringify(response, null, 2));
+              setToastMessage({
+                title: "Deleted",
+                subtitle: response?.message || "Record removed successfully",
+                type: "success",
+              });
+              setShowToast(true);
+              fetchSurgicalHistory();
+            } catch (error) {
+              console.error("❌ Delete failed:", error);
+              setToastMessage({
+                title: "Error",
+                subtitle: "Failed to delete record",
+                type: "error",
+              });
+              setShowToast(true);
+            }
+          },
+        },
+      ]
+    );
+  }, [patientId, fetchSurgicalHistory]);
 
   const renderProcedureCard = useCallback(
     ({ item }: { item: Procedure }) => (
       <View style={styles.procedureCard}>
         <View style={styles.procedureContent}>
-          <Text style={styles.procedureName}>{item.procedureName}</Text>
-          <Text style={styles.date}>Date: {item.date}</Text>
+          <Text style={styles.procedureNameText}>{item.historyName}</Text>
+          <Text style={styles.dateText}>
+            Date: {item.surgeryDate ? item.surgeryDate.split('T')[0] : ''}
+          </Text>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteProcedure(item.id)}
+          onPress={() => handleDeleteProcedure(item.surgicalHistoryId)}
         >
-          <Image source={images.icons.close} style={styles.deleteIcon} />
+          {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    []
+    [handleDeleteProcedure]
   );
 
   return (
@@ -159,32 +390,48 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <BackButton
-            title=""
+            title="Surgical History"
+            color={colors.black}
             onPress={handleBack}
             style={styles.backButton}
+            textStyle={styles.headerTitle}
           />
-          <Text style={styles.headerTitle}>Surgical History</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleAddProcedure}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+Add</Text>
+          <Text style={styles.addButtonText}>+ADD</Text>
         </TouchableOpacity>
       </View>
 
       {/* Divider with shadow */}
-      <View style={styles.divider} />
+      {/* <View style={styles.divider} /> */}
 
       {/* Procedures List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.proceduresContainer}>
-          {procedures.map((procedure) => (
-            <View key={procedure.id} style={styles.procedureCardWrapper}>
-              {renderProcedureCard({ item: procedure })}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={{ marginTop: 20 }}
+            />
+          ) : procedures.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No surgical history found</Text>
             </View>
-          ))}
+          ) : (
+            procedures.map((procedure) => (
+              <View
+                key={procedure.surgicalHistoryId}
+                style={styles.procedureCardWrapper}
+              >
+                {renderProcedureCard({ item: procedure })}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -202,7 +449,7 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
           />
           <SafeAreaView style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>ADD SURGICAL HISTORY</Text>
+              <Text style={styles.modalTitle}>Add Surgical History</Text>
               <TouchableOpacity
                 onPress={handleCloseModal}
                 style={styles.closeButton}
@@ -212,18 +459,78 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
             </View>
 
             <View style={styles.modalBody}>
-              {/* Procedure Name Input */}
-              <View style={styles.inputGroup}>
+              {/* Procedure Name Dropdown — following MedicalHistoryScreen pattern */}
+              <View style={[styles.inputGroup, { zIndex: 2 }]}>
                 <Text style={styles.inputLabel}>Surgical History Name</Text>
-                <TouchableOpacity
-                  style={styles.procedureInputContainer}
-                  onPress={handleOpenSearchModal}
-                >
-                  <Text style={[styles.procedureInputText, newProcedure.procedureName ? styles.procedureInputTextFilled : styles.procedureInputTextPlaceholder]}>
-                    {newProcedure.procedureName || 'e.g., Appendectomy, Knee Surgery'}
-                  </Text>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                </TouchableOpacity>
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setProcedureModalVisible(true);
+                      fetchMasterOptions("");
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>
+                      {newProcedure.procedureName || 'e.g., Appendectomy, Knee Surgery'}
+                    </Text>
+                    <Text style={styles.dropdownIcon}>▼</Text>
+                  </TouchableOpacity>
+
+                  {/* Dropdown Options */}
+                  <Modal
+                    visible={procedureModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setProcedureModalVisible(false)}
+                  >
+                    <View style={styles.centerModalOverlay}>
+
+                      <TouchableOpacity
+                        style={styles.centerModalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setProcedureModalVisible(false)}
+                      />
+
+                      <View style={styles.centerModalContainer}>
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search procedure..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={handleSearchChange}
+                        />
+
+                        <ScrollView
+                          style={{ maxHeight: 400 }}
+                          keyboardShouldPersistTaps="handled"
+                          showsVerticalScrollIndicator
+                        >
+                          {dropdownLoading ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : masterOptions.length > 0 ? (
+                            masterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                onPress={() => {
+                                  handleSelectProcedure(item);
+                                  setProcedureModalVisible(false);
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>No options</Text>
+                            </View>
+                          )}
+                        </ScrollView>
+                      </View>
+
+                    </View>
+                  </Modal>
+                </View>
               </View>
 
               {/* Date Input */}
@@ -235,15 +542,17 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor="#999"
                     value={newProcedure.date}
-                    onChangeText={(text) => setNewProcedure({ ...newProcedure, date: text })}
-                    selectionColor="transparent"
+                    onChangeText={handleDateInputChange}
+                    maxLength={10}
+                    keyboardType="numeric"
+                    selectionColor={colors.primary}
                     underlineColorAndroid="transparent"
                   />
                   <TouchableOpacity
                     style={styles.calendarIconContainer}
                     onPress={handleOpenNativeDatePicker}
                   >
-                    <Text style={styles.calendarIcon}>📅</Text>
+                    <Image source={images.icons.calendar} style={styles.calendarImage} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -252,129 +561,67 @@ export default function PastProceduresScreen({ onClose }: PastProceduresScreenPr
             {/* Save Button */}
             <View style={styles.modalFooter}>
               <PrimaryButton
-                title="Save"
+                title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveProcedure}
                 style={styles.saveButton}
-                disabled={!newProcedure.procedureName.trim() || !newProcedure.date.trim()}
+                disabled={!newProcedure.procedureName.trim() || saveLoading}
               />
             </View>
           </SafeAreaView>
         </View>
       </Modal>
 
-      {/* Search Surgical Procedures Modal */}
-      <Modal
-        visible={searchModalVisible}
-        animationType="slide"
-        onRequestClose={handleCloseSearchModal}
-      >
-        <SafeAreaView style={styles.searchModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Search Surgical History</Text>
-              <TouchableOpacity
-                onPress={handleCloseSearchModal}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.searchModalBody}>
-              {/* Search Input */}
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search surgical procedures..."
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                  selectionColor="transparent"
-                  underlineColorAndroid="transparent"
-                />
-                <Text style={styles.searchInputIcon}>🔍</Text>
-              </View>
-
-              {/* Search Results */}
-              <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
-                {filteredResults.map((procedure, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.searchResultItem}
-                    onPress={() => handleSelectProcedure(procedure)}
-                  >
-                    <Text style={styles.searchResultText}>{procedure}</Text>
-                  </TouchableOpacity>
-                ))}
-                {filteredResults.length === 0 && searchQuery && (
-                  <View style={styles.noResultsContainer}>
-                    <Text style={styles.noResultsText}>No procedures found</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-      </Modal>
-
-      {/* Date Picker Modal */}
-      <Modal
-        visible={showDatePicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDatePicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setShowDatePicker(false)}
-          />
-          <View style={styles.datePickerModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Date</Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(false)}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.datePickerContent}>
-              <ScrollView style={styles.dateList} showsVerticalScrollIndicator={false}>
-                {Array.from({ length: 365 }, (_, i) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() - i);
-                  const dateString = date.toISOString().split('T')[0];
-                  const formattedDate = date.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  });
-                  return (
-                    <TouchableOpacity
-                      key={dateString}
-                      style={styles.dateOption}
-                      onPress={() => handleDateSelect(dateString)}
-                    >
-                      <Text style={styles.dateOptionText}>{formattedDate}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Native Date Picker */}
       {showNativeDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleNativeDateChange}
-          maximumDate={new Date()}
-        />
+        Platform.OS === 'ios' ? (
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={showNativeDatePicker}
+            onRequestClose={handleCancelDatePicker}
+          >
+            <View style={styles.pickerModalOverlay}>
+              <TouchableOpacity
+                style={styles.pickerModalBackdrop}
+                onPress={handleCancelDatePicker}
+              />
+              <View style={styles.pickerContainer}>
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity onPress={handleCancelDatePicker}>
+                    <Text style={styles.pickerHeaderButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleDoneDatePicker}>
+                    <Text style={[styles.pickerHeaderButtonText, { color: colors.primary }]}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleNativeDateChange}
+                  maximumDate={new Date()}
+                  textColor="black"
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={handleNativeDateChange}
+            maximumDate={new Date()}
+          />
+        )
       )}
+
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -390,8 +637,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
-    // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+        borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,
@@ -401,22 +649,43 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
   },
+  centerModalOverlay: {
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(0,0,0,0.4)",
+},
+
+centerModalBackdrop: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+},
+
+centerModalContainer: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 10,
+  maxHeight: "70%",
+  elevation: 6,
+},
   headerTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    ...fontStyles.headercontent,
     color: colors.black,
-    marginLeft: getResponsiveSpacing(12),
   },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(6),
+    backgroundColor: "transparent",
   },
   addButtonText: {
-    fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: getResponsiveFontSize(16),
+    fontWeight: "600",
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
@@ -443,34 +712,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: getResponsiveSpacing(12),
+    borderWidth: 1,
+    borderColor: '#DADADA',
     padding: getResponsiveSpacing(16),
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
     alignItems: 'flex-start',
   },
   procedureContent: {
     flex: 1,
     marginRight: getResponsiveSpacing(12),
   },
-  procedureName: {
+  procedureNameText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: 'bold',
-    color: colors.text,
+    //fontWeight: "bold",
+    color: colors.black,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
   },
-  date: {
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+  },
+  dateText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
     marginBottom: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
   },
   deleteButton: {
-    padding: getResponsiveSpacing(8),
+    padding: getResponsiveSpacing(12),
+    minWidth: getResponsiveSpacing(60),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteIcon: {
     ...getResponsiveImageSize(18, 18),
@@ -504,9 +789,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(15),
+    fontWeight: '600',
     color: colors.text,
+    fontFamily: fonts.semiBold,
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -526,16 +812,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: getResponsiveSpacing(8),
-    paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(10),
-    fontSize: getResponsiveFontSize(14),
-    color: colors.text,
-    backgroundColor: '#fff',
+    fontFamily: fonts.medium,
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -546,7 +823,20 @@ const styles = StyleSheet.create({
     height: getResponsiveSpacing(45),
     width: '100%',
   },
-  procedureInputContainer: {
+  noResultsContainer: {
+    padding: getResponsiveSpacing(20),
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+  },
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 10000,
+  },
+  dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -554,23 +844,73 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(10),
+    paddingVertical: getResponsiveSpacing(12),
     backgroundColor: '#fff',
     minHeight: getResponsiveSpacing(48),
   },
-  procedureInputText: {
+  dropdownText: {
     fontSize: getResponsiveFontSize(14),
-    flex: 1,
-  },
-  procedureInputTextFilled: {
     color: colors.text,
+    flex: 1,
+    fontFamily: fonts.regular,
   },
-  procedureInputTextPlaceholder: {
-    color: '#999',
-  },
-  searchIcon: {
-    fontSize: getResponsiveFontSize(16),
+  dropdownIcon: {
+    fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    backgroundColor: 'transparent',
+  },
+  dropdownOptions: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: getResponsiveSpacing(8),
+    maxHeight: getResponsiveSpacing(200),
+    zIndex: 10001,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginTop: getResponsiveSpacing(4),
+  },
+  dropdownSearchInput: {
+    padding: getResponsiveSpacing(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    fontSize: getResponsiveFontSize(14),
+    color: colors.text,
+    fontFamily: fonts.regular,
+  },
+  dropdownOption: {
+    paddingHorizontal: getResponsiveSpacing(16),
+    paddingVertical: getResponsiveSpacing(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownOptionText: {
+    fontSize: getResponsiveFontSize(14),
+    color: colors.text,
+    fontFamily: fonts.regular,
+  },
+  loadingContainer: {
+    padding: getResponsiveSpacing(20),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateInputContainer: {
     flexDirection: 'row',
@@ -594,87 +934,43 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: '#ddd',
   },
-  calendarIcon: {
-    fontSize: getResponsiveFontSize(16),
-    color: colors.textSecondary,
+  calendarImage: {
+    ...getResponsiveImageSize(20, 20),
   },
-  searchModalContent: {
-    backgroundColor: '#fff',
+  pickerModalOverlay: {
     flex: 1,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  searchModalBody: {
-    padding: getResponsiveSpacing(20),
-    flex: 1,
+  pickerModalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  searchInputContainer: {
+  pickerContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: getResponsiveSpacing(15),
+    borderTopRightRadius: getResponsiveSpacing(15),
+    paddingBottom: getResponsiveSpacing(30),
+  },
+  pickerHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: getResponsiveSpacing(8),
-    paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(6),
-    backgroundColor: '#fff',
-    marginBottom: getResponsiveSpacing(16),
+    justifyContent: 'space-between',
+    padding: getResponsiveSpacing(15),
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  searchInput: {
-    flex: 1,
-    fontSize: getResponsiveFontSize(14),
-    color: colors.text,
-  },
-  searchInputIcon: {
+  pickerHeaderButtonText: {
     fontSize: getResponsiveFontSize(16),
-    color: colors.textSecondary,
-    marginLeft: getResponsiveSpacing(8),
+    color: '#666',
+    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
-  searchResultsContainer: {
-    flex: 1,
-  },
-  searchResultItem: {
-    paddingVertical: getResponsiveSpacing(12),
-    paddingHorizontal: getResponsiveSpacing(16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-  },
-  searchResultText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.text,
-    fontWeight: '500',
-  },
-  noResultsContainer: {
-    padding: getResponsiveSpacing(20),
-    alignItems: 'center',
-  },
-  noResultsText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  datePickerModal: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: getResponsiveSpacing(20),
-    borderTopRightRadius: getResponsiveSpacing(20),
-    maxHeight: '70%',
-    overflow: 'hidden',
-  },
-  datePickerContent: {
-    flex: 1,
-  },
-  dateList: {
-    flex: 1,
-  },
-  dateOption: {
-    paddingVertical: getResponsiveSpacing(12),
-    paddingHorizontal: getResponsiveSpacing(16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-  },
-  dateOptionText: {
-    fontSize: getResponsiveFontSize(14),
-    color: colors.text,
-    fontWeight: '500',
+  deleteButtonText: {
+    fontFamily: fonts.regular,
+    fontSize: getResponsiveFontSize(12),
+    color: colors.error,
   },
 });

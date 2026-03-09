@@ -130,7 +130,7 @@ export default function MainLayout() {
 
           // 🔥 Align label close to icon
           tabBarLabelStyle: {
-            marginTop: 2,
+            marginTop: 0,
           },
 
           // 🔥 Outer tab item container
@@ -145,7 +145,7 @@ export default function MainLayout() {
             borderTopWidth: 0,
             height: 70 + insets.bottom,
             paddingBottom: insets.bottom,
-            paddingTop: 7,
+            paddingTop: 7
           },
         }}
       >

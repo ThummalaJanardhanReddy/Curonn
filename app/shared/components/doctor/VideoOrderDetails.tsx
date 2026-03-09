@@ -6,11 +6,13 @@ import {
   Text,
   Platform,
   Linking,
+  ScrollView
 } from "react-native";
 import { fonts } from "@/app/shared/styles/fonts";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideoStore } from "@/src/store/VideoStore";
 import { signalRVideoService } from "@/src/api/SignalRVideoService";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Props {
   orderDetails: any;
@@ -46,7 +48,7 @@ export default function VideoOrderDetails({
   }, [data.scheduleDate]);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data?.patientId) return;
     const initialize = async () => {
       await signalRVideoService.connect(data.patientId);
     };
@@ -69,111 +71,114 @@ export default function VideoOrderDetails({
   const handleJoinCall = () => {
     if (data?.videoRoomUrl) Linking.openURL(data.videoRoomUrl);
   };
+
   return (
-    <View style={styles.container}>
-      {/* SERVICE INFORMATION */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Service Information</Text>
+    
+      <View style={styles.container}>
+        {/* SERVICE INFORMATION */}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Service Information</Text>
 
-        <View style={styles.infoCard}>
-          {/* Left Icon */}
-          <View style={styles.serviceImageContainer}>
-            <Ionicons name="videocam" size={22} color="#3B5BDB" />
-          </View>
+            <View style={styles.infoCard}>
+              {/* Left Icon */}
+              <View style={styles.serviceImageContainer}>
+                <Ionicons name="videocam" size={22} color="#3B5BDB" />
+              </View>
 
-          {/* Center Content */}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.infoTitle}>
-              {data.speciality || "General Consultation"}
-            </Text>
+              {/* Center Content */}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoTitle}>
+                  {data.speciality || "General Consultation"}
+                </Text>
 
-            {/* Description */}
-            <Text style={styles.departmentDescription}>
-              {data.symptoms
-                ? `Symptoms: ${data.symptoms}`
-                : "Consultation with certified specialist doctors."}
-            </Text>
+                {/* Description */}
+                <Text style={styles.departmentDescription}>
+                  {data.symptoms
+                    ? `Symptoms: ${data.symptoms}`
+                    : "Consultation with certified specialist doctors."}
+                </Text>
 
-            {/* Consultation Type Badge */}
-            <View style={styles.consultTypeBadge}>
-              <Text style={styles.consultTypeText}>
-                {data.scheduleTypeName || "Video Consultation"}
+                {/* Consultation Type Badge */}
+                <View style={styles.consultTypeBadge}>
+                  <Text style={styles.consultTypeText}>
+                    {data.scheduleTypeName || "Video Consultation"}
+                  </Text>
+                </View>
+
+                {/* Booking ID */}
+                <Text style={styles.bookingIdText}>
+                  Booking ID: {data.bookingId}
+                </Text>
+              </View>
+
+              {/* Right Side Status Badge */}
+              <View style={styles.statusBadgeContainer}>
+                <Text style={styles.statusBadgeText}>{data.statusName}</Text>
+              </View>
+            </View>
+        
+            {/* ---------------- Doctor Information ---------------- */}
+            <Text style={styles.sectionTitle}>Doctor Information</Text>
+            <View style={styles.card}>
+              {data.doctorId && data.doctorId !== 0 ? (
+                <>
+                  <Text style={styles.primaryText}>{data.doctorName}</Text>
+
+                  <Text style={styles.secondaryText}>
+                    {data.speciality || "Speciality not available"}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.primaryTextPending}>
+                    Doctor Not Assigned Yet
+                  </Text>
+                  <Text style={styles.secondaryText}>
+                    You will be notified once a doctor is assigned.
+                  </Text>
+                </>
+              )}
+            </View>
+
+
+            {/* ---------------- Consultation Date & Time ---------------- */}
+            <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
+            <View style={styles.card}>
+              <Text style={styles.label}>Selected Date</Text>
+              <View style={styles.disabledInput}>
+                <Text style={styles.value}>{formattedDate}</Text>
+              </View>
+
+              <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
+              <View style={styles.disabledInput}>
+                <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
+              </View>
+            </View>
+
+            {/* ---------------- Patient Details ---------------- */}
+            <Text style={styles.sectionTitle}>Patient Details</Text>
+            <View style={styles.card}>
+              <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
+              <Text style={styles.secondaryText}>
+                {[
+                  data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
+                  data.relationGender ? data.relationGender : data.patientGender,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "N/A"}
               </Text>
             </View>
 
-            {/* Booking ID */}
-            <Text style={styles.bookingIdText}>
-              Booking ID: {data.bookingId}
-            </Text>
-          </View>
-
-          {/* Right Side Status Badge */}
-          <View style={styles.statusBadgeContainer}>
-            <Text style={styles.statusBadgeText}>{data.statusName}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ---------------- Doctor Information ---------------- */}
-      <Text style={styles.sectionTitle}>Doctor Information</Text>
-      <View style={styles.card}>
-        {data.doctorId && data.doctorId !== 0 ? (
-          <>
-            <Text style={styles.primaryText}>{data.doctorName}</Text>
-
-            <Text style={styles.secondaryText}>
-              {data.speciality || "Speciality not available"}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.primaryTextPending}>
-              Doctor Not Assigned Yet
-            </Text>
-            <Text style={styles.secondaryText}>
-              You will be notified once a doctor is assigned.
-            </Text>
-          </>
-        )}
-      </View>
-
-      {/* ---------------- Consultation Date & Time ---------------- */}
-      <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
-      <View style={styles.card}>
-        <Text style={styles.label}>Selected Date</Text>
-        <View style={styles.disabledInput}>
-          <Text style={styles.value}>{formattedDate}</Text>
-        </View>
-
-        <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
-        <View style={styles.disabledInput}>
-          <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
-        </View>
-      </View>
-
-      {/* ---------------- Patient Details ---------------- */}
-      <Text style={styles.sectionTitle}>Patient Details</Text>
-      <View style={styles.card}>
-        <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
-        <Text style={styles.secondaryText}>
-          {[
-            data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
-            data.relationGender ? data.relationGender : data.patientGender,
-          ]
-            .filter(Boolean)
-            .join(", ") || "N/A"}
-        </Text>
-      </View>
-
-      {/* ---------------- Prescription Section ---------------- */}
-      {data.prescription && (
-        <>
-          <Text style={styles.sectionTitle}>Prescription</Text>
-          <View style={styles.card}>
-            <Text style={styles.value}>{data.prescription}</Text>
-          </View>
-        </>
-      )}
+            {/* ---------------- Prescription Section ---------------- */}
+            {data.prescription && (
+              <>
+                <Text style={styles.sectionTitle}>Prescription</Text>
+                <View style={styles.card}>
+                  <Text style={styles.value}>{data.prescription}</Text>
+                </View>
+              </>
+            )}
 
       {/* ---------------- Join Call Button ---------------- */}
       {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
@@ -183,7 +188,7 @@ export default function VideoOrderDetails({
       >
         <Text style={styles.primaryButtonText}>Join Video Call</Text>
       </TouchableOpacity>}
-
+      </View>
       {/* ---------------- Reschedule & Cancel ---------------- */}
       {/* <View style={styles.rowButtons}>
         <TouchableOpacity style={styles.outlineButton} onPress={onReschedule}>
@@ -209,43 +214,49 @@ export default function VideoOrderDetails({
         </TouchableOpacity>
       </View> */}
 
-      {/* ---------------- Book Again ---------------- */}
-      {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
+          {/* ---------------- Book Again ---------------- */}
+          {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-    </View>
+        </ScrollView>
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
-    padding: 16,
+    backgroundColor: "rgba(245, 244, 249, 1)"
   },
 
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
+    color: "#000",
     fontFamily: fonts.semiBold,
-    color: "#222",
-    marginTop: 18,
+    fontWeight: '600',
     marginBottom: 8,
+    marginTop: 10,
   },
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: { elevation: 2 },
-    }),
+    // ...Platform.select({
+    //   ios: {
+    //     shadowColor: "#000",
+    //     shadowOpacity: 0.05,
+    //     shadowRadius: 6,
+    //     shadowOffset: { width: 0, height: 3 },
+    //   },
+    //   android: { elevation: 2 },
+    // }),
+    
+     
+    borderWidth: 1,
+    borderColor: '#E1E8F1',
+    marginBottom: 20,
+    overflow: 'hidden',
   },
 
   primaryText: {
@@ -282,16 +293,16 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     backgroundColor: "#C15E9D",
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 20,
     alignItems: "center",
-    marginTop: 16,
+    marginTop:5,
   },
 
   primaryButtonText: {
     color: "#fff",
     fontFamily: fonts.semiBold,
-    fontSize: 15,
+    fontSize: 14,
   },
 
   disabledButton: {
@@ -358,20 +369,25 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   section: {
-    marginTop: 18,
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    backgroundColor: "rgba(245, 244, 249, 1)",
+    marginBottom: 20,
   },
-
+  scrollContent: {
+    flexGrow: 1,
+  },
   infoCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
     padding: 16,
     alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E1E8F1',
+    marginBottom: 20,
+    overflow: 'hidden',
   },
 
   serviceImageContainer: {
@@ -385,7 +401,7 @@ const styles = StyleSheet.create({
   },
 
   infoTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: fonts.semiBold,
     color: "#222",
   },

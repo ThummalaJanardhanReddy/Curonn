@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   Modal,
@@ -27,6 +27,7 @@ import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { useUser } from "../../shared/context/UserContext";
 const { height: screenHeight } = Dimensions.get("window");
 import Toast from './Toast';
+import * as SecureStore from 'expo-secure-store';
 
 interface FamilyMembersModalProps {
   visible: boolean;
@@ -50,13 +51,14 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   // TODO: Replace with actual patientId and createdBy from context/user
-    const { userData } = useUser();
-    const patientId = userData?.e_id;
+  const { userData } = useUser();
+  const { setUserData } = useUser();
+  const patientId = userData?.e_id || userData?.eId;
   const createdBy = 0;
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [showForm, setShowForm] = useState(false);
-    const [showRelationDropdown, setShowRelationDropdown] = useState(false);
+  const [showRelationDropdown, setShowRelationDropdown] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<{ masterDataId: number; name: string } | null>(null);
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -85,7 +87,20 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   // Use ref to allow calling fetchFamilyMembers outside useEffect
-  const fetchFamilyMembersRef = React.useRef<() => Promise<void>>(async () => {});
+  const fetchFamilyMembersRef = React.useRef<() => Promise<void>>(async () => { });
+
+  useEffect(() => {
+    const restoreUserData = async () => {
+      const userData = await SecureStore.getItemAsync('userData');
+      console.log("Restoring userData on Home Screen:", userData);
+      if (userData) {
+        setUserData(JSON.parse(userData));
+      }
+    };
+    restoreUserData();
+  }, []);
+
+
   React.useEffect(() => {
     if (!visible || !patientId) return;
     const fetchFamilyMembers = async () => {
@@ -140,7 +155,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     try {
       // Match Swagger: POST with empRelationId as query param, empty body
       const url = `${ApiRoutes.Employee.deletefamilymember}?empRelationId=${empRelationId}`;
-      const response:any = await axiosClient.post(url, {});
+      const response: any = await axiosClient.post(url, {});
       console.log('Delete response:', response);
       let message = "Family Member has been deleted successfully.";
       if (response && response.data && typeof response.data === 'object' && response.data.message) {
@@ -157,14 +172,12 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       if (fetchFamilyMembersRef.current) {
         await fetchFamilyMembersRef.current();
       }
-    } catch (error) {
+    } catch (error: any) {
       let errorMsg = 'Something went wrong';
-      if (error && typeof error === 'object') {
-        if ('response' in error && error.response && error.response.data && error.response.data.message) {
-          errorMsg = error.response.data.message;
-        } else if ('message' in error) {
-          errorMsg = error.message;
-        }
+      if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error?.message) {
+        errorMsg = error.message;
       }
       setToastMessage({
         title: "Delete Failed",
@@ -187,40 +200,40 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   };
 
 
-    const handleEditMember = async (member: any) => {
-      // Fetch details from GetByPatientRelationAsync using relationId and patientId
-      try {
-        const response = await axiosClient.get(ApiRoutes.Employee.GetByPatientRelationAsync(member.relationId, member.patientId));
-        console.log('GetByPatientRelationAsync response:', response);
-        let data = null;
-        if (Array.isArray(response) && response.length > 0) {
-          data = response[0];
-        } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
-          data = response.data[0];
-        }
-        if (data) {
-          setEditingMember(data);
-          // Find relation name from relationTypes
-          const relationType = relationTypes.find(r => r.masterDataId === data.relationId);
-          setFormData({
-            name: data.relationName || '',
-            relation: relationType ? relationType.name : '',
-            gender: data.gender || '',
-            age: data.age ? String(data.age) : ''
-          });
-          setSelectedRelation(relationType || null); // <-- auto-populate selectedRelation
-          setIsEditMode(true);
-          setShowForm(true);
-        }
-      } catch (error) {
-        setToastMessage({
-          title: 'Fetch Failed',
-          subtitle: 'Could not fetch family member details.',
-          type: 'error',
-        });
-        setShowToast(true);
+  const handleEditMember = async (member: any) => {
+    // Fetch details from GetByPatientRelationAsync using relationId and patientId
+    try {
+      const response = await axiosClient.get(ApiRoutes.Employee.getRelation(member.relationId, member.patientId));
+      console.log('GetByPatientRelationAsync response:', response);
+      let data = null;
+      if (Array.isArray(response) && response.length > 0) {
+        data = response[0];
+      } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+        data = response.data[0];
       }
-    };
+      if (data) {
+        setEditingMember(data);
+        // Find relation name from relationTypes
+        const relationType = relationTypes.find(r => r.masterDataId === data.relationId);
+        setFormData({
+          name: data.relationName || '',
+          relation: relationType ? relationType.name : '',
+          gender: data.gender || '',
+          age: data.age ? String(data.age) : ''
+        });
+        setSelectedRelation(relationType || null); // <-- auto-populate selectedRelation
+        setIsEditMode(true);
+        setShowForm(true);
+      }
+    } catch (error) {
+      setToastMessage({
+        title: 'Fetch Failed',
+        subtitle: 'Could not fetch family member details.',
+        type: 'error',
+      });
+      setShowToast(true);
+    }
+  };
 
   const handleSaveMember = () => {
     let newErrors = {};
@@ -294,7 +307,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     <View key={member.relationId} style={styles.familyMemberCard}>
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.relationName}</Text>
-        <Text style={styles.memberRelation}>{relationTypes.find(r => r.masterDataId === member.relationId)?.name || ''} | {member.gender} | {member.age} yrs</Text>
+        <Text style={styles.memberRelation}>{relationTypes.find(r => r.masterDataId === member.relationId)?.name || member.relation || ''} | {member.gender} | {member.age} yrs</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity
@@ -346,157 +359,157 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   }, []);
 
   const renderForm = () => (
-    <SafeAreaView style={{ flex: 1, height: screenHeight}}>
-    <View style={styles.formContainer}>
-      {/* Relation Type Dropdown */}
-      <View style={styles.dropdownContainer}>
-        <Text style={styles.label}>Relation Type</Text>
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => setShowRelationDropdown(true)}
-          activeOpacity={1}
-        >
-          <Text style={[
-            styles.dropdownButtonText,
-            !selectedRelation && styles.placeholderText
-          ]}>
-            {selectedRelation ? selectedRelation.name : 'Select'}
-          </Text>
-          <IconButton
-            icon={showRelationDropdown ? "chevron-up" : "chevron-down"}
-            size={20}
-            iconColor="#666"
-            rippleColor="transparent"
-          />
-        </TouchableOpacity>
-        {errors && errors.relation && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.relation}</Text>
-        )}
-      </View>
-
-      {/* Relation Type Dropdown Modal */}
-      <Modal
-        visible={showRelationDropdown}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRelationDropdown(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+    <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+      <View style={styles.formContainer}>
+        {/* Relation Type Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <Text style={styles.label}>Relation Type</Text>
           <TouchableOpacity
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}
-            onPress={() => setShowRelationDropdown(false)}
+            style={styles.dropdownButton}
+            onPress={() => setShowRelationDropdown(true)}
             activeOpacity={1}
-          />
-          <View style={{
-            maxHeight: 300,
-            width: '80%',
-            backgroundColor: '#fff',
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: '#ccc',
-            zIndex: 2,
-            overflow: 'hidden',
-            elevation: 10,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-          }}>
-            <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled={true}>
-              {relationTypes.map((relation) => (
-                <TouchableOpacity
-                  key={relation.masterDataId}
-                  style={styles.dropdownOption}
-                  onPress={() => {
-                    setSelectedRelation(relation);
-                    handleInputChange('relation', relation.name);
-                    setShowRelationDropdown(false);
-                  }}
-                >
-                  <Text style={styles.dropdownOptionText}>{relation.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          >
+            <Text style={[
+              styles.dropdownButtonText,
+              !selectedRelation && styles.placeholderText
+            ]}>
+              {selectedRelation ? selectedRelation.name : 'Select'}
+            </Text>
+            <IconButton
+              icon={showRelationDropdown ? "chevron-up" : "chevron-down"}
+              size={20}
+              iconColor="#666"
+              rippleColor="transparent"
+            />
+          </TouchableOpacity>
+          {errors && errors.relation && (
+            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.relation}</Text>
+          )}
+        </View>
+
+        {/* Relation Type Dropdown Modal */}
+        <Modal
+          visible={showRelationDropdown || false}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowRelationDropdown(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}
+              onPress={() => setShowRelationDropdown(false)}
+              activeOpacity={1}
+            />
+            <View style={{
+              maxHeight: 300,
+              width: '80%',
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#ccc',
+              zIndex: 2,
+              overflow: 'hidden',
+              elevation: 10,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+            }}>
+              <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled={true}>
+                {relationTypes.map((relation) => (
+                  <TouchableOpacity
+                    key={relation.masterDataId}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setSelectedRelation(relation);
+                      handleInputChange('relation', relation.name);
+                      setShowRelationDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
+        </Modal>
+
+        {/* Full Name */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            underlineColorAndroid="transparent"
+            selectionColor="transparent"
+            placeholder="Enter "
+            value={formData.name}
+            onChangeText={text => handleInputChange('name', text)}
+          />
+          {errors && errors.name && (
+            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.name}</Text>
+          )}
         </View>
-      </Modal>
 
-      {/* Full Name */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          style={styles.input}
-          underlineColorAndroid="transparent"
-          selectionColor="transparent"
-          placeholder="Enter "
-          value={formData.name}
-          onChangeText={text => handleInputChange('name', text)}
-        />
-        {errors && errors.name && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.name}</Text>
-        )}
-      </View>
-
-      {/* Gender */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Gender</Text>
-        <View style={styles.radioContainer}>
-          <TouchableOpacity
-            style={styles.radioOption}
-            onPress={() => handleInputChange('gender', 'male')}
-          >
-            <RadioButton
-              value="male"
-              status={formData.gender === 'male' ? 'checked' : 'unchecked'}
+        {/* Gender */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.radioContainer}>
+            <TouchableOpacity
+              style={styles.radioOption}
               onPress={() => handleInputChange('gender', 'male')}
-              color="#C15E9C"
-            />
-            <Text style={styles.radioText}>Male</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.radioOption}
-            onPress={() => handleInputChange('gender', 'Female')}
-          >
-            <RadioButton
-              value="Female"
-              status={formData.gender === 'Female' ? 'checked' : 'unchecked'}
+            >
+              <RadioButton
+                value="male"
+                status={formData.gender === 'male' ? 'checked' : 'unchecked'}
+                onPress={() => handleInputChange('gender', 'male')}
+                color="#C15E9C"
+              />
+              <Text style={styles.radioText}>Male</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.radioOption}
               onPress={() => handleInputChange('gender', 'Female')}
-              color="#C15E9C"
-            />
-            <Text style={styles.radioText}>Female</Text>
-          </TouchableOpacity>
+            >
+              <RadioButton
+                value="Female"
+                status={formData.gender === 'Female' ? 'checked' : 'unchecked'}
+                onPress={() => handleInputChange('gender', 'Female')}
+                color="#C15E9C"
+              />
+              <Text style={styles.radioText}>Female</Text>
+            </TouchableOpacity>
+          </View>
+          {errors && errors.gender && (
+            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.gender}</Text>
+          )}
         </View>
-        {errors && errors.gender && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.gender}</Text>
-        )}
+
+        {/* Age */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Age</Text>
+          <TextInput
+            style={styles.input}
+            underlineColorAndroid="transparent"
+            selectionColor="transparent"
+            placeholder="Enter"
+            value={formData.age}
+            onChangeText={text => {
+              // Allow only numbers, max 2 digits
+              const numeric = text.replace(/[^0-9]/g, "").slice(0, 2);
+              handleInputChange('age', numeric);
+            }}
+            keyboardType="numeric"
+            maxLength={2}
+          />
+          {errors && errors.age && (
+            <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.age}</Text>
+          )}
+        </View>
+
+
       </View>
 
-      {/* Age */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Age</Text>
-        <TextInput
-          style={styles.input}
-          underlineColorAndroid="transparent"
-          selectionColor="transparent"
-          placeholder="Enter"
-          value={formData.age}
-          onChangeText={text => {
-            // Allow only numbers, max 2 digits
-            const numeric = text.replace(/[^0-9]/g, "").slice(0, 2);
-            handleInputChange('age', numeric);
-          }}
-          keyboardType="numeric"
-          maxLength={2}
-        />
-        {errors && errors.age && (
-          <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}>{errors.age}</Text>
-        )}
-      </View>
-
-     
-    </View>
-
-         {/* Action Buttons */}
+      {/* Action Buttons */}
       <View style={styles.formButtons}>
         <PrimaryButton
           title={isEditMode ? 'Update Family' : 'Save Family'}
@@ -505,13 +518,13 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           disabled={
             isEditMode
               ? (
-                  !(formData.relation && formData.name && formData.gender && formData.age) ||
-                  editingMember &&
-                  formData.name === (editingMember.relationName || '') &&
-                  formData.relation === (relationTypes.find(r => r.masterDataId === editingMember.relationId)?.name || '') &&
-                  formData.gender === (editingMember.gender || '') &&
-                  formData.age === (editingMember.age ? String(editingMember.age) : '')
-                )
+                !(formData.relation && formData.name && formData.gender && formData.age) ||
+                (editingMember &&
+                  formData.name === ((editingMember as any).relationName || '') &&
+                  formData.relation === (relationTypes.find(r => r.masterDataId === (editingMember as any).relationId)?.name || '') &&
+                  formData.gender === ((editingMember as any).gender || '') &&
+                  formData.age === ((editingMember as any).age ? String((editingMember as any).age) : ''))
+              )
               : !(formData.relation && formData.name && formData.gender && formData.age)
           }
         />
@@ -527,58 +540,58 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, height: screenHeight}}>
-      <SafeAreaView style={styles.modalContent}>
-        {/* Header */}
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Family Members</Text>
-          <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-            <Image
-              source={images.icons.close}
-              style={styles.closeIcon}
-            />
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+        <SafeAreaView style={styles.modalContent}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Family Members</Text>
+            <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
+              <Image
+                source={images.icons.close}
+                style={styles.closeIcon}
+              />
+            </TouchableOpacity>
+          </View>
 
-        {showForm ? (
-          renderForm()
-        ) : (
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Add Button (only show if under max limit) */}
-            {(!maxFamilyMembers || familyMembers.length < maxFamilyMembers) && (
-              <TouchableOpacity style={styles.addButton} onPress={handleAddMember} activeOpacity={1}>
-                <LinearGradient
-                  colors={['#EEC4E2', '#F9EFF2', '#EEDAF5', '#F3B9BC']}
-                  locations={[0.0, 0.47, 0.75, 1.0]}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0, y: 0.5 }}
-                  style={styles.addButtonBackground}
-                />
-                <View style={styles.addButtonContent}>
-                  <Image
-                    source={images.icons.addCircle}
-                    style={styles.addButtonIcon}
-                    resizeMode="contain"
+          {showForm ? (
+            renderForm()
+          ) : (
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+              {/* Add Button (only show if under max limit) */}
+              {(!maxFamilyMembers || familyMembers.length < maxFamilyMembers) && (
+                <TouchableOpacity style={styles.addButton} onPress={handleAddMember} activeOpacity={1}>
+                  <LinearGradient
+                    colors={['#EEC4E2', '#F9EFF2', '#EEDAF5', '#F3B9BC']}
+                    locations={[0.0, 0.47, 0.75, 1.0]}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0, y: 0.5 }}
+                    style={styles.addButtonBackground}
                   />
-                  <Text style={styles.addButtonText}>Add Family Members</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            {/* Family Members List */}
-            <View style={styles.familyMembersList}>
-              {familyMembers.length === 0 ? (
-                <Text style={{ textAlign: 'center', color: '#888', fontSize: 16, marginTop: 24, fontFamily: fonts.regular }}>
-                  No Family Members
-                </Text>
-              ) : (
-                familyMembers.map(renderFamilyMemberCard)
+                  <View style={styles.addButtonContent}>
+                    <Image
+                      source={images.icons.addCircle}
+                      style={styles.addButtonIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.addButtonText}>Add Family Members</Text>
+                  </View>
+                </TouchableOpacity>
               )}
-            </View>
-          </ScrollView>
-        )}
-        {/* Toast Message (removed duplicate PrimaryButton) */}
-      </SafeAreaView>
+
+              {/* Family Members List */}
+              <View style={styles.familyMembersList}>
+                {familyMembers.length === 0 ? (
+                  <Text style={{ textAlign: 'center', color: '#888', fontSize: 16, marginTop: 24, fontFamily: fonts.regular }}>
+                    No Family Members
+                  </Text>
+                ) : (
+                  familyMembers.map(renderFamilyMemberCard)
+                )}
+              </View>
+            </ScrollView>
+          )}
+          {/* Toast Message (removed duplicate PrimaryButton) */}
+        </SafeAreaView>
       </SafeAreaView>
       <Toast
         visible={showToast}
@@ -593,21 +606,21 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 }
 
 const styles = StyleSheet.create({
-    actionButton: {
-      borderWidth: 1,
-      borderRadius: 15,
-      height: 30,
-      paddingHorizontal: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    actionButtonText: {
-      fontSize: 12,
-      fontWeight: '600',
-      fontFamily: fonts.regular,
-      paddingTop: 2,
-      paddingHorizontal: 4,
-    },
+  actionButton: {
+    borderWidth: 1,
+    borderRadius: 15,
+    height: 30,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fonts.regular,
+    paddingTop: 2,
+    paddingHorizontal: 4,
+  },
   modalContent: {
     flex: 1,
     backgroundColor: colors.bg_primary,
@@ -627,7 +640,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#202427',
-     fontFamily: fonts.semiBold
+    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: 4,
@@ -683,7 +696,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   familyMembersList: {
     gap: 10,
@@ -694,7 +707,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#DADADA',
     borderRadius: 12,
     backgroundColor: '#fff',
     marginBottom: 0,
@@ -752,7 +765,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.primary,
-     fontSize: 14,
+    fontSize: 14,
     marginBottom: 3,
     fontFamily: fonts.semiBold
 
@@ -765,18 +778,18 @@ const styles = StyleSheet.create({
     borderColor: "#9D9D9F",
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingTop:3,
+    paddingTop: 3,
     backgroundColor: '#fff',
     height: 42,
   },
   dropdownButtonText: {
     fontSize: 13,
     color: '#333',
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   placeholderText: {
     color: '#999',
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   dropdownOverlay: {
     position: 'absolute',
@@ -813,19 +826,19 @@ const styles = StyleSheet.create({
   dropdownOptionText: {
     fontSize: 16,
     color: '#333',
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   selectedOptionText: {
     color: '#fff',
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
   },
   inputContainer: {
     marginBottom: 20,
   },
   input: {
     borderWidth: 1,
-        borderColor: "#9D9D9F",
-    borderRadius: 8,    paddingHorizontal: 12,
+    borderColor: "#9D9D9F",
+    borderRadius: 8, paddingHorizontal: 12,
     fontSize: 13,
     color: '#333',
     fontFamily: fonts.regular,
@@ -845,7 +858,7 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: 16,
     color: '#333',
-    marginLeft:0,
+    marginLeft: 0,
     fontFamily: fonts.regular,
     paddingTop: 2,
   },

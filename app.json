@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "appleTeamId": "4JAM43NMGL"
+      "appleTeamId": "4JAM43NMGL",
+      "bundleIdentifier": "com.janardhan.reddy.curonn"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,8 +30,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic"
         }
-      },
-      "googleServicesFile": "./google-services.json"
+      }
+    },
+    "splash": {
+      "image": "./assets/Splash_Screen.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#C35E9C"
     },
     "web": {
       "bundler": "metro",
