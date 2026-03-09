@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StatusBar,
@@ -26,7 +27,11 @@ import { useUserStore } from "@/src/store/UserStore";
 import PrimaryButton from "../shared/components/PrimaryButton";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
-import { IConsultationType } from "@/src/constants/constants";
+import {
+  IConsultationType,
+  ICreateAppointmentRequest,
+} from "@/src/constants/constants";
+import dayjs from "dayjs";
 
 export interface IDepartments {
   charges: number;
@@ -159,8 +164,18 @@ export default function MyDoctorScreen() {
     [],
   );
 
-  const handleChatStart = () => {
-    router.push("/features/chat/Chat");
+  const handleChatStart = async () => {
+    if (!user) return;
+    try {
+      const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
+      console.log("chat appointment created: ", res);
+      router.push("/features/chat/Chat");
+    } catch (error) {
+      Alert.alert(
+        "Chat Consultation Failed",
+        "Chat appointment failed: " + error,
+      );
+    }
   };
   const handleConsultationTypeChange = (data: IConsultationType) => {
     setConsultationTypeId(data.value);

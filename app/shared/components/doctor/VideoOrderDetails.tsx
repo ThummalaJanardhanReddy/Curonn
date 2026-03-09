@@ -48,7 +48,7 @@ export default function VideoOrderDetails({
   }, [data.scheduleDate]);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data?.patientId) return;
     const initialize = async () => {
       await signalRVideoService.connect(data.patientId);
     };
@@ -180,17 +180,17 @@ export default function VideoOrderDetails({
               </>
             )}
 
-            {/* ---------------- Join Call Button ---------------- */}
-            <TouchableOpacity
-              style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
-              disabled={joinDisabled}
-              onPress={handleJoinCall}
-            >
-              <Text style={styles.primaryButtonText}>Join Video Call</Text>
-            </TouchableOpacity>
-          </View>
-          {/* ---------------- Reschedule & Cancel ---------------- */}
-          {/* <View style={styles.rowButtons}>
+      {/* ---------------- Join Call Button ---------------- */}
+      {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
+        style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
+        disabled={joinDisabled}
+        onPress={handleJoinCall}
+      >
+        <Text style={styles.primaryButtonText}>Join Video Call</Text>
+      </TouchableOpacity>}
+
+      {/* ---------------- Reschedule & Cancel ---------------- */}
+      {/* <View style={styles.rowButtons}>
         <TouchableOpacity style={styles.outlineButton} onPress={onReschedule}>
           <Text style={styles.outlineButtonText}>Reschedule</Text>
         </TouchableOpacity>

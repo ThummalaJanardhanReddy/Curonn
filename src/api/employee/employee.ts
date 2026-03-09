@@ -241,6 +241,11 @@ export const SurgicalHistoryApi = {
     `/Histories/DeleteSurgical/${id}?deletedBy=${deletedBy}`,
 } as const;
 
+export const ChatApi = {
+  history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
+  start: (patientId: number)=> `/chat/start?patientId=${patientId}`,
+}
+
 export const ApiRoutes = {
   Employee: EmployeeApi,
   Auth: AuthApi,
@@ -272,6 +277,7 @@ export const ApiRoutes = {
   Departments: DepartmentsApi,
   Appointments: AppointmentAPi,
   SurgicalHistory: SurgicalHistoryApi,
+  Chat: ChatApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

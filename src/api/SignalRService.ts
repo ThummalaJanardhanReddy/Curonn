@@ -1,9 +1,16 @@
 import * as signalR from "@microsoft/signalr";
 import { useChatStore } from "../store/ChatStore";
 import axiosClient from "./axiosClient";
+import { useUserStore } from "../store/UserStore";
+
+const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;
 
 class SignalRService {
   connection: signalR.HubConnection | null = null;
+
+  private get UserId(){
+    return useUserStore.getState().user?.eId;
+  }
 
   /**
    * CONNECT
@@ -31,10 +38,21 @@ class SignalRService {
       // 🔥 IMPORTANT: Register listeners BEFORE start
       this.registerListeners();
 
-      await this.connection.start();
-
+      await this.connection?.start();
+      useChatStore.getState().setChatStatus("connected");
       console.log("✅ SignalR connected");
-      console.log("Connection state:", this.connection.state);
+      try {
+        // await this.connection.invoke("patient-267");
+        await this.connection.invoke("JoinPatientGroup", this.UserId);
+        console.log("✅ Joined chat group:", this.UserId);
+      } catch (invokeError) {
+        console.log("❌ Join chat UserGroup failed:", invokeError);
+
+        await this.connection.stop();
+        this.connection = null;
+
+        return;
+      }
 
       useChatStore.getState().setConnectionState("connected");
 
@@ -54,6 +72,14 @@ class SignalRService {
     if (!this.connection) return;
 
     /**
+     * CHAT ACCEPTED
+     */
+    this.connection.on("ChatAccepted", (response) => {
+      console.log("Chat accepted: ", response);
+      useChatStore.getState().setChatStatus("connected");
+      useChatStore.getState().setChatAcceptDetails(response);
+    });
+    /**
      * RECEIVE MESSAGE
      */
     this.connection.on("ReceiveMessage", (message: any) => {
@@ -61,11 +87,13 @@ class SignalRService {
 
       const messageId = message.id ?? `server_${Date.now()}`;
 
+      const IsItsSenderMsg = message.senderId === this.UserId; // this.user.user?.eId;
+
       const exists = useChatStore
         .getState()
         .messages.some((m) => m.id === messageId);
 
-      if (exists) return;
+      if (exists || IsItsSenderMsg) return;
 
       useChatStore.getState().addMessage({
         id: messageId,
@@ -73,6 +101,16 @@ class SignalRService {
         sender: "doctor",
         timestamp: Date.now(),
         status: "received",
+        type: message.fileUrl
+          ? message.fileUrl.split(".").pop()?.toLowerCase()
+          : "text",
+        attachment: message.fileUrl
+          ? {
+              uri: `${S3Link}${message.fileUrl}`,
+              name: message.fileUrl.split("/").pop() || "file",
+              type: message.fileUrl.split(".").pop()?.toLowerCase(),
+            }
+          : undefined,
       });
     });
 
@@ -99,9 +137,10 @@ class SignalRService {
      */
     this.connection.on("ChatExpired", () => {
       console.log("ChatExpired");
-      useChatStore
-        .getState()
-        .endChat("No doctors available. Please try again later.");
+      useChatStore.getState().setChatStatus("expired");
+      // useChatStore
+      //   .getState()
+      //   .endChat("No doctors available. Please try again later.");
     });
 
     /**
@@ -153,10 +192,17 @@ class SignalRService {
       timestamp: Date.now(),
       status: "sending",
       attachment: file,
+      type: file ? "image" : "text",
     });
 
     try {
-      await this.handleSend(senderId, receiverId, text, appointmentId, file);
+      const res = await this.handleSend(
+        senderId,
+        receiverId,
+        text,
+        appointmentId,
+        file,
+      );
       useChatStore.getState().updateMessageStatus(messageId, "sent");
     } catch (err) {
       console.log("Send failed:", err);
@@ -194,9 +240,19 @@ class SignalRService {
       } as any);
     }
 
-    await axiosClient.post("/chat/send", formData, {
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    // if (file) {
+    const _res = await axiosClient.post("/chat/TestsendImage", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
+    console.log("network:", _res);
+    // } else {
+    //   const _res = await axiosClient.post("/chat/send", formData, {
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //   });
+    //   console.log('network file: ', _res);
+    // }
   }
 
   /**

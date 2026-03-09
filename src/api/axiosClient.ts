@@ -1,12 +1,10 @@
-import axios from 'axios';
+import axios from "axios";
 
 // ✅ Create Axios instance
 const axiosClient = axios.create({
-  baseURL: 'https://api.curonn.com/api', // 🔹 Change this to your API base
-  timeout: 10000, // optional timeout (ms)
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: "https://api.curonn.com/api", // 🔹 Change this to your API base
+  timeout: 30000, // optional timeout (ms)
+ 
 });
 
 // ✅ Request interceptor
@@ -22,7 +20,7 @@ axiosClient.interceptors.request.use(
 
     // Optionally log requests in dev mode (include params and resolved full URL)
     if (__DEV__) {
-      const fullUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
+      const fullUrl = `${config.baseURL ?? ""}${config.url ?? ""}`;
       // console.log('📤 API Request:', config.method?.toUpperCase(), fullUrl, {
       //   params: config.params,
       //   data: config.data,
@@ -33,9 +31,9 @@ axiosClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    console.error("❌ Request Error:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // ✅ Response interceptor
@@ -49,13 +47,13 @@ axiosClient.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized globally
     if (error.response?.status === 401) {
-      console.warn('🔒 Unauthorized — maybe redirect to login');
+      console.warn("🔒 Unauthorized — maybe redirect to login");
       // Example: navigateToLoginScreen();
     }
 
     // console.error('❌ Response Error:', error.response?.data || error.message);
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosClient;

@@ -177,7 +177,7 @@ export interface IMaster {
 
   createdBy: number;
   createdOn: string; // ISO date string
-};
+}
 
 export interface ICreateAppointmentRequest {
   appointmentId?: number; // optional for create
@@ -194,7 +194,7 @@ export interface ICreateAppointmentRequest {
 
   doctorId?: number;
 
-  scheduleDate: string;        // ISO format
+  scheduleDate: string; // ISO format
   scheduleBetween: string;
 
   scheduleTypeId: number;
@@ -212,9 +212,41 @@ export interface ICreateAppointmentRequest {
   relationGender?: string;
 
   referedDoctor?: number;
-};
+}
 export interface IConsultationType {
   label: string; // what UI shows
   value: number; // id
   key: "chat" | "video" | "phone"; // stable key
-};
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: "user" | "doctor";
+  text?: string;
+  attachment?: {
+    uri: string;
+    name: string;
+    type?: string;
+  };
+  timestamp: string;
+  isRead: boolean;
+  status?: "sending" | "sent" | "failed";
+}
+
+export interface ChatHistoryItem {
+  messageId: number;
+  senderId: number;
+  receiverId: number;
+
+  messageText: string | null;
+  fileUrl: string | null;
+
+  isRead: boolean;
+  sentOn: string; // ISO date string
+  isActive: boolean;
+
+  senderRole: string | null;
+  receiverRole: string | null;
+
+  appointmentId: number;
+}
