@@ -7,6 +7,9 @@ interface UserData {
   mobileNo: string;
   emailAddress: string;
   fullName: string;
+  address?: string;
+  gender?: string;
+  age?: number;
   employeeId: string;
   isVerified: boolean;
   e_id?: number;

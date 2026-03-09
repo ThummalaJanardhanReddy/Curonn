@@ -79,6 +79,7 @@ export const images = {
   medicalicon: require('./AppIcons/Curonn_icons/medicalicon.png'),
   consultationicon: require('./AppIcons/Curonn_icons/consultation.png'),
   ambulanceicon: require('./AppIcons/Curonn_icons/ambulance_order.png'),
+   wellnessicon: require('./AppIcons/Curonn_icons/wellness_orders.png'),
 
   appIcon: require('./AppIcons/appIcon.png'),
   // Splash Screen
@@ -115,6 +116,7 @@ export const images = {
   sampleCollectionStep3: require('./images/sampleCollectionProcess3.png'),
   labdefault: require('./AppIcons/Curonn_icons/lab_detault_ic.png'),
   healthpackage: require('./images/healthpackage.jpg'),
+  wellnesspackage: require('./images/wellnesspackage.png'),
   //home
   home: {
     arrow_card: arrow_card,
@@ -129,7 +131,9 @@ export const images = {
   panels: {
     ambulance: require('./AppIcons/panels/panel_ambulance.png'),
     labTest: require('./AppIcons/panels/panel_labtest.png'),
+
     wellness: require('./AppIcons/panels/panel_wellness.png'),
+    panel_card2: require('./AppIcons/panels/panel_card2.png'),
     medicalCondition: require('./images/panels/medicalCondition.png'),
     landingPage: require('./images/panels/landingPage.png'),
     happyLife: require('./images/panels/happyLife.png'),

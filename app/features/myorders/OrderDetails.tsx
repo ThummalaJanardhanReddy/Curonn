@@ -267,6 +267,14 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 setLoading(false);
             });
         }
+        else if (order.orderType === "Wellness Program") {
+            console.log("Fetching Wellness Program booking details for masterId:", order.masterId);
+            fetchWellnesseOrderById(order.masterId).then((data) => {
+                console.log("Wellness Booking Details:", data);
+                setOrderDetails({ type: "wellness", data: data.data || data || {} });
+                setLoading(false);
+            });
+        }
         else {
             setOrderDetails(null);
             setLoading(false);
@@ -334,6 +342,17 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         try {
             const response = await axiosClient.get(ApiRoutes.Ambulance.getbookingId(bookingId));
             console.log("Ambulance Order Details:", response);
+            return response;
+        } catch (error) {
+            return { success: false, data: {} };
+        }
+    }
+
+    async function fetchWellnesseOrderById(id: number): Promise<any> {
+        try {
+            console.log("Fetching Wellness Order Details for ID:", id);
+            const response = await axiosClient.get(ApiRoutes.WellnessData.getwellnessId(id));
+            console.log("Wellness Order Details:", response);
             return response;
         } catch (error) {
             return { success: false, data: {} };
@@ -683,12 +702,26 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             `${ApiRoutes.LabOrders.cancelOrder}?labOrderId=${order.masterId}&cancelReason=${encodeURIComponent(cancelReason)}`,
                                             {}
                                         );
+                                    }
+                                    else if (orderDetails?.type === 'wellness') {
+                                        const payload = {
+                                            bookingId: Number(order.masterId),
+                                            reason: cancelReason || "Cancelled by user"
+                                        };
+                                        console.log("Payload for wellness cancel:", payload);
+                                        try {
+                                            const response: any = await axiosClient.post(ApiRoutes.WellnessData.wellnessCancel, payload);
+                                            console.log("Wellness cancel response:", response);
+                                        } catch (err) {
+                                            console.error("Wellness cancel error:", err?.response?.data || err);
+                                        }
                                     } else if (orderDetails?.type === 'medicine' || orderDetails?.type === 'prescription') {
                                         await axiosClient.post(ApiRoutes.MedicalOrders.medicineCancel, {
                                             medicineOrderId: order.masterId,
                                             cancelReason: cancelReason
                                         });
                                     }
+
                                     setShowCancelModal(false);
                                     setToastMessage({
                                         title: 'Order Cancelled',
@@ -808,8 +841,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
                                             {/* Patient Details */}
                                             {order.orderType === "Xray" ? (
-                                            <Text style={styles.sectionTitle}>Patient Info</Text>
-                                            ):(
+                                                <Text style={styles.sectionTitle}>Patient Info</Text>
+                                            ) : (
                                                 <Text style={styles.sectionTitle}>Address Info</Text>
                                             )}
                                             <View style={styles.databox}>
@@ -828,18 +861,18 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         }
                                                     </Text>
                                                 </View>
-                                                 {order.orderType !== "Xray" && (<>
-                                                <View style={styles.divider} />
-                                                <View style={{ padding: 16 }}>
-                                                    <Text style={styles.itemSubText}>
-                                                        {[
-                                                            orderDetails.data.hNo ? orderDetails.data.hNo : null,
-                                                            orderDetails.data.address ? orderDetails.data.address : null,
-                                                            orderDetails.data.landMark ? orderDetails.data.landMark : null
-                                                        ].filter(Boolean).join(', ') || 'N/A'}
-                                                    </Text>
-                                                </View>
-                                                 </>)}
+                                                {order.orderType !== "Xray" && (<>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.itemSubText}>
+                                                            {[
+                                                                orderDetails.data.hNo ? orderDetails.data.hNo : null,
+                                                                orderDetails.data.address ? orderDetails.data.address : null,
+                                                                orderDetails.data.landMark ? orderDetails.data.landMark : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'}
+                                                        </Text>
+                                                    </View>
+                                                </>)}
                                             </View>
                                             {canOngoing && (<>
                                                 <View style={styles.databox}>
@@ -1059,7 +1092,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         <Text style={styles.itemSubText}>No prescriptions found.</Text>
                                                     )}
                                                 </ScrollView>
-                                               
+
                                                 {/* Status Section */}
                                                 <View style={styles.paidAmountRow}>
                                                     <Text style={styles.paidAmountLabel}>Status</Text>
@@ -1284,6 +1317,144 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         </View>
                                     )}
 
+                                    {orderDetails.type === "wellness" && (
+                                        <View style={styles.servicepage}>
+                                            {/* Service Information */}
+                                            <Text style={styles.sectionTitle}>Service Information</Text>
+                                            <View style={styles.databox}>
+                                                <View style={styles.labelheaderdatabox}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text style={styles.labelheader}>{orderDetails.data.programName}</Text>
+                                                        {/* <Text style={styles.labelinner}>
+                                                        AT Home
+                                                    </Text> */}
+                                                    </View>
+                                                    {/* <Text style={styles.labelinner}>
+                                                    Report within 10-12 hours
+                                                </Text> */}
+                                                </View>
+
+                                                <View style={styles.paymentsection}>
+                                                    <Text style={styles.paidlabel}>Paid Amount</Text>
+                                                    <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
+                                                </View>
+                                                <View style={styles.servicesection}>
+                                                    <Text style={styles.label}>Service Status:</Text>
+                                                    <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "In Progress"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            {/* Patient Details */}
+                                            <Text style={styles.sectionTitle}>Patient Details</Text>
+                                            <View style={styles.databox}>
+                                                <View style={styles.patiendetails}>
+                                                    <Text style={styles.patientname}>{orderDetails.data.personName || "N/A"}</Text>
+
+                                                    <Text style={styles.value}>
+                                                        {orderDetails.data.isSelfService
+                                                            ? [
+                                                                orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
+                                                                orderDetails.data.gender ? orderDetails.data.gender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                            : [
+                                                                orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
+                                                                orderDetails.data.relationGender ? orderDetails.data.relationGender : null
+                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                        }
+                                                    </Text>
+                                                </View>
+
+                                            </View>
+
+                                            {canOngoing && (<>
+                                                <View style={styles.databox}>
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Delivery Notes</Text>
+                                                        <Text style={styles.ongoingLabel}>
+                                                            {orderDetails.data.deliveryNotes || "N/A"}</Text>
+
+                                                    </View>
+                                                    <View style={styles.divider} />
+                                                    <View style={{ padding: 16 }}>
+                                                        <Text style={styles.DeliveryLabel}>Traking</Text>
+                                                        <TouchableOpacity
+                                                            disabled={!orderDetails.data.trackingLink}
+                                                            onPress={() => {
+                                                                let url = orderDetails.data.trackingLink;
+                                                                if (url && !/^https?:\/\//i.test(url)) {
+                                                                    url = 'https://' + url;
+                                                                }
+                                                                if (url) {
+                                                                    Linking.openURL(url);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Text style={styles.trackingLabel}>
+                                                                {orderDetails.data.trackingLink || "N/A"}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            </>)}
+
+                                            {/* Reports Section (Lab)*/}
+                                            {(() => {
+                                                // Debug logs to help diagnose why Reports section is not displaying
+                                                console.log('DEBUG: statusName:', orderDetails.data.statusName || order.statusName);
+                                                console.log('DEBUG: labReports:', labReports);
+                                                if (orderDetails.data.statusName === 'Completed' && Array.isArray(labReports) && labReports.length > 0) {
+                                                    return (
+                                                        <View style={styles.reportspage}>
+                                                            <Text style={styles.sectionTitle}>Reports</Text>
+                                                            <View style={styles.databoxreports}>
+                                                                {labReports.map((report: any, idx: number) => {
+                                                                    const { category, iconSource } = getCategoryAndIcon(report.orderType);
+                                                                    return (
+                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
+                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                {report.reportname}
+                                                                            </Text>
+                                                                            {/* <Text>
+                                                                              {report.reportinfo} || 'fdgnfdgbbn'
+                                                                        </Text> */}
+                                                                            <TouchableOpacity
+                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                onPress={() => {
+                                                                                    console.log('Preview pressed:', report.url);
+                                                                                    setPdfLoading(true);
+                                                                                    setSelectedPdfUrl(report.url);
+                                                                                    // Encode the file name part of the URL
+                                                                                    try {
+                                                                                        const url = report.url;
+                                                                                        const lastSlash = url.lastIndexOf('/');
+                                                                                        const base = url.substring(0, lastSlash + 1);
+                                                                                        const file = url.substring(lastSlash + 1);
+                                                                                        const encodedUrl = base + encodeURIComponent(file);
+                                                                                        setEncodedPdfUrl(encodedUrl);
+                                                                                    } catch (e) {
+                                                                                        setEncodedPdfUrl(report.url);
+                                                                                    }
+                                                                                    setPdfModalVisible(true);
+                                                                                }}
+                                                                            >
+                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    );
+                                                                })}
+                                                            </View></View>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                        </View>
+                                    )}
+
                                 </>
                             ) : (
                                 <>
@@ -1297,16 +1468,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
 
                         {/* Footer Buttons */}
-                        
-                            {/* Lab & Medicine: Cancel Order only */}
-                            {orderDetails?.type === 'medicine' && canCancel && (
-                                <View style={styles.footerRow}>
+
+                        {/* Lab & Medicine: Cancel Order only */}
+                        {orderDetails?.type === 'medicine' && canCancel && (
+                            <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
                                     <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
                                 </TouchableOpacity>
-                                </View>
-                            )}
-                            {orderDetails?.type === 'lab' && canCancel && (<>
+                            </View>
+                        )}
+
+                        {orderDetails?.type === 'wellness' && canCancel && (
+                            <View style={styles.footerRow}>
+                                <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
+                                    <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {orderDetails?.type === 'lab' && canCancel && (<>
                             <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
@@ -1316,25 +1496,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         <Text style={styles.rescheduleBtnText}>Reschedule</Text>
                                     </TouchableOpacity>
                                 </View>
-                                </View>
-                            </>)}
-                            {/* Consultation: Reschedule only */}
-                            {orderDetails?.type === 'consultation' && canReschedule && (
-                                 <View style={styles.footerRow}>
+                            </View>
+                        </>)}
+                        {/* Consultation: Reschedule only */}
+                        {orderDetails?.type === 'consultation' && canReschedule && (
+                            <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
                                     <Text style={styles.rescheduleBtnText}>Reschedule Consultation</Text>
                                 </TouchableOpacity>
-                                </View>
-                            )}
+                            </View>
+                        )}
 
-                            {/* {canCompleted && (
+                        {/* {canCompleted && (
                             <TouchableOpacity style={styles.cancelOrderBtn} onPress={() => setShowCancelModal(true)}>
                                 <Text style={styles.cancelOrderBtnText}>Book Again</Text>
                             </TouchableOpacity>
                         )} */}
 
-                            {/* Lab: Both if allowed */}
-                            {/* {orderDetails?.type === 'lab' && canReschedule && canCancel && (
+                        {/* Lab: Both if allowed */}
+                        {/* {orderDetails?.type === 'lab' && canReschedule && canCancel && (
                             <>
                                 <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
                                     <Text style={styles.rescheduleBtnText}>Reschedule</Text>
@@ -1344,7 +1524,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 </TouchableOpacity>
                             </>
                         )} */}
-                       
+
 
                     </View>
                     {renderRescheduleModal()}

@@ -188,7 +188,7 @@ export default function VideoOrderDetails({
       >
         <Text style={styles.primaryButtonText}>Join Video Call</Text>
       </TouchableOpacity>}
-
+      </View>
       {/* ---------------- Reschedule & Cancel ---------------- */}
       {/* <View style={styles.rowButtons}>
         <TouchableOpacity style={styles.outlineButton} onPress={onReschedule}>

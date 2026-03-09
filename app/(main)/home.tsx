@@ -78,24 +78,28 @@ const faqs = [
 ];
 
 export default function HomeScreen() {
-  // Restore userData from SecureStore on mount
-  const { setUserData } = useUser();
-  const { userData } = useUser();
-
-
+  
   useEffect(() => {
     const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      //console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
+      const secureUserData = await SecureStore.getItemAsync('userData');
+      if (secureUserData) {
+        setUserData(JSON.parse(secureUserData));
       }
+      // If not found in SecureStore, context will be used
     };
     restoreUserData();
   }, []);
-  const patientId = Number(userData?.e_id || userData?.eId);
+  // Restore userData from SecureStore on mount
+  const { userData,setUserData } = useUser();
+   const patientId = Number(userData?.e_id || userData?.eId);
+    // Render wellness program cards
+   
+
+
+ 
   
     const fetchNotifications = async () => {
+      console.log("Fetching notifications for patientId:", patientId);
       // Ensure patientId is string or number, fallback to empty string
       const response = await axiosClient.get(
         ApiRoutes.Notification.GetList(patientId, "patient")
@@ -110,6 +114,7 @@ export default function HomeScreen() {
   }, [patientId]);
 
   //console.log("Home Screen patientId:", patientId);
+  const [wellnessall, setWellnessall] = useState<any[]>([]);
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -147,6 +152,64 @@ export default function HomeScreen() {
   };
 
 
+   const renderWellnessCard = useCallback(
+      ({ item, index }: { item: any; index: number }) => {
+        const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
+        const isLast = index === wellnessall.length - 1;
+        return (
+          <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
+            <Image
+              source={bgImage}
+              style={styles.featureBackground}
+              resizeMode="cover"
+            />
+            <images.home.book_wellness
+              style={{ position: "absolute", right: 20, bottom: 0 }}
+            />
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: "#fff" }]}>
+                {item.programName}
+              </Text>
+              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>Duration: {item.duration}</Text>
+              <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
+                ₹{item.price}
+              </Text>
+              <Button
+                mode="contained"
+                style={[
+                  styles.featureButton,
+                  {
+                    backgroundColor: "#EFBC73",
+                    height: 36,
+                    justifyContent: "center",
+                  },
+                ]}
+                labelStyle={{
+                  color: "#000",
+                  fontSize: 14,
+                  fontFamily: fonts.medium,
+                  lineHeight: 18,
+                }}
+                contentStyle={{
+                  height: 36,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onPress={() => {
+                  router.push({
+                    pathname: "/wellnessdetails",
+                    params: { wellnessMasterId: item.wellnessMasterId || item.id }
+                  });
+                }}
+              >
+                Get Now
+              </Button>
+            </View>
+          </View>
+        );
+      },
+      [wellnessall],
+    );
 
  useEffect(() => {
   if (!patientId) return; // 🚨 VERY IMPORTANT
@@ -566,6 +629,21 @@ export default function HomeScreen() {
       }
     }
     fetchArticles();
+
+        async function fetchWelness() {
+      try {
+        console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
+        const res = await axiosClient.get(ApiRoutes.WellnessData.GetAllwellness);
+        console.log("Wellness API response:", res.data);
+        // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
+        if (Array.isArray(res.data.items)) {
+          setWellnessall(res.data.items);
+        }
+      } catch (e) {
+        console.error("Failed to fetch articles", e);
+      }
+    }
+    fetchWelness();
   }, []);
 
   useFocusEffect(
@@ -955,51 +1033,20 @@ export default function HomeScreen() {
 
          {/* Wellness Program Section */}
         <View style={styles.section}>
-          <View style={styles.featureCard}>
-            <Image
-              source={images.panels.wellness}
-              style={styles.featureBackground}
-              resizeMode="cover"
-            />
-            <images.home.book_wellness
-              style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'20%'}
-            // height={'80%'}
-            />
-            <View style={styles.featureContent}>
-              <Text style={[styles.featureTitle, { color: "#fff" }]}>
-                Wellness Program
-              </Text>
-              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
-                at your doorstep
-              </Text>
-              <Button
-                mode="contained"
-                style={[
-                  styles.featureButton,
-                  {
-                    backgroundColor: "#EFBC73",
-                    height: 36,
-                    justifyContent: "center",
-                  },
-                ]}
-                labelStyle={{
-                  color: "#000",
-                  fontSize: 14,
-                  fontFamily: fonts.medium,
-                  lineHeight: 18, // Ensures text is vertically centered
-                }}
-                contentStyle={{
-                  height: 36,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              // onPress={() => router.push("/")}
-              >
-                Get Now
-              </Button>
+          {wellnessall.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center' }}>
+              <Text style={{ color: '#ff0000', fontSize: 16 }}>Data is not available</Text>
             </View>
-          </View>
+          ) : (
+            <FlatList
+              data={wellnessall}
+              renderItem={renderWellnessCard}
+              keyExtractor={(item, idx) => item.wellnessMasterId?.toString?.() || idx.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 0 }}
+            />
+          )}
         </View>
 
         {/* Health Articles Section */}

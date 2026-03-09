@@ -167,6 +167,14 @@ export const ArticlesApi = {
   Allarticles: "/Article/get-by-status?status=published",
 } as const;
 
+export const WellnessApi = {
+  GetAllwellness: "/WellnessProgram/GetAll",
+  getdataById: (id: string | number) => `/WellnessProgram/GetById/${id}`,
+  saveUpdate: "/wellnessBooking/create",
+  getwellnessId: (id: string | number) => `/wellnessBooking/${id}`,
+  wellnessCancel: "wellnessBooking/cancel"
+} as const;
+
 export const PrescriptionOrdersApi = {
   savePrescriptionOrder: "/medicine-orders/SavePrescriptionOrderAsync",
 } as const;
@@ -264,6 +272,7 @@ export const ApiRoutes = {
   MedicalOrders: MedicalOrdersApi,
   ConsultationsData: ConsultationApi,
   ArticlesData: ArticlesApi,
+  WellnessData: WellnessApi,
   Ambulance: AmbulanceApi,
   PrescriptionOrders: PrescriptionOrdersApi,
   FoodAllergies: FoodAllergiesApi,

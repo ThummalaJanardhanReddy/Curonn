@@ -131,15 +131,15 @@ export default function OrdersScreen() {
 
   // Fetch orders when filter changes or search is performed
   useEffect(() => {
-    
+
     let statusId = 0;
     console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
-    
+
     if (!patientId) {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     // If searching by order number
     if (searchQuery.trim().length > 0) {
@@ -183,36 +183,36 @@ export default function OrdersScreen() {
   };
 
 
-    const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
-      const date = new Date(isoDate);
+  const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
+    const date = new Date(isoDate);
 
-      // Add extra hours and minutes
-      date.setHours(date.getUTCHours() + extraHours);
-      date.setMinutes(date.getUTCMinutes() + extraMinutes);
+    // Add extra hours and minutes
+    date.setHours(date.getUTCHours() + extraHours);
+    date.setMinutes(date.getUTCMinutes() + extraMinutes);
 
-      const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-      ];
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
 
-      const getOrdinal = (n: number) => {
-        const s = ["th", "st", "nd", "rd"];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
-      };
-
-      const month = months[date.getMonth()];
-      const day = getOrdinal(date.getDate());
-      const year = date.getFullYear();
-
-      let hours = date.getUTCHours(); // Use UTC hours
-      const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
-
-      const ampm = hours >= 12 ? "pm" : "am";
-      hours = hours % 12 || 12;
-
-      return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+    const getOrdinal = (n: number) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
+
+    const month = months[date.getMonth()];
+    const day = getOrdinal(date.getDate());
+    const year = date.getFullYear();
+
+    let hours = date.getUTCHours(); // Use UTC hours
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
+
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12 || 12;
+
+    return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+  };
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -251,9 +251,13 @@ export default function OrdersScreen() {
           category = "Consultation";
           iconSource = images.consultationicon;
           break;
-           case "Ambulance":
+        case "Ambulance":
           category = "Ambulance";
           iconSource = images.ambulanceicon;
+          break;
+        case "Wellness Program":
+          category = "Wellness Program";
+          iconSource = images.wellnessicon;
           break;
         default:
           category = item.orderType;
@@ -261,7 +265,7 @@ export default function OrdersScreen() {
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4): "";
+      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4) : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
@@ -347,8 +351,8 @@ export default function OrdersScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff"}} edges={['top']}>
-      <View style={[styles.container]}> 
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['top']}>
+      <View style={[styles.container]}>
         <StatusBar
           barStyle="dark-content"
           translucent={false}
@@ -364,7 +368,7 @@ export default function OrdersScreen() {
             paddingHorizontal: 0,
             paddingVertical: 5,
             borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+            borderBottomColor: '#E0E0E0',
           }}
         >
           <View style={styles.searchContainer}>
@@ -400,7 +404,7 @@ export default function OrdersScreen() {
                 keyExtractor={(item) => item.key}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filtersList, { paddingBottom:0,paddingLeft: 20, paddingRight: 20 }]} />
+                contentContainerStyle={[styles.filtersList, { paddingBottom: 0, paddingLeft: 20, paddingRight: 20 }]} />
             </View>
           )}
         </View>

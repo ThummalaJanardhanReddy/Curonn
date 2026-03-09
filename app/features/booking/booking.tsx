@@ -46,7 +46,7 @@ try {
   maybeUseSearchParams = null;
 }
 
-type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance";
+type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance" | "wellness";
 
 interface BookingScreenProps {
   visible: boolean;
@@ -58,11 +58,12 @@ interface BookingScreenProps {
   /** Lab-test flow only */
   masterId?: number;
   /** Lab-test flow only */
+  programeId?: number;
   type?: ServiceType;
   /** Lab-test flow only */
   reportTime?: string;
   serviceId?: number;
-
+  duration?: string;
   selectedDiagCenter?: any;
   selectedDate?: Date;
   selectedTimeSlot?: string;
@@ -81,6 +82,7 @@ export default function BookingScreen({
   reportTime,
   selectedDiagCenter,
   serviceId,
+  duration,
   selectedDate: propSelectedDate,
   selectedTimeSlot: propSelectedTimeSlot,
 }: BookingScreenProps) {
@@ -279,7 +281,7 @@ export default function BookingScreen({
                 ? res.discountAmbulanceService
                 : 0;
           }
-          else {
+          else if (type !== "wellness") {
             discount =
               typeof res.discountMedicineOrder === "number" &&
                 res.discountMedicineOrder != null
@@ -527,7 +529,7 @@ export default function BookingScreen({
 
     return payload;
   };
-  console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
+  //console.log("📤 Lab Order Payload Preview:", JSON.stringify(buildLabOrderPayload, null, 2));
   // Save lab order after payment
   const saveLabOrder = async (paymentData: {
     razorpayOrderId: string;
@@ -654,6 +656,65 @@ export default function BookingScreen({
   };
 
 
+  const saveWellnessOrder = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    // Build ambulance order payload (customize as needed)
+    const payload: any = {
+      programId: masterId,
+      programName: serviceName,
+      patientId: Number(userData?.e_id || userData?.eId),
+      address: "",
+      timeSlot: "",
+      createdBy: userData?.e_id || userData?.eId,
+      paymentAmount: totalAmount,
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
+    };
+    // Add relation info if for others
+    console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
+    try {
+      const response: any = await axiosClient.post(
+        ApiRoutes.WellnessData.saveUpdate,
+        payload
+      );
+      console.log("📥 Wellness Save Order Response:", JSON.stringify(response, null, 2));
+      if ((typeof response === "number" && response > 0) || (response && (response.success || response.isSuccess))) {
+        setToastMessageLab({
+          title: "Your wellness booking has been completed successfully",
+          subtitle: response.message || "Your wellness order was placed successfully!",
+          type: "success",
+        });
+        setShowToastLab(true);
+        setTimeout(() => {
+          setShowToastLab(false);
+          setShowPayment(false);
+          if (onClose) onClose();
+          router.replace("/(main)/orders");
+        }, 1500);
+      } else {
+        setToastMessageLab({
+          title: "Order Failed",
+          subtitle: response?.message || "Failed to place ambulance order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (error) {
+      console.error("[Booking] saveAmbulanceOrder error:", error);
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Something went wrong.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+
+
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
@@ -729,6 +790,36 @@ export default function BookingScreen({
   };
 
 
+   // Lab-test: handleBookNow
+  const handleBookWellness = async () => {
+    try {
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${userData?.e_id || userData?.eId || 0}`;
+      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Wellness Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+  
   const handleBookNowScan = async () => {
     // Validate address, date, timeSlot as string errors
     if (!selectedLocation) {
@@ -1705,13 +1796,13 @@ export default function BookingScreen({
               <View style={styles.serviceCard}>
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
-                  {(type !== "ambulance") && (
+                  {(type !== "ambulance" && type !== "wellness") && (
                     <Text style={styles.serviceLocation}>
                       {isAtHome ? "AT-HOME" : "AT Lab"}
                     </Text>
                   )}
                 </View>
-                {(type !== "ambulance") && (
+                {(type !== "ambulance" && type !== "wellness") && (
                   <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
                     Report within {reportTime}
                   </Text>
@@ -1745,18 +1836,13 @@ export default function BookingScreen({
                       <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
                   </>)}
-                  {/* <SecondaryButton
-                    title="Edit"
-                    onPress={handleEdit}
-                    width={50}
-                    height={25}
-                  /> */}
+
                 </View>
               </View>
             </View>
 
             {/* Service Address */}
-            {(type !== "scans") && (
+            {(type !== "scans" && type !== "wellness") && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Service Address</Text>
                 {selectedLocation ? (
@@ -1824,184 +1910,206 @@ export default function BookingScreen({
               </View>
             )}
 
+            {(type == "wellness") && (<>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Patient Details
+                </Text>
+                <View style={styles.addressCard}>
+                  <View style={styles.addressInfoNew}>
+                    <Text style={styles.addressNameBold}>
+                      {userData?.fullName}
+                    </Text>
+                    <Text style={styles.addressTextNew}>
+                      {userData?.address} | {userData?.gender} | {userData?.age} yrs
+                    </Text>
 
-            {/* Sample Pickup Date & Time */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Sample Pickup Date & Time
-              </Text>
-              <View style={styles.dateTimeCard}>
-                <View style={styles.dateSection}>
-                  <Text style={styles.fieldLabel}>Service Start Date</Text>
-                  <TouchableOpacity
-                    style={styles.dateInput}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !selectedDate && styles.placeholderText,
-                      ]}
-                    >
-                      {selectedDate
-                        ? formatDateLab(selectedDate)
-                        : "dd/mm/yyyy"}
-                    </Text>
-                    <Image
-                      source={images.icons.calendar}
-                      style={styles.calendarIcon}
-                    />
-                  </TouchableOpacity>
-                  {errors === "Please select service start date" && (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                    >
-                      {errors}
-                    </Text>
-                  )}
+                  </View>
                 </View>
+              </View>
 
-                <View style={styles.timeSection}>
-                  <Text style={styles.fieldLabel}>Select Time Slot</Text>
-                  <View style={styles.timeSlotsContainer}>
-                    {labTimeSlots.map((slot, index) => (
-                      <TouchableOpacity
-                        key={index}
+            </>)}
+
+            {(type !== "wellness") && (<>
+              {/* Sample Pickup Date & Time */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Sample Pickup Date & Time
+                </Text>
+                <View style={styles.dateTimeCard}>
+                  <View style={styles.dateSection}>
+                    <Text style={styles.fieldLabel}>Service Start Date</Text>
+                    <TouchableOpacity
+                      style={styles.dateInput}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text
                         style={[
-                          styles.timeSlot,
-                          selectedTimeSlot === slot && styles.selectedTimeSlot,
+                          styles.dateText,
+                          !selectedDate && styles.placeholderText,
                         ]}
-                        onPress={() => {
-                          setSelectedTimeSlot(slot);
-                          if (errors === "Please select time slot")
-                            setErrors("");
-                        }}
                       >
-                        <Text
-                          style={[
-                            styles.timeSlotText,
-                            selectedTimeSlot === slot && styles.selectedTimeSlotText,
-                          ]}
-                        >
-                          {selectedTimeSlot === slot ? `${slot}` : slot}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                        {selectedDate
+                          ? formatDateLab(selectedDate)
+                          : "dd/mm/yyyy"}
+                      </Text>
+                      <Image
+                        source={images.icons.calendar}
+                        style={styles.calendarIcon}
+                      />
+                    </TouchableOpacity>
+                    {errors === "Please select service start date" && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
                   </View>
-                  {errors === "Please select time slot" && (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {errors}
-                    </Text>
+
+                  <View style={styles.timeSection}>
+                    <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                    <View style={styles.timeSlotsContainer}>
+                      {labTimeSlots.map((slot, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.timeSlot,
+                            selectedTimeSlot === slot && styles.selectedTimeSlot,
+                          ]}
+                          onPress={() => {
+                            setSelectedTimeSlot(slot);
+                            if (errors === "Please select time slot")
+                              setErrors("");
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.timeSlotText,
+                              selectedTimeSlot === slot && styles.selectedTimeSlotText,
+                            ]}
+                          >
+                            {selectedTimeSlot === slot ? `${slot}` : slot}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {errors === "Please select time slot" && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+
+              {/* Patient Details */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Patient Details</Text>
+                <View style={styles.patientCard}>
+                  <View style={styles.radioGroup}>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="self"
+                        status={patientType === "self" ? "checked" : "unchecked"}
+                        onPress={() => setPatientType("self")}
+                        color="#C15E9C"
+
+                      />
+                      <Text style={styles.radioLabel}>Self Service</Text>
+                    </View>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="others"
+                        status={
+                          patientType === "others" ? "checked" : "unchecked"
+                        }
+                        onPress={() => setPatientType("others")}
+                        color="#C15E9C"
+                      />
+                      <Text style={styles.radioLabel}>For Others</Text>
+                    </View>
+                  </View>
+
+                  {patientType === "others" && (
+                    <View style={styles.othersForm}>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Relation Type</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowRelationDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {selectedRelation
+                              ? selectedRelation.name
+                              : "Select"}
+                          </Text>
+                          <View style={styles.dropdownIcon} />
+                        </TouchableOpacity>
+                        {fieldErrors.relation ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Full Name</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={fullName}
+                          onChangeText={(text) => {
+                            setFullName(text);
+                            if (fieldErrors.fullName) {
+                              setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                        />
+                        {fieldErrors.fullName ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Age</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={age}
+                          onChangeText={(text) => {
+                            setAge(text);
+                            if (fieldErrors.age) {
+                              setFieldErrors((prev) => ({ ...prev, age: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                          keyboardType="numeric"
+                        />
+                        {fieldErrors.age ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Gender</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowGenderDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {gender || "Select"}
+                          </Text>
+                          <View style={styles.dropdownIcon} />
+                        </TouchableOpacity>
+                        {fieldErrors.gender ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                        ) : null}
+                      </View>
+                    </View>
                   )}
                 </View>
               </View>
-            </View>
-
-            {/* Patient Details */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Patient Details</Text>
-              <View style={styles.patientCard}>
-                <View style={styles.radioGroup}>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="self"
-                      status={patientType === "self" ? "checked" : "unchecked"}
-                      onPress={() => setPatientType("self")}
-                      color="#C15E9C"
-
-                    />
-                    <Text style={styles.radioLabel}>Self Service</Text>
-                  </View>
-                  <View style={styles.radioOption}>
-                    <RadioButton
-                      value="others"
-                      status={
-                        patientType === "others" ? "checked" : "unchecked"
-                      }
-                      onPress={() => setPatientType("others")}
-                      color="#C15E9C"
-                    />
-                    <Text style={styles.radioLabel}>For Others</Text>
-                  </View>
-                </View>
-
-                {patientType === "others" && (
-                  <View style={styles.othersForm}>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Relation Type</Text>
-                      <TouchableOpacity
-                        style={styles.dropdown}
-                        onPress={() => setShowRelationDropdown(true)}
-                      >
-                        <Text style={styles.dropdownText}>
-                          {selectedRelation
-                            ? selectedRelation.name
-                            : "Select"}
-                        </Text>
-                        <View style={styles.dropdownIcon} />
-                      </TouchableOpacity>
-                      {fieldErrors.relation ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Full Name</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={fullName}
-                        onChangeText={(text) => {
-                          setFullName(text);
-                          if (fieldErrors.fullName) {
-                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                          }
-                        }}
-                        placeholder="Enter"
-                        placeholderTextColor="#999"
-                      />
-                      {fieldErrors.fullName ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Age</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={age}
-                        onChangeText={(text) => {
-                          setAge(text);
-                          if (fieldErrors.age) {
-                            setFieldErrors((prev) => ({ ...prev, age: "" }));
-                          }
-                        }}
-                        placeholder="Enter"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                      />
-                      {fieldErrors.age ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.fieldLabel}>Gender</Text>
-                      <TouchableOpacity
-                        style={styles.dropdown}
-                        onPress={() => setShowGenderDropdown(true)}
-                      >
-                        <Text style={styles.dropdownText}>
-                          {gender || "Select"}
-                        </Text>
-                        <View style={styles.dropdownIcon} />
-                      </TouchableOpacity>
-                      {fieldErrors.gender ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                )}
-              </View>
-            </View>
+            </>)}
 
             {/* Order Summary */}
 
@@ -2094,19 +2202,27 @@ export default function BookingScreen({
           </ScrollView>
 
           {/* Book Now Button */}
-          {(type !== "scans") ? (
+          {type === "scans" ? (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm &  Pay \u20B9${totalAmount}`}
-                onPress={handleBookNowLab}
+                title={`Confirm & Book Now`}
+                onPress={handleBookNowScan}
+                style={{ width: "100%" }}
+              />
+            </View>
+          ) : type === "wellness" ? (
+            <View style={styles.footer}>
+              <PrimaryButton
+                title={`Confirm & Pay wellness \u20B9${totalAmount}`}
+                onPress={handleBookWellness}
                 style={{ width: "100%" }}
               />
             </View>
           ) : (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm &  Book Now`}
-                onPress={handleBookNowScan}
+                title={`Confirm & Pay \u20B9${totalAmount}`}
+                onPress={handleBookNowLab}
                 style={{ width: "100%" }}
               />
             </View>
@@ -2222,6 +2338,14 @@ export default function BookingScreen({
                     });
                   } else if (type === "ambulance") {
                     saveAmbulanceOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
+                  }
+                  else if (type === "wellness") {
+                    saveWellnessOrder({
                       razorpayOrderId:
                         data.razorpay_order_id || razorpayOrderId || "",
                       razorpayPaymentId: data.razorpay_payment_id || "",
@@ -2365,7 +2489,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -2381,7 +2505,7 @@ fontFamily: fonts.semiBold,
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-   // backgroundColor: '#fff',
+    // backgroundColor: '#fff',
   },
   section: {
     marginTop: getResponsiveSpacing(0),
