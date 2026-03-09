@@ -44,6 +44,7 @@ export interface Message {
   attachment?: Attachment;
   fileUrl?: string;
   type: MessageType;
+  sentOn?: string;
 }
 
 export interface IAcceptRequest {
@@ -60,6 +61,7 @@ export interface IAcceptRequest {
  */
 interface ChatState {
   sessionId?: string;
+  requestId?: number;
 
   messages: Message[];
 
@@ -78,6 +80,7 @@ interface ChatState {
    * Actions
    */
   setSession: (sessionId: string) => void;
+  setRequestId: (requestId: number) => void;
   setChatAcceptDetails: (details: IAcceptRequest) => void;
 
   setMessages: (messages: Message[]) => void; // ✅ added properly
@@ -106,6 +109,7 @@ interface ChatState {
  */
 export const useChatStore = create<ChatState>((set, get) => ({
   sessionId: undefined,
+  requestId: undefined,
   messages: [],
   connectionState: "disconnected",
   typing: false,
@@ -126,6 +130,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       chatEndedReason: undefined,
     }),
 
+    setRequestId: (requestId) => set({
+      requestId,
+      chatEnabled: false,
+      chatStatus: 'idle',
+    }),
   /**
    * SET ACCEPT DETAILS
    */
@@ -225,6 +234,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   reset: () =>
     set({
       sessionId: undefined,
+      requestId: undefined,
       messages: [],
       connectionState: "disconnected",
       typing: false,
