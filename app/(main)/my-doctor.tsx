@@ -32,6 +32,7 @@ import {
   ICreateAppointmentRequest,
 } from "@/src/constants/constants";
 import dayjs from "dayjs";
+import { useChatStore } from "@/src/store/ChatStore";
 
 export interface IDepartments {
   charges: number;
@@ -169,6 +170,7 @@ export default function MyDoctorScreen() {
     try {
       const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
       console.log("chat appointment created: ", res);
+      useChatStore.getState().setRequestId(res?.chatRequestId);
       router.push("/features/chat/Chat");
     } catch (error) {
       Alert.alert(

@@ -46,8 +46,10 @@ export default function ChatScreen() {
     setConnectionState,
     chatEnabled,
     clearChat,
+    requestId,
     chatAcceptDetails,
     setMessages,
+    reset: chatStoreReset,
   } = useChatStore();
   const chatStatus = useChatStore((s) => s.chatStatus);
   const chatEndedReason = useChatStore((s) => s.chatEndedReason);
@@ -116,6 +118,7 @@ export default function ChatScreen() {
         onPress: () => {
           signalRService.disconnect();
           clearChat();
+          handleCancelAppointment();
           router.back();
         },
       },
@@ -252,6 +255,18 @@ export default function ChatScreen() {
     return <MessageItem item={item} onOpenFile={openFile} />;
   }, []);
 
+  const handleCancelAppointment = async () => {
+    const reqId = requestId;
+    if (!reqId) Alert.alert("Appointment Cancel", "Request ID not found!");
+
+    const res = await axiosClient.post(ApiRoutes.Chat.cancel, {
+      chatRequestId: reqId,
+      patientid: user?.eId,
+    });
+    console.log("Chat appointment cancelled! ", res?.result);
+    chatStoreReset();
+    router.replace("/(main)/my-doctor");
+  };
   /**
    * CONNECTION BANNER
    */
@@ -285,12 +300,12 @@ export default function ChatScreen() {
       case "idle":
         return (
           <View style={styles.banner}>
-            <Text style={[styles.bannerText, { fontSize: 18 }]}>
-              Please wait. Our doctor will add shortly...
+            <Text style={[styles.bannerText, { fontSize: 16 }]}>
+              Please wait. Our doctor will join shortly
             </Text>
             <PrimaryButton
               title="Cancel Appointment"
-              onPress={() => console.log("doc busy. cancel")}
+              onPress={handleCancelAppointment}
             />
           </View>
         );
@@ -298,14 +313,19 @@ export default function ChatScreen() {
       case "expired":
         return (
           <View style={styles.banner}>
-            <Text style={[styles.bannerText, { fontSize: 18 }]}>
-              We are really Sorry, All our Doctors are busy now. Please book an
+            <Text
+              style={[
+                styles.bannerText,
+                {
+                  fontSize: 16,
+                  textAlign: "center",
+                },
+              ]}
+            >
+              We are really Sorry, All our Doctors are busy now.Please book an
               appointment after some time.
             </Text>
-            <PrimaryButton
-              title="Exit"
-              onPress={() => console.log("doc busy too. exit")}
-            />
+            <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
           </View>
         );
       default:
@@ -394,9 +414,9 @@ export default function ChatScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>
-              {chatAcceptDetails?.doctorName || "Dr. "}
-            </Text>
+            {chatAcceptDetails?.doctorName && (
+              <Text style={styles.title}>{chatAcceptDetails?.doctorName}</Text>
+            )}
             <Text style={styles.subtitle}>Chat Consultation</Text>
           </View>
 
@@ -528,11 +548,12 @@ const styles = StyleSheet.create({
 
   subtitle: {
     color: colors.primary,
+    fontSize: 18,
   },
 
   banner: {
     flex: 1,
-    backgroundColor: "#FFF3CD",
+    backgroundColor: colors.bg_primary,
     padding: 6,
     alignItems: "center",
     justifyContent: "center",

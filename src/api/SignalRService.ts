@@ -8,7 +8,7 @@ const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;
 class SignalRService {
   connection: signalR.HubConnection | null = null;
 
-  private get UserId(){
+  private get UserId() {
     return useUserStore.getState().user?.eId;
   }
 
@@ -42,7 +42,7 @@ class SignalRService {
       useChatStore.getState().setChatStatus("connected");
       console.log("✅ SignalR connected");
       try {
-        // await this.connection.invoke("patient-267");
+        if (!this.connection) return;
         await this.connection.invoke("JoinPatientGroup", this.UserId);
         console.log("✅ Joined chat group:", this.UserId);
       } catch (invokeError) {
@@ -86,6 +86,7 @@ class SignalRService {
       console.log("📩 Received:", message);
 
       const messageId = message.id ?? `server_${Date.now()}`;
+      const messageSentOn = message.sentOn;
 
       const IsItsSenderMsg = message.senderId === this.UserId; // this.user.user?.eId;
 
@@ -93,7 +94,9 @@ class SignalRService {
         .getState()
         .messages.some((m) => m.id === messageId);
 
-      if (exists || IsItsSenderMsg) return;
+      const isDuplicate = useChatStore.getState().messages.some((m)=>m.sentOn === messageSentOn);
+
+      if (exists || IsItsSenderMsg || isDuplicate) return;
 
       useChatStore.getState().addMessage({
         id: messageId,
