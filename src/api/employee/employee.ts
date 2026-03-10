@@ -250,7 +250,7 @@ export const SurgicalHistoryApi = {
 } as const;
 
 export const ChatApi = {
-  history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
+    history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
   start: (patientId: number)=> `/chat/start?patientId=${patientId}`,
   cancel: `/chat/CancelChat`,
 }
