@@ -35,7 +35,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from '@/app/shared/styles/fonts';
-import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 // Guarded access to expo-router's useSearchParams hook (for medicine flow).
 let maybeUseSearchParams: any = null;
 try {
@@ -92,7 +92,7 @@ export default function BookingScreen({
   }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData } = useUser();
-  console.log("👤 User Data ID:", userData?.e_id, userData?.eId);
+
 
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
@@ -102,18 +102,13 @@ export default function BookingScreen({
   const [selectedDate, setSelectedDate] = useState<Date | null>(propSelectedDate || null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
-  const { setUserData } = useUser();
+  // ...existing code...
+
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
-  
+  console.log("👤 User Data ID:", userData?.e_id, user?.eId);
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -187,7 +182,7 @@ export default function BookingScreen({
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
-  const patientId = Number(userData?.e_id || userData?.eId);
+  const patientId = Number(userData?.e_id || user?.eId);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -198,12 +193,24 @@ export default function BookingScreen({
 
 
   // Lab-test date format: YYYY-MM-DD
+  // API format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
   };
+
+  // Display format: DD-MM-YYYY
+  const displayDateLab = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+
+
 
   // Helper to get end time of slot
   function getSlotEndTime(slot: string): Date {
@@ -789,7 +796,7 @@ export default function BookingScreen({
   };
 
 
-   // Lab-test: handleBookNow
+  // Lab-test: handleBookNow
   const handleBookWellness = async () => {
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
@@ -818,7 +825,7 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
-  
+
   const handleBookNowScan = async () => {
     // Validate address, date, timeSlot as string errors
     if (!selectedLocation) {
@@ -1449,7 +1456,7 @@ export default function BookingScreen({
                     style={styles.addnewaddressButton}
                     onPress={handleViewAddress}
                   >
-                    <Text style={styles.AddressText}>+ Add New Address1</Text>
+                    <Text style={styles.AddressText}>+ Add New Address</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1801,7 +1808,7 @@ export default function BookingScreen({
                     </Text>
                   )}
                 </View>
-                {(type !== "ambulance" && type !== "wellness") && (
+                {(type !== "ambulance" && type !== "wellness" && type !== "scans") && (
                   <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
                     Report within {reportTime}
                   </Text>
@@ -1871,20 +1878,12 @@ export default function BookingScreen({
                       </TouchableOpacity>
 
                     </View>
-                    <Button
-                      style={{
-                        borderRadius: 8,
-                        width: "80%",
-                        borderColor: "#0580FA",
-                        borderStyle: "solid",
-                        borderWidth: 1,
-                        marginTop: 12,
-                      }}
-                      labelStyle={{ color: "#0580FA" }}
+                    <TouchableOpacity
+                      style={styles.addnewaddressButton}
                       onPress={handleViewAddress}
                     >
-                      +  Add New Address
-                    </Button>
+                      <Text style={styles.AddressText}> +  Add New Address</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <View style={styles.addressCard}>
@@ -1895,7 +1894,7 @@ export default function BookingScreen({
                       style={styles.addnewaddressButton}
                       onPress={handleViewAddress}
                     >
-                      <Text style={styles.AddressText}>+ Add New Address1</Text>
+                      <Text style={styles.AddressText}>+ Add New Address</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1932,9 +1931,16 @@ export default function BookingScreen({
             {(type !== "wellness") && (<>
               {/* Sample Pickup Date & Time */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Sample Pickup Date & Time
-                </Text>
+                {type === "scans" ? (
+                  <Text style={styles.sectionTitle}>
+                    Schedule Date & Time
+                  </Text>
+                ) : (
+                  <Text style={styles.sectionTitle}>
+                    Sample Pickup Date & Time
+                  </Text>
+                )}
+
                 <View style={styles.dateTimeCard}>
                   <View style={styles.dateSection}>
                     <Text style={styles.fieldLabel}>Service Start Date</Text>
@@ -1943,14 +1949,9 @@ export default function BookingScreen({
                       onPress={() => setShowDatePicker(true)}
                     >
                       <Text
-                        style={[
-                          styles.dateText,
-                          !selectedDate && styles.placeholderText,
-                        ]}
+                        style={[styles.dateText, !selectedDate && styles.placeholderText]}
                       >
-                        {selectedDate
-                          ? formatDateLab(selectedDate)
-                          : "dd/mm/yyyy"}
+                        {selectedDate ? displayDateLab(selectedDate) : "dd/mm/yyyy"}
                       </Text>
                       <Image
                         source={images.icons.calendar}
@@ -2921,15 +2922,15 @@ const styles = StyleSheet.create({
   },
   addnewaddressButton: {
     borderRadius: 8,
-    width: "50%",
+    width: "55%",
     borderColor: "#0580FA",
     borderStyle: "solid",
     borderWidth: 1,
-    paddingVertical: 3,
+    paddingVertical: 4,
     paddingHorizontal: 12,
     textAlign: "center",
     marginTop: 12,
-    height: 28,
+    height: 30,
   },
   AddressText: {
     color: "#0580FA", fontSize: 13, fontFamily: fonts.medium

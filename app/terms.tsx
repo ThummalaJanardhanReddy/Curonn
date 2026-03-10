@@ -9,24 +9,20 @@ import commonStyles, { colors } from './shared/styles/commonStyles';
 import { fonts } from './shared/styles/fonts';
 import * as SecureStore from 'expo-secure-store';
 import { useUser } from './shared/context/UserContext';
+import { useUserStore } from '@/src/store/UserStore';
 
 
 export default function TermsScreen() {
   const [canContinue, setCanContinue] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [mobileDetailsUpdated, setMobileDetailsUpdated] = useState(false);
-  const { setUserData } = useUser();
   
-  
+    const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-    const userDataString = await SecureStore.getItemAsync('userData');
-    if (userDataString) {
-      setUserData(JSON.parse(userDataString));
-    }
-  };
-  restoreUserData();
+    restoreUserData();
+  }, []);
 
+  useEffect(() => {
   const fetchMobileDetailsUpdated = async () => {
     const value = await SecureStore.getItemAsync('mobile_details_updated');
     setMobileDetailsUpdated(value === 'true');
@@ -51,7 +47,7 @@ export default function TermsScreen() {
       import('expo-secure-store').then(async (SecureStore) => {
         const isLoggedIn = await SecureStore.getItemAsync('isLoggedIn');
         if (isLoggedIn === 'true') {
-          router.push('/username');
+          router.push('/home');
         } else {
           router.push('/verify-details');
         }

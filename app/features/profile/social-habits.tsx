@@ -29,6 +29,7 @@ import { useUser } from '../../shared/context/UserContext';
 import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import Toast from '@/app/shared/components/Toast';
+import { useUserStore } from '@/src/store/UserStore';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -120,7 +121,11 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
   // Dropdown visibility
   const [showSmokingFreqDropdown, setShowSmokingFreqDropdown] = useState(false);
   const [showAlcoholFreqDropdown, setShowAlcoholFreqDropdown] = useState(false);
-  const patientId = Number(userData?.e_id || userData?.eId);
+   const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+  const patientId = Number(userData?.e_id || user?.eId);
   // ── API calls ────────────────────────────────────────────────────────────────
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import ApiRoutes from '@/src/api/employee/employee';
 import { useUser } from './UserContext';
 import { getCartData, saveCartData } from '../utils/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 export interface CartItem {
     id: string;
@@ -48,19 +48,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const { userData } = useUser();
-    const { setUserData } = useUser();
-    const patientId = userData?.e_id || userData?.eId;
 
-     useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
+    const { restoreUserData, user } = useUserStore();
+    useEffect(() => {
+        restoreUserData();
     }, []);
+
+    const patientId = Number(userData?.e_id || user?.eId);
 
     // Helper to save image to cache
     const saveImageToCache = async (medId: string | number, url: string) => {

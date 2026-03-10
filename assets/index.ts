@@ -80,7 +80,7 @@ export const images = {
   consultationicon: require('./AppIcons/Curonn_icons/consultation.png'),
   ambulanceicon: require('./AppIcons/Curonn_icons/ambulance_order.png'),
    wellnessicon: require('./AppIcons/Curonn_icons/wellness_orders.png'),
-
+  reportsimage: require('./images/medicalreport.jpg'),
   appIcon: require('./AppIcons/appIcon.png'),
   // Splash Screen
   splashScreen: require('./images/Splash_Screen.png'),
@@ -219,6 +219,7 @@ export const images = {
     logout: require('./icons/Icon open-account-logout.png'),
     feedly: require('./icons/Icon simple-feedly.png'),
     privacy: require('./icons/privacy.png'),
+        pdf: require('./icons/pdf_icon.png'),
     rating: require('./icons/rating.png'),
     termsAndConditions: require('./icons/terms-and-conditions.png'),
     arrow_left: ArrowLeft,

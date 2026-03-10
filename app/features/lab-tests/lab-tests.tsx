@@ -119,6 +119,28 @@ interface ScansResponse {
 type ServiceType = "lab-test" | "health-checks" | "scans";
 
 export default function LabTestsScreen() {
+    const [isTodayAvailable, setIsTodayAvailable] = useState(true);
+      // Restrict Service Start Date based on labTimeSlots
+      useEffect(() => {
+        const now = new Date();
+        // Find latest slot end time
+        const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
+          const end = getSlotEndTime(slot);
+          return end > latest ? end : latest;
+        }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
+        setIsTodayAvailable(now < latestSlotEnd);
+      }, []);
+
+      // Helper to get end time of slot
+      function getSlotEndTime(slot: string): Date {
+        const [, end] = slot.split("-");
+        const [endTime, endPeriod] = end.trim().split(" ");
+        let [hour, minute] = endTime.split(":");
+        hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
+        const now = new Date();
+        const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
+        return slotDate;
+      }
   const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("lab-test");
   const [selectedSubTest, setSelectedSubTest] = useState<string | null>(null);
@@ -363,8 +385,8 @@ export default function LabTestsScreen() {
         id: String(item.labTestMasterId),
         labTestMasterId: item.labTestMasterId,
         name: item.testName,
-        price: item.price,               // original price
-        curonnPrice: item.curonnPrice,   // discounted price
+        price: String(item.price),               // original price
+        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined,   // discounted price
         reportTime: "10 to 12 hours",
         isAtHome: true,
       }));
@@ -448,7 +470,7 @@ export default function LabTestsScreen() {
         labPackageMasterId: item.labPackageMasterId,
         name: item.testName,
         price: String(item.price),
-        curonnPrice: item.curonnPrice,   // discounted price
+        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined,   // discounted price
         testsList: item.testsList,
         testCount: getTestCount(item.testsList),
         reportTime: "48 to 72 hours",
@@ -511,7 +533,7 @@ export default function LabTestsScreen() {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
+     return `${day}/${month}/${year}`;
   };
 
   const handleMedDateChange = (event: any, selectedDate?: Date) => {
@@ -781,12 +803,10 @@ export default function LabTestsScreen() {
               <Text style={styles.testName}>{item.name}</Text>
 
               <Text style={styles.priceRow}>
-                Starting from  <Text style={styles.originalPrice}>
-                  ₹{item.price}
-                </Text>
-                {' '}
+                Starting from{" "}
+                <Text style={styles.originalPrice}>₹{String(item.price)}</Text>{" "}
                 <Text style={styles.finalPrice}>
-                  ₹{item.curonnPrice}
+                  ₹{item.curonnPrice ? String(item.curonnPrice) : ""}
                 </Text>
               </Text>
 
@@ -843,29 +863,26 @@ export default function LabTestsScreen() {
             <View style={styles.testCard1}>
               <View style={styles.testInfo}>
                 <Text style={styles.testName}>{item.name}</Text>
-                {item.testCount && (
+                {item.testCount ? (
                   <Text style={styles.finalPrice}>
-                    {item.testCount} Tests  Included
+                    {item.testCount} Tests Included
                   </Text>
-                )}
+                ) : null}
 
-                {item.reportTime && (
+                {item.reportTime ? (
                   <Text style={styles.testReportTime}>
                     Report within {item.reportTime}
                   </Text>
-                )}
+                ) : null}
 
 
               </View>
 
               <View style={styles.healthprice}>
                 <Text style={styles.priceRow}>
-                  <Text style={styles.originalPrice}>
-                    ₹{item.price}
-                  </Text>
-                  {' '}
+                  <Text style={styles.originalPrice}>₹{String(item.price)}</Text>{" "}
                   <Text style={styles.finalPrice1}>
-                    ₹{item.curonnPrice}
+                    ₹{item.curonnPrice ? String(item.curonnPrice) : ""}
                   </Text>
                 </Text>
               </View>
@@ -896,11 +913,11 @@ export default function LabTestsScreen() {
                 </TouchableOpacity>
               ) :
                 (
-                <TouchableOpacity
-                  style={styles.bookButton}
-                  onPress={() => handleBookScan(item.id)}
-                > <Text style={styles.bookButtontext}>Book Now</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.bookButton}
+                    onPress={() => handleBookScan(item.id)}
+                  > <Text style={styles.bookButtontext}>Book Now</Text>
+                  </TouchableOpacity>
                 )
               }
             </View>
@@ -947,160 +964,160 @@ export default function LabTestsScreen() {
           }}
         > */}
         <View style={styles.boxcolor}>
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
-            {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search for lab tests"
-              placeholderTextColor="#000"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setSearchQuery("")}
-              >
-                <Image source={images.icons.close} style={styles.clearIcon} />
-              </TouchableOpacity>
-            )}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+              {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for lab tests"
+                placeholderTextColor="#000"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setSearchQuery("")}
+                >
+                  <Image source={images.icons.close} style={styles.clearIcon} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
 
-        {/* Test Categories */}
-        {searchQuery.trim().length === 0 && (
-          <View style={styles.categoriesContainer}>
-            <FlatList
-              data={testCategories}
-              renderItem={renderTestCategory}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesList}
-            />
-          </View>
-        )}
-
-        {/* Sub Test Types for Lab Test */}
-        {selectedCategory === "lab-test" &&
-          searchQuery.trim().length === 0 && (
-            <View style={styles.subTestTypesContainer}>
+          {/* Test Categories */}
+          {searchQuery.trim().length === 0 && (
+            <View style={styles.categoriesContainer}>
               <FlatList
-                data={subTestTypes}
-                renderItem={renderSubTestType}
-                keyExtractor={(item) => item.groupName}
+                data={testCategories}
+                renderItem={renderTestCategory}
+                keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.subTestTypesList}
+                contentContainerStyle={styles.categoriesList}
               />
             </View>
           )}
 
-        {/* </LinearGradient> */}
-        <View style={styles.containercontent}>
-          <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 0 }}>
-            <View style={styles.testItemsContainer}>
-              <FlatList
-                data={getDisplayedData()}
-                renderItem={renderTestItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                onEndReached={() => {
-                  if (searchQuery.trim().length > 0) return;
-                  if (onEndReachedCalledDuringMomentum) return;
+          {/* Sub Test Types for Lab Test */}
+          {selectedCategory === "lab-test" &&
+            searchQuery.trim().length === 0 && (
+              <View style={styles.subTestTypesContainer}>
+                <FlatList
+                  data={subTestTypes}
+                  renderItem={renderSubTestType}
+                  keyExtractor={(item) => item.groupName}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.subTestTypesList}
+                />
+              </View>
+            )}
 
-                  if (selectedCategory === "lab-test") {
-                    if (hasMoreTests && !loadingTests) {
-                      handleLoadMoreTests();
+          {/* </LinearGradient> */}
+          <View style={styles.containercontent}>
+            <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 0 }}>
+              <View style={styles.testItemsContainer}>
+                <FlatList
+                  data={getDisplayedData()}
+                  renderItem={renderTestItem}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  onEndReached={() => {
+                    if (searchQuery.trim().length > 0) return;
+                    if (onEndReachedCalledDuringMomentum) return;
+
+                    if (selectedCategory === "lab-test") {
+                      if (hasMoreTests && !loadingTests) {
+                        handleLoadMoreTests();
+                      }
                     }
-                  }
 
-                  if (selectedCategory === "health-checks") {
-                    if (hasMoreHealthChecks && !loadingHealthChecks) {
-                      setHealthCheckPageNo(prev => prev + 1);
+                    if (selectedCategory === "health-checks") {
+                      if (hasMoreHealthChecks && !loadingHealthChecks) {
+                        setHealthCheckPageNo(prev => prev + 1);
+                      }
                     }
-                  }
 
-                  if (selectedCategory === "scans") {
-                    if (hasMoreScans && !loadingScans) {
-                      setScanPageNo(prev => prev + 1);
+                    if (selectedCategory === "scans") {
+                      if (hasMoreScans && !loadingScans) {
+                        setScanPageNo(prev => prev + 1);
+                      }
                     }
-                  }
 
-                  setOnEndReachedCalledDuringMomentum(true);
-                }}
-                onMomentumScrollBegin={() => {
-                  setOnEndReachedCalledDuringMomentum(false);
-                }}
-                onEndReachedThreshold={0.5}
-                ListEmptyComponent={() => {
-                  const isLoading =
-                    (selectedCategory === "lab-test" && loadingTests) ||
-                    (selectedCategory === "health-checks" && loadingHealthChecks) ||
-                    (selectedCategory === "scans" && loadingScans);
+                    setOnEndReachedCalledDuringMomentum(true);
+                  }}
+                  onMomentumScrollBegin={() => {
+                    setOnEndReachedCalledDuringMomentum(false);
+                  }}
+                  onEndReachedThreshold={0.5}
+                  ListEmptyComponent={() => {
+                    const isLoading =
+                      (selectedCategory === "lab-test" && loadingTests) ||
+                      (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                      (selectedCategory === "scans" && loadingScans);
 
-                  if (isLoading) return null;
-                  return (
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>
-                        No data available
-                      </Text>
-                    </View>
-                  );
-                }}
-                ListFooterComponent={() => {
-                  const isLoading =
-                    (selectedCategory === "lab-test" && loadingTests) ||
-                    (selectedCategory === "health-checks" && loadingHealthChecks) ||
-                    (selectedCategory === "scans" && loadingScans);
+                    if (isLoading) return null;
+                    return (
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>
+                          No data available
+                        </Text>
+                      </View>
+                    );
+                  }}
+                  ListFooterComponent={() => {
+                    const isLoading =
+                      (selectedCategory === "lab-test" && loadingTests) ||
+                      (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                      (selectedCategory === "scans" && loadingScans);
 
-                  if (!isLoading) return null;
+                    if (!isLoading) return null;
 
-                  return (
-                    <View style={{ paddingVertical: 20 }}>
-                      <ActivityIndicator size="large" color="#694664" />
-                    </View>
-                  );
-                }}
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                removeClippedSubviews={true}
-                showsVerticalScrollIndicator={false}
-              />
-            </View>
-            <View style={styles.sampleCollectionContainer}>
-              <Text style={styles.sampleCollectionTitle}>
-                How does sample collection work?
-              </Text>
-              <View style={styles.sampleCollectionImages}>
-                <View style={styles.sampleImageContainer}>
-                  <Image
-                    source={images.sampleCollectionStep1}
-                    style={styles.sampleImage}
-                  />
-                </View>
-                <View style={styles.sampleImageContainer}>
-                  <Image
-                    source={images.sampleCollectionStep2}
-                    style={styles.sampleImage}
-                  />
-                </View>
-                <View style={styles.sampleImageContainer}>
-                  <Image
-                    source={images.sampleCollectionStep3}
-                    style={styles.sampleImage}
-                  />
+                    return (
+                      <View style={{ paddingVertical: 20 }}>
+                        <ActivityIndicator size="large" color="#694664" />
+                      </View>
+                    );
+                  }}
+                  initialNumToRender={10}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  removeClippedSubviews={true}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+              <View style={styles.sampleCollectionContainer}>
+                <Text style={styles.sampleCollectionTitle}>
+                  How does sample collection work?
+                </Text>
+                <View style={styles.sampleCollectionImages}>
+                  <View style={styles.sampleImageContainer}>
+                    <Image
+                      source={images.sampleCollectionStep1}
+                      style={styles.sampleImage}
+                    />
+                  </View>
+                  <View style={styles.sampleImageContainer}>
+                    <Image
+                      source={images.sampleCollectionStep2}
+                      style={styles.sampleImage}
+                    />
+                  </View>
+                  <View style={styles.sampleImageContainer}>
+                    <Image
+                      source={images.sampleCollectionStep3}
+                      style={styles.sampleImage}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
 
-          {/* <View style={styles.backgroundImageContainer}>
+            {/* <View style={styles.backgroundImageContainer}>
           </View> */}
-        </View>
+          </View>
         </View>
         {/* </LinearGradient> */}
 
@@ -1286,17 +1303,13 @@ export default function LabTestsScreen() {
 
                                 <View style={styles.healthprice}>
                                   <Text style={styles.priceRow}>
-                                    <Text style={styles.originalPrice}>
-                                      ₹{selectedTest?.price}
-                                    </Text>
-                                    {' '}
-                                    <Text style={styles.finalPrice1}>
-                                      ₹{selectedTest?.curonnPrice}
-                                    </Text>
-                                    {/* <Text style={styles.finalPrice1}>
-                     ₹{selectedTest?.curonnPrice || center.price}
-                  </Text> */}
-                                  </Text>
+  <Text style={styles.originalPrice}>
+    ₹{selectedTest?.price ? String(selectedTest.price) : ""}
+  </Text>{" "}
+  <Text style={styles.finalPrice1}>
+    ₹{selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : ""}
+  </Text>
+</Text>
                                 </View>
                               </View>
 
@@ -1374,7 +1387,7 @@ export default function LabTestsScreen() {
             mode="date"
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleMedDateChange}
-            minimumDate={new Date()}
+            minimumDate={isTodayAvailable ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)}
           />
         )}
       </View>
@@ -1583,21 +1596,21 @@ const styles = StyleSheet.create({
   },
   containercontent: {
     //...commonStyles.containercontent_layout,
-    backgroundColor: 'colors.bg_primary', // colors.bg_secondary,
+    backgroundColor: colors.bg_primary, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
     paddingTop: 7,
     flex: 1,
   },
-  boxcolor:{
- backgroundColor:colors.bg_primary,
- flex:1
+  boxcolor: {
+    backgroundColor: colors.bg_primary,
+    flex: 1
   },
   searchContainer: {
     marginBottom: 20,
     paddingHorizontal: 20,
     marginTop: 5,
-    backgroundColor:colors.bg_primary
+    backgroundColor: colors.bg_primary
   },
   cardContainer: {
     width: '100%',

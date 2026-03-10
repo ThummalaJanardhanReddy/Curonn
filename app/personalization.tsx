@@ -22,6 +22,7 @@ import Toast from './shared/components/Toast';
 
 import { useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 interface PersonalizationData {
   gender: string;
@@ -104,16 +105,11 @@ export default function PersonalizationScreen() {
       }, 100);
     }
   }, [currentStep]);
-   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
+
+ const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
 
   // Conversion functions
   const convertHeight = (
@@ -147,8 +143,8 @@ export default function PersonalizationScreen() {
   };
 
   const totalSteps = 5;
-  const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+  //const { setUserData } = useUser();
+  const patientId = Number(userData?.e_id || user?.eId);
   React.useEffect(() => {
     if (!patientId) return;
     // console.log("[ProfileModal] userData:", userData);
@@ -190,12 +186,12 @@ export default function PersonalizationScreen() {
     } else {
       // All steps completed, update employee profile, save registration status and user data
       try {
-           const { ...formData } = profileForm;
+        const { ...formData } = profileForm;
         const payload = {
           eId: userData?.e_id, // fallback if eId is not present
           roleId: formData.roleId,
-           fullName: formData.fullName,
-           branch: formData.branch,
+          fullName: formData.fullName,
+          branch: formData.branch,
           emailAddress: formData.emailAddress,
           companyName: formData.companyName,
           department: formData.department,
@@ -211,34 +207,34 @@ export default function PersonalizationScreen() {
           medicalCondition: data.medicalConditions.join(','),
         };
         console.log('Updating employee with payload:', payload);
-          const response: any = await axiosClient.post(ApiRoutes.Employee.update, payload);
-          console.log('Employee update response:', response);
-          let message = "Employee registration completed successfully";
-          if (response?.id) {
-            setToastMessage({
-              title: "Employee Details Saved Successfully",
-              subtitle: response?.data?.message || "Saved successfully!",
-              type: "success"
-            });
-            setShowToast(true);
-            await setRegistrationCompleted(true);
-            await saveUserData(data);
-            router.push('/home');
-          } else {
-            // Show error or handle failure
-            const msg = response?.message || response?.data?.message || 'Failed to update employee details.';
-            setToastMessage({
-              title: "Failed to update employee details.",
-              subtitle: response?.data?.message,
-              type: "Failed"
-            });
-            setShowToast(true);
-          }
-        } catch (err) {
-          console.error('Failed to update employee:', err);
+        const response: any = await axiosClient.post(ApiRoutes.Employee.update, payload);
+        console.log('Employee update response:', response);
+        let message = "Employee registration completed successfully";
+        if (response?.id) {
+          setToastMessage({
+            title: "Employee Details Saved Successfully",
+            subtitle: response?.data?.message || "Saved successfully!",
+            type: "success"
+          });
+          setShowToast(true);
+          await setRegistrationCompleted(true);
+          await saveUserData(data);
           router.push('/home');
+        } else {
+          // Show error or handle failure
+          const msg = response?.message || response?.data?.message || 'Failed to update employee details.';
+          setToastMessage({
+            title: "Failed to update employee details.",
+            subtitle: response?.data?.message,
+            type: "error"
+          });
+          setShowToast(true);
         }
-      
+      } catch (err) {
+        console.error('Failed to update employee:', err);
+        router.push('/home');
+      }
+
     }
   };
 
@@ -485,9 +481,9 @@ export default function PersonalizationScreen() {
                 placeholder={`0.00`}
                 placeholderTextColor={'#9D9D9F'}
                 outlineColor="#9D9D9F"
-                 outlineStyle={{ borderWidth: 1 }}
+                outlineStyle={{ borderWidth: 1 }}
                 activeOutlineColor="#9D9D9F"
-                 returnKeyType="go"
+                returnKeyType="go"
                 onSubmitEditing={() => {
                   if (isStepValid()) {
                     handleContinue();
@@ -808,7 +804,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-     paddingHorizontal: 0,
+    paddingHorizontal: 0,
     paddingTop: 10,
     // paddingBottom: 25,
     // marginBottom:20,

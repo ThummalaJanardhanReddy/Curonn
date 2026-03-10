@@ -67,21 +67,23 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const insets = useSafeAreaInsets();
 
     const handleCancelPress = () => {
-        Alert.alert(
-            "Cancel Order",
-            "Are you sure you want to cancel this order?",
-            [
-                {
-                    text: "No",
-                    onPress: () => console.log("Cancel Pressed"),
-                    style: "cancel"
-                },
-                {
-                    text: "Yes",
-                    onPress: () => setShowCancelModal(true)
-                }
-            ]
-        );
+        setShowCancelModal(true)
+
+        // Alert.alert(
+        //     "Cancel Order",
+        //     "Are you sure you want to cancel this order?",
+        //     [
+        //         {
+        //             text: "No",
+        //             onPress: () => console.log("Cancel Pressed"),
+        //             style: "cancel"
+        //         },
+        //         {
+        //             text: "Yes",
+        //             onPress: () => setShowCancelModal(true)
+        //         }
+        //     ]
+        // );
     };
     // PDF preview state
     const [pdfModalVisible, setPdfModalVisible] = useState(false);
@@ -91,6 +93,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [labReports, setLabReports] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [useDirectUrl, setUseDirectUrl] = useState(false);
     const SLOT_GROUPS = {
         morning: ["09:00 AM", "09:30 AM", "10:00 AM"],
         afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
@@ -141,7 +144,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [rescheduleReason, setRescheduleReason] = useState('');
-    const [cancelReason, setCancelReason] = useState('Sample Collection agent not assigned');
+    const [cancelReason, setCancelReason] = useState('Professionals not assigned');
     const [newRescheduleDate, setNewRescheduleDate] = useState('');
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
@@ -363,6 +366,16 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         setSelectedSlot(time);
     };
 
+    const displayDateLab = (date: Date) => {
+        if (!date) return "N/A";
+        // Accept string or Date
+        const d = typeof date === "string" ? new Date(date) : date;
+        if (isNaN(d.getTime())) return "N/A";
+        const day = d.getDate().toString().padStart(2, "0");
+        const month = (d.getMonth() + 1).toString().padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
 
     if (!order) return null;
     // Helper: statusName check for button display
@@ -662,7 +675,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
                         <View>
                             {[
-                                "Sample Collection agent not assigned",
+                                "Professionals not assigned",
                                 "Service required at a different time",
                                 "High Price",
                                 "Other reasons"
@@ -704,17 +717,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         );
                                     }
                                     else if (orderDetails?.type === 'wellness') {
-                                        const payload = {
-                                            bookingId: Number(order.masterId),
-                                            reason: cancelReason || "Cancelled by user"
-                                        };
-                                        console.log("Payload for wellness cancel:", payload);
-                                        try {
-                                            const response: any = await axiosClient.post(ApiRoutes.WellnessData.wellnessCancel, payload);
-                                            console.log("Wellness cancel response:", response);
-                                        } catch (err) {
-                                            console.error("Wellness cancel error:", err?.response?.data || err);
-                                        }
+                                        await axiosClient.post(
+                                            `${ApiRoutes.WellnessData.Wellnesscancel}?bookingId=${order.masterId}&reason=${encodeURIComponent(cancelReason)}`,
+                                            {}
+                                        );
+
                                     } else if (orderDetails?.type === 'medicine' || orderDetails?.type === 'prescription') {
                                         await axiosClient.post(ApiRoutes.MedicalOrders.medicineCancel, {
                                             medicineOrderId: order.masterId,
@@ -798,23 +805,38 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                             {(order.orderType === "Single Test" || order.orderType === "Package") ? "AT-HOME" : "AT Lab"}
                                                         </Text>
                                                     </View>
+                                                    {order.orderType !== "Xray" && (<>
                                                     <Text style={styles.labelinner}>
-                                                        {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
+                                                             {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
+                                                        
                                                     </Text>
+                                                     </>)}
                                                 </View>
                                                 <View style={styles.datesection}>
-                                                    <Text style={styles.label}>Sample pickup date & time</Text>
-                                                    <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
+                                                     {order.orderType === "Xray" ? (
+                                                    <Text style={styles.label}>Schedule Date & Time</Text>
+                                                     ) : (
+                                                         <Text style={styles.label}>Sample pickup date & time</Text>
+                                                     )}
+                                                    <Text style={styles.value}>{displayDateLab(orderDetails.data.serviceDate?.split('T')[0]) || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.paymentsection}>
-                                                    <Text style={styles.paidlabel}>Paid Amount</Text>
+                                                    {order.orderType === "Xray" ? (
+                                                        orderDetails.data.statusName === "Completed" ? (
+                                                            <Text style={styles.label}>Paid Amount</Text>
+                                                        ) : (
+                                                            <Text style={styles.paidlabel}>Pending Amount</Text>
+                                                        )
+                                                    ) : (
+                                                        <Text style={styles.label}>Paid Amount</Text>
+                                                    )}
                                                     <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.servicesection}>
                                                     <Text style={styles.label}>Service Status:</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                            ? "In Progress"
+                                                            ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
                                                 </View>
@@ -918,16 +940,10 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                 {labReports.map((report: any, idx: number) => {
                                                                     const { category, iconSource } = getCategoryAndIcon(report.orderType);
                                                                     return (
-                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
-                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
-                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                                                                                {report.reportname}
-                                                                            </Text>
-                                                                            {/* <Text>
-                                                                              {report.reportinfo} || 'fdgnfdgbbn'
-                                                                        </Text> */}
+                                                                        <View key={report.reportId || idx} style={styles.individualcard}>
+                                                                            <Image source={images.reportsimage} style={styles.closeIcon} />
                                                                             <TouchableOpacity
-                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                style={{ flexDirection: 'row', alignItems: 'center', padding: 5, }}
                                                                                 onPress={() => {
                                                                                     console.log('Preview pressed:', report.url);
                                                                                     setPdfLoading(true);
@@ -946,7 +962,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                                     setPdfModalVisible(true);
                                                                                 }}
                                                                             >
-                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                                {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                                <Text style={{ marginBottom: 10, flex: 1, color: '#fff', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                    {report.reportname}
+                                                                                </Text>
+
                                                                             </TouchableOpacity>
                                                                         </View>
                                                                     );
@@ -996,7 +1016,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.paidAmountLabel}>Status</Text>
                                                     <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                            ? "In Progress"
+                                                            ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
                                                 </View>
@@ -1098,7 +1118,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.paidAmountLabel}>Status</Text>
                                                     <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                            ? "In Progress"
+                                                            ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
                                                 </View>
@@ -1195,7 +1215,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.label}>Service Status:</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                            ? "In Progress"
+                                                            ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
                                                 </View>
@@ -1276,16 +1296,10 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                 {labReports.map((report: any, idx: number) => {
                                                                     const { category, iconSource } = getCategoryAndIcon(report.orderType);
                                                                     return (
-                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
-                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
-                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                                                                                {report.reportname}
-                                                                            </Text>
-                                                                            {/* <Text>
-                                                                              {report.reportinfo} || 'fdgnfdgbbn'
-                                                                        </Text> */}
+                                                                        <View key={report.reportId || idx} style={styles.individualcard}>
+                                                                            <Image source={images.reportsimage} style={styles.closeIcon} />
                                                                             <TouchableOpacity
-                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                style={{ flexDirection: 'row', alignItems: 'center', padding: 5, }}
                                                                                 onPress={() => {
                                                                                     console.log('Preview pressed:', report.url);
                                                                                     setPdfLoading(true);
@@ -1304,7 +1318,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                                     setPdfModalVisible(true);
                                                                                 }}
                                                                             >
-                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                                {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                                <Text style={{ marginBottom: 10, flex: 1, color: '#fff', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                    {report.reportname}
+                                                                                </Text>
+
                                                                             </TouchableOpacity>
                                                                         </View>
                                                                     );
@@ -1342,7 +1360,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.label}>Service Status:</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
-                                                            ? "In Progress"
+                                                            ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
                                                 </View>
@@ -1352,18 +1370,14 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             <Text style={styles.sectionTitle}>Patient Details</Text>
                                             <View style={styles.databox}>
                                                 <View style={styles.patiendetails}>
-                                                    <Text style={styles.patientname}>{orderDetails.data.personName || "N/A"}</Text>
+                                                    <Text style={styles.patientname}>{orderDetails.data.patientName || "N/A"}</Text>
 
                                                     <Text style={styles.value}>
-                                                        {orderDetails.data.isSelfService
-                                                            ? [
-                                                                orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
-                                                                orderDetails.data.gender ? orderDetails.data.gender : null
-                                                            ].filter(Boolean).join(', ') || 'N/A'
-                                                            : [
-                                                                orderDetails.data.relationAge ? orderDetails.data.relationAge + ' yrs' : null,
-                                                                orderDetails.data.relationGender ? orderDetails.data.relationGender : null
-                                                            ].filter(Boolean).join(', ') || 'N/A'
+                                                        {[
+                                                            orderDetails.data.age ? orderDetails.data.age + ' yrs' : null,
+                                                            orderDetails.data.gender ? orderDetails.data.gender : null
+                                                        ].filter(Boolean).join(', ') || 'N/A'
+
                                                         }
                                                     </Text>
                                                 </View>
@@ -1414,16 +1428,10 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                 {labReports.map((report: any, idx: number) => {
                                                                     const { category, iconSource } = getCategoryAndIcon(report.orderType);
                                                                     return (
-                                                                        <View key={report.reportId || idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 0 }}>
-                                                                            {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
-                                                                            <Text style={{ flex: 1, color: '#C15E9D', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                                                                                {report.reportname}
-                                                                            </Text>
-                                                                            {/* <Text>
-                                                                              {report.reportinfo} || 'fdgnfdgbbn'
-                                                                        </Text> */}
+                                                                        <View key={report.reportId || idx} style={styles.individualcard}>
+                                                                            <Image source={images.reportsimage} style={styles.closeIcon} />
                                                                             <TouchableOpacity
-                                                                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#C15E9D', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 1, }}
+                                                                                style={{ flexDirection: 'row', alignItems: 'center', padding: 5, }}
                                                                                 onPress={() => {
                                                                                     console.log('Preview pressed:', report.url);
                                                                                     setPdfLoading(true);
@@ -1442,7 +1450,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                                                     setPdfModalVisible(true);
                                                                                 }}
                                                                             >
-                                                                                <Text style={{ color: '#C15E9D', fontFamily: fonts.semiBold, fontSize: 11 }}>Preview</Text>
+                                                                                {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
+                                                                                <Text style={{ marginBottom: 10, flex: 1, color: '#fff', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                                                                                    {report.reportname}
+                                                                                </Text>
+
                                                                             </TouchableOpacity>
                                                                         </View>
                                                                     );
@@ -1563,8 +1575,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedPdfUrl)}` }}
                                         style={{ flex: 1 }}
                                         onLoadEnd={() => setPdfLoading(false)}
-                                        onError={() => setPdfLoading(true)}
-                                    />
+                                        onError={() => setPdfLoading(false)}
+                                    /> 
                                 )
                             )}
 
@@ -1891,19 +1903,19 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(245, 244, 249, 1)"
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         color: "#000",
         fontFamily: fonts.semiBold,
         fontWeight: '600',
-        marginBottom: 8,
+        marginBottom: 2,
         marginTop: 10,
     },
     databox: {
         backgroundColor: '#fff',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E1E8F1',
-        marginBottom: 20,
+        borderColor: '#DBDBDB',
+        marginBottom: 10,
         overflow: 'hidden',
     },
     databox1: {
@@ -1985,24 +1997,44 @@ const styles = StyleSheet.create({
     },
 
     databoxreports: {
-        borderWidth: 1,
-        borderColor: "rgba(212,212,212,1)",
-        borderRadius: 20,
-        backgroundColor: "#fff",
-        paddingHorizontal: 20,
-        paddingVertical: 10,
+        // borderWidth: 1,
+        // borderColor: "rgba(212,212,212,1)",
+        // borderRadius: 20,
+        // backgroundColor: "#fff",
+        // paddingHorizontal: 20,
+        // paddingVertical: 10,
         marginBottom: 20,
-        marginTop: 5,
+        marginTop: 0,
     },
-    databox1: {
-        borderWidth: 1,
-        borderColor: "rgba(212,212,212,1)",
-        borderRadius: 20,
-        backgroundColor: "#fff",
-        marginBottom: 20,
+    individualcard: {
+        backgroundColor: "#807A7A",
+        marginBottom: 10,
         paddingHorizontal: 20,
-        marginTop: 5,
+        paddingVertical: 4,
+        minHeight: 100,
+        borderRadius: 20,
+        flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start',
+        position: 'relative',
+        overflow: 'hidden',
     },
+    closeIcon: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: '100%',
+        opacity: 0.15,
+        zIndex: 0,
+        borderRadius: 20,
+    },
+    // databox1: {
+    //     borderWidth: 1,
+    //     borderColor: "rgba(212,212,212,1)",
+    //     borderRadius: 20,
+    //     backgroundColor: "#fff",
+    //     marginBottom: 20,
+    //     paddingHorizontal: 20,
+    //     marginTop: 5,
+    // },
     databox2: {
         borderWidth: 1,
         borderColor: "rgba(212,212,212,1)",

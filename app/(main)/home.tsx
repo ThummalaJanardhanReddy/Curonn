@@ -45,59 +45,23 @@ import {
 import { fontStyles, fonts } from "../shared/styles/fonts";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUserStore } from "@/src/store/UserStore";
 
-
-// FAQ data
-const faqs = [
-  {
-    id: 1,
-
-    question: "How do I book an appointment?",
-    answer:
-      // All hooks must be at the top, before any logic or returns
-      'You can book an appointment through our app by selecting the "Consult a Doctor" service and choosing your preferred time slot.',
-  },
-  {
-    id: 2,
-    question: "Is my medical information secure?",
-    answer:
-      "Yes, we use industry-standard encryption and follow HIPAA guidelines to ensure your medical information is completely secure.",
-  },
-  {
-    id: 3,
-    question: "How long does medicine delivery take?",
-    answer:
-      "Medicine delivery typically takes 2-4 hours in urban areas and 24-48 hours in rural areas.",
-  },
-  {
-    id: 4,
-    question: "Can I cancel my appointment?",
-    answer:
-      "Yes, you can cancel your appointment up to 2 hours before the scheduled time without any cancellation fees.",
-  },
-];
 
 export default function HomeScreen() {
-  
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const secureUserData = await SecureStore.getItemAsync('userData');
-      if (secureUserData) {
-        setUserData(JSON.parse(secureUserData));
-      }
-      // If not found in SecureStore, context will be used
-    };
     restoreUserData();
+    fetchNotifications();
   }, []);
-  // Restore userData from SecureStore on mount
-  const { userData,setUserData } = useUser();
-   const patientId = Number(userData?.e_id || userData?.eId);
+  const { userData } = useUser();
+  // Use Zustand user state after restoration
+  const patientId = Number(userData?.e_id || user?.eId);
+  //console.log("Restored Zustand user:", user);
+  // console.log("Home Screen patientId:", patientId);
     // Render wellness program cards
    
 
-
- 
-  
     const fetchNotifications = async () => {
       console.log("Fetching notifications for patientId:", patientId);
       // Ensure patientId is string or number, fallback to empty string
@@ -258,11 +222,12 @@ export default function HomeScreen() {
       const fetchOrders = async () => {
         if (patientId) {
           const data = await fetchAllOrders(patientId, 0);
+          console.log("Fetched orders for locking:", data);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
-                const dateA = new Date(a.createdOn).getTime();
-                const dateB = new Date(b.createdOn).getTime();
+                const dateA = new Date(a.scheduleDate).getTime();
+                const dateB = new Date(b.scheduleDate).getTime();
                 return dateB - dateA;
               },
             );
@@ -271,7 +236,7 @@ export default function HomeScreen() {
             const locked = sorted
               .filter(
                 (o) =>
-                  o.statusName === "Requested" || o.statusName === "Completed",
+                  o.statusName === "Requested" || o.statusName === "Ongoing" || o.statusName === "Inprogress" || o.statusName === "Pending"
               )
               .slice(0, 3)
               .map((o) => o.orderNo?.toString?.() || o.id?.toString?.() || "");
@@ -308,7 +273,7 @@ export default function HomeScreen() {
       .slice()
       .sort(
         (a, b) =>
-          new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime(),
+          new Date(b.scheduleDate).getTime() - new Date(a.scheduleDate).getTime(),
       )
       .slice(3);
   }, [orders]);
@@ -330,8 +295,8 @@ export default function HomeScreen() {
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
-                const dateA = new Date(a.createdOn).getTime();
-                const dateB = new Date(b.createdOn).getTime();
+                const dateA = new Date(a.scheduleDate).getTime();
+                const dateB = new Date(b.scheduleDate).getTime();
                 return dateB - dateA;
               },
             );
@@ -362,6 +327,38 @@ export default function HomeScreen() {
   };
 
   // Format date as 'Feb 20th, 2026, 12:14 PM'
+
+  // const formatDate = (isoDate: string) => {
+  //   const date = new Date(isoDate);
+  //   const months = [
+  //     "Jan",
+  //     "Feb",
+  //     "Mar",
+  //     "Apr",
+  //     "May",
+  //     "Jun",
+  //     "Jul",
+  //     "Aug",
+  //     "Sep",
+  //     "Oct",
+  //     "Nov",
+  //     "Dec",
+  //   ];
+  //   const getOrdinal = (n: number) => {
+  //     const s = ["th", "st", "nd", "rd"];
+  //     const v = n % 100;
+  //     return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  //   };
+  //   const month = months[date.getMonth()];
+  //   const day = getOrdinal(date.getDate());
+  //   const year = date.getFullYear();
+  //   let hours = date.getHours();
+  //   const minutes = date.getMinutes().toString().padStart(2, "0");
+  //   const ampm = hours >= 12 ? "PM" : "AM";
+  //   hours = hours % 12 || 12;
+  //   return `${month} ${day}, ${year}, ${hours}:${minutes} ${ampm}`;
+  // };
+
   const formatDate = (isoDate: string) => {
     const date = new Date(isoDate);
     const months = [
@@ -386,19 +383,15 @@ export default function HomeScreen() {
     const month = months[date.getMonth()];
     const day = getOrdinal(date.getDate());
     const year = date.getFullYear();
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-    return `${month} ${day}, ${year}, ${hours}:${minutes} ${ampm}`;
+    return `${month} ${day}, ${year}`;
   };
 
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
-    const createdOn = item.createdOn ? formatDate(item.createdOn) : "";
+    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
     // Status display
     const status =
       item.statusName === "Requested"
-        ? "In Progress"
+        ? "Pending"
         : item.statusName || "N/A";
     // Status color mapping
     const statusColors: { [key: string]: string } = {
@@ -539,7 +532,7 @@ export default function HomeScreen() {
               justifyContent: "space-between",
             }}
           >
-            {/* Status on the left */}f
+            {/* Status on the left */}
             <View
               style={{
                 backgroundColor: statusBgColor,
@@ -595,13 +588,14 @@ export default function HomeScreen() {
     // State for OrderDetails modal
   };
 
+  // Ref to trigger notification count refresh in CommonHeader
+  const notificationCountRefreshRef = useRef<() => void>(null);
+
   const markNotificationAsRead = async (notificationId: number) => {
     try {
-      // Replace with your actual API endpoint for marking as read
       await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
         notificationId,
       });
-      // Update local state to mark as read
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
@@ -609,6 +603,10 @@ export default function HomeScreen() {
           )
           : prev,
       );
+      // Refresh notification count in CommonHeader
+      if (notificationCountRefreshRef.current) {
+        notificationCountRefreshRef.current();
+      }
     } catch (error) {
       console.error("Failed to mark notification as read", error);
     }
@@ -724,15 +722,16 @@ export default function HomeScreen() {
   }, [slideAnim]);
 
   const hideNotificationModal = useCallback(() => {
-    Animated.timing(slideAnim, {
-      toValue: SCREEN_WIDTH,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      setNotificationVisible(false);
-    });
-  }, [slideAnim]);
-
+    setNotificationVisible(false);
+  //   Animated.timing(slideAnim, {
+  //     toValue: SCREEN_WIDTH,
+  //     duration: 300,
+  //     useNativeDriver: true,
+  //   }).start(() => {
+  //     setNotificationVisible(false);
+  //   });
+  // }, [slideAnim]);
+}, []);
   const showBottomModal = useCallback(
     (type: "faq" | "feedback") => {
       if (type === "faq") setFaqVisible(true);
@@ -895,6 +894,9 @@ export default function HomeScreen() {
         onLocationChange={(location) => {
           console.log("Location changed to:", location);
           // You can add logic here to update the location state
+        }}
+        onRefreshNotificationCount={(cb) => {
+          notificationCountRefreshRef.current = cb;
         }}
       />
 
@@ -1472,21 +1474,21 @@ const styles = StyleSheet.create({
   },
   transhead: {
     fontSize: 50,
-    fontWeight: 600,
+    fontWeight: "600",
     color: colors.white,
     fontFamily: fonts.bold,
     lineHeight: 70,
   },
   transinner: {
     fontSize: 50,
-    fontWeight: 600,
+    fontWeight: "600",
     color: colors.white,
     fontFamily: fonts.bold,
     lineHeight: 70,
   },
   curonhealth: {
     fontSize: 16,
-    fontWeight: 400,
+    fontWeight: "400",
     color: colors.white,
     fontFamily: fonts.regular,
   },
