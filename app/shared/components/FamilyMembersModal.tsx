@@ -28,6 +28,7 @@ import { useUser } from "../../shared/context/UserContext";
 const { height: screenHeight } = Dimensions.get("window");
 import Toast from './Toast';
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 interface FamilyMembersModalProps {
   visible: boolean;
@@ -52,8 +53,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const [showToast, setShowToast] = useState(false);
   // TODO: Replace with actual patientId and createdBy from context/user
   const { userData } = useUser();
-  const { setUserData } = useUser();
-  const patientId = userData?.e_id || userData?.eId;
+
   const createdBy = 0;
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -88,18 +88,11 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
   // Use ref to allow calling fetchFamilyMembers outside useEffect
   const fetchFamilyMembersRef = React.useRef<() => Promise<void>>(async () => { });
-
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
-
+  const patientId = Number(userData?.e_id || user?.eId);
 
   React.useEffect(() => {
     if (!visible || !patientId) return;

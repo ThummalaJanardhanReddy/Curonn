@@ -1,6 +1,6 @@
 // import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState,useEffect } from 'react';
 import {
   Image,
   Modal,
@@ -29,6 +29,7 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from "@/app/shared/components/Toast";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
+import { useUserStore } from '@/src/store/UserStore';
 
 interface Procedure {
   surgicalHistoryId: number;
@@ -81,7 +82,11 @@ export default function PastProceduresScreen({
   const handleAddProcedure = () => {
     setModalVisible(true);
   };
-  const patientId = Number(userData?.e_id || userData?.eId);
+   const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+const patientId = Number(userData?.e_id || user?.eId);
   const fetchSurgicalHistory = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);

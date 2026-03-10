@@ -183,8 +183,7 @@ export default function ViewDetailsScreen() {
         details.programName ||
         details.name,
 
-      servicePrice: Number(
-        details.curonnprice
+      servicePrice: Number( details.curonnprice || details.curonnPrice
       ),
 
       reportTime: details.reportTime || details.duration || "",

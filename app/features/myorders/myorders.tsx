@@ -31,6 +31,7 @@ import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { images } from "../../../assets";
 import OrderDetails from "./OrderDetails";
 import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
+import { useUserStore } from "@/src/store/UserStore";
 
 export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -45,11 +46,15 @@ export default function OrdersScreen() {
   // Load orders from order manager
   // Helper to map order status names to masterDataId for categoryId=7
   const [searchQuery, setSearchQuery] = useState("");
-  // Debug: Log userData as soon as it changes
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    console.log('[OrdersScreen] userData changed:', userData);
-  }, [userData]);
-  const patientId = Number(userData?.e_id || userData?.eId);
+    restoreUserData();
+  }, []);
+  // Debug: Log userData as soon as it changes
+  // useEffect(() => {
+  //   console.log('[OrdersScreen] userData changed:', userData);
+  // }, [userData]);
+  const patientId = Number(userData?.e_id || user?.eId);
   const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
     try {
       const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
@@ -120,7 +125,7 @@ export default function OrdersScreen() {
   const filters = useMemo(
     () => [
       { key: "all", title: "All Orders" },
-      { key: "Requested", title: "In Progress" },
+      { key: "Requested", title: "Pending" },
       { key: "Completed", title: "Completed" },
       { key: "Cancelled", title: "Cancelled" },
 
@@ -159,7 +164,11 @@ export default function OrdersScreen() {
     });
   }, [selectedFilter, statusIdMap, patientId, searchQuery]);
 
-  const filteredOrders = [...orders].sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
+  const filteredOrders = [...orders].sort((a, b) => {
+    const dateA = a.scheduleDate ? new Date(a.scheduleDate).getTime() : 0;
+    const dateB = b.scheduleDate ? new Date(b.scheduleDate).getTime() : 0;
+    return dateB - dateA;
+  });
 
 
   const fetchAllOrders = async (patientId: number, statusId: number = 0, searchorderno?: string) => {
@@ -183,36 +192,64 @@ export default function OrdersScreen() {
   };
 
 
-  const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
+  // const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
+  //   const date = new Date(isoDate);
+
+  //   // Add extra hours and minutes
+  //   date.setHours(date.getUTCHours() + extraHours);
+  //   date.setMinutes(date.getUTCMinutes() + extraMinutes);
+
+  //   const months = [
+  //     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  //   ];
+
+  //   const getOrdinal = (n: number) => {
+  //     const s = ["th", "st", "nd", "rd"];
+  //     const v = n % 100;
+  //     return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  //   };
+
+  //   const month = months[date.getMonth()];
+  //   const day = getOrdinal(date.getDate());
+  //   const year = date.getFullYear();
+
+  //   let hours = date.getUTCHours(); // Use UTC hours
+  //   const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
+
+  //   const ampm = hours >= 12 ? "pm" : "am";
+  //   hours = hours % 12 || 12;
+
+  //   return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+  // };
+
+  const formatDate = (isoDate: string) => {
     const date = new Date(isoDate);
-
-    // Add extra hours and minutes
-    date.setHours(date.getUTCHours() + extraHours);
-    date.setMinutes(date.getUTCMinutes() + extraMinutes);
-
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
-
     const getOrdinal = (n: number) => {
       const s = ["th", "st", "nd", "rd"];
       const v = n % 100;
       return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
-
     const month = months[date.getMonth()];
     const day = getOrdinal(date.getDate());
     const year = date.getFullYear();
-
-    let hours = date.getUTCHours(); // Use UTC hours
-    const minutes = date.getUTCMinutes().toString().padStart(2, "0"); // Use UTC minutes
-
-    const ampm = hours >= 12 ? "pm" : "am";
-    hours = hours % 12 || 12;
-
-    return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
+    return `${month} ${day}, ${year}`;
   };
+
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -265,16 +302,17 @@ export default function OrdersScreen() {
       }
 
       // Format createdOn date
-      const createdOn = item.createdOn ? formatDate(item.createdOn, 30, 4) : "";
+      const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
         Completed: "#ccface",
         Cancelled: "#ffd8d5",
-        Inprogress: "#f8d7a7",
+        Inprogress: "#d0eaff",
         Ongoing: "#f7cdff",
         Pending: "#ffeeba",
         Rescheduled: "#bbecf3",
+        AdminDoctor:"#f7cdff",
       };
       const statusColor = statusColors[item.statusName] || "#666";
 
@@ -283,14 +321,15 @@ export default function OrdersScreen() {
         Requested: "#006cc5",
         Completed: "#4CAF50",
         Cancelled: "#F44336",
-        Inprogress: "#FF9800",
+        Inprogress: "#006cc5",
         Ongoing: "#9C27B0",
         Pending: "#9e7600",
         Rescheduled: "#00BCD4",
+        AdminDoctor:"#9C27B0",
       };
       const statusTextColor = statusTextColors[item.statusName] || "#000";
       // Display 'Inprogress' instead of 'Requested'
-      const displayStatusName = item.statusName === "Requested" ? "In Progress" : item.statusName;
+      const displayStatusName = item.statusName === "Requested" ? "Pending" : item.statusName;
       return (
         <TouchableOpacity onPress={() => handleOrderPress(item)}>
           <View style={styles.orderCard}>
@@ -423,10 +462,18 @@ export default function OrdersScreen() {
               <FlatList
                 data={filteredOrders}
                 renderItem={renderOrderCard}
-                keyExtractor={(item, index) => item.orderNo ? String(item.orderNo) : `order-${index}`}
-                contentContainerStyle={[styles.ordersList, { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 0 }]}
+                keyExtractor={(item, index) =>
+                  item.orderNo
+                    ? `${item.orderNo}-${item.scheduleDate}`
+                    : `order-${index}`
+                }
+                contentContainerStyle={[
+                  styles.ordersList,
+                  { paddingHorizontal: 20, paddingTop: 15 }
+                ]}
                 showsVerticalScrollIndicator={true}
-                style={{ flex: 1, backgroundColor: '#F5F4F9' }} />
+                style={{ flex: 1, backgroundColor: '#F5F4F9' }}
+              />
 
             </View>
           )}

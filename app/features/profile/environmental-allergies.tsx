@@ -29,6 +29,7 @@ import ApiRoutes from '@/src/api/employee/employee';
 import Toast from '@/app/shared/components/Toast';
 import { StatusBar } from "expo-status-bar";
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 interface EnvironmentalAllergy {
   id: string;
@@ -65,19 +66,15 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
   const [showToast, setShowToast] = useState(false);
   const [environmentDropdownModal, setEnvironmentDropdownModal] = useState(false);
   const { userData } = useUser();
-  const { setUserData } = useUser();
-  const patientId = Number(userData?.e_id || userData?.eId);
-
+    const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
+
+  const patientId = Number(userData?.e_id || user?.eId);
+
+
+  
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>

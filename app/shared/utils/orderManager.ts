@@ -34,6 +34,7 @@ export interface Order {
   patientDetails: PatientDetails;
   serviceAddress?: ServiceAddress;
   scheduledDate?: string;
+  scheduleDate?: string;
   scheduledTime?: string;
   isAtHome: boolean;
   estimatedDelivery?: string;

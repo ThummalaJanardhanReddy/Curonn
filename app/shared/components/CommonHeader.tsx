@@ -23,9 +23,11 @@ import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as signalR from "@microsoft/signalr";
+import { useUserStore } from '@/src/store/UserStore';
 
 interface CommonHeaderProps {
   title?: string;
+  patientId?: number;
   isHomePage?: boolean;
   currentLocation?: string;
   onProfilePress?: () => void;
@@ -35,6 +37,7 @@ interface CommonHeaderProps {
   showCart?: boolean;
   showProfile?: boolean;
   showLocation?: boolean; // NEW: control location visibility
+  onRefreshNotificationCount?: (cb: () => void) => void;
 }
 
 export default function CommonHeader({
@@ -48,11 +51,16 @@ export default function CommonHeader({
   showCart = true,
   showProfile = true,
   showLocation = true, // NEW: default true
+  onRefreshNotificationCount,
 }: CommonHeaderProps) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
   const [count, setCount] = useState(0);
+
+  // ...existing code...
+
+
   
   const [selectedLocation, setSelectedLocation] = useState("Fetching location...");
   const [profileForm, setProfileForm] = useState({
@@ -60,23 +68,22 @@ export default function CommonHeader({
     image: "",
   });
   const { getCurrentAddress, address } = useLocation();
-  const { userData, setUserData } = useUser();
+  const { userData} = useUser();
   const { cartCount } = useCart();
-  const patientId = Number(userData?.e_id || userData?.eId);
 
-   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
 
+ const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+    fetchNotiCounts();
+  }, []);
+const patientId = Number(userData?.e_id || user?.eId);
+console.log("[CommonHeader] patientId:", patientId);
+      // Expose fetchNotiCounts to parent if callback provided
+  
      const fetchNotiCounts = async () => {
       try {
+        console.log("[CommonHeader] Fetching notification count for patientId:", patientId);
         const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
         const data = response?.data ?? response;
         console.log("[CommonHeader] Notification count response:", response);
@@ -85,6 +92,13 @@ export default function CommonHeader({
         console.error("[ProfileModal] Failed to fetch profile data:", error);
       }
     };
+
+    useEffect(() => {
+    if (onRefreshNotificationCount) {
+      onRefreshNotificationCount(fetchNotiCounts);
+    }
+  }, [onRefreshNotificationCount, patientId]);
+  
 
   React.useEffect(() => {
     if (!patientId) return;

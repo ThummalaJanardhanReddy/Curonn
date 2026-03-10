@@ -30,6 +30,7 @@ import { KeyboardAvoidingView, ScrollView } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { colors } from "@/app/shared/styles/commonStyles";
+import { useUserStore } from "@/src/store/UserStore";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -88,18 +89,11 @@ export default function LocationSelection({
     subtitle: "",
     color: "#4BB543", // default to success green
   });
+   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
-  const { setUserData } = useUser();
-  const patientId = Number(userData?.e_id || userData?.eId);
+  const patientId = Number(userData?.e_id || user?.eId);
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
     Animated.timing(slideAnim, {

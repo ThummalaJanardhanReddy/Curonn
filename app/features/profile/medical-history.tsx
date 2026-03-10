@@ -26,6 +26,7 @@ import { useUser } from '../../shared/context/UserContext';
 import axiosClient from '@/src/api/axiosClient';
 import ApiRoutes from '@/src/api/employee/employee';
 import Toast from '@/app/shared/components/Toast';
+import { useUserStore } from '@/src/store/UserStore';
 
 interface MedicalCondition {
   medicalHistoryId: number;
@@ -60,7 +61,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [dropdownSearch, setDropdownSearch] = useState('');
-  const patientId = Number(userData?.e_id || userData?.eId);
+
   const filteredMasterOptions = React.useMemo(() => {
     if (!dropdownSearch) return masterOptions;
     return masterOptions.filter(item =>
@@ -68,6 +69,12 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
     );
   }, [masterOptions, dropdownSearch]);
 
+    const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+  
+    const patientId = Number(userData?.e_id || user?.eId);
   const fetchMedicalHistory = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -245,7 +252,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
 
       const payload = {
         medicalHistoryId: 0,
-        patientId: userData.e_id,
+        patientId: patientId,
         historyName: newCondition.condition.trim(),
         reactions: "",
         status: newCondition.status,
@@ -256,7 +263,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         appointmentId: 0,
         isActive: true,
         conditionType: "Chronic",
-        createdBy: userData.e_id,
+        createdBy: patientId,
         createdOn: formattedDate,
         totalCount: 0,
       };

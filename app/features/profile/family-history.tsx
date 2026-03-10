@@ -27,6 +27,7 @@ import {
 } from "../../shared/utils/responsive";
 import { useUser } from "../../shared/context/UserContext";
 import Toast from '@/app/shared/components/Toast';
+import { useUserStore } from "@/src/store/UserStore";
 
 interface FamilyMember {
   familyHistoryId: number;
@@ -93,7 +94,11 @@ export default function FamilyHistoryScreen({
   const [relationshipOptions, setRelationshipOptions] = useState<Array<{ masterDataId: number; name: string }>>([
 
   ]);
-  const patientId = Number(userData?.e_id || userData?.eId);
+  const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+  const patientId = Number(userData?.e_id || user?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -824,7 +829,7 @@ const styles = StyleSheet.create({
     // paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-        borderColor: '#DADADA',
+    borderColor: '#DADADA',
   },
   headerLeft: {
     flex: 1,

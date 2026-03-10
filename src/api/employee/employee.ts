@@ -172,7 +172,7 @@ export const WellnessApi = {
   getdataById: (id: string | number) => `/WellnessProgram/GetById/${id}`,
   saveUpdate: "/wellnessBooking/create",
   getwellnessId: (id: string | number) => `/wellnessBooking/${id}`,
-  wellnessCancel: "wellnessBooking/cancel"
+  Wellnesscancel: (bookingId: string | number, reason: string | number) =>`/wellnessBooking/cancel/?bookingId=${bookingId}&reason=${reason}`,
 } as const;
 
 export const PrescriptionOrdersApi = {

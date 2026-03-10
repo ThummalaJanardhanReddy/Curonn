@@ -28,6 +28,7 @@ import {
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from '@/app/shared/components/Toast';
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from "@/src/store/UserStore";
 
 interface MenstrualRecord {
   id: string;
@@ -52,7 +53,6 @@ export default function MenstrualHistoryScreen({
   const [menstrualRecords, setMenstrualRecords] = useState<any[]>([]);
   // fetch user id from context
   const { userData } = useUser();
-  const { setUserData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [newRecord, setNewRecord] = useState({
     frequency: "regular" as "regular" | "irregular",
@@ -63,18 +63,12 @@ export default function MenstrualHistoryScreen({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
 
+ const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
 
-  const patientId = Number(userData?.e_id || userData?.eId);
+   const patientId = Number(userData?.e_id || user?.eId);
   const handleBack = () => {
     if (onClose) {
       onClose();

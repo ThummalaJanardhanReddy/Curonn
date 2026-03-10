@@ -50,6 +50,7 @@ import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg'
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from "@/src/store/UserStore";
 const { height: screenHeight } = Dimensions.get("window");
 interface ProfileModalProps {
   visible: boolean;
@@ -105,20 +106,13 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     gender: ""
   });
   const { userData } = useUser();
-  const { setUserData } = useUser();
-  const patientId = Number(userData?.e_id || userData?.eId);
 
+
+    const { restoreUserData, user } = useUserStore();
   useEffect(() => {
-    const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
-      }
-    };
     restoreUserData();
   }, []);
-
+ const patientId = Number(userData?.e_id || user?.eId);
   React.useEffect(() => {
     if (!visible || !patientId) return;
     // console.log("[ProfileModal] userData:", userData);

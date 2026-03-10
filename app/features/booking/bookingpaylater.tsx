@@ -28,6 +28,7 @@ import LocationSelection from '../location/location-selection';
 import { images } from '../../../assets';
 import { fonts } from '@/app/shared/styles/fonts';
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -88,17 +89,10 @@ export default function BookingPayLaterScreen() {
   }>({ title: '', subtitle: '', type: 'success' });
 
   const genderOptions = ['Male', 'Female', 'Other'];
-   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
- const { setUserData } = useUser();
+   const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
   // ── On mount: read prescription from store ───────────────────────────
   useEffect(() => {
     const stored = prescriptionStore.get();
@@ -108,12 +102,11 @@ export default function BookingPayLaterScreen() {
     }
   }, []);
 
-   const patientId = Number(userData?.e_id || userData?.eId);
+  const patientId = Number(userData?.e_id || user?.eId);
   // ── fetchAddresses (identical to booking.tsx) ─────────────────────────
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-       const patientId = userData?.e_id || userData?.eId;
       if (!patientId) throw new Error('Patient ID not available');
       const responcedata: any = await axiosClient.get(
         ApiRoutes.Address.getAddressByPatientId(patientId),
@@ -239,7 +232,7 @@ export default function BookingPayLaterScreen() {
   const fetchRelationDetails = async (relationId: number) => {
     try {
       setLoading(true);
-     
+
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)
@@ -483,7 +476,7 @@ export default function BookingPayLaterScreen() {
 
         paymentDetails: 'pay_later',
         isPaymentDone: false,
-        createdBy:patientId,
+        createdBy: patientId,
         statusId: 2867,
         // Send numeric fees (Swagger shows numbers, not strings)
         handlingFee: 0,
@@ -906,7 +899,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-   fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -933,7 +926,7 @@ const styles = StyleSheet.create({
     marginTop: getResponsiveSpacing(5),
   },
   sectionTitle: {
-   fontSize: 14,
+    fontSize: 14,
     color: "#000000",
     marginBottom: getResponsiveSpacing(5),
     marginTop: getResponsiveSpacing(0),
@@ -1054,7 +1047,7 @@ const styles = StyleSheet.create({
     borderColor: '#C15E9C',
   },
   editAddressTextNew: {
-  fontSize: 13,
+    fontSize: 13,
     color: '#C15E9C',
     fontFamily: fonts.medium,
   },
@@ -1067,7 +1060,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
   },
   patientCard: {
-  backgroundColor: "#fff",
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -1177,7 +1170,7 @@ const styles = StyleSheet.create({
     tintColor: '#666',
   },
   policyTitle: {
-        fontSize: 14,
+    fontSize: 14,
     color: "#000000",
     marginBottom: getResponsiveSpacing(5),
     marginTop: getResponsiveSpacing(10),
@@ -1187,7 +1180,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   policyTextNew: {
-     fontSize: 12,
+    fontSize: 12,
     color: "#666",
     lineHeight: 20,
     marginBottom: 8,
@@ -1208,7 +1201,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    
+
   },
   bottomButton: {
     width: '100%',

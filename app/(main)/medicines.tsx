@@ -36,13 +36,14 @@ import SeacrchIcon from '../../assets/AppIcons/Curonn_icons/search.svg';
 import GalleryIcon from '../../assets/AppIcons/Curonn_icons/gallery.svg';
 import CameraIcon from '../../assets/AppIcons/Curonn_icons/camera.svg';
 import * as SecureStore from 'expo-secure-store';
+import { useUserStore } from '@/src/store/UserStore';
 
 export default function MedicinesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentLocation] = useState('New York, NY');
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const { userData } = useUser();
- 
+
   const [drugGroups, setDrugGroups] = useState<any[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
@@ -52,18 +53,11 @@ export default function MedicinesScreen() {
   // State for edit back-flow: pre-fill modal with previously entered data
   const [initialModalNotes, setInitialModalNotes] = useState('');
   const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
-   useEffect(() => {
-      const restoreUserData = async () => {
-        const userData = await SecureStore.getItemAsync('userData');
-        console.log("Restoring userData on Home Screen:", userData);
-        if (userData) {
-          setUserData(JSON.parse(userData));
-        }
-      };
-      restoreUserData();
-    }, []);
-  const { setUserData } = useUser();
-const patientId = Number(userData?.e_id || userData?.eId);
+   const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+  const patientId = Number(userData?.e_id || user?.eId);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 3) {
@@ -331,7 +325,7 @@ const patientId = Number(userData?.e_id || userData?.eId);
       </View>
 
 
-     <View style={styles.boxcolor}>
+      <View style={styles.boxcolor}>
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
@@ -356,50 +350,50 @@ const patientId = Number(userData?.e_id || userData?.eId);
           </View>
         </View>
 
-      <View style={styles.containercontent}>
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.containercontent}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.prescriptionSection}>
-            <Text style={styles.prescriptionTitle}>Upload a prescription and get a medicine</Text>
-            <View style={styles.prescriptionCardsContainer}>
-              {prescriptionOptions.map((option, idx) => (
-                <View key={option.id} style={styles.prescriptionCardWrapper}>
-                  {renderPrescriptionCard({ item: option, index: idx })}
-                </View>
-              ))}
+            <View style={styles.prescriptionSection}>
+              <Text style={styles.prescriptionTitle}>Upload a prescription and get a medicine</Text>
+              <View style={styles.prescriptionCardsContainer}>
+                {prescriptionOptions.map((option, idx) => (
+                  <View key={option.id} style={styles.prescriptionCardWrapper}>
+                    {renderPrescriptionCard({ item: option, index: idx })}
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
 
-          <View style={styles.categoriesSection}>
-            <Text style={styles.categoriesTitle}>Popular Categories</Text>
-            <View style={styles.categoriesGrid}>
-              {categories.map(category => (
-                <View key={category.id} style={styles.categoryCardWrapper}>
-                  {renderCategoryCard({ item: category })}
-                </View>
-              ))}
+            <View style={styles.categoriesSection}>
+              <Text style={styles.categoriesTitle}>Popular Categories</Text>
+              <View style={styles.categoriesGrid}>
+                {categories.map(category => (
+                  <View key={category.id} style={styles.categoryCardWrapper}>
+                    {renderCategoryCard({ item: category })}
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
+
+        <PrescriptionUploadModal
+          visible={confirmModalVisible}
+          onClose={() => {
+            setConfirmModalVisible(false);
+            // If user closes without proceeding, clear pre-fill state
+            setInitialModalNotes('');
+            setInitialModalOption('all');
+          }}
+          selectedImages={selectedImages}
+          onRemove={removeSelectedImage}
+          onUploadMoreGallery={() => pickFromGallery(false)}
+          onTakePhoto={() => takePhoto(false)}
+          onNext={handleConfirmNext}
+          initialNotes={initialModalNotes}
+          initialOption={initialModalOption}
+        />
       </View>
-
-      <PrescriptionUploadModal
-        visible={confirmModalVisible}
-        onClose={() => {
-          setConfirmModalVisible(false);
-          // If user closes without proceeding, clear pre-fill state
-          setInitialModalNotes('');
-          setInitialModalOption('all');
-        }}
-        selectedImages={selectedImages}
-        onRemove={removeSelectedImage}
-        onUploadMoreGallery={() => pickFromGallery(false)}
-        onTakePhoto={() => takePhoto(false)}
-        onNext={handleConfirmNext}
-        initialNotes={initialModalNotes}
-        initialOption={initialModalOption}
-      />
-    </View>
     </View>
   );
 }
@@ -420,9 +414,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingTop: 0,
   },
-   boxcolor:{
- backgroundColor:colors.bg_primary,
- flex:1
+  boxcolor: {
+    backgroundColor: colors.bg_primary,
+    flex: 1
   },
   content: {
     paddingHorizontal: getResponsiveSpacing(20),
@@ -432,7 +426,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     marginBottom: getResponsiveSpacing(10),
     paddingHorizontal: getResponsiveSpacing(20),
-     marginTop: 5,
+    marginTop: 5,
   },
   searchInputContainer: {
     flexDirection: "row",
