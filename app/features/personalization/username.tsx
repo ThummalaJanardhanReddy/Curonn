@@ -46,7 +46,7 @@ export default function UsernameScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Welcome!</Text>
-          <Text style={styles.subtitle}>12Answer a few questions to start personalizing your journey</Text>
+          <Text style={styles.subtitle}>Answer a few questions to start personalizing your journey</Text>
         </View>
 
         <Card style={styles.usernameCard}>

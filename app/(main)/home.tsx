@@ -540,7 +540,12 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           onPress={() => {
-            setSelectedOrderDetails(item);
+            setSelectedOrderDetails({
+              ...item,
+              masterId: item.masterId || item.id,
+              orderType: item.orderType || '',
+              statusName: item.statusName || item.title || ''
+            });
             setOrderDetailsModalVisible(true);
           }}
         >
@@ -931,7 +936,16 @@ export default function HomeScreen() {
         style={[styles.notificationItem, { backgroundColor: bgColor }]}
         activeOpacity={0.7}
         onPress={() => {
+          // Mark as read if not already
           if (!item.isRead) markNotificationAsRead(item.notificationId);
+          // Set selectedOrderDetails and open modal
+          setSelectedOrderDetails({
+            ...item,
+            masterId: item.referenceId,
+            orderType: item.source,
+            statusName: item.statusName  || ""
+          });
+          setOrderDetailsModalVisible(true);
         }}
       >
         <View style={styles.notificationItemIconContainer}>

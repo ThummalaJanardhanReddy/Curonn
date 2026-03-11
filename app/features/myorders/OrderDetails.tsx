@@ -103,6 +103,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
     };
 
+    
     const labTimeSlots =
         ["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM"];
     // Helper: get reports array from labReports (API)
@@ -157,7 +158,15 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [patientProfile, setPatientProfile] = useState<any>(null);
     const [patientId, setPatientId] = useState<number | null>(null);
     // Status color maps based on serviceName
-
+          useEffect(() => {
+    if (showRescheduleModal) {
+      // Reset data when the modal is opened
+      setSelectedDate(null);
+      setSelectedSlot(null);
+      setRescheduleReason('');
+      setErrors('');
+    }
+  }, [showRescheduleModal]);
     const handleMedDateChange = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === "ios");
         if (selectedDate) {
@@ -165,11 +174,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             if (errors === "Please select reschedule date") setErrors("");
         }
     };
-    const handleLabDateChange = (event: any, date?: Date) => {
+    const handleLabDateChange = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === "ios");
-        if (date) {
-            setSelectedDate(date);
-            setNewRescheduleDate(formatDateLab(date));
+        if (selectedDate) {
+            setSelectedDate(selectedDate);
+            setNewRescheduleDate(formatDateLab(selectedDate));
             if (errors === "Please select service start date") setErrors("");
         }
     };
@@ -398,6 +407,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     // }, [showRescheduleModal]);
     // Removed patientId effect; now handled after fetchMedicineOrderById resolves
     // Helper: Render Reschedule Modal
+
     const renderRescheduleModal = () => (
         <Modal visible={showRescheduleModal} transparent animationType="slide" onRequestClose={() => setShowRescheduleModal(false)}>
             <SafeAreaView style={{ flex: 1 }}>
@@ -476,16 +486,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     minimumDate={new Date()}
                                 />
                             )}
-                            {/* {errors && errors.toLowerCase().includes("date") && (
-                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
-                                    {errors}
-                                </Text>
-                            )} */}
-                            {errors === "Please select date" && (
-                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
-                                    {errors}
-                                </Text>
-                            )}
+                             {errors === "Please select reschedule date" && (
+                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                {errors}
+                            </Text>
+                        )}
                         </View>
 
                         <View style={styles.timeSection}>
@@ -563,14 +568,17 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
                             // Validation for required fields
                             if (orderDetails?.type === 'consultation') {
+                                setErrors('');
                                 if (!selectedDate) {
                                     setErrors('Please select reschedule date');
-                                    return;
+                                    return; // Prevent API call if date is not selected
                                 }
+
                                 if (!selectedSlot) {
                                     setErrors('Please select time slot');
-                                    return;
+                                    return; // Prevent API call if slot is not selected
                                 }
+
                                 if (!rescheduleReason) {
                                     setErrors('Please provide a reason for rescheduling');
                                     return;
@@ -601,9 +609,10 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     // Clear fields after success
                                     setRescheduleReason('');
                                     setSelectedSlot(null);
-                                    setSelectedDate(null);
-                                    setNewRescheduleDate('');
-                                    setErrors("");
+            setSelectedDate(null);
+            setNewRescheduleDate('');
+            setErrors(""); // Clear errors
+
 
                                     setTimeout(() => {
                                         setShowToast(false);
@@ -621,15 +630,17 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 }
                             }
                             if (orderDetails?.type === 'lab') {
-
+                                setErrors('');
                                 if (!selectedDate) {
                                     setErrors('Please select reschedule date');
-                                    return;
+                                    return; // Prevent API call if date is not selected
                                 }
+
                                 if (!selectedSlot) {
                                     setErrors('Please select time slot');
-                                    return;
+                                    return; // Prevent API call if slot is not selected
                                 }
+
                                 const payload: any = {
                                     labOrderId: order.masterId,
                                     serviceDate: selectedDate,
