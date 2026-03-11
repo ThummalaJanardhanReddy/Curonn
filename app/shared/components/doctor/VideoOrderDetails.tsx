@@ -286,7 +286,7 @@ export default function VideoOrderDetails({
         {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-      </ScrollView>
+     
     </View>
       </ScrollView>
     </View>
