@@ -46,10 +46,36 @@ export default function VideoOrderDetails({
   const { status, roomUrl } = useVideoStore();
   const [report, setReport] = useState();
 
+  const statusColors: { [key: string]: string } = {
+    Requested: "#d0eaff",
+    Completed: "#ccface",
+    Cancelled: "#ffd8d5",
+    Inprogress: "#f8d7a7",
+    Ongoing: "#f7cdff",
+    Pending: "#ffeeba",
+    Rescheduled: "#bbecf3",
+    "Admin Doctor": "#f7cdff",
+  };
+  const statusTextColors: { [key: string]: string } = {
+    Requested: "#006cc5",
+    Completed: "#4CAF50",
+    Cancelled: "#F44336",
+    Inprogress: "#FF9800",
+    Ongoing: "#9C27B0",
+    Pending: "#9e7600",
+    Rescheduled: "#00BCD4",
+    "Admin Doctor": "#9C27B0",
+  };
+
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
     return dayjs(data.scheduleDate).format("DD-MM-YYYY HH:mm:ss");
   }, [data.scheduleDate]);
+
+  // Get status color and text color based on statusName
+  const statusKey = data.statusName || "Requested";
+  const badgeBgColor = statusColors[statusKey] || "#FFF4E5";
+  const badgeTextColor = statusTextColors[statusKey] || "#D97706";
 
   const fetchReportInfo = useCallback(async () => {
     if (!data) return;
@@ -103,6 +129,11 @@ export default function VideoOrderDetails({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Information</Text>
 
+          <View style={styles.infoCard}>
+            {/* Left Icon */}
+            <View style={styles.serviceImageContainer}>
+              <Ionicons name="videocam" size={22} color="#3B5BDB" />
+            </View>
           <View style={styles.infoCard}>
             {/* Left Icon */}
             <View style={styles.serviceImageContainer}>
@@ -257,6 +288,8 @@ export default function VideoOrderDetails({
       </TouchableOpacity> */}
       </ScrollView>
     </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -267,11 +300,11 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#000",
     fontFamily: fonts.semiBold,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: '600',
+    marginBottom: 2,
     marginTop: 10,
   },
 
@@ -322,6 +355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
+    marginTop: 5,
     marginTop: 5,
   },
 
@@ -470,8 +504,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: "#D97706",
+    fontSize: 10,
+    fontFamily: fonts.regular,
   },
 });

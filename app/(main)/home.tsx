@@ -12,6 +12,7 @@ import { useUser } from "../shared/context/UserContext";
 import * as SecureStore from "expo-secure-store";
 import { Dimensions } from "react-native";
 import * as signalR from "@microsoft/signalr";
+import { AppState } from 'react-native';
 // Carousel slider for orders
 
 import {
@@ -52,30 +53,16 @@ export default function HomeScreen() {
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
-    fetchNotifications();
   }, []);
   const { userData } = useUser();
   // Use Zustand user state after restoration
   const patientId = Number(userData?.e_id || user?.eId);
   //console.log("Restored Zustand user:", user);
   // console.log("Home Screen patientId:", patientId);
-    // Render wellness program cards
-   
+  // Render wellness program cards
 
-    const fetchNotifications = async () => {
-      console.log("Fetching notifications for patientId:", patientId);
-      // Ensure patientId is string or number, fallback to empty string
-      const response = await axiosClient.get(
-        ApiRoutes.Notification.GetList(patientId, "patient")
-      );
-      console.log("Notifications API response:", response);
-      const data = response?.data ?? response;
-      setNotifications(data);
-    };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [patientId]);
+
 
   //console.log("Home Screen patientId:", patientId);
   const [wellnessall, setWellnessall] = useState<any[]>([]);
@@ -89,6 +76,7 @@ export default function HomeScreen() {
   // Lock the visible set of 3 orders per session
   const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [feedbackForm, setFeedbackForm] = useState({
     name: "",
     email: "",
@@ -96,6 +84,122 @@ export default function HomeScreen() {
   });
   const bottomSlideAnim = useRef(new Animated.Value(400)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
+  const fetchNotifications = async () => {
+    if (!patientId) return;
+    try {
+      const response:any = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, "patient"));
+      console.log("Notifications API response:", response);
+      setNotifications(response); // Set notifications in the state
+    } catch (error) {
+      console.log("Error fetching notifications:", error);
+    }
+  };
+
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
+
+ useEffect(() => {
+    return () => {
+      if (connectionRef.current) {
+        connectionRef.current.stop(); // Stop the connection when the component is unmounted
+        console.log("SignalR connection stopped.");
+      }
+    };
+  }, []);
+
+
+
+    useEffect(() => {
+    const setupSignalR = async () => {
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token || !patientId) return;
+
+      // Create the SignalR connection
+      connectionRef.current = new signalR.HubConnectionBuilder()
+        .withUrl("https://api.curonn.com/hubs/video", {
+          accessTokenFactory: () => token || "",
+        })
+        .withAutomaticReconnect([0, 2000, 10000, 30000])
+        .build();
+
+      connectionRef.current.serverTimeoutInMilliseconds = 60 * 1000;
+      connectionRef.current.keepAliveIntervalInMilliseconds = 30 * 1000;
+
+      try {
+        await connectionRef.current.start();
+        console.log("✅ SignalR Connected");
+      } catch (err) {
+        console.log("❌ SignalR connection failed:", err);
+      }
+
+      // Listen for new notifications
+      connectionRef.current.on("NewNotification", async (data) => {
+        console.log("📩 New notification received:", data);
+        await fetchNotifications(); // Refresh notifications
+      });
+
+      // Handle disconnections
+      connectionRef.current!.onclose(async (error) => {
+        if (error) {
+          console.log("⚠️ SignalR Disconnected due to error:", error);
+          try {
+            await connectionRef.current!.start();  // The '!' tells TypeScript that `current` is not null
+            console.log("✅ Reconnected to SignalR");
+          } catch (err) {
+            console.log("❌ SignalR reconnect failed:", err);
+          }
+        }
+      });
+    };
+
+    if (patientId) {
+      setupSignalR();
+    }
+
+    return () => {
+      if (connectionRef.current) {
+        connectionRef.current.stop(); // Clean up connection on unmount
+        console.log("SignalR connection stopped.");
+      }
+    };
+  }, [patientId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (patientId) {
+        fetchNotifications();
+      }
+    }, [patientId]),
+  );
+
+
+
+  useFocusEffect(
+    useCallback(() => {
+      if (patientId) {
+        fetchNotifications();
+      }
+    }, [patientId]),
+  );
+
+  // Handle app state changes (background/foreground) for reconnection
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active" && connectionRef.current?.state === signalR.HubConnectionState.Disconnected) {
+        if (connectionRef.current) {
+          connectionRef.current.start().then(() => {
+            console.log("✅ SignalR Reconnected after app resumed");
+          }).catch((err) => {
+            console.log("❌ SignalR reconnect failed after app resumed:", err);
+          });
+        }
+      }
+    });
+
+    return () => {
+      appStateSubscription.remove(); // Cleanup app state listener
+    };
+  }, [connectionRef.current]);
 
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
@@ -116,13 +220,10 @@ export default function HomeScreen() {
 
   const renderWellnessCard = useCallback(
     ({ item, index }: { item: any; index: number }) => {
-      const bgImage =
-        index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
+      const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
       const isLast = index === wellnessall.length - 1;
       return (
-        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}>
-          {" "}
-          {/* 16px gap */}
+        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
           <Image
             source={bgImage}
             style={styles.featureBackground}
@@ -135,9 +236,7 @@ export default function HomeScreen() {
             <Text style={[styles.featureTitle, { color: "#fff" }]}>
               {item.programName}
             </Text>
-            <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
-              Duration: {item.duration}
-            </Text>
+            <Text style={[styles.featureSubtitle, { color: "#fff" }]}>Duration: {item.duration}</Text>
             <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
               ₹{item.price}
             </Text>
@@ -165,9 +264,7 @@ export default function HomeScreen() {
               onPress={() => {
                 router.push({
                   pathname: "/wellnessdetails",
-                  params: {
-                    wellnessMasterId: item.wellnessMasterId || item.id,
-                  },
+                  params: { wellnessMasterId: item.wellnessMasterId || item.id }
                 });
               }}
             >
@@ -180,44 +277,8 @@ export default function HomeScreen() {
     [wellnessall],
   );
 
-  useEffect(() => {
-    if (!patientId) return; // 🚨 VERY IMPORTANT
 
-    let connection: signalR.HubConnection;
-    const setupSignalR = async () => {
-      await fetchNotifications();
-      const token = await AsyncStorage.getItem("authToken");
-      console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-      connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://api.curonn.com/hubs/video", {
-          accessTokenFactory: () => token || "",
-        })
-        .withAutomaticReconnect()
-        .build();
 
-      try {
-        await connection.start();
-        console.log("✅ SignalR Connected");
-
-        connection.on("NewNotification", async (data) => {
-          console.log("📩 New notification received:", data);
-          // ⭐ Refresh notification list
-          await fetchNotifications();
-        });
-        connection.onclose(() => {
-          console.log("⚠️ SignalR Disconnected");
-        });
-      } catch (err) {
-        console.log("❌ SignalR connection error:", err);
-      }
-    };
-
-    setupSignalR();
-
-    return () => {
-      if (connection) connection.stop();
-    };
-  }, [patientId]);
 
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
@@ -230,8 +291,8 @@ export default function HomeScreen() {
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
-                const dateA = new Date(a.scheduleDate).getTime();
-                const dateB = new Date(b.scheduleDate).getTime();
+                const dateA = new Date(a.createdOn).getTime();
+                const dateB = new Date(b.createdOn).getTime();
                 return dateB - dateA;
               },
             );
@@ -293,6 +354,7 @@ export default function HomeScreen() {
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
+
         if (patientId) {
           const data = await fetchAllOrders(patientId);
           if (isActive) {
@@ -391,6 +453,7 @@ export default function HomeScreen() {
 
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
     const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+    const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
     // Status display
     const status =
       item.statusName === "Requested"
@@ -487,16 +550,7 @@ export default function HomeScreen() {
               marginBottom: 3,
             }}
           >
-            {/* {iconSource && (
-              <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />
-            )} */}
-            {/* <Text
-              style={{ fontSize: 10, color: '#888', fontFamily: fonts.medium, marginRight: 6, lineHeight: 15 }}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              {category}
-            </Text> */}
+          
           </View>
           <View
             style={{
@@ -525,7 +579,7 @@ export default function HomeScreen() {
               fontFamily: fonts.medium,
             }}
           >
-            {createdOn}
+            {createdOn}{timeSlot}
           </Text>
           <View
             style={{
@@ -595,25 +649,43 @@ export default function HomeScreen() {
   const notificationCountRefreshRef = useRef<() => void>(null);
 
   const markNotificationAsRead = async (notificationId: number) => {
-    try {
-      await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
-        notificationId,
-      });
-      setNotifications((prev: any) =>
-        Array.isArray(prev)
-          ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n,
-            )
-          : prev,
-      );
-      // Refresh notification count in CommonHeader
-      if (notificationCountRefreshRef.current) {
-        notificationCountRefreshRef.current();
-      }
-    } catch (error) {
-      console.error("Failed to mark notification as read", error);
+  try {
+    // Optimistically update the state before the API call
+    setNotifications((prev: any) =>
+      Array.isArray(prev)
+        ? prev.map((n) =>
+            n.notificationId === notificationId ? { ...n, isRead: true } : n
+          )
+        : prev
+    );
+
+    // Call the backend API to mark the notification as read
+    const readnotific =await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
+      notificationId,
+    });
+    console.log(`Notification ${notificationId} marked as read on backend`);
+    console.log(`After read Notificaiton`,readnotific);
+
+    // Refresh notification count in CommonHeader
+    if (notificationCountRefreshRef.current) {
+      notificationCountRefreshRef.current();
     }
-  };
+
+    // Add a short delay before re-fetching notifications to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await fetchNotifications();  // Fetch notifications after successful API call
+  } catch (error) {
+    console.error("Failed to mark notification as read", error);
+    // Optionally, revert the state change if there's an error
+    setNotifications((prev: any) =>
+      Array.isArray(prev)
+        ? prev.map((n) =>
+            n.notificationId === notificationId ? { ...n, isRead: false } : n
+          )
+        : prev
+    );
+  }
+};
 
   useEffect(() => {
     async function fetchArticles() {
@@ -728,15 +800,15 @@ export default function HomeScreen() {
 
   const hideNotificationModal = useCallback(() => {
     setNotificationVisible(false);
-  //   Animated.timing(slideAnim, {
-  //     toValue: SCREEN_WIDTH,
-  //     duration: 300,
-  //     useNativeDriver: true,
-  //   }).start(() => {
-  //     setNotificationVisible(false);
-  //   });
-  // }, [slideAnim]);
-}, []);
+    //   Animated.timing(slideAnim, {
+    //     toValue: SCREEN_WIDTH,
+    //     duration: 300,
+    //     useNativeDriver: true,
+    //   }).start(() => {
+    //     setNotificationVisible(false);
+    //   });
+    // }, [slideAnim]);
+  }, []);
   const showBottomModal = useCallback(
     (type: "faq" | "feedback") => {
       if (type === "faq") setFaqVisible(true);
@@ -983,6 +1055,8 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+
 
         {/* Ambulance Booking Section */}
         <View style={styles.section}>

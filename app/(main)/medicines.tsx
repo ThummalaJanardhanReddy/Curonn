@@ -331,7 +331,7 @@ export default function MedicinesScreen() {
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for Medicines"
+              placeholder="Search for Medicines1"
               placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}

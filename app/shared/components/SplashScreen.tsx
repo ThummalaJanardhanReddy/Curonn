@@ -3,30 +3,30 @@ import React, { useEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { images } from '../../../assets';
 import { Dimensions } from 'react-native';
+import { useUserStore } from '@/src/store/UserStore';
  const { width, height } = Dimensions.get('window');
 export default function AppSplashScreen() {
- 
-  useEffect(() => {
-    console.log('SplashScreen component mounted');
 
+  const { restoreUserData, user } = useUserStore();
+
+  useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Restore user data
+        await restoreUserData();
         // Wait a bit for the app to be ready
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Navigate to welcome screen first (bypasses RegistrationGuard)
-        console.log('Navigating to welcome screen...');
-        router.replace('/welcome');
-        // router.replace('/(main)/home' as any);
-        // router.replace('/(tabs)' as any); // Temporary direct navigation to main tabs
-        console.log('Navigation command sent');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Redirect based on user presence
+        if (user) {
+          router.replace('/home');
+        } else {
+          router.replace('/welcome');
+        }
       } catch (error) {
         console.error('Error during app initialization:', error);
-        // Fallback navigation
         router.replace('/welcome');
       }
     };
-
     initializeApp();
   }, []);
 
@@ -62,7 +62,9 @@ const styles = StyleSheet.create({
   },
   logo: {
      width: width,
-  height: height,
+   height: height,
+  //   width: 200,
+  // height: 200,
     resizeMode: 'contain',
   },
 });

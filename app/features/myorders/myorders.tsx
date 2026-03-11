@@ -311,91 +311,75 @@ export default function OrdersScreen() {
         iconSource = null;
     }
 
-    // Format createdOn date
-    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
-    // Status color mapping
-    const statusColors: { [key: string]: string } = {
-      Requested: "#d0eaff",
-      Completed: "#ccface",
-      Cancelled: "#ffd8d5",
-      Inprogress: "#d0eaff",
-      Ongoing: "#f7cdff",
-      Pending: "#ffeeba",
-      Rescheduled: "#bbecf3",
-      AdminDoctor: "#f7cdff",
-    };
-    const statusColor = statusColors[item.statusName] || "#666";
+      // Format createdOn date
+      const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+      const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
+      // Status color mapping
+      const statusColors: { [key: string]: string } = {
+        Requested: "#d0eaff",
+        Completed: "#ccface",
+        Cancelled: "#ffd8d5",
+        
+        Inprogress: "#f8d7a7",
+          Assigned: "#f7cdff",
+        Ongoing: "#f7cdff",
+        Pending: "#ffeeba",
+        Rescheduled: "#bbecf3",
+         "Admin Doctor": "#f7cdff",
+      };
+      const statusColor = statusColors[item.statusName] || "#666";
 
-    const statusTextColors: { [key: string]: string } = {
-      Requested: "#006cc5",
-      Completed: "#4CAF50",
-      Cancelled: "#F44336",
-      Inprogress: "#006cc5",
-      Ongoing: "#9C27B0",
-      Pending: "#9e7600",
-      Rescheduled: "#00BCD4",
-      AdminDoctor: "#9C27B0",
-    };
-    const statusTextColor = statusTextColors[item.statusName] || "#000";
-    // Display 'Inprogress' instead of 'Requested'
-    const displayStatusName =
-      item.statusName === "Requested" ? "Pending" : item.statusName;
-    return (
-      <TouchableOpacity onPress={() => handleOrderPress(item)}>
-        <View style={styles.orderCard}>
-          <View style={styles.orderLeft}>
-            {iconSource && (
-              <Image
-                source={iconSource}
-                style={{ width: 55, resizeMode: "contain", borderRadius: 10 }}
-              />
-            )}
-            <Text style={styles.orderno}>{item.orderNo}</Text>
-          </View>
-          <View style={styles.orderRight}>
-            {/* Title */}
-            <Text style={styles.title}>{item.title}</Text>
-            <View style={styles.categoryrow}>
-              <Text style={styles.categorytitle}>{createdOn}</Text>
-              {/* <Text style={styles.category}>{category}</Text> */}
-              {/* CreatedOn Date */}
-            </View>
-            <View style={styles.categoryrow}>
-              {/* StatusName with background color */}
-              <View
-                key={item.orderNo + "-status"}
-                style={{
-                  alignSelf: "flex-start",
-                  backgroundColor: statusColor,
-                  borderRadius: 30,
-                  paddingHorizontal: 12,
-                  paddingVertical: 2,
-                  paddingTop: 4,
-                  marginTop: 0,
-                }}
-              >
-                <Text
-                  style={{
-                    color: statusTextColor,
-                    fontSize: 10,
-                    fontFamily: fonts.regular,
-                  }}
-                >
-                  {displayStatusName}
-                </Text>
-              </View>
-              {item.orderType !== "Consultation" && (
-                <View style={styles.paymentrow}>
-                  {/* <Text style={styles.paymentheader}>Payment:</Text> */}
-                  {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
-                </View>
+
+      const statusTextColors: { [key: string]: string } = {
+        Requested: "#006cc5",
+        Completed: "#4CAF50",
+        Cancelled: "#F44336",
+        Inprogress: "#FF9800",
+         Assigned: "#9C27B0",
+        Ongoing: "#9C27B0",
+        Pending: "#9e7600",
+        Rescheduled: "#00BCD4",
+         "Admin Doctor": "#9C27B0",
+      };
+      const statusTextColor = statusTextColors[item.statusName] || "#000";
+      // Display 'Inprogress' instead of 'Requested'
+      const displayStatusName = item.statusName === "Requested" ? "Pending" : item.statusName;
+      return (
+        <TouchableOpacity onPress={() => handleOrderPress(item)}>
+          <View style={styles.orderCard}>
+            <View style={styles.orderLeft}>
+              {iconSource && (
+                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain', borderRadius: 10 }} />
               )}
+              <Text style={styles.orderno}>{item.orderNo}</Text>
+            </View>
+            <View style={styles.orderRight}>
+              {/* Title */}
+              <Text style={styles.title}>{item.title}</Text>
+              <View style={styles.categoryrow}>
+                <Text style={styles.categorytitle}>{createdOn}{timeSlot}</Text>
+                {/* <Text style={styles.category}>{category}</Text> */}
+                {/* CreatedOn Date */}
+              </View>
+              <View style={styles.categoryrow}>
+                {/* StatusName with background color */}
+                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2, paddingTop: 4, marginTop: 0 }}>
+                  <Text style={{ color: statusTextColor, fontSize: 10, fontFamily: fonts.regular }}>{displayStatusName}</Text>
+                </View>
+                {item.orderType !== "Consultation" && (
+                  <View style={styles.paymentrow}>
+                    {/* <Text style={styles.paymentheader}>Payment:</Text> */}
+                    {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }, []);
+        </TouchableOpacity>
+      );
+    },
+    []
+  );
 
   const renderFilterChip = useCallback(
     ({ item }: { item: any }) => (
