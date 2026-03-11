@@ -27,12 +27,14 @@ import { useUserStore } from "@/src/store/UserStore";
 import PrimaryButton from "../shared/components/PrimaryButton";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
+import SeacrchIcon from "../../assets/AppIcons/Curonn_icons/search.svg";
 import {
   IConsultationType,
   ICreateAppointmentRequest,
 } from "@/src/constants/constants";
 import dayjs from "dayjs";
 import { useChatStore } from "@/src/store/ChatStore";
+import { fonts } from "@/app/shared/styles/fonts";
 
 export interface IDepartments {
   charges: number;
@@ -128,8 +130,9 @@ export default function MyDoctorScreen() {
   const handleSpecialistSelect = (
     specialistId: number,
     specialistName: string,
+    specialityImage: string
   ) => {
-    setDepartment(specialistId, specialistName);
+    setDepartment(specialistId, specialistName, specialityImage);
 
     router.push({
       pathname: "/features/symptoms/symptoms",
@@ -141,7 +144,7 @@ export default function MyDoctorScreen() {
       <TouchableOpacity
         style={styles.specialistCard}
         onPress={() =>
-          handleSpecialistSelect(item.specialityMasterId, item.specialityName)
+          handleSpecialistSelect(item.specialityMasterId, item.specialityName, item.image)
         }
         activeOpacity={0.8}
       >
@@ -185,101 +188,106 @@ export default function MyDoctorScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        translucent={false}
-        backgroundColor="#ffffffff"
-      />
-      {/* Header */}
-      {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
-      <CommonHeader
-        currentLocation={currentLocation}
-        onProfilePress={() => console.log("Profile pressed")}
-        onCartPress={() => console.log("Cart pressed")}
-      />
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Image source={images.icons.search} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search department"
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setSearchQuery("")}
-              >
-                <Image source={images.icons.close} style={styles.clearIcon} />
-              </TouchableOpacity>
-            )}
+    <View style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          translucent={false}
+          backgroundColor="#ffffffff"
+        />
+        {/* Header */}
+        {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
+        <CommonHeader
+          currentLocation={currentLocation}
+          onProfilePress={() => console.log("Profile pressed")}
+          onCartPress={() => console.log("Cart pressed")}
+          showCart={false}
+        />
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
+              <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search department"
+                placeholderTextColor="#000"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setSearchQuery("")}
+                >
+                  <Image source={images.icons.close} style={styles.clearIcon} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={{ paddingVertical: 10 }}>
+              <AnimatedTabs
+                tabs={consultationTypes}
+                activeValue={consultationTypeId}
+                onChange={handleConsultationTypeChange}
+              />
+            </View>
           </View>
-          <View style={{ paddingVertical: 15 }}>
-            <AnimatedTabs
-              tabs={consultationTypes}
-              activeValue={consultationTypeId}
-              onChange={handleConsultationTypeChange}
-            />
-          </View>
-        </View>
 
-        {consultationTypeId === chatId ? (
-          <View
-            style={{
-              flex: 1,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 15,
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: "600" }}>
-              {" "}
-              Our doctors are available now.
-            </Text>
-            <PrimaryButton
-              title="Start Now"
-              onPress={handleChatStart}
-              style={{ paddingHorizontal: 40, width: "auto" }}
-            />
-            {/* <TouchableOpacity
+          {consultationTypeId === chatId ? (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 15,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: "400" }}>
+                {" "}
+                Our doctors are available now
+              </Text>
+              <PrimaryButton
+                title="Start Chat"
+                onPress={handleChatStart}
+                style={{ paddingHorizontal: 40, width: "auto", height:38, backgroundColor: 'transparent', borderColor: colors.primary, borderWidth:1 }}
+                textStyle={{color: colors.primary}}
+              />
+              {/* <TouchableOpacity
               style={styles.chatStartButton}
               onPress={handleChatStart}
             >
               <Text style={styles.chatStartButtonText}>Start Now</Text>
             </TouchableOpacity> */}
-          </View>
-        ) : (
-          <>
-            {/* Choose Your Specialist Title */}
-            <View style={styles.titleContainer}>
-              <Text style={styles.titleText}>Choose your specialist</Text>
             </View>
-
-            {/* Specialists Grid */}
-            <View style={styles.specialistsContainer}>
-              <View style={styles.specialistsGrid}>
-                {filteredSpecialists?.map((specialist) => (
-                  <View
-                    key={specialist.specialityMasterId}
-                    style={styles.specialistCardWrapper}
-                  >
-                    {renderSpecialistCard({ item: specialist })}
-                  </View>
-                ))}
+          ) : (
+            <>
+              {/* Choose Your Specialist Title */}
+              <View style={styles.titleContainer}>
+                <Text style={styles.titleText}>Choose your specialist</Text>
               </View>
-            </View>
-          </>
-        )}
-      </ScrollView>
+
+              {/* Specialists Grid */}
+              <View style={styles.specialistsContainer}>
+                <View style={styles.specialistsGrid}>
+                  {filteredSpecialists?.map((specialist) => (
+                    <View
+                      key={specialist.specialityMasterId}
+                      style={styles.specialistCardWrapper}
+                    >
+                      {renderSpecialistCard({ item: specialist })}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -287,8 +295,8 @@ export default function MyDoctorScreen() {
 const styles = StyleSheet.create({
   container: {
     ...commonStyles.container_layout,
-    // backgroundColor: colors.bg_primary,
-    backgroundColor: colors.white,
+    backgroundColor: colors.bg_primary,
+    // backgroundColor: colors.white,
   },
   content: {
     flex: 1,
@@ -297,6 +305,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(10),
     paddingBottom: getResponsiveSpacing(10),
+    backgroundColor: colors.bg_primary,
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -306,18 +315,20 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(8),
     backgroundColor: "#fff",
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(4),
+    height: 40,
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
     marginRight: getResponsiveSpacing(8),
-    tintColor: "#999",
+    tintColor: "#808080",
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(12),
     paddingVertical: getResponsiveSpacing(4),
-    color: "#333",
+    color: "#000",
+    fontFamily: fonts.regular,
   },
   clearButton: {
     padding: getResponsiveSpacing(4),
@@ -329,10 +340,10 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     // paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(14),
   },
   titleText: {
-    fontSize: getResponsiveFontSize(20),
+    fontSize: getResponsiveFontSize(16),
     fontWeight: "bold",
     color: colors.text,
     textAlign: "left",
@@ -355,14 +366,14 @@ const styles = StyleSheet.create({
     height: wp(32),
     borderRadius: getResponsiveSpacing(12),
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 3.84,
+    // elevation: 5,
   },
   specialistImageContainer: {
     position: "absolute",
@@ -382,16 +393,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    // backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: getResponsiveSpacing(6),
     zIndex: 1,
   },
   specialistName: {
-    fontSize: getResponsiveFontSize(10),
+    fontSize: getResponsiveFontSize(12),
     fontWeight: "bold",
     color: "#fff",
     marginBottom: getResponsiveSpacing(1),
-    textAlign: "center",
+    textAlign: "left",
+    paddingLeft:8
   },
   specialistDescription: {
     fontSize: getResponsiveFontSize(8),

@@ -124,7 +124,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSession: (sessionId) =>
     set({
       sessionId,
-      chatEnabled: true,
+      chatEnabled: false,
       chatStatus: "idle",
       // chatStatus: 'connected',
       chatEndedReason: undefined,

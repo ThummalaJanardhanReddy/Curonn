@@ -1,3 +1,4 @@
+import { IPatientReport } from "@/src/constants/constants";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 // ✅ Centralized API route definitions for the entire app
@@ -10,16 +11,21 @@ export const EmployeeApi = {
   getById: (id: string | number) => `/Employee/GetEmployeeById?id=${id}`,
   getAll: "/Employee/GetAllEmployees",
   delete: (id: string | number) => `/Employee/DeleteEmployee/${id}`,
-  uploadExcel: '/Employee/UploadExcelEmployees',
-  verifyOTP: '/Employee/verify-otp',
-  updateMobileProfile: '/Employee/UpdateEmployeeMobileProfile',
-  saveandupdaterelative: '/Employee/SaveOrUpdatePatientRelation',
-  GetPatientRelations: (patientId: string | number) => `/Employee/GetPatientRelations?patientId=${patientId}`,
-  GetByPatientRelationAsync: (relationId: string | number, patientId: string | number) => `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
-  getRelation: (relationId: string | number, patientId: string | number) => `/Employee/get-relation?relationId=${relationId}&patientId=${patientId}`,
-  deletefamilymember: '/Employee/DeletePatientRelation',
-  updateDeviceToken: '/Employee/update-device-token',
-
+  uploadExcel: "/Employee/UploadExcelEmployees",
+  verifyOTP: "/Employee/verify-otp",
+  updateMobileProfile: "/Employee/UpdateEmployeeMobileProfile",
+  saveandupdaterelative: "/Employee/SaveOrUpdatePatientRelation",
+  GetPatientRelations: (patientId: string | number) =>
+    `/Employee/GetPatientRelations?patientId=${patientId}`,
+  GetByPatientRelationAsync: (
+    relationId: string | number,
+    patientId: string | number,
+  ) =>
+    `/Employee/GetByPatientRelationAsync?relationId=${relationId}&patientId=${patientId}`,
+  getRelation: (relationId: string | number, patientId: string | number) =>
+    `/Employee/get-relation?relationId=${relationId}&patientId=${patientId}`,
+  deletefamilymember: "/Employee/DeletePatientRelation",
+  updateDeviceToken: "/Employee/update-device-token",
 } as const;
 
 export const AuthApi = {
@@ -143,13 +149,23 @@ export const MedicalOrdersApi = {
   saveCartItem: "/medicine-orders/save-cart-item",
   updateCartQuantity: (cartId: number | string, quantity: number) =>
     `/medicine-orders/cart/update-quantity?cartId=${cartId}&quantity=${quantity}`,
-  updateCartQuantityBase: '/medicine-orders/cart/update-quantity',
-  deleteCartItem: '/medicine-orders/delete-cart-item',
-  getMedicinesByGroup: (groupName: string, pageNo: number = 1, pageSize: number = 10, search?: string) =>
-    `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
-  getAllMedicines: (pageNo: number = 1, pageSize: number = 10, search?: string, createdBy: number = 1) =>
-    `/Medicines/GetAll?pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}&createdBy=${createdBy}`,
-  saveOrder: '/medicine-orders/save-order',
+  updateCartQuantityBase: "/medicine-orders/cart/update-quantity",
+  deleteCartItem: "/medicine-orders/delete-cart-item",
+  getMedicinesByGroup: (
+    groupName: string,
+    pageNo: number = 1,
+    pageSize: number = 10,
+    search?: string,
+  ) =>
+    `/medicine-orders/GetMedicinesByGroup?groupName=${encodeURIComponent(groupName)}&pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+  getAllMedicines: (
+    pageNo: number = 1,
+    pageSize: number = 10,
+    search?: string,
+    createdBy: number = 1,
+  ) =>
+    `/Medicines/GetAll?pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ""}&createdBy=${createdBy}`,
+  saveOrder: "/medicine-orders/save-order",
 } as const;
 
 export const ConsultationApi = {
@@ -173,7 +189,8 @@ export const WellnessApi = {
   getdataById: (id: string | number) => `/WellnessProgram/GetById/${id}`,
   saveUpdate: "/wellnessBooking/create",
   getwellnessId: (id: string | number) => `/wellnessBooking/${id}`,
-  Wellnesscancel: (bookingId: string | number, reason: string | number) =>`/wellnessBooking/cancel/?bookingId=${bookingId}&reason=${reason}`,
+  Wellnesscancel: (bookingId: string | number, reason: string | number) =>
+    `/wellnessBooking/cancel/?bookingId=${bookingId}&reason=${reason}`,
 } as const;
 
 export const PrescriptionOrdersApi = {
@@ -184,7 +201,8 @@ export const AmbulanceApi = {
   saveUpdate: "/AmbulanceBooking/save",
   getAll: "/Ambulances/GetAll",
   getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
-  getbookingId: (bookingId: string | number) => `/AmbulanceBooking/get-by-id/${bookingId}`
+  getbookingId: (bookingId: string | number) =>
+    `/AmbulanceBooking/get-by-id/${bookingId}`,
 } as const;
 
 export const NotificationApi = {
@@ -221,9 +239,10 @@ export const DepartmentsApi = {
 
 // ✅ Unified export for convenience
 export const DiagApi = {
-  Diagsticcenter: '/DiagnosticCenters/nearby-centers',
-  saveUpdate: '/laborders/save-update-scan-order',
-  GetById: (centerId: string | number) => `/DiagnosticCenters/GetById/${centerId}`,
+  Diagsticcenter: "/DiagnosticCenters/nearby-centers",
+  saveUpdate: "/laborders/save-update-scan-order",
+  GetById: (centerId: string | number) =>
+    `/DiagnosticCenters/GetById/${centerId}`,
   //getAll: '/Allergies/GetAllEnvironmentAllergies',
   // getdeleteById: (id: string | number) => `/Allergies/DeleteEnvironmentAllergy/${id}`,
 } as const;
@@ -236,11 +255,11 @@ export const MenstrualHistoryApi = {
 } as const;
 
 export const SymptomsApi = {
-  getAll: "/SymptomsMaster/get-all",
+  getAll: (pageSize: number) => `/SymptomsMaster/get-all?pageSize=${pageSize}`,
 } as const;
 
 export const AppointmentAPi = {
-  save: '/Appointment/save',
+  save: "/Appointment/save",
 };
 
 export const SurgicalHistoryApi = {
@@ -251,10 +270,16 @@ export const SurgicalHistoryApi = {
 } as const;
 
 export const ChatApi = {
-    history: (senderId: number, receiverId:number) => `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
-  start: (patientId: number)=> `/chat/start?patientId=${patientId}`,
+  history: (senderId: number, receiverId: number) =>
+    `/chat/history?senderId=${senderId}&receiverId=${receiverId}`,
+  start: (patientId: number) => `/chat/start?patientId=${patientId}`,
   cancel: `/chat/CancelChat`,
-}
+};
+
+export const PatientReportsApi = {
+  getAllReports: (patientId: number, categoryId: number) =>
+    `/patient-report/GetAllPatientReports?patientId=${patientId}&categoryid=${categoryId}`,
+};
 
 export const ApiRoutes = {
   Employee: EmployeeApi,
@@ -289,6 +314,7 @@ export const ApiRoutes = {
   Appointments: AppointmentAPi,
   SurgicalHistory: SurgicalHistoryApi,
   Chat: ChatApi,
+  PatientReports: PatientReportsApi,
 } as const;
 
 export type ApiGroupKey = keyof typeof ApiRoutes;

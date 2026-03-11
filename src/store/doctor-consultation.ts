@@ -5,6 +5,7 @@ interface DoctorConsultationState {
   doctorName?: string;
   departmentId?: number;
   departmentName?: string;
+  departmentImage?: string;
   symptoms?: string[];
   slotId?: number;
   slotTime?: string;
@@ -14,7 +15,7 @@ interface DoctorConsultationState {
   consultationTypeId?: number;
 
   setDoctor: (doctorId: number, doctorName: string) => void;
-  setDepartment: (id: number, name: string) => void;
+  setDepartment: (id: number, name: string, image: string) => void;
   setSymptoms: (symptoms: string[]) => void;
   setSlot: (slotId: number, slotTime: string) => void;
   setPatient: (patientId: number) => void;
@@ -30,8 +31,8 @@ export const useDoctorConsultationStore = create<DoctorConsultationState>(
 
     setDoctor: (doctorId, doctorName) => set({ doctorId, doctorName }),
 
-    setDepartment: (departmentId, departmentName) =>
-      set({ departmentId, departmentName }),
+    setDepartment: (departmentId, departmentName, departmentImage) =>
+      set({ departmentId, departmentName, departmentImage }),
 
     setSymptoms: (symptoms) => set({ symptoms }),
 
@@ -49,6 +50,7 @@ export const useDoctorConsultationStore = create<DoctorConsultationState>(
         doctorName: undefined,
         departmentId: undefined,
         departmentName: undefined,
+        departmentImage: undefined,
         symptoms: [],
         slotId: undefined,
         slotTime: undefined,

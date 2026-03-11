@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { useUser } from "../shared/context/UserContext";
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 import { Dimensions } from "react-native";
 import * as signalR from "@microsoft/signalr";
 import { AppState } from 'react-native';
@@ -217,7 +217,6 @@ export default function HomeScreen() {
       return [];
     }
   };
-
 
   const renderWellnessCard = useCallback(
     ({ item, index }: { item: any; index: number }) => {
@@ -712,7 +711,9 @@ export default function HomeScreen() {
     async function fetchWelness() {
       try {
         console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
-        const res = await axiosClient.get(ApiRoutes.WellnessData.GetAllwellness);
+        const res = await axiosClient.get(
+          ApiRoutes.WellnessData.GetAllwellness,
+        );
         console.log("Wellness API response:", res.data);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res.data.items)) {
@@ -1034,8 +1035,8 @@ export default function HomeScreen() {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'60%'}
-            // height={'60%'}
+              // width={'60%'}
+              // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -1126,14 +1127,18 @@ export default function HomeScreen() {
         {/* Wellness Program Section */}
         <View style={styles.section}>
           {wellnessall.length === 0 ? (
-            <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ color: '#ff0000', fontSize: 16 }}>Data is not available</Text>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <Text style={{ color: "#ff0000", fontSize: 16 }}>
+                Data is not available
+              </Text>
             </View>
           ) : (
             <FlatList
               data={wellnessall}
               renderItem={renderWellnessCard}
-              keyExtractor={(item, idx) => item.wellnessMasterId?.toString?.() || idx.toString()}
+              keyExtractor={(item, idx) =>
+                item.wellnessMasterId?.toString?.() || idx.toString()
+              }
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 0 }}
@@ -1248,7 +1253,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}
