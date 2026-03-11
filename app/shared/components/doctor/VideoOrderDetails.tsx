@@ -39,6 +39,27 @@ export default function VideoOrderDetails({
   const doctorAssigned = !!data.doctorName;
   const { status, roomUrl } = useVideoStore();
 
+  const statusColors: { [key: string]: string } = {
+    Requested: "#d0eaff",
+    Completed: "#ccface",
+    Cancelled: "#ffd8d5",
+    Inprogress: "#f8d7a7",
+    Ongoing: "#f7cdff",
+    Pending: "#ffeeba",
+    Rescheduled: "#bbecf3",
+    "Admin Doctor": "#f7cdff",
+  };
+  const statusTextColors: { [key: string]: string } = {
+    Requested: "#006cc5",
+    Completed: "#4CAF50",
+    Cancelled: "#F44336",
+    Inprogress: "#FF9800",
+    Ongoing: "#9C27B0",
+    Pending: "#9e7600",
+    Rescheduled: "#00BCD4",
+    "Admin Doctor": "#9C27B0",
+  };
+
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
     const d = new Date(data.scheduleDate);
@@ -46,6 +67,11 @@ export default function VideoOrderDetails({
       d.getMonth() + 1,
     ).padStart(2, "0")}-${d.getFullYear()}`;
   }, [data.scheduleDate]);
+
+  // Get status color and text color based on statusName
+  const statusKey = data.statusName || "Requested";
+  const badgeBgColor = statusColors[statusKey] || "#FFF4E5";
+  const badgeTextColor = statusTextColors[statusKey] || "#D97706";
 
   useEffect(() => {
     if (!data?.patientId) return;
@@ -73,124 +99,126 @@ export default function VideoOrderDetails({
   };
 
   return (
-    
-      <View style={styles.container}>
-        {/* SERVICE INFORMATION */}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Information</Text>
 
-            <View style={styles.infoCard}>
-              {/* Left Icon */}
-              <View style={styles.serviceImageContainer}>
-                <Ionicons name="videocam" size={22} color="#3B5BDB" />
-              </View>
+    <View style={styles.container}>
+      {/* SERVICE INFORMATION */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Information</Text>
 
-              {/* Center Content */}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoTitle}>
-                  {data.speciality || "General Consultation"}
-                </Text>
+          <View style={styles.infoCard}>
+            {/* Left Icon */}
+            <View style={styles.serviceImageContainer}>
+              <Ionicons name="videocam" size={22} color="#3B5BDB" />
+            </View>
 
-                {/* Description */}
-                <Text style={styles.departmentDescription}>
-                  {data.symptoms
-                    ? `Symptoms: ${data.symptoms}`
-                    : "Consultation with certified specialist doctors."}
-                </Text>
+            {/* Center Content */}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoTitle}>
+                {data.speciality || "General Consultation"}
+              </Text>
 
-                {/* Consultation Type Badge */}
-                <View style={styles.consultTypeBadge}>
-                  <Text style={styles.consultTypeText}>
-                    {data.scheduleTypeName || "Video Consultation"}
-                  </Text>
-                </View>
+              {/* Description */}
+              <Text style={styles.departmentDescription}>
+                {data.symptoms
+                  ? `Symptoms: ${data.symptoms}`
+                  : "Consultation with certified specialist doctors."}
+              </Text>
 
-                {/* Booking ID */}
-                <Text style={styles.bookingIdText}>
-                  Booking ID: {data.bookingId}
+              {/* Consultation Type Badge */}
+              <View style={styles.consultTypeBadge}>
+                <Text style={styles.consultTypeText}>
+                  {data.scheduleTypeName || "Video Consultation"}
                 </Text>
               </View>
 
-              {/* Right Side Status Badge */}
-              <View style={styles.statusBadgeContainer}>
-                <Text style={styles.statusBadgeText}>{data.statusName}</Text>
-              </View>
-            </View>
-        
-            {/* ---------------- Doctor Information ---------------- */}
-            <Text style={styles.sectionTitle}>Doctor Information</Text>
-            <View style={styles.card}>
-              {data.doctorId && data.doctorId !== 0 ? (
-                <>
-                  <Text style={styles.primaryText}>{data.doctorName}</Text>
-
-                  <Text style={styles.secondaryText}>
-                    {data.speciality || "Speciality not available"}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.primaryTextPending}>
-                    Doctor Not Assigned Yet
-                  </Text>
-                  <Text style={styles.secondaryText}>
-                    You will be notified once a doctor is assigned.
-                  </Text>
-                </>
-              )}
-            </View>
-
-
-            {/* ---------------- Consultation Date & Time ---------------- */}
-            <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
-            <View style={styles.card}>
-              <Text style={styles.label}>Selected Date</Text>
-              <View style={styles.disabledInput}>
-                <Text style={styles.value}>{formattedDate}</Text>
-              </View>
-
-              <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
-              <View style={styles.disabledInput}>
-                <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
-              </View>
-            </View>
-
-            {/* ---------------- Patient Details ---------------- */}
-            <Text style={styles.sectionTitle}>Patient Details</Text>
-            <View style={styles.card}>
-              <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
-              <Text style={styles.secondaryText}>
-                {[
-                  data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
-                  data.relationGender ? data.relationGender : data.patientGender,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "N/A"}
+              {/* Booking ID */}
+              <Text style={styles.bookingIdText}>
+                Booking ID: {data.bookingId}
               </Text>
             </View>
 
-            {/* ---------------- Prescription Section ---------------- */}
-            {data.prescription && (
+            {/* Right Side Status Badge */}
+            <View style={[styles.statusBadgeContainer, { backgroundColor: badgeBgColor }]}>
+              <Text style={[styles.statusBadgeText, { color: badgeTextColor }]}>
+                {data.statusName === "Requested" ? "Pending" : data.statusName}
+              </Text>
+            </View>
+          </View>
+
+          {/* ---------------- Doctor Information ---------------- */}
+          <Text style={styles.sectionTitle}>Doctor Information</Text>
+          <View style={styles.card}>
+            {data.doctorId && data.doctorId !== 0 ? (
               <>
-                <Text style={styles.sectionTitle}>Prescription</Text>
-                <View style={styles.card}>
-                  <Text style={styles.value}>{data.prescription}</Text>
-                </View>
+                <Text style={styles.primaryText}>{data.doctorName}</Text>
+
+                <Text style={styles.secondaryText}>
+                  {data.speciality || "Speciality not available"}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.primaryTextPending}>
+                  Doctor Not Assigned Yet
+                </Text>
+                <Text style={styles.secondaryText}>
+                  You will be notified once a doctor is assigned.
+                </Text>
               </>
             )}
+          </View>
 
-      {/* ---------------- Join Call Button ---------------- */}
-      {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
-        style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
-        disabled={joinDisabled}
-        onPress={handleJoinCall}
-      >
-        <Text style={styles.primaryButtonText}>Join Video Call</Text>
-      </TouchableOpacity>}
-      </View>
-      {/* ---------------- Reschedule & Cancel ---------------- */}
-      {/* <View style={styles.rowButtons}>
+
+          {/* ---------------- Consultation Date & Time ---------------- */}
+          <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
+          <View style={styles.card}>
+            <Text style={styles.label}>Selected Date</Text>
+            <View style={styles.disabledInput}>
+              <Text style={styles.value}>{formattedDate}</Text>
+            </View>
+
+            <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
+            <View style={styles.disabledInput}>
+              <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
+            </View>
+          </View>
+
+          {/* ---------------- Patient Details ---------------- */}
+          <Text style={styles.sectionTitle}>Patient Details</Text>
+          <View style={styles.card}>
+            <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
+            <Text style={styles.secondaryText}>
+              {[
+                data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
+                data.relationGender ? data.relationGender : data.patientGender,
+              ]
+                .filter(Boolean)
+                .join(", ") || "N/A"}
+            </Text>
+          </View>
+
+          {/* ---------------- Prescription Section ---------------- */}
+          {data.prescription && (
+            <>
+              <Text style={styles.sectionTitle}>Prescription</Text>
+              <View style={styles.card}>
+                <Text style={styles.value}>{data.prescription}</Text>
+              </View>
+            </>
+          )}
+
+          {/* ---------------- Join Call Button ---------------- */}
+          {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
+            style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
+            disabled={joinDisabled}
+            onPress={handleJoinCall}
+          >
+            <Text style={styles.primaryButtonText}>Join Video Call</Text>
+          </TouchableOpacity>}
+        </View>
+        {/* ---------------- Reschedule & Cancel ---------------- */}
+        {/* <View style={styles.rowButtons}>
         <TouchableOpacity style={styles.outlineButton} onPress={onReschedule}>
           <Text style={styles.outlineButtonText}>Reschedule</Text>
         </TouchableOpacity>
@@ -214,12 +242,12 @@ export default function VideoOrderDetails({
         </TouchableOpacity>
       </View> */}
 
-          {/* ---------------- Book Again ---------------- */}
-          {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
+        {/* ---------------- Book Again ---------------- */}
+        {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-        </ScrollView>
-      </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -230,11 +258,11 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#000",
     fontFamily: fonts.semiBold,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 2,
     marginTop: 10,
   },
 
@@ -251,8 +279,8 @@ const styles = StyleSheet.create({
     //   },
     //   android: { elevation: 2 },
     // }),
-    
-     
+
+
     borderWidth: 1,
     borderColor: '#E1E8F1',
     marginBottom: 20,
@@ -296,7 +324,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
-    marginTop:5,
+    marginTop: 5,
   },
 
   primaryButtonText: {
@@ -385,7 +413,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E1E8F1',
+    borderColor: '#DBDBDB',
     marginBottom: 20,
     overflow: 'hidden',
   },
@@ -444,8 +472,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: "#D97706",
+    fontSize: 10,
+    fontFamily: fonts.regular,
   },
 });

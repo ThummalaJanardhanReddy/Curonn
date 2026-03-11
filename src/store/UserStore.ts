@@ -98,7 +98,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     // Dynamically import SecureStore to avoid issues in SSR
     const SecureStore = await import('expo-secure-store');
     const userData = await SecureStore.getItemAsync('userData');
-    console.log("Restoring userData in UserStore1234:", userData);
+   // console.log("Restoring userData in UserStore1234:", userData);
     if (userData) {
       set({ user: JSON.parse(userData) });
     }

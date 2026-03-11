@@ -24,7 +24,8 @@ const theme = {
     secondary: "#03dac6",
   },
 };
-export default function RootLayout() { 
+
+export default function RootLayout() {
   const { restoreUserData, user, isLoggedIn } = useUserStore();
   const [loading, setLoading] = React.useState(true);
 
@@ -38,14 +39,12 @@ export default function RootLayout() {
   if (loading) {
     return (
       <AppFontLoader>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-          <Text style={{ fontSize: 18, color: '#6200ee' }}>Loading...</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#C35E9C' }}>
+          <Text style={{ fontSize: 18, color: '#fff' }}>Loading...</Text>
         </View>
       </AppFontLoader>
     );
   }
-
-  const initialRoute = isLoggedIn() ? "home" : "welcome";
 
   return (
     <AppFontLoader>
@@ -54,14 +53,14 @@ export default function RootLayout() {
           <PaperProvider theme={theme}>
             <KeyboardProvider>
               <Stack
-                //initialRouteName={initialRoute}
                 screenOptions={{
                   headerShown: false,
                   animation: "slide_from_right",
                 }}
               >
-                <Stack.Screen
-                  name="features/medicines/medicine-list"
+                {/* Update the screen to match an existing route */}
+               <Stack.Screen
+                  name="shared/components/SplashScreen" 
                   options={{
                     animation: "none",
                   }}
@@ -73,4 +72,4 @@ export default function RootLayout() {
       </UserProvider>
     </AppFontLoader>
   );
-}   
+}

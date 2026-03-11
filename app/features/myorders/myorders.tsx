@@ -303,16 +303,19 @@ export default function OrdersScreen() {
 
       // Format createdOn date
       const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+      const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
         Completed: "#ccface",
         Cancelled: "#ffd8d5",
-        Inprogress: "#d0eaff",
+        
+        Inprogress: "#f8d7a7",
+          Assigned: "#f7cdff",
         Ongoing: "#f7cdff",
         Pending: "#ffeeba",
         Rescheduled: "#bbecf3",
-        AdminDoctor:"#f7cdff",
+         "Admin Doctor": "#f7cdff",
       };
       const statusColor = statusColors[item.statusName] || "#666";
 
@@ -321,11 +324,12 @@ export default function OrdersScreen() {
         Requested: "#006cc5",
         Completed: "#4CAF50",
         Cancelled: "#F44336",
-        Inprogress: "#006cc5",
+        Inprogress: "#FF9800",
+         Assigned: "#9C27B0",
         Ongoing: "#9C27B0",
         Pending: "#9e7600",
         Rescheduled: "#00BCD4",
-        AdminDoctor:"#9C27B0",
+         "Admin Doctor": "#9C27B0",
       };
       const statusTextColor = statusTextColors[item.statusName] || "#000";
       // Display 'Inprogress' instead of 'Requested'
@@ -343,7 +347,7 @@ export default function OrdersScreen() {
               {/* Title */}
               <Text style={styles.title}>{item.title}</Text>
               <View style={styles.categoryrow}>
-                <Text style={styles.categorytitle}>{createdOn}</Text>
+                <Text style={styles.categorytitle}>{createdOn}{timeSlot}</Text>
                 {/* <Text style={styles.category}>{category}</Text> */}
                 {/* CreatedOn Date */}
               </View>

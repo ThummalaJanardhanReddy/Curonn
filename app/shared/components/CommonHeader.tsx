@@ -22,7 +22,6 @@ import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg'
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import * as signalR from "@microsoft/signalr";
 import { useUserStore } from '@/src/store/UserStore';
 
 interface CommonHeaderProps {
@@ -123,42 +122,6 @@ console.log("[CommonHeader] patientId:", patientId);
   }, [patientId]);
 
   
- useEffect(() => {
-  if (!patientId) return; 
-  let connection: signalR.HubConnection;
-  const setupSignalR = async () => {
-    await fetchNotiCounts();
-    const token = await AsyncStorage.getItem("authToken");
-    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-    connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://api.curonn.com/hubs/video", {
-        accessTokenFactory: () => token || "",
-      })
-      .withAutomaticReconnect()
-      .build();
-
-    try {
-      await connection.start();
-      console.log("✅ SignalR Connected");
-      connection.on("NewNotification", async (data) => {
-        console.log("📩 New notification received:", data);
-        // ⭐ Refresh notification list
-        await fetchNotiCounts();
-      });
-      connection.onclose(() => {
-        console.log("⚠️ SignalR Disconnected");
-      });
-
-    } catch (err) {
-      console.log("❌ SignalR connection error:", err);
-    }
-  };
-  setupSignalR();
-
-  return () => {
-    if (connection) connection.stop();
-  };
-}, [patientId, isHomePage]);
 
 useEffect(() => {
   const fetchAddress = async () => {

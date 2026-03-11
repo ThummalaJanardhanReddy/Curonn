@@ -157,6 +157,7 @@ export const ConsultationApi = {
     `Appointment/get-by-id/?appointmentId=${appointmentId}`,
   reshduledata: "/Appointment/reschedule",
   rescheduleAppointment: "/Appointment/RescheduleAppointment",
+  cancelAppointment: "/Appointment/Completeorcancelappointment",
 } as const;
 
 export const MyOrdersApi = {

@@ -64,6 +64,7 @@ interface LabOrderDetails {
 
 
 function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsProps) {
+    console.log("Order received in OrderDetails component:", order);
     const insets = useSafeAreaInsets();
 
     const handleCancelPress = () => {
@@ -92,6 +93,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [pdfLoading, setPdfLoading] = useState(false);
     const [labReports, setLabReports] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [useDirectUrl, setUseDirectUrl] = useState(false);
     const SLOT_GROUPS = {
@@ -143,9 +146,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [loading, setLoading] = useState(false);
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
-    const [rescheduleReason, setRescheduleReason] = useState('');
+    const [rescheduleReason, setRescheduleReason] = useState('Professional not assigned');
     const [cancelReason, setCancelReason] = useState('Professionals not assigned');
-    const [newRescheduleDate, setNewRescheduleDate] = useState('');
+    const [newRescheduleDate, setNewRescheduleDate] = useState('Professionals not assigned');
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
     const [errors, setErrors] = useState("");
@@ -187,6 +190,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         Ongoing: "#f7cdff",
         Pending: "#ffeeba",
         Rescheduled: "#bbecf3",
+        "Admin Doctor": "#f7cdff",
     };
     const statusTextColors: { [key: string]: string } = {
         Requested: "#006cc5",
@@ -194,8 +198,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         Cancelled: "#F44336",
         Inprogress: "#FF9800",
         Ongoing: "#9C27B0",
-        Pending: "#FFC107",
+        Pending: "#9e7600",
         Rescheduled: "#00BCD4",
+        "Admin Doctor": "#9C27B0",
     };
     // Use serviceName for color lookup, fallback to statusName, fallback to N/A
     const statusKey = (order && (order.serviceName || order.statusName)) || "N/A";
@@ -380,10 +385,17 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     if (!order) return null;
     // Helper: statusName check for button display
     const canReschedule = ["Requested", "Inprogress"].includes(order.statusName);
-    const canCancel = ["Requested", "Inprogress"].includes(order.statusName);
+    const canCancelMed = ["Requested", "Inprogress"].includes(order.statusName);
     const canCompleted = ["Completed"].includes(order.statusName);
     const canOngoing = ["Ongoing", "ongoing"].includes(order.statusName);
 
+    // useEffect(() => {
+    //     if (showRescheduleModal) {
+    //         setSelectedSlot(null);
+    //         setSelectedDate(null);
+    //         setErrors('');
+    //     }
+    // }, [showRescheduleModal]);
     // Removed patientId effect; now handled after fetchMedicineOrderById resolves
     // Helper: Render Reschedule Modal
     const renderRescheduleModal = () => (
@@ -446,7 +458,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     ]}
                                 >
                                     {selectedDate
-                                        ? formatDateLab(selectedDate)
+                                        ? displayDateLab(selectedDate)
                                         : "dd/mm/yyyy"}
                                 </Text>
                                 <Image
@@ -464,6 +476,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     minimumDate={new Date()}
                                 />
                             )}
+                            {/* {errors && errors.toLowerCase().includes("date") && (
+                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                    {errors}
+                                </Text>
+                            )} */}
                             {errors === "Please select date" && (
                                 <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
                                     {errors}
@@ -546,8 +563,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         <TouchableOpacity style={styles.rescheduleButton} onPress={async () => {
                             // Validation for required fields
                             if (orderDetails?.type === 'consultation') {
-
-                                if (!newRescheduleDate) {
+                                if (!selectedDate) {
                                     setErrors('Please select reschedule date');
                                     return;
                                 }
@@ -555,17 +571,25 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     setErrors('Please select time slot');
                                     return;
                                 }
-                                const payload: any = {
+                                if (!rescheduleReason) {
+                                    setErrors('Please provide a reason for rescheduling');
+                                    return;
+                                }
+
+                                const payload = {
                                     appointmentId: orderDetails.data.appointmentId,
                                     scheduleDate: newRescheduleDate,
                                     reason: rescheduleReason,
                                     scheduleBetween: selectedSlot,
                                     modifiedBy: orderDetails.data.patientId
                                 };
+
                                 console.log("Payload of consultation reschedule:", payload);
+
                                 try {
-                                    const responsce = await axiosClient.put(ApiRoutes.ConsultationsData.rescheduleAppointment, payload);
-                                    console.log("Consultation Reschedule Response:", responsce);
+                                    const response = await axiosClient.put(ApiRoutes.ConsultationsData.rescheduleAppointment, payload);
+                                    console.log("Consultation Reschedule Response:", response.data);
+
                                     setShowRescheduleModal(false);
                                     setToastMessage({
                                         title: 'Reschedule Success',
@@ -573,18 +597,21 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         type: 'success',
                                     });
                                     setShowToast(true);
+
                                     // Clear fields after success
                                     setRescheduleReason('');
                                     setSelectedSlot(null);
                                     setSelectedDate(null);
                                     setNewRescheduleDate('');
                                     setErrors("");
+
                                     setTimeout(() => {
                                         setShowToast(false);
                                         if (refreshOrders) refreshOrders();
                                         onClose && onClose();
                                     }, 3500);
                                 } catch (e) {
+                                    console.error("Error during reschedule:", e);
                                     setToastMessage({
                                         title: 'Reschedule Failed',
                                         subtitle: 'Failed to reschedule.',
@@ -595,8 +622,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             }
                             if (orderDetails?.type === 'lab') {
 
-                                if (!newRescheduleDate) {
-                                    setErrors('Please select service start date');
+                                if (!selectedDate) {
+                                    setErrors('Please select reschedule date');
                                     return;
                                 }
                                 if (!selectedSlot) {
@@ -605,7 +632,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                 }
                                 const payload: any = {
                                     labOrderId: order.masterId,
-                                    serviceDate: newRescheduleDate,
+                                    serviceDate: selectedDate,
                                     timeSlot: selectedSlot,
                                     modifiedBy: orderDetails.data.patientId,
                                     reason: rescheduleReason
@@ -663,7 +690,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 <View style={styles.modalOverlay}>
                     <View style={styles.bottomModal}>
                         <View style={styles.modalHeaderRow}>
-                            <Text style={styles.modalHeading}>Order cancel</Text>
+                            {(orderDetails?.type === 'consultation') ? (
+                                <Text style={styles.modalHeading}>Cancel Consultation</Text>
+                            ) : (<Text style={styles.modalHeading}>Order cancel</Text>)}
                             <TouchableOpacity onPress={() => setShowCancelModal(false)} style={styles.modalCloseBtn}>
                                 <Image source={images.icons.close} style={styles.modalCloseIcon} />
                             </TouchableOpacity>
@@ -728,13 +757,37 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             cancelReason: cancelReason
                                         });
                                     }
+                                    else if (orderDetails?.type === 'consultation') {
+                                        const payload = {
+                                            appointmentId: orderDetails.data.appointmentId,
+                                            statusId: 2713,
+                                            modifiedBy: orderDetails.data.patientId
+                                        };
+                                        console.log("Cancelling consultation with appointmentId:", orderDetails.data.appointmentId);
+                                        console.log("Payload of Cancelling consultation with appointmentId:", payload);
+                                        const responce = await axiosClient.put(
+                                            `${ApiRoutes.ConsultationsData.cancelAppointment}?appointmentId=${orderDetails.data.appointmentId}&statusId=2713&modifiedBy=${orderDetails.data.patientId}`,
+                                            {}
+                                        );
+                                        console.log("Consultation Cancel Response:", responce);
+                                    }
+
 
                                     setShowCancelModal(false);
-                                    setToastMessage({
-                                        title: 'Order Cancelled',
-                                        subtitle: 'Order cancelled successfully!',
-                                        type: 'success',
-                                    });
+                                    setToastMessage(
+                                        orderDetails?.type === 'consultation'
+                                            ? {
+                                                title: 'Consultation cancelled',
+                                                subtitle: 'Consultation cancelled successfully!',
+                                                type: 'success',
+                                            }
+                                            : {
+                                                title: 'Order Cancelled',
+                                                subtitle: 'Order cancelled successfully!',
+                                                type: 'success',
+                                            }
+                                    );
+
                                     setShowToast(true);
                                     setTimeout(() => {
                                         setShowToast(false);
@@ -806,18 +859,18 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                         </Text>
                                                     </View>
                                                     {order.orderType !== "Xray" && (<>
-                                                    <Text style={styles.labelinner}>
-                                                             {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
-                                                        
-                                                    </Text>
-                                                     </>)}
+                                                        <Text style={styles.labelinner}>
+                                                            {order.orderType === "Single Test" ? "Report within 10-12 hours" : "Report within 48-72 hours"}
+
+                                                        </Text>
+                                                    </>)}
                                                 </View>
-                                                <View style={styles.datesection}>
-                                                     {order.orderType === "Xray" ? (
-                                                    <Text style={styles.label}>Schedule Date & Time</Text>
-                                                     ) : (
-                                                         <Text style={styles.label}>Sample pickup date & time</Text>
-                                                     )}
+                                                <View style={styles.datesection1}>
+                                                    {order.orderType === "Xray" ? (
+                                                        <Text style={styles.label}>Schedule Date & Time</Text>
+                                                    ) : (
+                                                        <Text style={styles.label}>Sample pickup date & time</Text>
+                                                    )}
                                                     <Text style={styles.value}>{displayDateLab(orderDetails.data.serviceDate?.split('T')[0]) || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.paymentsection}>
@@ -1203,7 +1256,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     Report within 10-12 hours
                                                 </Text> */}
                                                 </View>
-                                                <View style={styles.datesection}>
+                                                <View style={styles.datesection1}>
                                                     <Text style={styles.label}>Booking Date & Time</Text>
                                                     <Text style={styles.value}>{orderDetails.data.serviceDate?.split('T')[0] || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
                                                 </View>
@@ -1482,7 +1535,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         {/* Footer Buttons */}
 
                         {/* Lab & Medicine: Cancel Order only */}
-                        {orderDetails?.type === 'medicine' && canCancel && (
+                        {orderDetails?.type === 'medicine' && canCancelMed && (
                             <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
                                     <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
@@ -1490,7 +1543,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </View>
                         )}
 
-                        {orderDetails?.type === 'wellness' && canCancel && (
+                        {orderDetails?.type === 'wellness' && !["Completed", "Cancelled"].includes(order.statusName) && (
                             <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
                                     <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
@@ -1498,24 +1551,33 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </View>
                         )}
 
-                        {orderDetails?.type === 'lab' && canCancel && (<>
+                        {orderDetails?.type === 'lab' && !["Completed", "Cancelled"].includes(order.statusName) && (<>
                             <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
                                         <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
-                                        <Text style={styles.rescheduleBtnText}>Reschedule</Text>
-                                    </TouchableOpacity>
+                                    {canReschedule && (
+                                        <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
+                                            <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </View>
                         </>)}
                         {/* Consultation: Reschedule only */}
-                        {orderDetails?.type === 'consultation' && canReschedule && (
+                        {orderDetails?.type === 'consultation' && !["Completed", "Cancelled"].includes(order.statusName) && (
                             <View style={styles.footerRow}>
-                                <TouchableOpacity style={styles.rescheduleBtn} onPress={() => setShowRescheduleModal(true)}>
-                                    <Text style={styles.rescheduleBtnText}>Reschedule Consultation</Text>
-                                </TouchableOpacity>
+                                <View style={styles.reschedulebox}>
+                                    <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
+                                        <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                                    </TouchableOpacity>
+                                    {canReschedule && (
+                                        <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
+                                            <Text style={styles.rescheduleBtnText}>Reschedule </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                             </View>
                         )}
 
@@ -1576,7 +1638,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         style={{ flex: 1 }}
                                         onLoadEnd={() => setPdfLoading(false)}
                                         onError={() => setPdfLoading(false)}
-                                    /> 
+                                    />
                                 )
                             )}
 
@@ -1643,7 +1705,7 @@ const styles = StyleSheet.create({
     },
     footerRow: {
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'space-around',
         alignItems: 'center',
         padding: 20,
         backgroundColor: '#fff',
@@ -1664,12 +1726,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: 48,
-        width: '48%',
+        paddingHorizontal: 20,
+        minWidth: '45%',
     },
     rescheduleBtnText: {
         color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: fonts.semiBold,
+        fontSize: 14,
     },
     cancelOrderBtn: {
         backgroundColor: '#fff',
@@ -1684,7 +1748,8 @@ const styles = StyleSheet.create({
     },
     reschedulebox: {
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         gap: 20,
     },
     cancelOrderBtn1: {
@@ -1695,13 +1760,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: 48,
-        width: '48%',
         alignSelf: 'center',
+        paddingHorizontal: 20,
+        minWidth: '45%',
     },
     cancelOrderBtnText: {
         color: '#C35E9D',
-        fontSize: 15,
         fontFamily: fonts.semiBold,
+        fontSize: 14,
     },
     // Modal styles
     modalOverlay: {
@@ -1818,6 +1884,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         marginBottom: 8,
         color: "#6B7280",
+        fontFamily: fonts.medium,
     },
     /* SYMPTOM CHIP */
     chipContainer: {
@@ -1829,7 +1896,7 @@ const styles = StyleSheet.create({
 
     slotChip: {
         paddingHorizontal: 14,
-        paddingVertical: 8,
+        paddingVertical: 5,
         borderRadius: 20,
         backgroundColor: "#F3F4F6",
     },
@@ -1839,8 +1906,9 @@ const styles = StyleSheet.create({
 
 
     slotText: {
-        fontSize: 13,
+        fontSize: 12,
         color: "#374151",
+        fontFamily: fonts.regular,
     },
 
     timeSlot: {
@@ -1981,9 +2049,9 @@ const styles = StyleSheet.create({
         borderTopColor: '#E1E8F1',
     },
     paidAmountLabel: {
-        fontSize: 15,
+        fontSize: 13,
         color: '#000',
-        fontFamily: fonts.bold,
+        fontFamily: fonts.semiBold,
     },
     DeliveryLabel: {
         fontSize: 15,
@@ -1991,9 +2059,9 @@ const styles = StyleSheet.create({
         fontFamily: fonts.semiBold,
     },
     paidAmountValue: {
-        fontSize: 17,
-        color: '#C35E9D',
         fontFamily: fonts.bold,
+        fontSize: 14,
+        color: '#000'
     },
 
     databoxreports: {
@@ -2086,6 +2154,11 @@ const styles = StyleSheet.create({
         paddingTop: 10,
     },
     datesection: {
+        paddingHorizontal: 0,
+        paddingBottom: 5,
+        marginTop: getResponsiveSpacing(0),
+    },
+    datesection1: {
         paddingHorizontal: 20,
         paddingBottom: 5,
         marginTop: getResponsiveSpacing(0),
@@ -2149,7 +2222,7 @@ const styles = StyleSheet.create({
     paymentvalue: {
         color: '#C35E9C',
         fontFamily: fonts.bold,
-        fontSize: 15
+        fontSize: 14
     },
     patientname: {
         fontSize: 15,
