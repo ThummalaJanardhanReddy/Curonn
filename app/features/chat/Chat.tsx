@@ -118,7 +118,7 @@ export default function ChatScreen() {
         onPress: () => {
           signalRService.disconnect();
           clearChat();
-          handleCancelAppointment();
+          // handleCancelAppointment();
           router.back();
         },
       },
@@ -236,6 +236,10 @@ export default function ChatScreen() {
     return getMessagesWithDateHeaders(messages);
   }, [messages]);
 
+  useEffect(() => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+  }, [formattedMessages]);
+
   const renderItem = React.useCallback(({ item }: any) => {
     if (item.type === "date") {
       return (
@@ -322,8 +326,18 @@ export default function ChatScreen() {
                 },
               ]}
             >
-              We are really Sorry, All our Doctors are busy now.Please book an
-              appointment after some time.
+              We are really Sorry, All our Doctors are busy now.
+            </Text>
+            <Text
+              style={[
+                styles.bannerText,
+                {
+                  fontSize: 16,
+                  textAlign: "center",
+                },
+              ]}
+            >
+              Please book an appointment after some time.
             </Text>
             <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
           </View>
@@ -399,92 +413,65 @@ export default function ChatScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.bg_secondary,
+        backgroundColor: colors.bg_primary,
         paddingTop: insets.top,
         paddingBottom: isVisible ? 0 : insets.bottom,
       }}
     >
-      <KeyboardStickyView
-        offset={{ closed: 0, opened: 0 }}
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg_primary,
-        }}
-      >
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View>
-            {chatAcceptDetails?.doctorName && (
-              <Text style={styles.title}>{chatAcceptDetails?.doctorName}</Text>
-            )}
-            <Text style={styles.subtitle}>Chat Consultation</Text>
-          </View>
-
-          <TouchableOpacity onPress={confirmClose}>
-            <MaterialIcons name="close" size={26} />
-          </TouchableOpacity>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View>
+          {chatAcceptDetails?.doctorName && (
+            <Text style={styles.title}>{chatAcceptDetails?.doctorName}</Text>
+          )}
+          <Text style={styles.subtitle}>Chat Consultation</Text>
         </View>
 
-        {/* CONNECTION */}
+        <TouchableOpacity onPress={confirmClose}>
+          <MaterialIcons name="close" size={26} />
+        </TouchableOpacity>
+      </View>
+
+      {/* CONNECTION */}
+
+      <View style={{ flex: 1 }}>
         {renderConnectionBanner()}
         {renderWaitingBanner()}
-        {
-          // chatStatus == "connected" &&
-          // <FlatList
-          //   ref={flatListRef}
-          //   data={formattedMessages}
-          //   renderItem={renderItem}
-          //   keyExtractor={(item, index) =>
-          //     "type" in item ? `date-${index}` : item.id
-          //   }
-          //   contentContainerStyle={{
-          //     padding: 16,
-          //   }}
-          //   scrollEventThrottle={16}
-          //   onScroll={(event) => {
-          //     const { layoutMeasurement, contentOffset, contentSize } =
-          //       event.nativeEvent;
-          //     const paddingToBottom = 50;
-          //     isNearBottom.current =
-          //       layoutMeasurement.height + contentOffset.y >=
-          //       contentSize.height - paddingToBottom;
-          //   }}
-          // />
-          connectionState === "connected" && chatStatus === "connected" && (
-            <FlatList
-              ref={flatListRef}
-              data={formattedMessages}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              contentContainerStyle={{ padding: 16 }}
-              scrollEventThrottle={16}
-              onScroll={handleScroll}
-              initialNumToRender={20}
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              removeClippedSubviews
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-            />
-          )
-        }
-
-        {/* TYPING */}
-        {typing && <Text style={styles.typing}>Doctor typing...</Text>}
-
-        {/* ATTACHMENT PREVIEW */}
-        {attachment && (
-          <View style={styles.preview}>
-            <Text>{attachment.name}</Text>
-
-            <TouchableOpacity onPress={() => setAttachment(null)}>
-              <MaterialIcons name="close" size={18} />
-            </TouchableOpacity>
-          </View>
+        {connectionState === "connected" && chatStatus === "connected" && (
+          <FlatList
+            ref={flatListRef}
+            data={formattedMessages}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 1,
+            }}
+          />
         )}
+      </View>
 
-        {/* INPUT */}
-        {/* <KeyboardStickyView offset={{ closed: 0, opened: 0 }}> */}
+      {/* TYPING */}
+      {typing && <Text style={styles.typing}>Doctor typing...</Text>}
+
+      {/* ATTACHMENT PREVIEW */}
+      {attachment && (
+        <View style={styles.preview}>
+          <Text>{attachment.name}</Text>
+
+          <TouchableOpacity onPress={() => setAttachment(null)}>
+            <MaterialIcons name="close" size={18} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* INPUT */}
+      {/* <KeyboardStickyView offset={{ closed: 0, opened: 0 }}> */}
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
         <View style={[styles.inputContainer]}>
           <View style={styles.inputRow}>
             <TouchableOpacity
@@ -532,7 +519,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    // padding: 16,
     paddingHorizontal: 20,
     paddingVertical: 10,
     alignItems: "center",
@@ -547,7 +533,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: colors.primary,
+    color: colors.black,
     fontSize: 18,
   },
 
@@ -592,12 +578,12 @@ const styles = StyleSheet.create({
   },
 
   userMessage: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#DEF2DB",
     alignSelf: "flex-end",
   },
 
   doctorMessage: {
-    backgroundColor: "#eee",
+    backgroundColor: "#EDE7F7",
     alignSelf: "flex-start",
   },
 
@@ -622,6 +608,7 @@ const styles = StyleSheet.create({
   status: {
     marginLeft: 5,
     fontSize: 11,
+    color: "#666",
   },
 
   typing: {
@@ -656,27 +643,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   pdfButton: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
-    // backgroundColor: "#2f5cb6",
-    // padding: 12,
+    gap: 10,
     borderRadius: 12,
-    marginTop: 6,
-    // maxWidth: 260,
   },
 
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: "#E53935", // soft medical red
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
   },
 
   icon: {
-    fontSize: 20,
+    fontSize: 30,
     color: "#fff",
   },
 
@@ -695,8 +674,8 @@ const styles = StyleSheet.create({
   },
 
   fileSubText: {
-    fontSize: 18,
-    color: "#000000",
+    fontSize: 14,
+    color: colors.primary,
     marginTop: 2,
   },
   dateContainer: {
@@ -748,7 +727,7 @@ const MessageItem = React.memo(
               <Text style={styles.icon}>📄</Text>
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.fileSubText}>View PDF</Text>
+              <Text style={styles.fileSubText}>View Priscription</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -757,9 +736,7 @@ const MessageItem = React.memo(
           <Image source={{ uri: item.attachment.uri }} style={styles.image} />
         )}
 
-        {item.text && (
-          <Text style={{ color: isUser ? "white" : "black" }}>{item.text}</Text>
-        )}
+        {item.text && <Text>{item.text}</Text>}
 
         <View style={styles.metaRow}>
           <Text style={styles.time}>

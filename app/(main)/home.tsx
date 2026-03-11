@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { useUser } from "../shared/context/UserContext";
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 import { Dimensions } from "react-native";
 import * as signalR from "@microsoft/signalr";
 // Carousel slider for orders
@@ -97,7 +97,6 @@ export default function HomeScreen() {
   const bottomSlideAnim = useRef(new Animated.Value(400)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
 
-
   // Fetch all orders for the user
   const fetchAllOrders = async (patientId: number, statusId: number = 0) => {
     try {
@@ -115,105 +114,110 @@ export default function HomeScreen() {
     }
   };
 
-
-   const renderWellnessCard = useCallback(
-      ({ item, index }: { item: any; index: number }) => {
-        const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
-        const isLast = index === wellnessall.length - 1;
-        return (
-          <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
-            <Image
-              source={bgImage}
-              style={styles.featureBackground}
-              resizeMode="cover"
-            />
-            <images.home.book_wellness
-              style={{ position: "absolute", right: 20, bottom: 0 }}
-            />
-            <View style={styles.featureContent}>
-              <Text style={[styles.featureTitle, { color: "#fff" }]}>
-                {item.programName}
-              </Text>
-              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>Duration: {item.duration}</Text>
-              <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
-                ₹{item.price}
-              </Text>
-              <Button
-                mode="contained"
-                style={[
-                  styles.featureButton,
-                  {
-                    backgroundColor: "#EFBC73",
-                    height: 36,
-                    justifyContent: "center",
-                  },
-                ]}
-                labelStyle={{
-                  color: "#000",
-                  fontSize: 14,
-                  fontFamily: fonts.medium,
-                  lineHeight: 18,
-                }}
-                contentStyle={{
+  const renderWellnessCard = useCallback(
+    ({ item, index }: { item: any; index: number }) => {
+      const bgImage =
+        index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
+      const isLast = index === wellnessall.length - 1;
+      return (
+        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}>
+          {" "}
+          {/* 16px gap */}
+          <Image
+            source={bgImage}
+            style={styles.featureBackground}
+            resizeMode="cover"
+          />
+          <images.home.book_wellness
+            style={{ position: "absolute", right: 20, bottom: 0 }}
+          />
+          <View style={styles.featureContent}>
+            <Text style={[styles.featureTitle, { color: "#fff" }]}>
+              {item.programName}
+            </Text>
+            <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
+              Duration: {item.duration}
+            </Text>
+            <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
+              ₹{item.price}
+            </Text>
+            <Button
+              mode="contained"
+              style={[
+                styles.featureButton,
+                {
+                  backgroundColor: "#EFBC73",
                   height: 36,
-                  alignItems: "center",
                   justifyContent: "center",
-                }}
-                onPress={() => {
-                  router.push({
-                    pathname: "/wellnessdetails",
-                    params: { wellnessMasterId: item.wellnessMasterId || item.id }
-                  });
-                }}
-              >
-                Get Now
-              </Button>
-            </View>
+                },
+              ]}
+              labelStyle={{
+                color: "#000",
+                fontSize: 14,
+                fontFamily: fonts.medium,
+                lineHeight: 18,
+              }}
+              contentStyle={{
+                height: 36,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => {
+                router.push({
+                  pathname: "/wellnessdetails",
+                  params: {
+                    wellnessMasterId: item.wellnessMasterId || item.id,
+                  },
+                });
+              }}
+            >
+              Get Now
+            </Button>
           </View>
-        );
-      },
-      [wellnessall],
-    );
+        </View>
+      );
+    },
+    [wellnessall],
+  );
 
- useEffect(() => {
-  if (!patientId) return; // 🚨 VERY IMPORTANT
+  useEffect(() => {
+    if (!patientId) return; // 🚨 VERY IMPORTANT
 
-  let connection: signalR.HubConnection;
-  const setupSignalR = async () => {
-    await fetchNotifications();
-    const token = await AsyncStorage.getItem("authToken");
-    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-    connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://api.curonn.com/hubs/video", {
-        accessTokenFactory: () => token || "",
-      })
-      .withAutomaticReconnect()
-      .build();
+    let connection: signalR.HubConnection;
+    const setupSignalR = async () => {
+      await fetchNotifications();
+      const token = await AsyncStorage.getItem("authToken");
+      console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl("https://api.curonn.com/hubs/video", {
+          accessTokenFactory: () => token || "",
+        })
+        .withAutomaticReconnect()
+        .build();
 
-    try {
-      await connection.start();
-      console.log("✅ SignalR Connected");
+      try {
+        await connection.start();
+        console.log("✅ SignalR Connected");
 
-      connection.on("NewNotification", async (data) => {
-        console.log("📩 New notification received:", data);
-        // ⭐ Refresh notification list
-        await fetchNotifications();
-      });
-      connection.onclose(() => {
-        console.log("⚠️ SignalR Disconnected");
-      });
+        connection.on("NewNotification", async (data) => {
+          console.log("📩 New notification received:", data);
+          // ⭐ Refresh notification list
+          await fetchNotifications();
+        });
+        connection.onclose(() => {
+          console.log("⚠️ SignalR Disconnected");
+        });
+      } catch (err) {
+        console.log("❌ SignalR connection error:", err);
+      }
+    };
 
-    } catch (err) {
-      console.log("❌ SignalR connection error:", err);
-    }
-  };
+    setupSignalR();
 
-  setupSignalR();
-
-  return () => {
-    if (connection) connection.stop();
-  };
-}, [patientId]);
+    return () => {
+      if (connection) connection.stop();
+    };
+  }, [patientId]);
 
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
@@ -283,13 +287,12 @@ export default function HomeScreen() {
   );
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] =
     useState(false);
-   
+
   // Always fetch latest orders on mount and when page is focused
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-        
         if (patientId) {
           const data = await fetchAllOrders(patientId);
           if (isActive) {
@@ -599,8 +602,8 @@ export default function HomeScreen() {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-            n.notificationId === notificationId ? { ...n, isRead: true } : n,
-          )
+              n.notificationId === notificationId ? { ...n, isRead: true } : n,
+            )
           : prev,
       );
       // Refresh notification count in CommonHeader
@@ -628,10 +631,12 @@ export default function HomeScreen() {
     }
     fetchArticles();
 
-        async function fetchWelness() {
+    async function fetchWelness() {
       try {
         console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
-        const res = await axiosClient.get(ApiRoutes.WellnessData.GetAllwellness);
+        const res = await axiosClient.get(
+          ApiRoutes.WellnessData.GetAllwellness,
+        );
         console.log("Wellness API response:", res.data);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res.data.items)) {
@@ -944,8 +949,8 @@ export default function HomeScreen() {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'60%'}
-            // height={'60%'}
+              // width={'60%'}
+              // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -978,8 +983,6 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-
-       
 
         {/* Ambulance Booking Section */}
         <View style={styles.section}>
@@ -1033,17 +1036,21 @@ export default function HomeScreen() {
           </View>
         </View>
 
-         {/* Wellness Program Section */}
+        {/* Wellness Program Section */}
         <View style={styles.section}>
           {wellnessall.length === 0 ? (
-            <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ color: '#ff0000', fontSize: 16 }}>Data is not available</Text>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <Text style={{ color: "#ff0000", fontSize: 16 }}>
+                Data is not available
+              </Text>
             </View>
           ) : (
             <FlatList
               data={wellnessall}
               renderItem={renderWellnessCard}
-              keyExtractor={(item, idx) => item.wellnessMasterId?.toString?.() || idx.toString()}
+              keyExtractor={(item, idx) =>
+                item.wellnessMasterId?.toString?.() || idx.toString()
+              }
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 0 }}
@@ -1158,7 +1165,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}

@@ -2,7 +2,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-
 import {
   FlatList,
   Platform,
@@ -30,8 +29,11 @@ import { useUser } from "../../shared/context/UserContext";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { images } from "../../../assets";
 import OrderDetails from "./OrderDetails";
-import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
+import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
 import { useUserStore } from "@/src/store/UserStore";
+import dayjs from "dayjs";
+import advancedFormat from "dayjs/plugin/advancedFormat";
+dayjs.extend(advancedFormat);
 
 export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -57,7 +59,9 @@ export default function OrdersScreen() {
   const patientId = Number(userData?.e_id || user?.eId);
   const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
     try {
-      const response: any = await axiosClient.get(ApiRoutes.Master.getmasterdata(7));
+      const response: any = await axiosClient.get(
+        ApiRoutes.Master.getmasterdata(7),
+      );
       let data = [];
       if (Array.isArray(response)) {
         data = response;
@@ -75,7 +79,7 @@ export default function OrdersScreen() {
       console.error("Failed to fetch order status master data", error);
       return {};
     }
-  }
+  };
   // Fetch statusId map and orders on mount
   useEffect(() => {
     async function fetchStatusMapAndOrders() {
@@ -94,16 +98,15 @@ export default function OrdersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         const timeout = setTimeout(() => {
           // Use React Native StatusBar API to set background color on Android
           RNStatusBar.setBackgroundColor("#00e93aff", true);
         }, 400); // Adjust timeout as needed
         return () => clearTimeout(timeout);
       }
-    }, [])
+    }, []),
   );
-
 
   // Refresh orders from API when screen comes into focus
   useFocusEffect(
@@ -115,7 +118,7 @@ export default function OrdersScreen() {
           setLoading(false);
         });
       }
-    }, [patientId])
+    }, [patientId]),
   );
 
   // Add some sample orders if none exist (for demo purposes)
@@ -128,17 +131,18 @@ export default function OrdersScreen() {
       { key: "Requested", title: "Pending" },
       { key: "Completed", title: "Completed" },
       { key: "Cancelled", title: "Cancelled" },
-
     ],
-    []
+    [],
   );
-
 
   // Fetch orders when filter changes or search is performed
   useEffect(() => {
-
     let statusId = 0;
-    console.log('[OrdersScreen] useEffect patientId (on filter/search):', patientId, userData);
+    console.log(
+      "[OrdersScreen] useEffect patientId (on filter/search):",
+      patientId,
+      userData,
+    );
 
     if (!patientId) {
       setLoading(false);
@@ -170,14 +174,19 @@ export default function OrdersScreen() {
     return dateB - dateA;
   });
 
-
-  const fetchAllOrders = async (patientId: number, statusId: number = 0, searchorderno?: string) => {
+  const fetchAllOrders = async (
+    patientId: number,
+    statusId: number = 0,
+    searchorderno?: string,
+  ) => {
     try {
       let query = `?patientId=${patientId}&statusId=${statusId}`;
       if (searchorderno && searchorderno.length > 0) {
         query += `&searchorderno=${encodeURIComponent(searchorderno)}`;
       }
-      const response: any = await axiosClient.get(ApiRoutes.MyOrders.Allorders + query);
+      const response: any = await axiosClient.get(
+        ApiRoutes.MyOrders.Allorders + query,
+      );
       if (response.isSuccess && Array.isArray(response.data)) {
         console.log("Orders of :", response.data);
         return response.data;
@@ -190,7 +199,6 @@ export default function OrdersScreen() {
       return [];
     }
   };
-
 
   // const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
   //   const date = new Date(isoDate);
@@ -223,33 +231,36 @@ export default function OrdersScreen() {
   //   return `${month} ${day}, ${year}; ${hours}:${minutes} ${ampm}`;
   // };
 
-  const formatDate = (isoDate: string) => {
-    const date = new Date(isoDate);
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const getOrdinal = (n: number) => {
-      const s = ["th", "st", "nd", "rd"];
-      const v = n % 100;
-      return n + (s[(v - 20) % 10] || s[v] || s[0]);
-    };
-    const month = months[date.getMonth()];
-    const day = getOrdinal(date.getDate());
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  };
+  // const formatDate = (isoDate: string) => {
+  //   const date = new Date(isoDate);
+  //   const months = [
+  //     "Jan",
+  //     "Feb",
+  //     "Mar",
+  //     "Apr",
+  //     "May",
+  //     "Jun",
+  //     "Jul",
+  //     "Aug",
+  //     "Sep",
+  //     "Oct",
+  //     "Nov",
+  //     "Dec",
+  //   ];
+  //   const getOrdinal = (n: number) => {
+  //     const s = ["th", "st", "nd", "rd"];
+  //     const v = n % 100;
+  //     return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  //   };
+  //   const month = months[date.getMonth()];
+  //   const day = getOrdinal(date.getDate());
+  //   const year = date.getFullYear();
+  //   return `${month} ${day}, ${year}`;
+  // };
 
+  const formatDate = (isoDate: string) => {
+    return dayjs(isoDate).format("MMM Do, YYYY - hh:mm A");
+  };
 
   const handleOrderPress = (order: any) => {
     // Pass orderType and masterId explicitly
@@ -262,110 +273,129 @@ export default function OrdersScreen() {
     setOrderDetailsVisible(true);
   };
 
-  const renderOrderCard = useCallback(
-    ({ item }: { item: any }) => {
-      // Map orderType to category
-      let category = "";
-      let iconSource = null;
-      switch (item.orderType) {
-        case "Single Test":
-          category = "Lab Test";
-          iconSource = images.labicon;
-          break;
-        case "Package":
-          category = "Health Checks";
-          iconSource = images.labicon;
-          break;
-        case "Xray":
-          category = "Xray";
-          iconSource = images.labicon;
-          break;
-        case "Medicine":
-          category = "Medicine";
-          iconSource = images.medicalicon;
-          break;
-        case "Consultation":
-          category = "Consultation";
-          iconSource = images.consultationicon;
-          break;
-        case "Ambulance":
-          category = "Ambulance";
-          iconSource = images.ambulanceicon;
-          break;
-        case "Wellness Program":
-          category = "Wellness Program";
-          iconSource = images.wellnessicon;
-          break;
-        default:
-          category = item.orderType;
-          iconSource = null;
-      }
+  const renderOrderCard = useCallback(({ item }: { item: any }) => {
+    // Map orderType to category
+    let category = "";
+    let iconSource = null;
+    switch (item.orderType) {
+      case "Single Test":
+        category = "Lab Test";
+        iconSource = images.labicon;
+        break;
+      case "Package":
+        category = "Health Checks";
+        iconSource = images.labicon;
+        break;
+      case "Xray":
+        category = "Xray";
+        iconSource = images.labicon;
+        break;
+      case "Medicine":
+        category = "Medicine";
+        iconSource = images.medicalicon;
+        break;
+      case "Consultation":
+        category = "Consultation";
+        iconSource = images.consultationicon;
+        break;
+      case "Ambulance":
+        category = "Ambulance";
+        iconSource = images.ambulanceicon;
+        break;
+      case "Wellness Program":
+        category = "Wellness Program";
+        iconSource = images.wellnessicon;
+        break;
+      default:
+        category = item.orderType;
+        iconSource = null;
+    }
 
-      // Format createdOn date
-      const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
-      // Status color mapping
-      const statusColors: { [key: string]: string } = {
-        Requested: "#d0eaff",
-        Completed: "#ccface",
-        Cancelled: "#ffd8d5",
-        Inprogress: "#d0eaff",
-        Ongoing: "#f7cdff",
-        Pending: "#ffeeba",
-        Rescheduled: "#bbecf3",
-        AdminDoctor:"#f7cdff",
-      };
-      const statusColor = statusColors[item.statusName] || "#666";
+    // Format createdOn date
+    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+    // Status color mapping
+    const statusColors: { [key: string]: string } = {
+      Requested: "#d0eaff",
+      Completed: "#ccface",
+      Cancelled: "#ffd8d5",
+      Inprogress: "#d0eaff",
+      Ongoing: "#f7cdff",
+      Pending: "#ffeeba",
+      Rescheduled: "#bbecf3",
+      AdminDoctor: "#f7cdff",
+    };
+    const statusColor = statusColors[item.statusName] || "#666";
 
-
-      const statusTextColors: { [key: string]: string } = {
-        Requested: "#006cc5",
-        Completed: "#4CAF50",
-        Cancelled: "#F44336",
-        Inprogress: "#006cc5",
-        Ongoing: "#9C27B0",
-        Pending: "#9e7600",
-        Rescheduled: "#00BCD4",
-        AdminDoctor:"#9C27B0",
-      };
-      const statusTextColor = statusTextColors[item.statusName] || "#000";
-      // Display 'Inprogress' instead of 'Requested'
-      const displayStatusName = item.statusName === "Requested" ? "Pending" : item.statusName;
-      return (
-        <TouchableOpacity onPress={() => handleOrderPress(item)}>
-          <View style={styles.orderCard}>
-            <View style={styles.orderLeft}>
-              {iconSource && (
-                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain', borderRadius: 10 }} />
-              )}
-              <Text style={styles.orderno}>{item.orderNo}</Text>
+    const statusTextColors: { [key: string]: string } = {
+      Requested: "#006cc5",
+      Completed: "#4CAF50",
+      Cancelled: "#F44336",
+      Inprogress: "#006cc5",
+      Ongoing: "#9C27B0",
+      Pending: "#9e7600",
+      Rescheduled: "#00BCD4",
+      AdminDoctor: "#9C27B0",
+    };
+    const statusTextColor = statusTextColors[item.statusName] || "#000";
+    // Display 'Inprogress' instead of 'Requested'
+    const displayStatusName =
+      item.statusName === "Requested" ? "Pending" : item.statusName;
+    return (
+      <TouchableOpacity onPress={() => handleOrderPress(item)}>
+        <View style={styles.orderCard}>
+          <View style={styles.orderLeft}>
+            {iconSource && (
+              <Image
+                source={iconSource}
+                style={{ width: 55, resizeMode: "contain", borderRadius: 10 }}
+              />
+            )}
+            <Text style={styles.orderno}>{item.orderNo}</Text>
+          </View>
+          <View style={styles.orderRight}>
+            {/* Title */}
+            <Text style={styles.title}>{item.title}</Text>
+            <View style={styles.categoryrow}>
+              <Text style={styles.categorytitle}>{createdOn}</Text>
+              {/* <Text style={styles.category}>{category}</Text> */}
+              {/* CreatedOn Date */}
             </View>
-            <View style={styles.orderRight}>
-              {/* Title */}
-              <Text style={styles.title}>{item.title}</Text>
-              <View style={styles.categoryrow}>
-                <Text style={styles.categorytitle}>{createdOn}</Text>
-                {/* <Text style={styles.category}>{category}</Text> */}
-                {/* CreatedOn Date */}
+            <View style={styles.categoryrow}>
+              {/* StatusName with background color */}
+              <View
+                key={item.orderNo + "-status"}
+                style={{
+                  alignSelf: "flex-start",
+                  backgroundColor: statusColor,
+                  borderRadius: 30,
+                  paddingHorizontal: 12,
+                  paddingVertical: 2,
+                  paddingTop: 4,
+                  marginTop: 0,
+                }}
+              >
+                <Text
+                  style={{
+                    color: statusTextColor,
+                    fontSize: 10,
+                    fontFamily: fonts.regular,
+                  }}
+                >
+                  {displayStatusName}
+                </Text>
               </View>
-              <View style={styles.categoryrow}>
-                {/* StatusName with background color */}
-                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2, paddingTop: 4, marginTop: 0 }}>
-                  <Text style={{ color: statusTextColor, fontSize: 10, fontFamily: fonts.regular }}>{displayStatusName}</Text>
+              {item.orderType !== "Consultation" && (
+                <View style={styles.paymentrow}>
+                  {/* <Text style={styles.paymentheader}>Payment:</Text> */}
+                  {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
                 </View>
-                {item.orderType !== "Consultation" && (
-                  <View style={styles.paymentrow}>
-                    {/* <Text style={styles.paymentheader}>Payment:</Text> */}
-                    {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
-                  </View>
-                )}
-              </View>
+              )}
             </View>
           </View>
-        </TouchableOpacity>
-      );
-    },
-    []
-  );
+        </View>
+      </TouchableOpacity>
+    );
+  }, []);
 
   const renderFilterChip = useCallback(
     ({ item }: { item: any }) => (
@@ -386,16 +416,17 @@ export default function OrdersScreen() {
         </Text>
       </TouchableOpacity>
     ),
-    [selectedFilter]
+    [selectedFilter],
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
       <View style={[styles.container]}>
         <StatusBar
           barStyle="dark-content"
           translucent={false}
-          backgroundColor="#ffffff" />
+          backgroundColor="#ffffff"
+        />
 
         {/* Header */}
         <View style={styles.header}>
@@ -407,7 +438,7 @@ export default function OrdersScreen() {
             paddingHorizontal: 0,
             paddingVertical: 5,
             borderBottomWidth: 1,
-            borderBottomColor: '#E0E0E0',
+            borderBottomColor: "#E0E0E0",
           }}
         >
           <View style={styles.searchContainer}>
@@ -418,7 +449,8 @@ export default function OrdersScreen() {
                 placeholder="Search for Order Id"
                 placeholderTextColor="#999"
                 value={searchQuery}
-                onChangeText={setSearchQuery} />
+                onChangeText={setSearchQuery}
+              />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearButton}
@@ -443,19 +475,44 @@ export default function OrdersScreen() {
                 keyExtractor={(item) => item.key}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.filtersList, { paddingBottom: 0, paddingLeft: 20, paddingRight: 20 }]} />
+                contentContainerStyle={[
+                  styles.filtersList,
+                  { paddingBottom: 0, paddingLeft: 20, paddingRight: 20 },
+                ]}
+              />
             </View>
           )}
         </View>
         {/* Orders List */}
-        <View style={[styles.ordersdataContainer, { backgroundColor: '#F5F4F9', marginHorizontal: 0, marginTop: 0 }]}>
+        <View
+          style={[
+            styles.ordersdataContainer,
+            { backgroundColor: "#F5F4F9", marginHorizontal: 0, marginTop: 0 },
+          ]}
+        >
           {loading ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 40,
+              }}
+            >
               <ActivityIndicator size="large" color="#694664" />
             </View>
           ) : filteredOrders.length === 0 ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 16, color: '#888' }}>No orders found</Text>
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 40,
+              }}
+            >
+              <Text style={{ fontSize: 16, color: "#888" }}>
+                No orders found
+              </Text>
             </View>
           ) : (
             <View style={{ flex: 1 }}>
@@ -469,28 +526,27 @@ export default function OrdersScreen() {
                 }
                 contentContainerStyle={[
                   styles.ordersList,
-                  { paddingHorizontal: 20, paddingTop: 15 }
+                  { paddingHorizontal: 20, paddingTop: 15 },
                 ]}
                 showsVerticalScrollIndicator={true}
-                style={{ flex: 1, backgroundColor: '#F5F4F9' }}
+                style={{ flex: 1, backgroundColor: "#F5F4F9" }}
               />
-
             </View>
           )}
         </View>
-
       </View>
       <OrderDetails
         visible={orderDetailsVisible}
         order={selectedOrder}
-        statusName={selectedOrder?.statusName || ''}
+        statusName={selectedOrder?.statusName || ""}
         onClose={() => setOrderDetailsVisible(false)}
         refreshOrders={async () => {
           if (patientId) {
             const ordersData = await fetchAllOrders(patientId, 0);
             setOrders(ordersData);
           }
-        }} />
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -542,7 +598,6 @@ const styles = StyleSheet.create({
   },
   selectedFilterChip: {
     backgroundColor: "#694664",
-
   },
   orderRight: {
     flex: 1,
@@ -571,13 +626,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#694664",
     fontFamily: fonts.regular,
-    marginBottom: 4
+    marginBottom: 4,
   },
   categorytitle: {
     fontSize: 12,
     color: "#666",
     fontFamily: fonts.regular,
-    marginBottom: 4
+    marginBottom: 4,
   },
   paymentheader: {
     fontSize: 12,
@@ -594,15 +649,12 @@ const styles = StyleSheet.create({
   span: {
     fontSize: 12,
     color: "#694664",
-
   },
 
-
-
   orderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
     marginBottom: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
@@ -610,7 +662,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e2e2e2",
-
   },
 
   categoryrow: {
@@ -623,8 +674,8 @@ const styles = StyleSheet.create({
 
   orderLeft: {
     width: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
   },
   orderno: {
@@ -722,7 +773,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     marginBottom: 5,
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -734,7 +785,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     height: 40,
-    marginTop: 0
+    marginTop: 0,
   },
   searchIcon: {
     width: 16,

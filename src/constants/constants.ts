@@ -250,3 +250,20 @@ export interface ChatHistoryItem {
 
   appointmentId: number;
 }
+
+export interface IPatientReport {
+  createdBy: number;
+  fileBase64: string | null;
+  fileName: string;
+  filePath: string;
+  isPhotoUpdated: boolean;
+  mimeType: string;
+  notes: string;
+  patientId: number;
+  patientReportId: number;
+  reportCategoryId: number;
+  reportDate: string;
+  reportName: string;
+  typeId: number;
+}
+ export const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;

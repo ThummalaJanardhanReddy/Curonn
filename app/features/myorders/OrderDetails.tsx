@@ -1185,6 +1185,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                             statusColor={statusColor}
                                             statusTextColor={statusTextColor}
                                         />
+                                        // <Text>Video card</Text>
 
                                     )}
                                     {orderDetails.type === "ambulance" && (

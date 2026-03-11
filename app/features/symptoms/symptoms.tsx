@@ -25,6 +25,8 @@ import {
   ISymptomMasterApiResponse,
 } from "@/src/constants/constants";
 import ApiRoutes from "@/src/api/employee/employee";
+import { fonts } from "@/app/shared/styles/fonts";
+import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
 
 interface Symptom {
   id: string;
@@ -64,7 +66,7 @@ export default function SymptomsScreen() {
 
   const fetchAllSymptoms = async () => {
     const response = await axiosClient.get<ISymptomMasterApiResponse>(
-      ApiRoutes.Symptoms.getAll,
+      ApiRoutes.Symptoms.getAll(50),
     );
 
     if (response?.isSuccess) {
@@ -163,6 +165,7 @@ export default function SymptomsScreen() {
           onPress={handleBack}
           style={styles.backButton}
           textStyle={styles.headerTitle}
+          arrowColor={colors.black}
         />
       </View>
 
@@ -170,11 +173,12 @@ export default function SymptomsScreen() {
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <Image source={images.icons.search} style={styles.searchIcon} />
+            {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
+            <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for symptoms"
-              placeholderTextColor="#999"
+              placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -261,8 +265,9 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(10),
     paddingBottom: getResponsiveSpacing(10),
+    backgroundColor: colors.bg_primary,
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -272,18 +277,20 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSpacing(8),
     backgroundColor: "#fff",
     paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(4),
+    height: 40,
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
     marginRight: getResponsiveSpacing(8),
-    tintColor: "#999",
+    tintColor: "#808080",
   },
   searchInput: {
     flex: 1,
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getResponsiveFontSize(12),
     paddingVertical: getResponsiveSpacing(4),
-    color: "#333",
+    color: "#000",
+    fontFamily: fonts.regular,
   },
   clearButton: {
     padding: getResponsiveSpacing(4),

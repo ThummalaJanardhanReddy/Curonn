@@ -1,29 +1,27 @@
-import { useLocation } from '@/src/hooks/useLocation';
-import React, { useEffect, useState } from 'react';
+import { useLocation } from "@/src/hooks/useLocation";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { images } from "../../../assets";
+import LocationSelection from "../../features/location/location-selection";
 import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { images } from '../../../assets';
-import LocationSelection from '../../features/location/location-selection';
-import { getResponsiveFontSize, getResponsiveImageSize, getResponsiveSpacing } from '../utils/responsive';
-import CartModal from './CartModal';
-import ProfileModal from './ProfileModal';
+  getResponsiveFontSize,
+  getResponsiveImageSize,
+  getResponsiveSpacing,
+} from "../utils/responsive";
+import CartModal from "./CartModal";
+import ProfileModal from "./ProfileModal";
 import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
-import { fonts } from '../../shared/styles/fonts';
-import { useCart } from '../context/CartContext';
-import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
-import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
-import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import { fonts } from "../../shared/styles/fonts";
+import { useCart } from "../context/CartContext";
+import MenIcon from "../../../assets/AppIcons/Curonn_icons/menu/new/man.svg";
+import WomenIcon from "../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg";
+import CartIcon from "../../../assets/AppIcons/Curonn_icons/carticon.svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import * as signalR from "@microsoft/signalr";
-import { useUserStore } from '@/src/store/UserStore';
+import { useUserStore } from "@/src/store/UserStore";
 
 interface CommonHeaderProps {
   title?: string;
@@ -43,7 +41,7 @@ interface CommonHeaderProps {
 export default function CommonHeader({
   title,
   isHomePage = false,
-  currentLocation = 'New York, NY',
+  currentLocation = "New York, NY",
   onProfilePress,
   onNotificationPress,
   onCartPress,
@@ -60,45 +58,48 @@ export default function CommonHeader({
 
   // ...existing code...
 
-
-  
-  const [selectedLocation, setSelectedLocation] = useState("Fetching location...");
+  const [selectedLocation, setSelectedLocation] = useState(
+    "Fetching location...",
+  );
   const [profileForm, setProfileForm] = useState({
     gender: "",
     image: "",
   });
   const { getCurrentAddress, address } = useLocation();
-  const { userData} = useUser();
+  const { userData } = useUser();
   const { cartCount } = useCart();
 
-
- const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
     fetchNotiCounts();
   }, []);
-const patientId = Number(userData?.e_id || user?.eId);
-console.log("[CommonHeader] patientId:", patientId);
-      // Expose fetchNotiCounts to parent if callback provided
-  
-     const fetchNotiCounts = async () => {
-      try {
-        console.log("[CommonHeader] Fetching notification count for patientId:", patientId);
-        const response = await axiosClient.get(ApiRoutes.Notification.GetCount(patientId, 'patient'));
-        const data = response?.data ?? response;
-        console.log("[CommonHeader] Notification count response:", response);
-        setCount(data);
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
-    };
+  const patientId = Number(userData?.e_id || user?.eId);
+  console.log("[CommonHeader] patientId:", patientId);
+  // Expose fetchNotiCounts to parent if callback provided
 
-    useEffect(() => {
+  const fetchNotiCounts = async () => {
+    try {
+      console.log(
+        "[CommonHeader] Fetching notification count for patientId:",
+        patientId,
+      );
+      const response = await axiosClient.get(
+        ApiRoutes.Notification.GetCount(patientId, "patient"),
+      );
+      const data = response?.data ?? response;
+      console.log("[CommonHeader] Notification count response:", response);
+      setCount(data);
+    } catch (error) {
+      console.error("[ProfileModal] Failed to fetch profile data:", error);
+    }
+  };
+
+  useEffect(() => {
     if (onRefreshNotificationCount) {
       onRefreshNotificationCount(fetchNotiCounts);
     }
   }, [onRefreshNotificationCount, patientId]);
-  
 
   React.useEffect(() => {
     if (!patientId) return;
@@ -106,7 +107,9 @@ console.log("[CommonHeader] patientId:", patientId);
     // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
     const fetchProfile = async () => {
       try {
-        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.getById(patientId),
+        );
         const data = response?.data ?? response;
         setProfileForm({
           gender: data.gender || "",
@@ -118,105 +121,103 @@ console.log("[CommonHeader] patientId:", patientId);
     };
     fetchProfile();
 
-    
     fetchNotiCounts();
   }, [patientId]);
 
-  
- useEffect(() => {
-  if (!patientId) return; 
-  let connection: signalR.HubConnection;
-  const setupSignalR = async () => {
-    await fetchNotiCounts();
-    const token = await AsyncStorage.getItem("authToken");
-    console.log("Setting up SignalR with token:", token ? "Yes" : "No");
-    connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://api.curonn.com/hubs/video", {
-        accessTokenFactory: () => token || "",
-      })
-      .withAutomaticReconnect()
-      .build();
+  useEffect(() => {
+    if (!patientId) return;
+    let connection: signalR.HubConnection;
+    const setupSignalR = async () => {
+      await fetchNotiCounts();
+      const token = await AsyncStorage.getItem("authToken");
+      console.log("Setting up SignalR with token:", token ? "Yes" : "No");
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl("https://api.curonn.com/hubs/video", {
+          accessTokenFactory: () => token || "",
+        })
+        .withAutomaticReconnect()
+        .build();
 
-    try {
-      await connection.start();
-      console.log("✅ SignalR Connected");
-      connection.on("NewNotification", async (data) => {
-        console.log("📩 New notification received:", data);
-        // ⭐ Refresh notification list
-        await fetchNotiCounts();
-      });
-      connection.onclose(() => {
-        console.log("⚠️ SignalR Disconnected");
-      });
-
-    } catch (err) {
-      console.log("❌ SignalR connection error:", err);
-    }
-  };
-  setupSignalR();
-
-  return () => {
-    if (connection) connection.stop();
-  };
-}, [patientId, isHomePage]);
-
-useEffect(() => {
-  const fetchAddress = async () => {
-    try {
-
-      // ⭐ Check saved address first
-      const storedAddress = await AsyncStorage.getItem("userAddress");
-
-      if (storedAddress) {
-        setSelectedLocation(storedAddress);
-        onLocationChange?.(storedAddress);
-        return;
+      try {
+        await connection.start();
+        console.log("✅ SignalR Connected");
+        connection.on("NewNotification", async (data) => {
+          console.log("📩 New notification received:", data);
+          // ⭐ Refresh notification list
+          await fetchNotiCounts();
+        });
+        connection.onclose(() => {
+          console.log("⚠️ SignalR Disconnected");
+        });
+      } catch (err) {
+        console.log("❌ SignalR connection error:", err);
       }
+    };
+    setupSignalR();
 
-      // ⭐ Try getting GPS location
-      const addr = await getCurrentAddress();
+    return () => {
+      if (connection) connection.stop();
+    };
+  }, [patientId, isHomePage]);
 
-      if (addr) {
-        setSelectedLocation(addr);
-        onLocationChange?.(addr);
-      } else {
-        // ⭐ If permission denied or GPS failed
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        // ⭐ Check saved address first
+        const storedAddress = await AsyncStorage.getItem("userAddress");
+
+        if (storedAddress) {
+          setSelectedLocation(storedAddress);
+          onLocationChange?.(storedAddress);
+          return;
+        }
+
+        // ⭐ Try getting GPS location
+        const addr = await getCurrentAddress();
+
+        if (addr) {
+          setSelectedLocation(addr);
+          onLocationChange?.(addr);
+        } else {
+          // ⭐ If permission denied or GPS failed
+          setSelectedLocation("Select your address");
+          setLocationVisible(true);
+        }
+      } catch (error) {
+        console.log("Location load error:", error);
+
+        // ⭐ fallback to manual location selection
         setSelectedLocation("Select your address");
         setLocationVisible(true);
       }
+    };
 
-    } catch (error) {
-      console.log("Location load error:", error);
+    fetchAddress();
+  }, []);
 
-      // ⭐ fallback to manual location selection
-      setSelectedLocation("Select your address");
-      setLocationVisible(true);
-    }
-  };
+  const [latLng, setLatLng] = useState<{
+    latitude: string;
+    longitude: string;
+  } | null>(null);
 
-  fetchAddress();
-}, []);
-
-      const [latLng, setLatLng] = useState<{ latitude: string; longitude: string } | null>(null);
-
-      // Fetch lat/lng from AsyncStorage
-      useEffect(() => {
-        const getLatLng = async () => {
-          const stored = await AsyncStorage.getItem('userLocationLatLng');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            setLatLng(parsed);
-          }
-        };
-        getLatLng();
-      }, [selectedLocation]);
+  // Fetch lat/lng from AsyncStorage
+  useEffect(() => {
+    const getLatLng = async () => {
+      const stored = await AsyncStorage.getItem("userLocationLatLng");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setLatLng(parsed);
+      }
+    };
+    getLatLng();
+  }, [selectedLocation]);
 
   // useEffect(() => {
   //   setSelectedLocation(address);
   // }, [address]);
 
   const handleProfilePress = () => {
-    console.log('Profile button pressed');
+    console.log("Profile button pressed");
     setProfileVisible(true);
     if (onProfilePress) {
       onProfilePress();
@@ -227,12 +228,12 @@ useEffect(() => {
     if (onNotificationPress) {
       onNotificationPress();
     } else {
-      console.log('Notification pressed');
+      console.log("Notification pressed");
     }
   };
 
   const handleCartPress = () => {
-    console.log('Cart button pressed');
+    console.log("Cart button pressed");
     // setCartVisible(true);
     if (onCartPress) {
       onCartPress();
@@ -240,26 +241,26 @@ useEffect(() => {
   };
 
   const handleLocationPress = () => {
-    console.log('Location pressed');
+    console.log("Location pressed");
     setLocationVisible(true);
   };
 
-const handleLocationSelected = async (locationData: any) => {
-  const locationString = `${locationData.address}, ${locationData.houseNumber}`;
-  setSelectedLocation(locationString);
-  await AsyncStorage.setItem("userAddress", locationString);
-  onLocationChange?.(locationString);
-  setLocationVisible(false); // ⭐ close modal
-};
+  const handleLocationSelected = async (locationData: any) => {
+    const locationString = `${locationData.address}, ${locationData.houseNumber}`;
+    setSelectedLocation(locationString);
+    await AsyncStorage.setItem("userAddress", locationString);
+    onLocationChange?.(locationString);
+    setLocationVisible(false); // ⭐ close modal
+  };
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
   let mandal = selectedLocation;
-  let rest = '';
-  if (selectedLocation && selectedLocation.includes(',')) {
-    const parts = selectedLocation.split(',');
+  let rest = "";
+  if (selectedLocation && selectedLocation.includes(",")) {
+    const parts = selectedLocation.split(",");
     mandal = parts[0].trim();
-    rest = parts.slice(1).join(',').trim();
+    rest = parts.slice(1).join(",").trim();
   }
   if (isHomePage) {
     // Split the address at the first comma
@@ -278,16 +279,24 @@ const handleLocationSelected = async (locationData: any) => {
                   source={{ uri: profileForm.image }}
                   style={styles.profileIcon}
                 />
-              ) : profileForm?.gender === 'Female' ? (
+              ) : profileForm?.gender === "Female" ? (
                 <WomenIcon width={40} height={40} style={styles.profileIcon} />
               ) : (
                 <MenIcon width={40} height={40} style={styles.profileIcon} />
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
+            <TouchableOpacity
+              style={styles.locationInfo}
+              onPress={handleLocationPress}
+            >
               <View style={styles.locationhead}>
-                <Text style={styles.homeLocationText}>{mandal} &nbsp;<images.icons.location style={styles.locationIcon} /></Text>
-                {rest ? <Text style={styles.homeLocationSubtext}>{rest} </Text> : null}
+                <Text style={styles.homeLocationText}>
+                  {mandal} &nbsp;
+                  <images.icons.location style={styles.locationIcon} />
+                </Text>
+                {rest ? (
+                  <Text style={styles.homeLocationSubtext}>{rest} </Text>
+                ) : null}
               </View>
             </TouchableOpacity>
           </View>
@@ -297,7 +306,7 @@ const handleLocationSelected = async (locationData: any) => {
             onPress={handleNotificationPress}
           >
             <images.notification_bell_svg style={styles.notificationIcon} />
-             {count > 0 && (
+            {count > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>{count}</Text>
               </View>
@@ -326,7 +335,6 @@ const handleLocationSelected = async (locationData: any) => {
       </>
     );
   }
-               
 
   // Default style for other pages (like lab-tests)
   return (
@@ -343,7 +351,7 @@ const handleLocationSelected = async (locationData: any) => {
                   source={{ uri: profileForm.image }}
                   style={styles.profileIcon}
                 />
-              ) : profileForm?.gender === 'Female' ? (
+              ) : profileForm?.gender === "Female" ? (
                 <WomenIcon width={40} height={40} style={styles.profileIcon} />
               ) : (
                 <MenIcon width={40} height={40} style={styles.profileIcon} />
@@ -351,23 +359,31 @@ const handleLocationSelected = async (locationData: any) => {
             </TouchableOpacity>
           )}
           {showLocation ? (
-            <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
+            <TouchableOpacity
+              style={styles.locationInfo}
+              onPress={handleLocationPress}
+            >
               <View style={styles.locationhead}>
-                <Text style={styles.locationText}>{mandal} &nbsp;<images.icons.location style={[styles.locationIcon]} stroke={'#000000'} /></Text>
-                {rest ? <Text style={styles.sublocationText}>{rest}</Text> : null}
+                <Text style={styles.locationText}>
+                  {mandal} &nbsp;
+                  <images.icons.location
+                    style={[styles.locationIcon]}
+                    stroke={"#000000"}
+                  />
+                </Text>
+                {rest ? (
+                  <Text style={styles.sublocationText}>{rest}</Text>
+                ) : null}
               </View>
             </TouchableOpacity>
-
-
-          ) : (
-            title ? <Text style={[styles.locationText, { marginLeft: 8 }]}>{title}</Text> : null
-          )}
+          ) : title ? (
+            <Text style={[styles.locationText, { marginLeft: 8 }]}>
+              {title}
+            </Text>
+          ) : null}
         </View>
         {showCart && (
-          <TouchableOpacity
-            style={styles.cartButton}
-            onPress={handleCartPress}
-          >
+          <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
             <CartIcon style={styles.cartIcon} width={15} height={15} />
             {cartCount > 0 && (
               <View style={styles.cartBadge}>
@@ -384,10 +400,7 @@ const handleLocationSelected = async (locationData: any) => {
         onClose={() => setProfileVisible(false)}
       />
       {/* Cart Modal */}
-      <CartModal
-        visible={cartVisible}
-        onClose={() => setCartVisible(false)}
-      />
+      <CartModal visible={cartVisible} onClose={() => setCartVisible(false)} />
       {/* Location Selection Modal */}
       <LocationSelection
         visible={locationVisible}
@@ -401,22 +414,22 @@ const handleLocationSelected = async (locationData: any) => {
 const styles = StyleSheet.create({
   // Home page styles
   homeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     // paddingLeft: getResponsiveSpacing(16),
     // paddingRight: getResponsiveSpacing(16),
     paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     // borderBottomWidth: 1,
     // borderBottomColor: '#39193d4d',
     zIndex: 1,
   },
   homeLocationText: {
     fontSize: getResponsiveFontSize(13),
-    fontWeight: '600',
-    color: 'white',
+    fontWeight: "600",
+    color: "white",
     marginBottom: getResponsiveSpacing(0),
     fontFamily: fonts.bold,
     lineHeight: 18,
@@ -424,38 +437,38 @@ const styles = StyleSheet.create({
 
   homeLocationSubtext: {
     fontSize: getResponsiveFontSize(12),
-    color: 'white',
-    fontFamily: fonts.regular
+    color: "white",
+    fontFamily: fonts.regular,
   },
 
   sublocationText: {
     fontSize: getResponsiveFontSize(12),
     fontFamily: fonts.regular,
-    color: '#000',
+    color: "#000",
   },
   notificationButton: {
     padding: getResponsiveSpacing(8),
   },
   notificationIcon: {
     ...getResponsiveImageSize(28, 28),
-    tintColor: 'white',
+    tintColor: "white",
   },
 
   // Default page styles (lab-tests style)
   defaultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     // paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     // borderBottomWidth: 1,
     // borderBottomColor: '#eee',
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     minWidth: 0,
   },
@@ -482,60 +495,60 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: getResponsiveFontSize(13),
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
     marginBottom: getResponsiveSpacing(0),
     fontFamily: fonts.bold,
     lineHeight: 18,
   },
   locationSubtext: {
     fontSize: getResponsiveFontSize(12),
-    color: '#666',
+    color: "#666",
     opacity: 0.8,
   },
   cartButton: {
     padding: getResponsiveSpacing(3),
-    backgroundColor: '#FED8EC',
+    backgroundColor: "#FED8EC",
     width: getResponsiveSpacing(30),
     height: getResponsiveSpacing(30),
     borderRadius: getResponsiveSpacing(15),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   cartIcon: {
     ...getResponsiveImageSize(28, 28),
   },
   cartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: getResponsiveSpacing(-8),
     right: getResponsiveSpacing(-2),
-    backgroundColor: '#FF4444',
+    backgroundColor: "#FF4444",
     borderRadius: getResponsiveSpacing(10),
     minWidth: getResponsiveSpacing(20),
     height: getResponsiveSpacing(20),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: getResponsiveSpacing(4),
   },
   cartBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: getResponsiveFontSize(9),
     fontFamily: fonts.bold,
   },
-    notificationBadge: {
-    position: 'absolute',
+  notificationBadge: {
+    position: "absolute",
     borderRadius: getResponsiveSpacing(10),
     top: getResponsiveSpacing(2),
     right: getResponsiveSpacing(0),
-    backgroundColor: '#C35E9C',
+    backgroundColor: "#C35E9C",
     minWidth: getResponsiveSpacing(20),
     height: getResponsiveSpacing(20),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: getResponsiveSpacing(2),
   },
   notificationBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: getResponsiveFontSize(10),
     fontFamily: fonts.bold,
   },

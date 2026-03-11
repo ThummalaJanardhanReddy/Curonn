@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -6,13 +6,19 @@ import {
   Text,
   Platform,
   Linking,
-  ScrollView
+  ScrollView,
 } from "react-native";
 import { fonts } from "@/app/shared/styles/fonts";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideoStore } from "@/src/store/VideoStore";
 import { signalRVideoService } from "@/src/api/SignalRVideoService";
 import { SafeAreaView } from "react-native-safe-area-context";
+import dayjs from "dayjs";
+import { colors } from "../../styles/commonStyles";
+import ApiRoutes from "@/src/api/employee/employee";
+import axiosClient from "@/src/api/axiosClient";
+import { IPatientReport, S3Link } from "@/src/constants/constants";
+import PrimaryButton from "../PrimaryButton";
 
 interface Props {
   orderDetails: any;
@@ -38,14 +44,27 @@ export default function VideoOrderDetails({
   const data = orderDetails?.data || {};
   const doctorAssigned = !!data.doctorName;
   const { status, roomUrl } = useVideoStore();
+  const [report, setReport] = useState();
 
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
-    const d = new Date(data.scheduleDate);
-    return `${String(d.getDate()).padStart(2, "0")}-${String(
-      d.getMonth() + 1,
-    ).padStart(2, "0")}-${d.getFullYear()}`;
+    return dayjs(data.scheduleDate).format("DD-MM-YYYY HH:mm:ss");
   }, [data.scheduleDate]);
+
+  const fetchReportInfo = useCallback(async () => {
+    if (!data) return;
+    try {
+      const response = await axiosClient.get(
+        ApiRoutes.PatientReports.getAllReports(data.patientId, 5),
+      ); // 5 : prescription catogery id
+      console.log("reports: ", response);
+
+      if (response) {
+        const record = response?.filter((m) => (m.typeId = data.appointmentId));
+        setReport(record[0].filePath);
+      }
+    } catch (error) {}
+  }, [data?.appointmentId]);
 
   useEffect(() => {
     if (!data?.patientId) return;
@@ -53,8 +72,9 @@ export default function VideoOrderDetails({
       await signalRVideoService.connect(data.patientId);
     };
     initialize();
+    fetchReportInfo();
   }, [data]);
-  const joinDisabled = data.videoRoomUrl === "" || status !== "ready";
+  const joinDisabled = data.videoRoomUrl === ""; // || status !== "ready";
   // data.videoRoomUrl === "" || data.statusName !== "Accepted";
   const cancelDisabled = doctorAssigned;
   const InfoRow = ({ label, value }: { label: string; value?: string }) => {
@@ -72,62 +92,32 @@ export default function VideoOrderDetails({
     if (data?.videoRoomUrl) Linking.openURL(data.videoRoomUrl);
   };
 
+  const handleViewPrescription = () => {
+    if (report) Linking.openURL(report);
+  };
+
   return (
-    
-      <View style={styles.container}>
-        {/* SERVICE INFORMATION */}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Information</Text>
+    <View style={styles.container}>
+      {/* SERVICE INFORMATION */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Information</Text>
 
-            <View style={styles.infoCard}>
-              {/* Left Icon */}
-              <View style={styles.serviceImageContainer}>
-                <Ionicons name="videocam" size={22} color="#3B5BDB" />
-              </View>
-
-              {/* Center Content */}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoTitle}>
-                  {data.speciality || "General Consultation"}
-                </Text>
-
-                {/* Description */}
-                <Text style={styles.departmentDescription}>
-                  {data.symptoms
-                    ? `Symptoms: ${data.symptoms}`
-                    : "Consultation with certified specialist doctors."}
-                </Text>
-
-                {/* Consultation Type Badge */}
-                <View style={styles.consultTypeBadge}>
-                  <Text style={styles.consultTypeText}>
-                    {data.scheduleTypeName || "Video Consultation"}
-                  </Text>
-                </View>
-
-                {/* Booking ID */}
-                <Text style={styles.bookingIdText}>
-                  Booking ID: {data.bookingId}
-                </Text>
-              </View>
-
-              {/* Right Side Status Badge */}
-              <View style={styles.statusBadgeContainer}>
-                <Text style={styles.statusBadgeText}>{data.statusName}</Text>
-              </View>
+          <View style={styles.infoCard}>
+            {/* Left Icon */}
+            <View style={styles.serviceImageContainer}>
+              <Ionicons name="videocam" size={22} color="#3B5BDB" />
             </View>
-        
-            {/* ---------------- Doctor Information ---------------- */}
-            <Text style={styles.sectionTitle}>Doctor Information</Text>
-            <View style={styles.card}>
+
+            {/* Center Content */}
+            <View style={{ flex: 1 }}>
               {data.doctorId && data.doctorId !== 0 ? (
                 <>
                   <Text style={styles.primaryText}>{data.doctorName}</Text>
 
-                  <Text style={styles.secondaryText}>
-                    {data.speciality || "Speciality not available"}
-                  </Text>
+                  {data.speciality && (
+                    <Text style={styles.secondaryText}>{data.speciality}</Text>
+                  )}
                 </>
               ) : (
                 <>
@@ -139,58 +129,105 @@ export default function VideoOrderDetails({
                   </Text>
                 </>
               )}
-            </View>
 
+              <Text style={styles.infoTitle}>
+                {data.speciality || "General Consultation"}
+              </Text>
 
-            {/* ---------------- Consultation Date & Time ---------------- */}
-            <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
-            <View style={styles.card}>
-              <Text style={styles.label}>Selected Date</Text>
-              <View style={styles.disabledInput}>
-                <Text style={styles.value}>{formattedDate}</Text>
+              {/* Description */}
+              {/* <Text style={styles.departmentDescription}>
+                {data.symptoms
+                  ? `Symptoms: ${data.symptoms}`
+                  : "Consultation with certified specialist doctors."}
+              </Text> */}
+
+              {/* Consultation Type Badge */}
+              <View style={styles.consultTypeBadge}>
+                <Text style={styles.consultTypeText}>
+                  {data.scheduleTypeName || "Video Consultation"}
+                </Text>
               </View>
 
-              <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
-              <View style={styles.disabledInput}>
-                <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
+              <View style={{ paddingVertical: 10 }}>
+                <Text style={[styles.label, { color: colors.black }]}>
+                  Scheduled On:
+                </Text>
+                <Text style={styles.label}>{formattedDate}</Text>
               </View>
-            </View>
 
-            {/* ---------------- Patient Details ---------------- */}
-            <Text style={styles.sectionTitle}>Patient Details</Text>
-            <View style={styles.card}>
-              <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
-              <Text style={styles.secondaryText}>
-                {[
-                  data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
-                  data.relationGender ? data.relationGender : data.patientGender,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "N/A"}
+              {/* Booking ID */}
+              <Text style={styles.bookingIdText}>
+                Booking ID: {data.bookingId}
               </Text>
             </View>
 
-            {/* ---------------- Prescription Section ---------------- */}
-            {data.prescription && (
-              <>
-                <Text style={styles.sectionTitle}>Prescription</Text>
-                <View style={styles.card}>
-                  <Text style={styles.value}>{data.prescription}</Text>
-                </View>
-              </>
-            )}
+            {/* Right Side Status Badge */}
+            <View style={styles.statusBadgeContainer}>
+              <Text style={styles.statusBadgeText}>{data.statusName}</Text>
+            </View>
+          </View>
 
-      {/* ---------------- Join Call Button ---------------- */}
-      {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
-        style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
-        disabled={joinDisabled}
-        onPress={handleJoinCall}
-      >
-        <Text style={styles.primaryButtonText}>Join Video Call</Text>
-      </TouchableOpacity>}
-      </View>
-      {/* ---------------- Reschedule & Cancel ---------------- */}
-      {/* <View style={styles.rowButtons}>
+          {/* ---------------- Patient Details ---------------- */}
+          <Text style={styles.sectionTitle}>Patient Details</Text>
+          <View style={styles.card}>
+            <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
+            <Text style={styles.secondaryText}>
+              {[
+                data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
+                data.relationGender ? data.relationGender : data.patientGender,
+              ]
+                .filter(Boolean)
+                .join(", ") || "N/A"}
+            </Text>
+            {data?.symptoms && (
+              <Text style={styles.secondaryText}>{data.symptoms}</Text>
+            )}
+          </View>
+
+          {/* ---------------- Prescription Section ---------------- */}
+          {data.prescription && (
+            <>
+              <Text style={styles.sectionTitle}>Prescription</Text>
+              <View style={styles.card}>
+                <Text style={styles.value}>{data.prescription}</Text>
+              </View>
+            </>
+          )}
+          {report && (
+            <>
+              <PrimaryButton
+                title="View Prescription"
+                onPress={handleViewPrescription}
+                style={{
+                  paddingHorizontal: 40,
+                  width: "auto",
+                  height: 38,
+                  backgroundColor: "transparent",
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                }}
+                textStyle={{ color: colors.primary }}
+              />
+            </>
+          )}
+
+          {/* ---------------- Join Call Button ---------------- */}
+          {data?.scheduleTypeName == "Video Consultation" &&
+            data?.statusName !== "Completed" && (
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  joinDisabled && styles.disabledButton,
+                ]}
+                disabled={joinDisabled}
+                onPress={handleJoinCall}
+              >
+                <Text style={styles.primaryButtonText}>Join Video Call</Text>
+              </TouchableOpacity>
+            )}
+        </View>
+        {/* ---------------- Reschedule & Cancel ---------------- */}
+        {/* <View style={styles.rowButtons}>
         <TouchableOpacity style={styles.outlineButton} onPress={onReschedule}>
           <Text style={styles.outlineButtonText}>Reschedule</Text>
         </TouchableOpacity>
@@ -214,49 +251,38 @@ export default function VideoOrderDetails({
         </TouchableOpacity>
       </View> */}
 
-          {/* ---------------- Book Again ---------------- */}
-          {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
+        {/* ---------------- Book Again ---------------- */}
+        {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-        </ScrollView>
-      </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgba(245, 244, 249, 1)"
+    backgroundColor: "rgba(245, 244, 249, 1)",
   },
 
   sectionTitle: {
     fontSize: 15,
     color: "#000",
     fontFamily: fonts.semiBold,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
     marginTop: 10,
   },
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
-    // ...Platform.select({
-    //   ios: {
-    //     shadowColor: "#000",
-    //     shadowOpacity: 0.05,
-    //     shadowRadius: 6,
-    //     shadowOffset: { width: 0, height: 3 },
-    //   },
-    //   android: { elevation: 2 },
-    // }),
-    
-     
     borderWidth: 1,
-    borderColor: '#E1E8F1',
+    borderColor: "#d1d1d2",
     marginBottom: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   primaryText: {
@@ -296,7 +322,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
-    marginTop:5,
+    marginTop: 5,
   },
 
   primaryButtonText: {
@@ -363,7 +389,7 @@ const styles = StyleSheet.create({
   primaryTextPending: {
     fontSize: 15,
     fontFamily: fonts.semiBold,
-    color: "#B91C1C",
+    // color: "#B91C1C",
   },
   infoRow: {
     marginBottom: 14,
@@ -382,12 +408,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 16,
     alignItems: "flex-start",
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderColor: "#d1d1d2",
     borderWidth: 1,
-    borderColor: '#E1E8F1',
     marginBottom: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   serviceImageContainer: {
