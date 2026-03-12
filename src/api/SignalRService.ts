@@ -77,6 +77,7 @@ class SignalRService {
     this.connection.on("ChatAccepted", (response) => {
       console.log("Chat accepted: ", response);
       useChatStore.getState().setChatStatus("connected");
+      useChatStore.getState().setChatEnabled(true);
       useChatStore.getState().setChatAcceptDetails(response);
     });
     /**
@@ -153,6 +154,13 @@ class SignalRService {
       console.log("ChatEnded");
       useChatStore.getState().endChat("Consultation ended");
     });
+
+    this.connection.on("ConsultationCompleted", ()=>{
+      console.log('Consultation completed');
+      // useChatStore.getState().setChatStatus('ended');
+      useChatStore.getState().setChatEnabled(false);
+      // useChatStore.getState().endChat('Consultation Completed');
+    })
 
     /**
      * CONNECTION EVENTS

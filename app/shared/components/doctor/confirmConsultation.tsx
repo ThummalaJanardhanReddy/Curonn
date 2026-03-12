@@ -38,10 +38,15 @@ import { navigate } from "expo-router/build/global-state/routing";
 import { useVideoStore } from "@/src/store/VideoStore";
 
 const SLOT_GROUPS = {
-  morning: ["09:00 AM", "09:30 AM", "10:00 AM"],
-  afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
-  evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
+  morning: ["08:00 AM", "09:30 AM"],
+  afternoon: ["12:00 PM", "05:00 PM"],
+  evening: ["05:00 PM", "08:00 PM"],
 };
+const labTimeSlots = [
+  "08:00 AM - 12:00 PM",
+  "12:00 PM - 05:00 PM",
+  "05:00 PM - 08:00 PM",
+];
 const familyRelationTypeId = 5;
 
 export interface IFamilyMember {
@@ -58,6 +63,11 @@ export interface IFamilyMember {
   createdOn: string;
 }
 
+const AppointmentStatusCodes = {
+  pending: 2709,
+  requested: 2867,
+};
+
 export default function ConfirmConsultationScreen() {
   const {
     departmentName,
@@ -67,6 +77,7 @@ export default function ConfirmConsultationScreen() {
     patientId,
     setPatient,
     departmentId,
+    departmentImage,
     slotId,
     consultationType,
     consultationTypeId,
@@ -243,7 +254,6 @@ export default function ConfirmConsultationScreen() {
     return hasError;
   };
   const handleConfirm = async () => {
-    // console.log("Confirm Consultation");
     if (!user) return;
     if (validateFields()) return;
     try {
@@ -262,7 +272,7 @@ export default function ConfirmConsultationScreen() {
 
         scheduleTypeId: consultationTypeId || 1340,
         scheduledBy: user.eId,
-        statusId: 2867,
+        statusId: AppointmentStatusCodes.pending,
         createdBy: user.eId,
         symptoms: symptoms?.join(",") || "",
         ...(patientType === "others" && {
@@ -334,7 +344,7 @@ export default function ConfirmConsultationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, {paddingTop: insets.top, paddingBottom: insets.bottom}]}>
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Confirm Order</Text>
@@ -350,12 +360,14 @@ export default function ConfirmConsultationScreen() {
 
           <View style={styles.infoCard}>
             <View style={styles.serviceImageContainer}>
-              <Ionicons
-                name={
-                  consultationTypeId === 1339 ? "videocam" : "phone-portrait"
-                }
-                size={24}
-                color="#3B5BDB"
+              <Image
+                defaultSource={{
+                  uri: `https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop`,
+                }}
+                source={{
+                  uri: departmentImage,
+                }}
+                style={styles.specialistImage}
               />
             </View>
 
@@ -370,7 +382,7 @@ export default function ConfirmConsultationScreen() {
               {/* Consultation Type Badge */}
               <View style={styles.consultTypeBadge}>
                 <Text style={styles.consultTypeText}>
-                  {consultationType?.toUpperCase()} Consultation
+                  {consultationType} Consultation
                 </Text>
               </View>
             </View>
@@ -393,7 +405,9 @@ export default function ConfirmConsultationScreen() {
                 }}
                 onPress={handleServiceEdit}
               >
-                <Text style={{ fontSize: 14 }}>Edit</Text>
+                <Text style={{ fontSize: 14, color: colors.primary }}>
+                  Edit
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -454,39 +468,29 @@ export default function ConfirmConsultationScreen() {
             <View style={styles.timeSection}>
               <Text style={styles.fieldLabel}>Select Time Slot</Text>
               <View style={styles.timeSlotsContainer}>
-                <View style={{ marginTop: 20 }}>
-                  {Object.entries(SLOT_GROUPS).map(([group, times]) => (
-                    <View key={group} style={{ marginBottom: 16 }}>
-                      <Text style={styles.slotGroupTitle}>
-                        {group.toUpperCase()}
-                      </Text>
-
-                      <View style={styles.chipContainer}>
-                        {times.map((time) => (
-                          <TouchableOpacity
-                            key={time}
-                            style={[
-                              styles.slotChip,
-                              selectedSlot === time && styles.selectedSlotChip,
-                            ]}
-                            onPress={() => handleSlotSelect(time)}
-                          >
-                            <Text
-                              style={[
-                                styles.slotText,
-                                selectedSlot === time && {
-                                  color: "#fff",
-                                },
-                              ]}
-                            >
-                              {time}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  ))}
-                </View>
+                {labTimeSlots.map((slot, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.timeSlot,
+                      selectedSlot === slot && styles.selectedTimeSlot,
+                    ]}
+                    onPress={() => {
+                      setSelectedSlot(slot);
+                      if (errors === "Please select time slot") setErrors("");
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.timeSlotText,
+                        selectedSlot === slot && styles.selectedTimeSlotText,
+                      ]}
+                    >
+                      {slot}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {/* </View> */}
               </View>
               {errors === "Please select time slot" && (
                 <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
@@ -496,26 +500,6 @@ export default function ConfirmConsultationScreen() {
             </View>
           </View>
         </View>
-        {/* CONSULT FOR */}
-        {/* <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Consult For</Text>
-
-          <TouchableOpacity
-            style={styles.infoCard}
-            onPress={() => setFamilyModalVisible(true)}
-          >
-            <View style={styles.serviceImageContainer}>
-              <Ionicons name="person" size={22} color="#3B5BDB" />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>{selectedMember?.name}</Text>
-              <Text style={styles.infoSubtitle}>Family Member</Text>
-            </View>
-
-            <Text style={styles.changeText}>Change</Text>
-          </TouchableOpacity>
-        </View> */}
 
         {/* Patient Details */}
         <View style={styles.section}>
@@ -693,12 +677,14 @@ export default function ConfirmConsultationScreen() {
       </ScrollView>
 
       {/* CONFIRM BUTTON */}
-      <TouchableOpacity
-        style={[styles.confirmButton, { bottom: insets.bottom + 20 }]}
-        onPress={handleConfirm}
-      >
-        <Text style={styles.confirmText}>Confirm Consultation</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <PrimaryButton
+          title="Confirm"
+          onPress={handleConfirm}
+          style={styles.proceedButton}
+        />
+      </View>
+
       {/* Toast Notification */}
 
       {/* Relation Type Dropdown Modal */}
@@ -766,7 +752,6 @@ export default function ConfirmConsultationScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* FAMILY BOTTOM MODAL */}
       <Modal visible={familyModalVisible} animationType="slide" transparent>
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -838,14 +823,14 @@ export default function ConfirmConsultationScreen() {
         type={"success"}
         onHide={() => setShowConfirm(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: '#fff', // colors.bg_primary,
   },
 
   /* HEADER */
@@ -855,7 +840,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    // backgroundColor: "#fff",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#EAEAEA",
   },
@@ -868,11 +853,12 @@ const styles = StyleSheet.create({
   scrollContainer: {
     padding: 16,
     paddingBottom: 120,
+    backgroundColor: colors.bg_primary
   },
 
   /* SECTION */
   section: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
 
   sectionTitle: {
@@ -886,35 +872,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderColor: "#d1d1d2",
+    borderWidth: 1,
   },
-
-  // label: {
-  //   fontSize: 13,
-  //   color: "#888",
-  //   marginTop: 10,
-  // },
-  // value: {
-  //   fontSize: 15,
-  //   fontWeight: "500",
-  //   marginTop: 4,
-  // },
-
-  /* CONSULT FOR */
-  // consultBox: {
-  //   flexDirection: "row",
-  //   justifyContent: "space-between",
-  //   alignItems: "center",
-  //   backgroundColor: "#fff",
-  //   padding: 14,
-  //   borderRadius: 10,
-  //   borderWidth: 1,
-  //   borderColor: "#E5E7EB",
-  // },
 
   /* CONFIRM BUTTON */
   confirmButton: {
@@ -926,7 +886,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 3,
+    // elevation: 3,
   },
   confirmText: {
     color: "#fff",
@@ -1031,19 +991,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 14,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderColor: "#d1d1d2",
+    borderWidth: 1,
+    // elevation: 3,
+    // shadowColor: "#000",
+    // shadowOpacity: 0.06,
+    // shadowRadius: 8,
+    // shadowOffset: { width: 0, height: 4 },
   },
   serviceImageContainer: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
     borderRadius: 12,
     backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
+    alignSelf: "flex-start",
     marginRight: 14,
   },
 
@@ -1154,9 +1115,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#dbdbdb",
+    // borderWidth: 1,
+    // borderColor: "#dbdbdb",
     marginBottom: getResponsiveSpacing(5),
+    borderColor: "#d1d1d2",
+    borderWidth: 1,
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1173,7 +1136,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "400",
     color: "#333",
-    marginBottom: 3,
+    marginBottom: 1,
     fontFamily: fonts.medium,
   },
   dateInput: {
@@ -1343,5 +1306,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     fontFamily: fonts.regular,
+  },
+  buttonContainer: {
+    position: "absolute",
+    bottom: getResponsiveSpacing(60),
+    left: 0,
+    right: 0,
+    paddingHorizontal: getResponsiveSpacing(20),
+    // paddingBottom: getResponsiveSpacing(30),
+    // paddingTop: getResponsiveSpacing(15),
+    backgroundColor: colors.bg_primary,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    alignItems: "center",
+  },
+  proceedButton: {
+    borderRadius: getResponsiveSpacing(23),
+    height: getResponsiveSpacing(45),
+    width: "100%",
+  },
+
+  timeSlot: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    color: "#333",
+    fontFamily: fonts.regular,
+  },
+  selectedTimeSlot: {
+    backgroundColor: "#C15E9C",
+    borderColor: "#C15E9C",
+  },
+  timeSlotText: {
+    fontSize: 11,
+    color: "#333",
+    fontFamily: fonts.regular,
+  },
+  selectedTimeSlotText: {
+    color: "#fff",
+  },
+  specialistImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
 });

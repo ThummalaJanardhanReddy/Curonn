@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -6,13 +6,19 @@ import {
   Text,
   Platform,
   Linking,
-  ScrollView
+  ScrollView,
 } from "react-native";
 import { fonts } from "@/app/shared/styles/fonts";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideoStore } from "@/src/store/VideoStore";
 import { signalRVideoService } from "@/src/api/SignalRVideoService";
 import { SafeAreaView } from "react-native-safe-area-context";
+import dayjs from "dayjs";
+import { colors } from "../../styles/commonStyles";
+import ApiRoutes from "@/src/api/employee/employee";
+import axiosClient from "@/src/api/axiosClient";
+import { IPatientReport, S3Link } from "@/src/constants/constants";
+import PrimaryButton from "../PrimaryButton";
 
 interface Props {
   orderDetails: any;
@@ -38,6 +44,7 @@ export default function VideoOrderDetails({
   const data = orderDetails?.data || {};
   const doctorAssigned = !!data.doctorName;
   const { status, roomUrl } = useVideoStore();
+  const [report, setReport] = useState();
 
   const statusColors: { [key: string]: string } = {
     Requested: "#d0eaff",
@@ -62,10 +69,7 @@ export default function VideoOrderDetails({
 
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
-    const d = new Date(data.scheduleDate);
-    return `${String(d.getDate()).padStart(2, "0")}-${String(
-      d.getMonth() + 1,
-    ).padStart(2, "0")}-${d.getFullYear()}`;
+    return dayjs(data.scheduleDate).format("DD-MM-YYYY HH:mm:ss");
   }, [data.scheduleDate]);
 
   // Get status color and text color based on statusName
@@ -73,14 +77,30 @@ export default function VideoOrderDetails({
   const badgeBgColor = statusColors[statusKey] || "#FFF4E5";
   const badgeTextColor = statusTextColors[statusKey] || "#D97706";
 
+  const fetchReportInfo = useCallback(async () => {
+    if (!data) return;
+    try {
+      const response = await axiosClient.get(
+        ApiRoutes.PatientReports.getAllReports(data.patientId, 5),
+      ); // 5 : prescription catogery id
+      console.log("reports: ", response);
+
+      if (response) {
+        const record = response?.filter((m) => (m.typeId = data.appointmentId));
+        setReport(record[0].filePath);
+      }
+    } catch (error) {}
+  }, [data?.appointmentId]);
+
   useEffect(() => {
     if (!data?.patientId) return;
     const initialize = async () => {
       await signalRVideoService.connect(data.patientId);
     };
     initialize();
+    fetchReportInfo();
   }, [data]);
-  const joinDisabled = data.videoRoomUrl === "" || status !== "ready";
+  const joinDisabled = data.videoRoomUrl === ""; // || status !== "ready";
   // data.videoRoomUrl === "" || data.statusName !== "Accepted";
   const cancelDisabled = doctorAssigned;
   const InfoRow = ({ label, value }: { label: string; value?: string }) => {
@@ -98,8 +118,11 @@ export default function VideoOrderDetails({
     if (data?.videoRoomUrl) Linking.openURL(data.videoRoomUrl);
   };
 
-  return (
+  const handleViewPrescription = () => {
+    if (report) Linking.openURL(report);
+  };
 
+  return (
     <View style={styles.container}>
       {/* SERVICE INFORMATION */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -111,25 +134,56 @@ export default function VideoOrderDetails({
             <View style={styles.serviceImageContainer}>
               <Ionicons name="videocam" size={22} color="#3B5BDB" />
             </View>
+          <View style={styles.infoCard}>
+            {/* Left Icon */}
+            <View style={styles.serviceImageContainer}>
+              <Ionicons name="videocam" size={22} color="#3B5BDB" />
+            </View>
 
             {/* Center Content */}
             <View style={{ flex: 1 }}>
+              {data.doctorId && data.doctorId !== 0 ? (
+                <>
+                  <Text style={styles.primaryText}>{data.doctorName}</Text>
+
+                  {data.speciality && (
+                    <Text style={styles.secondaryText}>{data.speciality}</Text>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.primaryTextPending}>
+                    Doctor Not Assigned Yet
+                  </Text>
+                  <Text style={styles.secondaryText}>
+                    You will be notified once a doctor is assigned.
+                  </Text>
+                </>
+              )}
+
               <Text style={styles.infoTitle}>
                 {data.speciality || "General Consultation"}
               </Text>
 
               {/* Description */}
-              <Text style={styles.departmentDescription}>
+              {/* <Text style={styles.departmentDescription}>
                 {data.symptoms
                   ? `Symptoms: ${data.symptoms}`
                   : "Consultation with certified specialist doctors."}
-              </Text>
+              </Text> */}
 
               {/* Consultation Type Badge */}
               <View style={styles.consultTypeBadge}>
                 <Text style={styles.consultTypeText}>
                   {data.scheduleTypeName || "Video Consultation"}
                 </Text>
+              </View>
+
+              <View style={{ paddingVertical: 10 }}>
+                <Text style={[styles.label, { color: colors.black }]}>
+                  Scheduled On:
+                </Text>
+                <Text style={styles.label}>{formattedDate}</Text>
               </View>
 
               {/* Booking ID */}
@@ -139,48 +193,8 @@ export default function VideoOrderDetails({
             </View>
 
             {/* Right Side Status Badge */}
-            <View style={[styles.statusBadgeContainer, { backgroundColor: badgeBgColor }]}>
-              <Text style={[styles.statusBadgeText, { color: badgeTextColor }]}>
-                {data.statusName === "Requested" ? "Pending" : data.statusName}
-              </Text>
-            </View>
-          </View>
-
-          {/* ---------------- Doctor Information ---------------- */}
-          <Text style={styles.sectionTitle}>Doctor Information</Text>
-          <View style={styles.card}>
-            {data.doctorId && data.doctorId !== 0 ? (
-              <>
-                <Text style={styles.primaryText}>{data.doctorName}</Text>
-
-                <Text style={styles.secondaryText}>
-                  {data.speciality || "Speciality not available"}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.primaryTextPending}>
-                  Doctor Not Assigned Yet
-                </Text>
-                <Text style={styles.secondaryText}>
-                  You will be notified once a doctor is assigned.
-                </Text>
-              </>
-            )}
-          </View>
-
-
-          {/* ---------------- Consultation Date & Time ---------------- */}
-          <Text style={styles.sectionTitle}>Consultation Date & Time</Text>
-          <View style={styles.card}>
-            <Text style={styles.label}>Selected Date</Text>
-            <View style={styles.disabledInput}>
-              <Text style={styles.value}>{formattedDate}</Text>
-            </View>
-
-            <Text style={[styles.label, { marginTop: 12 }]}>Time Slot</Text>
-            <View style={styles.disabledInput}>
-              <Text style={styles.value}>{data.scheduleBetween || "N/A"}</Text>
+            <View style={styles.statusBadgeContainer}>
+              <Text style={styles.statusBadgeText}>{data.statusName}</Text>
             </View>
           </View>
 
@@ -196,6 +210,9 @@ export default function VideoOrderDetails({
                 .filter(Boolean)
                 .join(", ") || "N/A"}
             </Text>
+            {data?.symptoms && (
+              <Text style={styles.secondaryText}>{data.symptoms}</Text>
+            )}
           </View>
 
           {/* ---------------- Prescription Section ---------------- */}
@@ -207,15 +224,38 @@ export default function VideoOrderDetails({
               </View>
             </>
           )}
+          {report && (
+            <>
+              <PrimaryButton
+                title="View Prescription"
+                onPress={handleViewPrescription}
+                style={{
+                  paddingHorizontal: 40,
+                  width: "auto",
+                  height: 38,
+                  backgroundColor: "transparent",
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                }}
+                textStyle={{ color: colors.primary }}
+              />
+            </>
+          )}
 
           {/* ---------------- Join Call Button ---------------- */}
-          {(data?.scheduleTypeName == "Video Consultation" && data?.statusName !== 'Completed') && <TouchableOpacity
-            style={[styles.primaryButton, joinDisabled && styles.disabledButton]}
-            disabled={joinDisabled}
-            onPress={handleJoinCall}
-          >
-            <Text style={styles.primaryButtonText}>Join Video Call</Text>
-          </TouchableOpacity>}
+          {data?.scheduleTypeName == "Video Consultation" &&
+            data?.statusName !== "Completed" && (
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  joinDisabled && styles.disabledButton,
+                ]}
+                disabled={joinDisabled}
+                onPress={handleJoinCall}
+              >
+                <Text style={styles.primaryButtonText}>Join Video Call</Text>
+              </TouchableOpacity>
+            )}
         </View>
         {/* ---------------- Reschedule & Cancel ---------------- */}
         {/* <View style={styles.rowButtons}>
@@ -246,6 +286,8 @@ export default function VideoOrderDetails({
         {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
+     
+    </View>
       </ScrollView>
     </View>
   );
@@ -254,7 +296,7 @@ export default function VideoOrderDetails({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgba(245, 244, 249, 1)"
+    backgroundColor: "rgba(245, 244, 249, 1)",
   },
 
   sectionTitle: {
@@ -268,23 +310,12 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
-    // ...Platform.select({
-    //   ios: {
-    //     shadowColor: "#000",
-    //     shadowOpacity: 0.05,
-    //     shadowRadius: 6,
-    //     shadowOffset: { width: 0, height: 3 },
-    //   },
-    //   android: { elevation: 2 },
-    // }),
-
-
     borderWidth: 1,
-    borderColor: '#E1E8F1',
+    borderColor: "#d1d1d2",
     marginBottom: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   primaryText: {
@@ -324,6 +355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
+    marginTop: 5,
     marginTop: 5,
   },
 
@@ -391,7 +423,7 @@ const styles = StyleSheet.create({
   primaryTextPending: {
     fontSize: 15,
     fontFamily: fonts.semiBold,
-    color: "#B91C1C",
+    // color: "#B91C1C",
   },
   infoRow: {
     marginBottom: 14,
@@ -410,12 +442,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 16,
     alignItems: "flex-start",
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderColor: "#d1d1d2",
     borderWidth: 1,
-    borderColor: '#DBDBDB',
     marginBottom: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   serviceImageContainer: {

@@ -20,7 +20,7 @@ interface AnimatedTabsProps {
   onChange: (value: IConsultationType) => void;
 }
 
-const CONTAINER_PADDING = 4;
+const CONTAINER_PADDING = 0;
 
 export default function AnimatedTabs({
   tabs,
@@ -32,7 +32,7 @@ export default function AnimatedTabs({
 
   const activeIndex = useMemo(
     () => tabs.findIndex((t) => t.value === activeValue),
-    [tabs, activeValue]
+    [tabs, activeValue],
   );
 
   const usableWidth = containerWidth - CONTAINER_PADDING * 2;
@@ -44,7 +44,7 @@ export default function AnimatedTabs({
     if (tabWidth > 0 && activeIndex >= 0) {
       translateX.value = withTiming(
         activeIndex * tabWidth + CONTAINER_PADDING,
-        { duration: 250 }
+        { duration: 250 },
       );
     }
   }, [activeIndex, tabWidth]);
@@ -91,14 +91,23 @@ export default function AnimatedTabs({
         return (
           <TouchableOpacity
             key={tab.key}
-            style={styles.tab}
+            style={[
+              styles.tab,
+              {
+                // borderColor: isActive ? colors.white : "transparent",
+                // borderWidth: isActive ? 1 : 0,
+                // borderLeftWidth: 0,
+                // borderRightWidth: 0,
+                // marginVertical: isActive? 8: 0
+              },
+            ]}
             onPress={() => onChange(tab)}
           >
             <Text
               style={{
-                color: isActive
-                  ? colors.white
-                  : theme.colors.onSurface,
+                color: isActive ? colors.white : theme.colors.onSurface,
+
+                // marginVertical: isActive ? 4 : 0,
                 fontWeight: "600",
               }}
             >
@@ -114,20 +123,20 @@ export default function AnimatedTabs({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderRadius: 12,
+    borderRadius: 8,
     position: "relative",
   },
   tab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
     zIndex: 2,
   },
   indicator: {
     position: "absolute",
     top: CONTAINER_PADDING,
     bottom: CONTAINER_PADDING,
-    borderRadius: 10,
+    borderRadius: 8,
     zIndex: 1,
   },
 });
