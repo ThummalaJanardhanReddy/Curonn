@@ -80,13 +80,13 @@ export default function VideoOrderDetails({
   const fetchReportInfo = useCallback(async () => {
     if (!data) return;
     try {
-      const response = await axiosClient.get(
+      const response:any = await axiosClient.get(
         ApiRoutes.PatientReports.getAllReports(data.patientId, 5),
       ); // 5 : prescription catogery id
       console.log("reports: ", response);
 
       if (response) {
-        const record = response?.filter((m) => (m.typeId = data.appointmentId));
+        const record = response?.filter((m:any) => (m.typeId = data.appointmentId));
         setReport(record[0].filePath);
       }
     } catch (error) {}
@@ -355,7 +355,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
-    marginTop: 5,
     marginTop: 5,
   },
 
