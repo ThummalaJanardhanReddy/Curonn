@@ -103,7 +103,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
     };
 
-    
+
     const labTimeSlots =
         ["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM"];
     // Helper: get reports array from labReports (API)
@@ -158,15 +158,15 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [patientProfile, setPatientProfile] = useState<any>(null);
     const [patientId, setPatientId] = useState<number | null>(null);
     // Status color maps based on serviceName
-          useEffect(() => {
-    if (showRescheduleModal) {
-      // Reset data when the modal is opened
-      setSelectedDate(null);
-      setSelectedSlot(null);
-      setRescheduleReason('');
-      setErrors('');
-    }
-  }, [showRescheduleModal]);
+    useEffect(() => {
+        if (showRescheduleModal) {
+            // Reset data when the modal is opened
+            setSelectedDate(null);
+            setSelectedSlot(null);
+            setRescheduleReason('');
+            setErrors('');
+        }
+    }, [showRescheduleModal]);
     const handleMedDateChange = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === "ios");
         if (selectedDate) {
@@ -486,11 +486,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     minimumDate={new Date()}
                                 />
                             )}
-                             {errors === "Please select reschedule date" && (
-                            <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
-                                {errors}
-                            </Text>
-                        )}
+                            {errors === "Please select reschedule date" && (
+                                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                                    {errors}
+                                </Text>
+                            )}
                         </View>
 
                         <View style={styles.timeSection}>
@@ -609,9 +609,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     // Clear fields after success
                                     setRescheduleReason('');
                                     setSelectedSlot(null);
-            setSelectedDate(null);
-            setNewRescheduleDate('');
-            setErrors(""); // Clear errors
+                                    setSelectedDate(null);
+                                    setNewRescheduleDate('');
+                                    setErrors(""); // Clear errors
 
 
                                     setTimeout(() => {
