@@ -129,11 +129,7 @@ export default function VideoOrderDetails({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Information</Text>
 
-          <View style={styles.infoCard}>
-            {/* Left Icon */}
-            <View style={styles.serviceImageContainer}>
-              <Ionicons name="videocam" size={22} color="#3B5BDB" />
-            </View>
+          
           <View style={styles.infoCard}>
             {/* Left Icon */}
             <View style={styles.serviceImageContainer}>
@@ -287,7 +283,6 @@ export default function VideoOrderDetails({
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
      
-    </View>
       </ScrollView>
     </View>
   );

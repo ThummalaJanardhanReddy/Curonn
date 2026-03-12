@@ -210,13 +210,13 @@ export default function CommonHeader({
     setLocationVisible(true);
   };
 
-  const handleLocationSelected = async (locationData: any) => {
-    const locationString = `${locationData.address}, ${locationData.houseNumber}`;
-    setSelectedLocation(locationString);
-    await AsyncStorage.setItem("userAddress", locationString);
-    onLocationChange?.(locationString);
-    setLocationVisible(false); // ⭐ close modal
-  };
+const handleLocationSelected = async (locationData: any) => {
+  onLocationChange?.(locationData.address); // Pass the address to parent
+  console.log("Location selected in header:", locationData);
+  setSelectedLocation(locationData.address);
+  await AsyncStorage.setItem("userAddress", locationData.address);
+  setLocationVisible(false); // Close modal
+};
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
@@ -296,6 +296,8 @@ export default function CommonHeader({
           visible={locationVisible}
           onClose={handleLocationClose}
           onLocationSelected={handleLocationSelected}
+          isSimpleLocationSelect={true}
+           // Pass this prop to show simplified location selection
         />
       </>
     );
@@ -371,6 +373,7 @@ export default function CommonHeader({
         visible={locationVisible}
         onClose={handleLocationClose}
         onLocationSelected={handleLocationSelected}
+        isSimpleLocationSelect={true} // Pass this prop to show simplified location selection
       />
     </>
   );

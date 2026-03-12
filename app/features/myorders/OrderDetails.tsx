@@ -17,6 +17,7 @@ import Toast from "../../shared/components/Toast";
 import { colors } from "../..//shared/styles/commonStyles";
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 import { Linking } from 'react-native';
+import ChatConsultationDetails from "@/app/shared/components/doctor/ChatConsultationDetails";
 interface OrderDetailsProps {
     visible: boolean;
     order: any;
@@ -64,27 +65,14 @@ interface LabOrderDetails {
 
 
 function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsProps) {
+    // Helper: Resolve statusName from statusId if statusName is missing
+    const [statusName, setstatusName] = useState<string | null>(null);
+
     console.log("Order received in OrderDetails component:", order);
     const insets = useSafeAreaInsets();
 
     const handleCancelPress = () => {
         setShowCancelModal(true)
-
-        // Alert.alert(
-        //     "Cancel Order",
-        //     "Are you sure you want to cancel this order?",
-        //     [
-        //         {
-        //             text: "No",
-        //             onPress: () => console.log("Cancel Pressed"),
-        //             style: "cancel"
-        //         },
-        //         {
-        //             text: "Yes",
-        //             onPress: () => setShowCancelModal(true)
-        //         }
-        //     ]
-        // );
     };
     // PDF preview state
     const [pdfModalVisible, setPdfModalVisible] = useState(false);
@@ -201,6 +189,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         Rescheduled: "#bbecf3",
         "Admin Doctor": "#f7cdff",
     };
+
     const statusTextColors: { [key: string]: string } = {
         Requested: "#006cc5",
         Completed: "#4CAF50",
@@ -211,17 +200,31 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         Rescheduled: "#00BCD4",
         "Admin Doctor": "#9C27B0",
     };
-    // Use serviceName for color lookup, fallback to statusName, fallback to N/A
-    const statusKey = (order && (order.serviceName || order.statusName)) || "N/A";
+    //  console.log("Order statusName:", order?.statusName, "statusId:", order?.statusId);
+
+    // Null check and debug log for orderDetails.data
+    if (orderDetails && !orderDetails.data) {
+        console.error("orderDetails.data is null at statusKey assignment");
+    }
+    const statusKey = (order && (order.serviceName || order.statusName)) || (orderDetails && orderDetails.data ? orderDetails.data.statusName : "") || "";
     const statusColor = statusColors[statusKey] || "#666";
     const statusTextColor = statusTextColors[statusKey] || "#000";
+    //console.log("Status Color:", statusColor);
+    //console.log("Status Text Color:", statusTextColor);
+
     const selectedFile = orderDetails?.data?.prescriptions?.find(
         (p: any) => p.fileUrl === selectedPdfUrl
     );
 
+    const candocReschedule = ["Pending", "Inprogress", "Assigned"].includes(orderDetails.data.statusName);
+    const canReschedule = ["Requested", "Inprogress"].includes(orderDetails.data.statusName);
+    const canCancelMed = ["Requested", "Inprogress"].includes(orderDetails.data.statusName);
+    const canCompleted = ["Completed"].includes(orderDetails.data.statusName);
+    const canOngoing = ["Ongoing", "ongoing"].includes(orderDetails.data.statusName);
+
     const isImageFile = selectedFile?.mimeType?.startsWith("image");
     useEffect(() => {
-        console.log("Order in useEffect1:", order);
+        //  console.log("Order in useEffect1:", order);
         if (!order) return;
         console.log("Checking statusName and patientId:", order.statusName, order.patientId);
         setLoading(true);
@@ -240,7 +243,10 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             fetchMedicineOrderById(order.masterId).then((data) => {
 
                 const details = data?.data ? data.data : data;
-
+                // Ensure statusName is always present in details
+                if (!details.statusName && order.statusName) {
+                    details.statusName = order.statusName;
+                }
                 // Detect if prescription exists
                 if (Array.isArray(details.prescriptions) && details.prescriptions.length > 0) {
                     setOrderDetails({
@@ -253,11 +259,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         data: details
                     });
                 }
-
                 if (details?.patientId) {
                     const pid = details.patientId;
                     setPatientId(pid);
-
                     axiosClient
                         .get(ApiRoutes.Employee.getById(pid))
                         .then((response) => {
@@ -266,13 +270,22 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         })
                         .catch(() => setPatientProfile(null));
                 }
-
                 setLoading(false);
             });
         }
-        else if (order.orderType === "Consultation") {
+        else if (order.orderType === "Consultation" && order.referenceType !== "chat_request") {
+            console.log("Fetching consultation booking details for masterId:", order.masterId);
             fetchConsultationById(order.masterId).then((data) => {
+                console.log("Consultation data Details:", data);
                 setOrderDetails({ type: "consultation", data: data.data || data || {} });
+                setLoading(false);
+            });
+        }
+        else if (order.orderType === "Consultation" && order.referenceType === "chat_request") {
+            console.log("Fetching chat request for notificationId:", order.notificationId);
+            fetchConsultationchatById(order.notificationId).then((data) => {
+                console.log("Chat Consultation data Details:", data);
+                setOrderDetails({ type: "chatconsultation", data: data.data || data || {} });
                 setLoading(false);
             });
         }
@@ -280,7 +293,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             console.log("Fetching ambulance booking details for masterId:", order.masterId);
             fetchAmulanceOrderById(order.masterId).then((data) => {
                 console.log("Ambulance Booking Details:", data);
-                setOrderDetails({ type: "ambulance", data: data.data || data || {} });
+                const ambData = data.data || data || {};
+                if (!ambData.statusName && order.statusName) {
+                    ambData.statusName = order.statusName;
+                }
+                setOrderDetails({ type: "ambulance", data: ambData });
                 setLoading(false);
             });
         }
@@ -288,7 +305,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             console.log("Fetching Wellness Program booking details for masterId:", order.masterId);
             fetchWellnesseOrderById(order.masterId).then((data) => {
                 console.log("Wellness Booking Details:", data);
-                setOrderDetails({ type: "wellness", data: data.data || data || {} });
+                const wellnessData = data.data || data || {};
+                if (!wellnessData.statusName && order.statusName) {
+                    wellnessData.statusName = order.statusName;
+                }
+                setOrderDetails({ type: "wellness", data: wellnessData });
                 setLoading(false);
             });
         }
@@ -303,7 +324,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     // Fetch lab reports after orderDetails is set and has patientId
     useEffect(() => {
         if (
-            orderDetails &&
+            orderDetails && orderDetails.data &&
             (orderDetails.data.statusName === 'Completed' || orderDetails.data.statusName === 'completed' || orderDetails.statusName === 'Completed') &&
             orderDetails.data.labOrderId
         ) {
@@ -319,6 +340,9 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                 }
             }).catch(() => setLabReports([]));
         } else {
+            if (orderDetails && !orderDetails.data) {
+                console.error("orderDetails.data is null in lab reports effect");
+            }
             setLabReports([]);
         }
     }, [orderDetails]);
@@ -327,6 +351,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         try {
             const response = await axiosClient.get(ApiRoutes.LabOrders.getLabOrderById(labOrderId));
             console.log("Lab Order Details:", response);
+            //const map = await getOrderStatusIdMap();
             return response;
         } catch (error) {
             return { success: false, data: {} };
@@ -355,6 +380,24 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         }
     }
 
+    async function fetchConsultationchatById(notificationId: number): Promise<any> {
+        try {
+            // Use the correct endpoint as per Swagger
+            const response = await axiosClient.get(ApiRoutes.Notification.chartdetails(notificationId));
+            console.log("Chat Details new:", response);
+            // If response is an array, return the first item or the array
+            if (Array.isArray(response)) {
+                return response[0] || {};
+            }
+            if (Array.isArray(response?.data)) {
+                return response.data[0] || {};
+            }
+            return response;
+        } catch (error) {
+            return { success: false, data: {} };
+        }
+    }
+
     async function fetchAmulanceOrderById(bookingId: number): Promise<any> {
         try {
             const response = await axiosClient.get(ApiRoutes.Ambulance.getbookingId(bookingId));
@@ -370,12 +413,12 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
             console.log("Fetching Wellness Order Details for ID:", id);
             const response = await axiosClient.get(ApiRoutes.WellnessData.getwellnessId(id));
             console.log("Wellness Order Details:", response);
+
             return response;
         } catch (error) {
             return { success: false, data: {} };
         }
     }
-
     const handleSlotSelect = (time: string) => {
         setSelectedSlot(time);
     };
@@ -393,10 +436,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
     if (!order) return null;
     // Helper: statusName check for button display
-    const canReschedule = ["Requested", "Inprogress"].includes(order.statusName);
-    const canCancelMed = ["Requested", "Inprogress"].includes(order.statusName);
-    const canCompleted = ["Completed"].includes(order.statusName);
-    const canOngoing = ["Ongoing", "ongoing"].includes(order.statusName);
+
+
 
     // useEffect(() => {
     //     if (showRescheduleModal) {
@@ -1078,7 +1119,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                 {/* Status Section */}
                                                 <View style={styles.paidAmountRow}>
                                                     <Text style={styles.paidAmountLabel}>Status</Text>
-                                                    <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
+                                                    <Text style={[styles.paidAmountValue, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                             ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
@@ -1252,6 +1293,15 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                         // <Text>Video card</Text>
 
                                     )}
+
+
+                                    {orderDetails.type === "chatconsultation" && (
+                                        <ChatConsultationDetails
+                                            orderDetails={orderDetails}
+                                            order={order}
+                                        />
+                                    )}
+
                                     {orderDetails.type === "ambulance" && (
                                         <View style={styles.servicepage}>
                                             {/* Service Information */}
@@ -1555,7 +1605,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </View>
                         )}
 
-                        {orderDetails?.type === 'wellness' && !["Completed", "Cancelled"].includes(order.statusName) && (
+                        {orderDetails?.type === 'wellness' && !["Completed", "Cancelled"].includes(orderDetails.data.statusName) && (
                             <View style={styles.footerRow}>
                                 <TouchableOpacity style={styles.cancelOrderBtn} onPress={handleCancelPress}>
                                     <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
@@ -1563,7 +1613,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </View>
                         )}
 
-                        {orderDetails?.type === 'lab' && !["Completed", "Cancelled"].includes(order.statusName) && (<>
+                        {orderDetails?.type === 'lab' && !["Completed", "Cancelled"].includes(orderDetails.data.statusName) && (<>
                             <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
@@ -1578,13 +1628,13 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             </View>
                         </>)}
                         {/* Consultation: Reschedule only */}
-                        {orderDetails?.type === 'consultation' && !["Completed", "Cancelled"].includes(order.statusName) && (
+                        {orderDetails?.type === 'consultation' && !["Completed", "Cancelled"].includes(orderDetails.data.statusName) && (
                             <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
-                                        <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                                        <Text style={styles.cancelOrderBtnText}>Cancel Consul</Text>
                                     </TouchableOpacity>
-                                    {canReschedule && (
+                                    {candocReschedule && (
                                         <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
                                             <Text style={styles.rescheduleBtnText}>Reschedule </Text>
                                         </TouchableOpacity>

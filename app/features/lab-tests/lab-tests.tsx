@@ -641,6 +641,12 @@ export default function LabTestsScreen() {
     }
   };
 
+   const handleLocationChange = async (location: string) => {
+    setCurrentLocation(location); // Update the location
+    await fetchDiagCenters(); // Re-fetch diagnostic centers when location changes
+  };
+
+
   const handleBookscanTest = (testId: string, centerId: string) => {
     if (!selectedTest) {
       setErrors("No scan selected. Please select a scan before booking.");
@@ -687,32 +693,26 @@ export default function LabTestsScreen() {
       const latLngStr = await AsyncStorage.getItem('userLocationLatLng');
       let latitude = 0;
       let longitude = 0;
+
       if (latLngStr) {
-        const { latitude: lat, longitude: lng } = JSON.parse(latLngStr);
-        latitude = Number(lat);
-        longitude = Number(lng);
+        try {
+          const parsedLatLng = JSON.parse(latLngStr);
+          latitude = Number(parsedLatLng.latitude);
+          longitude = Number(parsedLatLng.longitude);
+        } catch (parseError) {
+          console.error('Failed to parse latLngStr:', parseError);
+        }
+      } else {
+        console.warn('No latLng found in AsyncStorage, using default 0,0');
       }
-      // Call DiagCenter API
-      const payload = {
-        latitude,
-        longitude,
-        radiusKm: 10,
-      }
-      const response: any = await axiosClient.post(
-        ApiRoutes.DiagCenter.Diagsticcenter,
-        payload
-      );
-      console.log('DiagCenter Responce:', response);
-      // Handle both top-level and nested array in response
-      // The API returns the array directly as the response body
+
+      const payload = { latitude, longitude, radiusKm: 10 };
+      const response = await axiosClient.post(ApiRoutes.DiagCenter.Diagsticcenter, payload);
       if (Array.isArray(response)) {
         setDiagCenters(response);
-        console.log('DiagCenter API response (array at root):', response);
       } else {
         setDiagCenters([]);
-        console.log('DiagCenter API response: not an array', response);
       }
-      console.log('DiagCenter API response:', response);
     } catch (error) {
       console.error('Error fetching diagnostic centers:', error);
       setDiagCenters([]);
@@ -928,6 +928,16 @@ export default function LabTestsScreen() {
     </LinearGradient >
   );
 
+  // Handler for address change from CommonHeader
+const handleHeaderLocationChange = async (locationData: any) => {
+  await fetchDiagCenters();
+  console.log("Location updated from header new:", locationData);
+  
+  
+  setCurrentLocation(locationData.address || "");
+};
+// Removed useEffect that incorrectly depended on handleHeaderLocationChange
+
   return (
     <>
       <View style={styles.container}>
@@ -940,8 +950,9 @@ export default function LabTestsScreen() {
         <View style={styles.defaultHeader}>
           <CommonHeader
             currentLocation={currentLocation}
-            onProfilePress={() => console.log("Profile pressed")}
+            //onProfilePress={() => console.log("Profile pressed")}
             showCart={false}
+            onLocationChange={handleLocationChange}
           />
         </View>
         {/* </View>
@@ -1171,6 +1182,7 @@ export default function LabTestsScreen() {
                 currentLocation={currentLocation}
                 onProfilePress={() => console.log("Profile pressed")}
                 showCart={false}
+                onLocationChange={handleLocationChange}
               />
               <TouchableOpacity onPress={() => {
                 setdiagsticVisible(false);
@@ -1271,7 +1283,7 @@ export default function LabTestsScreen() {
                 ) : (
                   <View style={styles.modalScrollableContent}>
                     {diagCenters.length === 0 ? (
-                      <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
+                      <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found in this location</Text>
                     ) : (
                       <>
 

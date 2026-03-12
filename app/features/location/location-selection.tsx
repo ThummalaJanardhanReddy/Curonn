@@ -31,6 +31,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { colors } from "@/app/shared/styles/commonStyles";
 import { useUserStore } from "@/src/store/UserStore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -45,6 +46,7 @@ interface LocationSelectionProps {
   onClose: () => void;
   onLocationSelected: (location: LocationData) => void;
   addressId?: number | null;
+  isSimpleLocationSelect?: boolean;
 }
 
 export default function LocationSelection({
@@ -52,7 +54,10 @@ export default function LocationSelection({
   onClose,
   onLocationSelected,
   addressId,
+  isSimpleLocationSelect = false, 
 }: LocationSelectionProps) {
+
+
   // console.log("LocationSelection page opened", { addressId });
 
   // useEffect(() => {
@@ -112,6 +117,40 @@ export default function LocationSelection({
       setOverlayVisible(false);
     });
   }, [slideAnim]);
+
+   const saveSimpleLocation = async () => {
+    if (!currentLocation && !markerPosition) {
+      Alert.alert("Error", "Location not available");
+      return;
+    }
+    // Use markerPosition if set (from map/autocomplete), else fallback to currentLocation
+    const lat = markerPosition?.latitude ?? currentLocation?.coords.latitude ?? 0;
+    const lng = markerPosition?.longitude ?? currentLocation?.coords.longitude ?? 0;
+    // Provide all required fields for LocationData
+    const simpleLocation = {
+      latitude: lat,
+      longitude: lng,
+      address: address || "",
+      houseNumber: "", // Set to empty string for simple mode
+      landmark: "",
+      nickname: "home",
+    };
+    console.log("Saving simple location:", simpleLocation);
+    try {
+      await AsyncStorage.setItem('userLocationLatLng', JSON.stringify({ latitude: markerPosition?.latitude ?? currentLocation?.coords.latitude, longitude: markerPosition?.longitude ?? currentLocation?.coords.longitude }));
+      //await AsyncStorage.setItem("userLocationLatLng", JSON.stringify(simpleLocation));
+      // Toast.show && Toast.show({
+      //   title: "Location Saved",
+      //   subtitle: "Your location has been saved.",
+      //   color: "#4BB543",
+      // });
+      
+      onLocationSelected && onLocationSelected(simpleLocation);
+      onClose && onClose();
+    } catch (e) {
+      Alert.alert("Error", "Failed to save location.");
+    }
+  };
 
   useEffect(() => {
     if (isEditMode && addressId) {
@@ -282,7 +321,162 @@ export default function LocationSelection({
   };
 
   if (!visible) return null;
+ if (isSimpleLocationSelect) {
+    return (
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent={false}
+        onRequestClose={onClose}
+        statusBarTranslucent
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Select your location</Text>
+              <View style={styles.headerSpacer} />
+              <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                <Image source={images.icons.close} style={styles.backIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.mapContainer}>
+               {/* Map Placeholder */}
+          <GooglePlacesAutocomplete
+            placeholder="Search location"
+            fetchDetails={true}
+            debounce={300}
+            enablePoweredByContainer={false}
+            onPress={(data, details = null) => {
+              if (!details || !details.geometry || !details.geometry.location) {
+                Alert.alert("Could not get location details. Please try again.");
+                return;
+              }
+              console.log('Autocomplete data:', data);
+              console.log('Autocomplete details:', details);
+              const loc = details?.geometry.location;
 
+              if (!loc) return;
+
+              const coords = {
+                latitude: loc.lat,
+                longitude: loc.lng,
+              };
+
+              setMarkerPosition(coords);
+              setAddress(data.description);
+
+              mapRef.current?.animateToRegion({
+                ...coords,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              });
+            }}
+            query={{
+              key: "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic",
+              language: "en",
+              //location: `${currentLocation?.coords.latitude},${currentLocation?.coords.longitude}`,
+              components: 'country:in',
+            }}
+            styles={{
+              container: {
+                position: "absolute",
+                top: 80,
+                width: "85%",
+                alignSelf: "center",
+                zIndex: 10,
+                borderRadius: 8,
+                shadowColor: "#dcdcdc",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              },
+              textInput: {
+                height: 48,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: "#d1d1d2",
+                backgroundColor: "#fff",
+                paddingLeft: 40, // space for search icon
+                fontSize: 14,
+                color: "#333",
+                fontFamily:fonts.regular,
+                paddingRight: 40, // space for clear icon
+              },
+              listView: {
+                borderRadius: 8,
+                marginTop: 4,
+                backgroundColor: "#fff",
+                borderWidth: 1,
+                borderColor: "#d1d1d2",
+                elevation: 2,
+              },
+            }}
+            renderLeftButton={() => (
+              <View style={{
+                position: "absolute",
+                left: 12,
+                top: 17,
+                zIndex: 1,
+              }}>
+                <Image
+                  source={images.icons.search} // Make sure you have a search icon in your assets
+                  style={{ width: 15, height: 15, tintColor: "#000" }}
+                />
+              </View>
+            )}
+      
+          />
+              {mapLoading && (
+                <View style={styles.mapLoader}>
+                  <ActivityIndicator size="large" color="#6200ee" />
+                  <Text style={{ marginTop: 10 }}>Loading map...</Text>
+                </View>
+              )}
+              {currentLocation ? (
+                <MapView
+                  ref={mapRef}
+                  style={{ flex: 1 }}
+                  initialRegion={{
+                    latitude: currentLocation.coords.latitude,
+                    longitude: currentLocation.coords.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                  }}
+                  onMapReady={() => setMapLoading(false)}
+                >
+                  <Marker
+                    coordinate={{
+                      latitude: currentLocation.coords.latitude,
+                      longitude: currentLocation.coords.longitude,
+                    }}
+                  />
+                </MapView>
+              ) : (
+                <View style={styles.loadingContainer}>
+                  <Text>No location available</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.overlayContent}>
+            <Button
+              mode="contained"
+              onPress={saveSimpleLocation}
+              style={styles.confirmButton}
+              contentStyle={styles.confirmButtonContent}
+              buttonColor="#C35E9C"
+              labelStyle={styles.buttonText}
+            >
+              Confirm Location
+            </Button>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    );
+  }
+  else {
   return (
     <Modal
       visible={visible}
@@ -387,26 +581,7 @@ export default function LocationSelection({
                 />
               </View>
             )}
-          // renderRightButton={(props) => (
-          //   <TouchableOpacity
-          //     style={{ position: "absolute", right: 12, top: 17, zIndex: 1 }}
-          //     onPress={() => {
-          //       if (props?.clear) {
-          //         props.clear();
-          //       } else {
-          //         // fallback: manually clear text if clear() not available
-          //         if (props?.textInputRef && props.textInputRef.current) {
-          //           props.textInputRef.current.clear();
-          //         }
-          //       }
-          //     }}
-          //   >
-          //     <Image
-          //       source={images.icons.close}
-          //       style={{ width: 18, height: 18, tintColor: "#999" }}
-          //     />
-          //   </TouchableOpacity>
-          // )}
+      
           />
           <View style={styles.mapContainer}>
             <TouchableOpacity
@@ -597,6 +772,7 @@ export default function LocationSelection({
       </SafeAreaView>
     </Modal>
   );
+}
 }
 
 const styles = StyleSheet.create({

@@ -940,12 +940,23 @@ export default function HomeScreen() {
           // Mark as read if not already
           if (!item.isRead) markNotificationAsRead(item.notificationId);
           // Set selectedOrderDetails and open modal
-          setSelectedOrderDetails({
-            ...item,
-            masterId: item.referenceId,
-            orderType: item.source,
-            statusName: item.statusName  || ""
-          });
+            setSelectedOrderDetails({
+              ...item,
+              masterId: item.referenceId,
+              orderType:
+                item.source === "Lab"
+                  ? "Single Test"
+                  : item.source === "Scan"
+                  ? "Xray"
+                  : item.source === "Wellness"
+                  ? "Wellness Program"
+                  : item.source === "ChatRequest"
+                  ? "ChatRequest"
+                  : item.source === "Consulation"
+                  ? "Consultation"
+                  : item.source,
+              statusName: item.statusName || ""
+            });
           setOrderDetailsModalVisible(true);
         }}
       >

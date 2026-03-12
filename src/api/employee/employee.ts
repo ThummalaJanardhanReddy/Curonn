@@ -211,6 +211,7 @@ export const NotificationApi = {
   GetList: (userId: string | number, userType: string | number) =>
     `/notifications/list?userId=${userId}&userType=${userType}`,
   readmark: (id: number) => `/notifications/mark-read/${id}`,
+  chartdetails: (id: number) => `/notifications/GetNotificationById?Id=${id}`,
 } as const;
 
 export const FoodAllergiesApi = {
