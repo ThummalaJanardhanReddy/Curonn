@@ -123,40 +123,37 @@ export default function CommonHeader({
     fetchNotiCounts();
   }, [patientId]);
 
-  
+  const fetchAddress = async () => {
+    try {
+      // ⭐ Check saved address first
+      const storedAddress = await AsyncStorage.getItem("userAddress");
 
-  useEffect(() => {
-    const fetchAddress = async () => {
-      try {
-        // ⭐ Check saved address first
-        const storedAddress = await AsyncStorage.getItem("userAddress");
+      if (storedAddress) {
+        setSelectedLocation(storedAddress);
+        onLocationChange?.(storedAddress);
+        return;
+      }
 
-        if (storedAddress) {
-          setSelectedLocation(storedAddress);
-          onLocationChange?.(storedAddress);
-          return;
-        }
+   //   ⭐ Try getting GPS location
+      const addr = await getCurrentAddress();
 
-        // ⭐ Try getting GPS location
-        const addr = await getCurrentAddress();
-
-        if (addr) {
-          setSelectedLocation(addr);
-          onLocationChange?.(addr);
-        } else {
-          // ⭐ If permission denied or GPS failed
-          setSelectedLocation("Select your address");
-          setLocationVisible(true);
-        }
-      } catch (error) {
-        console.log("Location load error:", error);
-
-        // ⭐ fallback to manual location selection
+      if (addr) {
+        setSelectedLocation(addr);
+        onLocationChange?.(addr);
+      } else {
         setSelectedLocation("Select your address");
         setLocationVisible(true);
       }
-    };
+    } catch (error) {
+      console.log("Location load error:", error);
 
+      // ⭐ fallback to manual location selection
+      setSelectedLocation("Select your address");
+      setLocationVisible(true);
+    }
+  };
+
+  useEffect(() => {
     fetchAddress();
   }, []);
 
@@ -166,16 +163,16 @@ export default function CommonHeader({
   } | null>(null);
 
   // Fetch lat/lng from AsyncStorage
-  useEffect(() => {
-    const getLatLng = async () => {
-      const stored = await AsyncStorage.getItem("userLocationLatLng");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setLatLng(parsed);
-      }
-    };
-    getLatLng();
-  }, [selectedLocation]);
+  // useEffect(() => {
+  //   const getLatLng = async () => {
+  //     const stored = await AsyncStorage.getItem("userLocationLatLng");
+  //     if (stored) {
+  //       const parsed = JSON.parse(stored);
+  //       setLatLng(parsed);
+  //     }
+  //   };
+  //   getLatLng();
+  // }, [selectedLocation]);
 
   // useEffect(() => {
   //   setSelectedLocation(address);
@@ -210,13 +207,17 @@ export default function CommonHeader({
     setLocationVisible(true);
   };
 
-const handleLocationSelected = async (locationData: any) => {
-  onLocationChange?.(locationData.address); // Pass the address to parent
-  console.log("Location selected in header:", locationData);
-  setSelectedLocation(locationData.address);
-  await AsyncStorage.setItem("userAddress", locationData.address);
-  setLocationVisible(false); // Close modal
-};
+  const handleLocationSelected = async (locationData: any) => {
+    setSelectedLocation(locationData.address);
+    await AsyncStorage.setItem("userAddress", locationData.address);
+    onLocationChange?.(locationData.address); // Pass the address to parent
+    console.log("Location selected in header:", locationData);
+
+    // Update the selected location immediately in the state to trigger re-render
+    //setSelectedLocation(locationData.address);
+    setLocationVisible(false); // Close modal
+  };
+
   const handleLocationClose = () => {
     setLocationVisible(false);
   };
@@ -297,7 +298,7 @@ const handleLocationSelected = async (locationData: any) => {
           onClose={handleLocationClose}
           onLocationSelected={handleLocationSelected}
           isSimpleLocationSelect={true}
-           // Pass this prop to show simplified location selection
+        // Pass this prop to show simplified location selection
         />
       </>
     );

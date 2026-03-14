@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors } from "../../styles/commonStyles";
 import { IConsultationType } from "@/src/constants/constants";
+import {fonts} from "../../styles/fonts";
 
 interface AnimatedTabsProps {
   tabs: IConsultationType[];
@@ -105,10 +106,10 @@ export default function AnimatedTabs({
           >
             <Text
               style={{
-                color: isActive ? colors.white : theme.colors.onSurface,
+                fontFamily:fonts.semiBold, color: isActive ? colors.white : theme.colors.onSurface,
 
                 // marginVertical: isActive ? 4 : 0,
-                fontWeight: "600",
+                fontWeight: "600",fontSize: 13,paddingTop: 2
               }}
             >
               {tab.label}

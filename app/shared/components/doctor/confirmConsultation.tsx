@@ -33,7 +33,7 @@ import {
 } from "@/src/constants/constants";
 import { fonts } from "@/app/shared/styles/fonts";
 import { images } from "@/assets";
-import { getResponsiveSpacing } from "../../utils/responsive";
+import { getResponsiveFontSize, getResponsiveSpacing } from "../../utils/responsive";
 import { navigate } from "expo-router/build/global-state/routing";
 import { useVideoStore } from "@/src/store/VideoStore";
 
@@ -47,6 +47,11 @@ const labTimeSlots = [
   "12:00 PM - 05:00 PM",
   "05:00 PM - 08:00 PM",
 ];
+
+// Helper to check if a slot is completed
+
+
+
 const familyRelationTypeId = 5;
 
 export interface IFamilyMember {
@@ -232,6 +237,21 @@ export default function ConfirmConsultationScreen() {
     if (patientType === "others") {
       let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
 
+
+      if (!selectedDate) {
+        setErrors("Please select a date");
+        hasError = true;
+      }
+
+      if (!selectedSlot) {
+        setErrors("Please select a time slot");
+        hasError = true;
+      }
+
+      // if (isSlotCompleted(selectedSlot)) {
+      //   setErrors("Selected time slot is already completed. Please choose another one.");
+      //   hasError = true;
+      // }
       if (!selectedRelation) {
         newFieldErrors.relation = "Please select relation type";
         hasError = true;
@@ -343,487 +363,520 @@ export default function ConfirmConsultationScreen() {
     }
   };
 
+  function convertTo24HourFormat(time12hr: string): string {
+  const [time, modifier] = time12hr.split(" "); 
+  let [hours, minutes] = time.split(":").map(Number); 
+  if (modifier === "PM" && hours !== 12) {
+    hours += 12;
+  }
+  if (modifier === "AM" && hours === 12) {
+    hours = 0;
+  }
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+}
+
+function isSlotCompleted(slot: string) {
+  const [, end] = slot.split(" - "); 
+  console.log("End Time to Parse:", end);
+  const convertedEndTime = convertTo24HourFormat(end);
+  console.log("Converted End Time (24-hour):", convertedEndTime);
+  const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
+  const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
+  console.log("Parsed End Time:", endTime.toString());
+  const now = dayjs();
+  console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
+  console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
+  return endTime.isBefore(now);
+}
+
   return (
-    <View style={[styles.container, {paddingTop: insets.top, paddingBottom: insets.bottom}]}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Confirm Order</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={styles.container}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Confirm Order</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={24} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* SERVICE INFORMATION */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Information</Text>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          {/* SERVICE INFORMATION */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Service Information</Text>
 
-          <View style={styles.infoCard}>
-            <View style={styles.serviceImageContainer}>
-              <Image
-                defaultSource={{
-                  uri: `https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop`,
-                }}
-                source={{
-                  uri: departmentImage,
-                }}
-                style={styles.specialistImage}
-              />
-            </View>
+            <View style={styles.infoCard}>
+              <View style={styles.serviceImageContainer}>
+                <Image
+                  defaultSource={{
+                    uri: `https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop`,
+                  }}
+                  source={{
+                    uri: departmentImage,
+                  }}
+                  style={styles.specialistImage}
+                />
+              </View>
 
-            <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>{departmentName}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoTitle}>{departmentName}</Text>
 
-              {/* Department Description */}
-              <Text style={styles.departmentDescription}>
-                Consultation with certified specialist doctors.
-              </Text>
-
-              {/* Consultation Type Badge */}
-              <View style={styles.consultTypeBadge}>
-                <Text style={styles.consultTypeText}>
-                  {consultationType} Consultation
+                {/* Department Description */}
+                <Text style={styles.departmentDescription}>
+                  Consultation with certified specialist doctors.
                 </Text>
+
+                {/* Consultation Type Badge */}
+                <View style={styles.consultTypeBadge}>
+                  <Text style={styles.consultTypeText}>
+                    {consultationType} Consultation
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={{
+                  alignItems: "flex-start",
+                  justifyContent: "flex-start",
+                  alignSelf: "flex-start",
+                }}
+              >
+                <TouchableOpacity
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 2,
+                    paddingTop: 3,
+                    borderRadius: 15,
+                    borderWidth: 1,
+                    borderColor: "#C15E9C",
+                    alignContent: "flex-start",
+                    justifyContent: "flex-start",
+                  }}
+                  onPress={handleServiceEdit}
+                >
+                  <Text style={{ fontSize: 12, color: colors.primary, fontFamily: fonts.medium }}>
+                    Edit
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <View
-              style={{
-                alignItems: "flex-start",
-                justifyContent: "flex-start",
-                alignSelf: "flex-start",
-              }}
-            >
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 2,
-                  borderRadius: 15,
-                  borderWidth: 1,
-                  borderColor: "#C15E9C",
-                  alignContent: "flex-start",
-                  justifyContent: "flex-start",
-                }}
-                onPress={handleServiceEdit}
-              >
-                <Text style={{ fontSize: 14, color: colors.primary }}>
-                  Edit
-                </Text>
-              </TouchableOpacity>
+          </View>
+
+          {/* SYMPTOMS */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Selected Symptoms</Text>
+
+            <View style={styles.card}>
+              <View style={styles.chipContainer}>
+                {symptoms?.map((s: string, i: number) => (
+                  <View key={i} style={styles.chip}>
+                    <Text style={styles.chipText}>{s}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* SYMPTOMS */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Selected Symptoms</Text>
-
-          <View style={styles.card}>
-            <View style={styles.chipContainer}>
-              {symptoms?.map((s: string, i: number) => (
-                <View key={i} style={styles.chip}>
-                  <Text style={styles.chipText}>{s}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Sample Pickup Date & Time */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sample Pickup Date & Time</Text>
-          <View style={styles.dateTimeCard}>
-            <View style={styles.dateSection}>
-              <Text style={styles.fieldLabel}>Service Start Date</Text>
-              <TouchableOpacity
-                style={styles.dateInput}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text
-                  style={[
-                    styles.dateText,
-                    !selectedDate && styles.placeholderText,
-                  ]}
+          {/* Sample Pickup Date & Time */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Appointment Date & Time</Text>
+            <View style={styles.dateTimeCard}>
+              <View style={styles.dateSection}>
+                <Text style={styles.fieldLabel}>Service Start Date</Text>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShowDatePicker(true)}
                 >
-                  {selectedDate ? formatDateLab(selectedDate) : "dd/mm/yyyy"}
-                </Text>
-                <Image
-                  source={images.icons.calendar}
-                  style={styles.calendarIcon}
-                />
-              </TouchableOpacity>
-              {errors === "Please select service start date" && (
-                <Text
-                  style={{
-                    color: "#ff0000",
-                    fontSize: 13,
-                    marginTop: 4,
-                    fontFamily: fonts.regular,
-                  }}
-                >
-                  {errors}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.timeSection}>
-              <Text style={styles.fieldLabel}>Select Time Slot</Text>
-              <View style={styles.timeSlotsContainer}>
-                {labTimeSlots.map((slot, index) => (
-                  <TouchableOpacity
-                    key={index}
+                  <Text
                     style={[
-                      styles.timeSlot,
-                      selectedSlot === slot && styles.selectedTimeSlot,
+                      styles.dateText,
+                      !selectedDate && styles.placeholderText,
                     ]}
-                    onPress={() => {
-                      setSelectedSlot(slot);
-                      if (errors === "Please select time slot") setErrors("");
+                  >
+                    {selectedDate ? formatDateLab(selectedDate) : "dd/mm/yyyy"}
+                  </Text>
+                  <Image
+                    source={images.icons.calendar}
+                    style={styles.calendarIcon}
+                  />
+                </TouchableOpacity>
+                {errors === "Please select service start date" && (
+                  <Text
+                    style={{
+                      color: "#ff0000",
+                      fontSize: 13,
+                      marginTop: 4,
+                      fontFamily: fonts.regular,
                     }}
                   >
-                    <Text
+                    {errors}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.timeSection}>
+                <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                <View style={styles.timeSlotsContainer}>
+                  {labTimeSlots.map((slot, index) => (
+                    <TouchableOpacity
+                      key={index}
                       style={[
-                        styles.timeSlotText,
-                        selectedSlot === slot && styles.selectedTimeSlotText,
+                        styles.timeSlot,
+                        selectedSlot === slot && styles.selectedTimeSlot,
+                        isSlotCompleted(slot) && { opacity: 0.5 },
                       ]}
+                      onPress={() => {
+                        if (!isSlotCompleted(slot)) {
+                          setSelectedSlot(slot);
+                          if (errors === "Please select time slot") setErrors("");
+                        }
+                      }}
+                      disabled={isSlotCompleted(slot)}
                     >
-                      {slot}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.timeSlotText,
+                          selectedSlot === slot && styles.selectedTimeSlotText,
+                        ]}
+                      >
+                        {slot}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                  {/* </View> */}
+                </View>
+                {errors === "Please select time slot" && (
+                  <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                    {errors}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Patient Details */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Patient Details</Text>
+            <View style={styles.patientCard}>
+              <View style={styles.radioGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    patientType === "self" && styles.selectedRadioOption,
+                  ]}
+                  onPress={() => setPatientType("self")}
+                >
+                  <View
+                    style={[
+                      styles.customRadio,
+                      patientType === "self" && styles.customRadioSelected,
+                    ]}
+                  >
+                    {patientType === "self" && (
+                      <View style={styles.customRadioInner} />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.radioLabel,
+                      patientType === "self" && styles.selectedRadioLabel,
+                    ]}
+                  >
+                    Self Service
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    patientType === "others" && styles.selectedRadioOption,
+                  ]}
+                  onPress={() => setPatientType("others")}
+                >
+                  <View
+                    style={[
+                      styles.customRadio,
+                      patientType === "others" && styles.customRadioSelected,
+                    ]}
+                  >
+                    {patientType === "others" && (
+                      <View style={styles.customRadioInner} />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.radioLabel,
+                      patientType === "others" && styles.selectedRadioLabel,
+                    ]}
+                  >
+                    For Others
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {patientType === "others" && (
+                <View style={styles.othersForm}>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>Relation Type</Text>
+                    <TouchableOpacity
+                      style={styles.dropdown}
+                      onPress={() => setShowRelationDropdown(true)}
+                    >
+                      <Text style={styles.dropdownText}>
+                        {selectedRelation
+                          ? selectedRelation.name
+                          : "Select Relation"}
+                      </Text>
+                      <Image
+                        source={images.arrowdown}
+                        style={styles.dropdownIcon}
+                      />
+                    </TouchableOpacity>
+                    {fieldErrors.relation ? (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {fieldErrors.relation}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>Full Name</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={fullName}
+                      onChangeText={(text) => {
+                        setFullName(text);
+                        if (fieldErrors.fullName) {
+                          setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                        }
+                      }}
+                      placeholder="Enter"
+                      placeholderTextColor="#999"
+                    />
+                    {fieldErrors.fullName ? (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {fieldErrors.fullName}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>Age</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={age}
+                      onChangeText={(text) => {
+                        setAge(text);
+                        if (fieldErrors.age) {
+                          setFieldErrors((prev) => ({ ...prev, age: "" }));
+                        }
+                      }}
+                      placeholder="Enter"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                    />
+                    {fieldErrors.age ? (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {fieldErrors.age}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>Gender</Text>
+                    <TouchableOpacity
+                      style={styles.dropdown}
+                      onPress={() => setShowGenderDropdown(true)}
+                    >
+                      <Text style={styles.dropdownText}>
+                        {gender || "Select"}
+                      </Text>
+                      <Image
+                        source={images.arrowdown}
+                        style={styles.dropdownIcon}
+                      />
+                    </TouchableOpacity>
+                    {fieldErrors.gender ? (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {fieldErrors.gender}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              minimumDate={new Date()}
+              display={Platform.OS === "ios" ? "inline" : "default"}
+              onChange={(event, date) => {
+                setShowDatePicker(false);
+
+                if (event.type === "set" && date) {
+                  console.log("date selected: ", date.toString());
+                  setSelectedDate(date);
+                }
+              }}
+            />
+          )}
+        </ScrollView>
+
+        {/* CONFIRM BUTTON */}
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Confirm"
+            onPress={handleConfirm}
+            style={styles.proceedButton}
+          />
+        </View>
+
+        {/* Toast Notification */}
+
+        {/* Relation Type Dropdown Modal */}
+        <View style={{ flex: 1 }}>
+          <Modal
+            visible={showRelationDropdown}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowRelationDropdown(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              onPress={() => setShowRelationDropdown(false)}
+            >
+              <View style={styles.dropdownModal}>
+                {labRelationTypes.map((relation, index) => (
+                  <TouchableOpacity
+                    key={relation.masterDataId}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setSelectedRelation(relation);
+                      if (fieldErrors && typeof setFieldErrors === "function") {
+                        setFieldErrors((prev) => ({ ...prev, relation: "" }));
+                      }
+                      fetchRelationDetails(relation.masterDataId);
+                      setShowRelationDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
                   </TouchableOpacity>
                 ))}
-                {/* </View> */}
               </View>
-              {errors === "Please select time slot" && (
-                <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
-                  {errors}
-                </Text>
-              )}
-            </View>
-          </View>
+            </TouchableOpacity>
+          </Modal>
         </View>
 
-        {/* Patient Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Patient Details</Text>
-          <View style={styles.patientCard}>
-            <View style={styles.radioGroup}>
-              <TouchableOpacity
-                style={[
-                  styles.radioOption,
-                  patientType === "self" && styles.selectedRadioOption,
-                ]}
-                onPress={() => setPatientType("self")}
-              >
-                <View
-                  style={[
-                    styles.customRadio,
-                    patientType === "self" && styles.customRadioSelected,
-                  ]}
-                >
-                  {patientType === "self" && (
-                    <View style={styles.customRadioInner} />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.radioLabel,
-                    patientType === "self" && styles.selectedRadioLabel,
-                  ]}
-                >
-                  Self Service
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.radioOption,
-                  patientType === "others" && styles.selectedRadioOption,
-                ]}
-                onPress={() => setPatientType("others")}
-              >
-                <View
-                  style={[
-                    styles.customRadio,
-                    patientType === "others" && styles.customRadioSelected,
-                  ]}
-                >
-                  {patientType === "others" && (
-                    <View style={styles.customRadioInner} />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.radioLabel,
-                    patientType === "others" && styles.selectedRadioLabel,
-                  ]}
-                >
-                  For Others
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {patientType === "others" && (
-              <View style={styles.othersForm}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>Relation Type</Text>
-                  <TouchableOpacity
-                    style={styles.dropdown}
-                    onPress={() => setShowRelationDropdown(true)}
-                  >
-                    <Text style={styles.dropdownText}>
-                      {selectedRelation
-                        ? selectedRelation.name
-                        : "Select Relation"}
-                    </Text>
-                    <Image
-                      source={images.icons.edit as any}
-                      style={styles.dropdownIcon}
-                    />
-                  </TouchableOpacity>
-                  {fieldErrors.relation ? (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {fieldErrors.relation}
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>Full Name</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={fullName}
-                    onChangeText={(text) => {
-                      setFullName(text);
-                      if (fieldErrors.fullName) {
-                        setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                      }
-                    }}
-                    placeholder="Enter"
-                    placeholderTextColor="#999"
-                  />
-                  {fieldErrors.fullName ? (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {fieldErrors.fullName}
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>Age</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={age}
-                    onChangeText={(text) => {
-                      setAge(text);
-                      if (fieldErrors.age) {
-                        setFieldErrors((prev) => ({ ...prev, age: "" }));
-                      }
-                    }}
-                    placeholder="Enter"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                  />
-                  {fieldErrors.age ? (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {fieldErrors.age}
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>Gender</Text>
-                  <TouchableOpacity
-                    style={styles.dropdown}
-                    onPress={() => setShowGenderDropdown(true)}
-                  >
-                    <Text style={styles.dropdownText}>
-                      {gender || "Select"}
-                    </Text>
-                    <Image
-                      source={images.icons.edit as any}
-                      style={styles.dropdownIcon}
-                    />
-                  </TouchableOpacity>
-                  {fieldErrors.gender ? (
-                    <Text
-                      style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                    >
-                      {fieldErrors.gender}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            minimumDate={new Date()}
-            display={Platform.OS === "ios" ? "inline" : "default"}
-            onChange={(event, date) => {
-              setShowDatePicker(false);
-
-              if (event.type === "set" && date) {
-                console.log("date selected: ", date.toString());
-                setSelectedDate(date);
-              }
-            }}
-          />
-        )}
-      </ScrollView>
-
-      {/* CONFIRM BUTTON */}
-      <View style={styles.buttonContainer}>
-        <PrimaryButton
-          title="Confirm"
-          onPress={handleConfirm}
-          style={styles.proceedButton}
-        />
-      </View>
-
-      {/* Toast Notification */}
-
-      {/* Relation Type Dropdown Modal */}
-      <View style={{ flex: 1 }}>
+        {/* Gender Dropdown Modal */}
         <Modal
-          visible={showRelationDropdown}
+          visible={showGenderDropdown}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setShowRelationDropdown(false)}
+          onRequestClose={() => setShowGenderDropdown(false)}
         >
           <TouchableOpacity
             style={styles.modalOverlay}
-            onPress={() => setShowRelationDropdown(false)}
+            onPress={() => setShowGenderDropdown(false)}
           >
             <View style={styles.dropdownModal}>
-              {labRelationTypes.map((relation, index) => (
+              {genderOptions.map((genderOption, index) => (
                 <TouchableOpacity
-                  key={relation.masterDataId}
+                  key={index}
                   style={styles.dropdownOption}
                   onPress={() => {
-                    setSelectedRelation(relation);
+                    setGender(genderOption);
                     if (fieldErrors && typeof setFieldErrors === "function") {
-                      setFieldErrors((prev) => ({ ...prev, relation: "" }));
+                      setFieldErrors((prev) => ({ ...prev, gender: "" }));
                     }
-                    fetchRelationDetails(relation.masterDataId);
-                    setShowRelationDropdown(false);
+                    setShowGenderDropdown(false);
                   }}
                 >
-                  <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                  <Text style={styles.dropdownOptionText}>{genderOption}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </TouchableOpacity>
         </Modal>
-      </View>
 
-      {/* Gender Dropdown Modal */}
-      <Modal
-        visible={showGenderDropdown}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowGenderDropdown(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setShowGenderDropdown(false)}
-        >
-          <View style={styles.dropdownModal}>
-            {genderOptions.map((genderOption, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setGender(genderOption);
-                  if (fieldErrors && typeof setFieldErrors === "function") {
-                    setFieldErrors((prev) => ({ ...prev, gender: "" }));
-                  }
-                  setShowGenderDropdown(false);
-                }}
-              >
-                <Text style={styles.dropdownOptionText}>{genderOption}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <Modal visible={familyModalVisible} animationType="slide" transparent>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setFamilyModalVisible(false)}
-        >
+        <Modal visible={familyModalVisible} animationType="slide" transparent>
           <TouchableOpacity
+            style={styles.modalOverlay}
             activeOpacity={1}
-            style={[styles.modalContainer, { marginBottom: insets.bottom }]}
+            onPressOut={() => setFamilyModalVisible(false)}
           >
-            {/* HEADER */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Family Member</Text>
-              <TouchableOpacity onPress={() => setFamilyModalVisible(false)}>
-                <Ionicons name="close" size={22} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={[styles.modalContainer, { marginBottom: insets.bottom }]}
+            >
+              {/* HEADER */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Family Member</Text>
+                <TouchableOpacity onPress={() => setFamilyModalVisible(false)}>
+                  <Ionicons name="close" size={22} />
+                </TouchableOpacity>
+              </View>
 
-            {/* FAMILY LIST */}
-            {familyMembers.length > 0 &&
-              familyMembers?.map((member) => {
-                const isSelected = member.empRelationId === patientId;
+              {/* FAMILY LIST */}
+              {familyMembers.length > 0 &&
+                familyMembers?.map((member) => {
+                  const isSelected = member.empRelationId === patientId;
 
-                return (
-                  <TouchableOpacity
-                    key={member.empRelationId}
-                    style={styles.familyCard}
-                    onPress={() => {
-                      setPatient(member.empRelationId);
-                      setFamilyModalVisible(false);
-                    }}
-                  >
-                    {/* LEFT - IMAGE + DETAILS */}
-                    <View style={styles.familyLeft}>
-                      <View style={styles.avatar}>
-                        <Ionicons name="person" size={20} color="#666" />
-                      </View>
-
-                      <View>
-                        <Text style={styles.familyName}>{member.name}</Text>
-                        <Text style={styles.familyRelation}>
-                          {member.gender}, {member.age}yrs,{" "}
-                          {member.relationTypeName === "Self"
-                            ? "Self"
-                            : member.relationTypeName}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* RIGHT - RADIO */}
-                    <View
-                      style={[
-                        styles.radioOuter,
-                        isSelected && styles.radioSelected,
-                      ]}
+                  return (
+                    <TouchableOpacity
+                      key={member.empRelationId}
+                      style={styles.familyCard}
+                      onPress={() => {
+                        setPatient(member.empRelationId);
+                        setFamilyModalVisible(false);
+                      }}
                     >
-                      {isSelected && <View style={styles.radioInner} />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+                      {/* LEFT - IMAGE + DETAILS */}
+                      <View style={styles.familyLeft}>
+                        <View style={styles.avatar}>
+                          <Ionicons name="person" size={20} color="#666" />
+                        </View>
+
+                        <View>
+                          <Text style={styles.familyName}>{member.name}</Text>
+                          <Text style={styles.familyRelation}>
+                            {member.gender}, {member.age}yrs,{" "}
+                            {member.relationTypeName === "Self"
+                              ? "Self"
+                              : member.relationTypeName}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* RIGHT - RADIO */}
+                      <View
+                        style={[
+                          styles.radioOuter,
+                          isSelected && styles.radioSelected,
+                        ]}
+                      >
+                        {isSelected && <View style={styles.radioInner} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-      <Toast
-        visible={showConfirm}
-        title={"Booking Confirmed"}
-        subtitle={"Your doctor consultation was successfully created."}
-        type={"success"}
-        onHide={() => setShowConfirm(false)}
-      />
-    </View>
+        </Modal>
+        <Toast
+          visible={showConfirm}
+          title={"Booking Confirmed"}
+          subtitle={"Your doctor consultation was successfully created."}
+          type={"success"}
+          onHide={() => setShowConfirm(false)}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -845,26 +898,29 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EAEAEA",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(16),
+    color: colors.black,
   },
 
   /* SCROLL */
   scrollContainer: {
-    padding: 16,
-    paddingBottom: 120,
+    paddingHorizontal: 16,
+    paddingBottom: 80,
     backgroundColor: colors.bg_primary
   },
 
   /* SECTION */
   section: {
-    marginBottom: 12,
+    marginBottom: 5,
   },
 
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 10,
+    fontSize: 14,
+    color: "#000000",
+    marginBottom: getResponsiveSpacing(2),
+    marginTop: getResponsiveSpacing(10),
+    fontFamily: fonts.semiBold
   },
 
   /* CARD BASE */
@@ -991,7 +1047,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 14,
-    borderColor: "#d1d1d2",
+    borderColor: "#dbdbdb",
     borderWidth: 1,
     // elevation: 3,
     // shadowColor: "#000",
@@ -1009,8 +1065,9 @@ const styles = StyleSheet.create({
   },
 
   infoTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
 
   // infoSubtitle: {
@@ -1057,27 +1114,30 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#E6DCF5",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 20,
   },
 
   chipText: {
     fontSize: 12,
-    color: "#3B5BDB",
+    color: colors.primary,
+    fontFamily: fonts.medium,
   },
   departmentDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
-    marginTop: 4,
+    marginTop: 0,
+    fontFamily: fonts.regular,
+    marginBottom: 3,
   },
 
   consultTypeBadge: {
     alignSelf: "flex-start",
-    marginTop: 8,
-    backgroundColor: "#E0EDFF",
-    paddingHorizontal: 10,
+    marginTop: 5,
+    backgroundColor: "#E6DCF5",
+    paddingHorizontal: 15,
     paddingVertical: 4,
     borderRadius: 20,
   },
@@ -1085,7 +1145,8 @@ const styles = StyleSheet.create({
   consultTypeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#3B5BDB",
+    color: colors.primary,
+    fontFamily: fonts.medium,
   },
   // dateLeft: {
   //   flexDirection: "row",
@@ -1137,7 +1198,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#333",
     marginBottom: 1,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.medium
   },
   dateInput: {
     flexDirection: "row",
@@ -1237,7 +1298,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: 13,
     color: "#2B2B2B",
-    fontFamily: fonts.regular,
+    fontFamily: fonts.regular
   },
   othersForm: {
     marginTop: 16,
@@ -1252,7 +1313,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   formField: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   textInput: {
     borderWidth: 1,
@@ -1286,7 +1347,7 @@ const styles = StyleSheet.create({
   dropdownIcon: {
     width: 16,
     height: 16,
-    tintColor: "#666",
+    // tintColor: "#666",
   },
   dropdownModal: {
     backgroundColor: "#fff",
@@ -1309,13 +1370,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: "absolute",
-    bottom: getResponsiveSpacing(60),
+    bottom: getResponsiveSpacing(0),
     left: 0,
     right: 0,
     paddingHorizontal: getResponsiveSpacing(20),
     // paddingBottom: getResponsiveSpacing(30),
     // paddingTop: getResponsiveSpacing(15),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.white,
+    paddingTop: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(10),
     borderTopWidth: 1,
     borderTopColor: "#eee",
     alignItems: "center",

@@ -5,6 +5,7 @@ import {
   View,
   Text,
   Platform,
+  Image,
   Linking,
   ScrollView,
 } from "react-native";
@@ -19,6 +20,7 @@ import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import { IPatientReport, S3Link } from "@/src/constants/constants";
 import PrimaryButton from "../PrimaryButton";
+import { images } from "@/assets";
 
 interface Props {
   orderDetails: any;
@@ -26,6 +28,7 @@ interface Props {
   onReschedule?: () => void;
   onCancel?: () => void;
   onBookAgain?: () => void;
+ 
   order: any;
   getReports: any;
   setSelectedPdfUrl: any;
@@ -44,52 +47,31 @@ export default function VideoOrderDetails({
   const data = orderDetails?.data || {};
   const doctorAssigned = !!data.doctorName;
   const { status, roomUrl } = useVideoStore();
-  const [report, setReport] = useState();
+  const [reports, setReports] = useState([]);
 
-  const statusColors: { [key: string]: string } = {
-    Requested: "#d0eaff",
-    Completed: "#ccface",
-    Cancelled: "#ffd8d5",
-    Inprogress: "#f8d7a7",
-    Ongoing: "#f7cdff",
-    Pending: "#ffeeba",
-    Rescheduled: "#bbecf3",
-    "Admin Doctor": "#f7cdff",
-  };
-  const statusTextColors: { [key: string]: string } = {
-    Requested: "#006cc5",
-    Completed: "#4CAF50",
-    Cancelled: "#F44336",
-    Inprogress: "#FF9800",
-    Ongoing: "#9C27B0",
-    Pending: "#9e7600",
-    Rescheduled: "#00BCD4",
-    "Admin Doctor": "#9C27B0",
-  };
+
 
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
-    return dayjs(data.scheduleDate).format("DD-MM-YYYY HH:mm:ss");
+    return dayjs(data.scheduleDate).format("DD-MM-YYYY");
   }, [data.scheduleDate]);
 
   // Get status color and text color based on statusName
-  const statusKey = data.statusName || "Requested";
-  const badgeBgColor = statusColors[statusKey] || "#FFF4E5";
-  const badgeTextColor = statusTextColors[statusKey] || "#D97706";
+
 
   const fetchReportInfo = useCallback(async () => {
     if (!data) return;
     try {
-      const response:any = await axiosClient.get(
+      const response: any = await axiosClient.get(
         ApiRoutes.PatientReports.getAllReports(data.patientId, 5),
       ); // 5 : prescription catogery id
       console.log("reports: ", response);
 
       if (response) {
-        const record = response?.filter((m:any) => (m.typeId = data.appointmentId));
-        setReport(record[0].filePath);
+        // Show all prescription reports for the patient
+        setReports(response || []);
       }
-    } catch (error) {}
+    } catch (error) { }
   }, [data?.appointmentId]);
 
   useEffect(() => {
@@ -100,7 +82,7 @@ export default function VideoOrderDetails({
     initialize();
     fetchReportInfo();
   }, [data]);
-  const joinDisabled = data.videoRoomUrl === ""; // || status !== "ready";
+  const joinDisabled = !data.videoRoomUrl; // || status !== "ready";
   // data.videoRoomUrl === "" || data.statusName !== "Accepted";
   const cancelDisabled = doctorAssigned;
   const InfoRow = ({ label, value }: { label: string; value?: string }) => {
@@ -119,8 +101,40 @@ export default function VideoOrderDetails({
   };
 
   const handleViewPrescription = () => {
-    if (report) Linking.openURL(report);
+    // Deprecated, replaced by handleViewReport
   };
+
+  const handleViewReport = (filePath: string) => {
+    if (filePath) Linking.openURL(filePath);
+  };
+
+  const statusColors: { [key: string]: string } = {
+    Requested: "#d0eaff",
+    Completed: "#ccface",
+    Cancelled: "#ffd8d5",
+    Inprogress: "#f8d7a7",
+    Ongoing: "#f7cdff",
+      Assigned: "#f7cdff",
+    Pending: "#ffeeba",
+    Rescheduled: "#bbecf3",
+    "Admin Doctor": "#f7cdff",
+  };
+
+  const statusTextColors: { [key: string]: string } = {
+    Requested: "#006cc5",
+    Completed: "#4CAF50",
+    Cancelled: "#F44336",
+    Inprogress: "#FF9800",
+     Assigned: "#9C27B0",
+    Ongoing: "#9C27B0",
+    Pending: "#9e7600",
+    Rescheduled: "#00BCD4",
+    "Admin Doctor": "#9C27B0",
+  };
+
+  const statusKey = data.statusName || "";
+  const statusColor = statusColors[statusKey] || "#666";
+  const statusTextColor = statusTextColors[statusKey] || "#000";
 
   return (
     <View style={styles.container}>
@@ -129,7 +143,7 @@ export default function VideoOrderDetails({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Information</Text>
 
-          
+
           <View style={styles.infoCard}>
             {/* Left Icon */}
             <View style={styles.serviceImageContainer}>
@@ -169,78 +183,118 @@ export default function VideoOrderDetails({
               </Text> */}
 
               {/* Consultation Type Badge */}
-              <View style={styles.consultTypeBadge}>
-                <Text style={styles.consultTypeText}>
-                  {data.scheduleTypeName || "Video Consultation"}
-                </Text>
-              </View>
 
-              <View style={{ paddingVertical: 10 }}>
+
+              {/* <View style={{ paddingVertical: 10 }}>
                 <Text style={[styles.label, { color: colors.black }]}>
                   Scheduled On:
                 </Text>
                 <Text style={styles.label}>{formattedDate}</Text>
-              </View>
+              </View> */}
 
               {/* Booking ID */}
-              <Text style={styles.bookingIdText}>
+              {/* <Text style={styles.bookingIdText}>
                 Booking ID: {data.bookingId}
-              </Text>
+              </Text> */}
             </View>
 
             {/* Right Side Status Badge */}
-            <View style={styles.statusBadgeContainer}>
+            {/* <View style={styles.statusBadgeContainer}>
               <Text style={styles.statusBadgeText}>{data.statusName}</Text>
+            </View> */}
+          </View>
+
+
+          <Text style={styles.sectionTitle}>Consultation info</Text>
+
+
+          <View style={styles.card}>
+            <View style={styles.consultTypeBadge}>
+              <Text style={styles.consultTypeText}>
+                {data.scheduleTypeName || "Video Consultation"}
+              </Text>
             </View>
+
+            <View style={{ paddingVertical: 0 }}>
+              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text>
+
+            </View>
+
+            {/* Booking ID */}
+            {/* <Text style={styles.bookingIdText}>
+                Booking ID: {data.bookingId}
+              </Text> */}
+
+            {/* Right Side Status Badge */}
+
+            <View style={styles.statusBadgeContainer}>
+              <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+                {data.statusName}
+              </Text>
+              {/* <Text style={styles.statusBadgeText}>Status:  <Text style={styles.statusBadgeText}>{data.statusName}</Text></Text> */}
+            </View>
+
           </View>
 
           {/* ---------------- Patient Details ---------------- */}
           <Text style={styles.sectionTitle}>Patient Details</Text>
           <View style={styles.card}>
-            <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
-            <Text style={styles.secondaryText}>
-              {[
-                data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
-                data.relationGender ? data.relationGender : data.patientGender,
-              ]
-                .filter(Boolean)
-                .join(", ") || "N/A"}
-            </Text>
+            <View style={styles.patiendetails}>
+              <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
+              <Text style={styles.secondaryText}>
+                {[
+                  data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
+                  data.relationGender ? data.relationGender : data.patientGender,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "N/A"}
+              </Text>
+              <Text style={styles.appointmentprepredText}>Appointment preffered data & Time</Text>
+              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text>
+            </View>
             {data?.symptoms && (
-              <Text style={styles.secondaryText}>{data.symptoms}</Text>
+              <View style={styles.symtomsSection}>
+                <Text style={styles.symtomsheader}>Symptoms</Text>
+                <Text style={styles.symtomText}>{data.symptoms}</Text>
+              </View>
             )}
           </View>
 
           {/* ---------------- Prescription Section ---------------- */}
+          {data?.statusName === "Completed" && (<> 
           {data.prescription && (
             <>
-              <Text style={styles.sectionTitle}>Prescription</Text>
-              <View style={styles.card}>
+
+              <Text style={styles.sectionTitle}>View Prescription</Text>
+              <View style={styles.individualcard}>
+                <Image source={images.reportsimage} style={styles.closeIcon} />
                 <Text style={styles.value}>{data.prescription}</Text>
               </View>
             </>
           )}
-          {report && (
+          {reports.length > 0 && (
             <>
-              <PrimaryButton
-                title="View Prescription"
-                onPress={handleViewPrescription}
-                style={{
-                  paddingHorizontal: 40,
-                  width: "auto",
-                  height: 38,
-                  backgroundColor: "transparent",
-                  borderColor: colors.primary,
-                  borderWidth: 1,
-                }}
-                textStyle={{ color: colors.primary }}
-              />
+              <Text style={styles.sectionTitle}>View Prescription</Text>
+              {reports.map((report: any) => (
+                <View key={report.patientReportId} style={styles.individualcard}>
+                  <Image source={images.reportsimage} style={styles.closeIcon} />
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 5 }}
+                    onPress={() => handleViewReport(report.filePath)}
+                  >
+                    <Text style={{ marginBottom: 10, flex: 1, color: '#fff', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
+                      {report.reportName ? report.reportName : report.fileName || "Report"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </>
           )}
+          </>)}
 
           {/* ---------------- Join Call Button ---------------- */}
           {data?.scheduleTypeName == "Video Consultation" &&
-            data?.statusName !== "Completed" && (
+           !["Completed", "Cancelled"].includes(data?.statusName) && (
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
@@ -282,7 +336,7 @@ export default function VideoOrderDetails({
         {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-     
+
       </ScrollView>
     </View>
   );
@@ -306,39 +360,91 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 14,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#d1d1d2",
-    marginBottom: 20,
+    marginBottom: 10,
     overflow: "hidden",
   },
-
+  patiendetails: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(212,212,212,1)",
+    paddingBottom: 6,
+    marginBottom: 6
+  },
   primaryText: {
     fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
     fontFamily: fonts.semiBold,
-    color: "#222",
+  },
+
+  appointmentprepredText: {
+    color: '#333',
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    marginTop: 0,
   },
 
   secondaryText: {
-    fontSize: 13,
+    color: '#333',
     fontFamily: fonts.regular,
-    color: "#666",
-    marginTop: 4,
+    fontSize: 13,
+    marginTop: 0,
   },
 
   label: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
+    fontSize: 18,
+    fontFamily: fonts.semiBold,
     color: "#888",
     marginBottom: 6,
   },
 
+  datelabel: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    color: "#000",
+    marginBottom: 0,
+  },
+  symtomsSection: {
+    marginTop: 0,
+  },
+  symtomsheader: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: "#000",
+  },
+  symtomText: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#000",
+  },
   value: {
     fontSize: 14,
     fontFamily: fonts.regular,
     color: "#333",
   },
-
+  individualcard: {
+    backgroundColor: "#807A7A",
+    marginBottom: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+    minHeight: 100,
+    borderRadius: 20,
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  closeIcon: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    opacity: 0.15,
+    zIndex: 0,
+    borderRadius: 20,
+  },
   disabledInput: {
     backgroundColor: "#F1F2F4",
     padding: 12,
@@ -440,7 +546,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderColor: "#d1d1d2",
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 5,
     overflow: "hidden",
   },
 
@@ -468,18 +574,16 @@ const styles = StyleSheet.create({
   },
 
   consultTypeBadge: {
-    backgroundColor: "#E6F4EA",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 0,
     borderRadius: 20,
     alignSelf: "flex-start",
-    marginTop: 8,
+    marginTop: 0,
   },
 
   consultTypeText: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: "#1B5E20",
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: "#C35E9C",
   },
 
   bookingIdText: {
@@ -490,15 +594,14 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeContainer: {
-    backgroundColor: "#FFF4E5",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 0,
+    paddingTop: 4,
     borderRadius: 20,
     alignSelf: "flex-start",
   },
 
   statusBadgeText: {
-    fontSize: 10,
+    fontSize: 15,
     fontFamily: fonts.regular,
   },
 });

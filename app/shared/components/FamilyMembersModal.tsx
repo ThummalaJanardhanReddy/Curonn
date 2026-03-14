@@ -194,16 +194,21 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
 
   const handleEditMember = async (member: any) => {
-    // Fetch details from GetByPatientRelationAsync using relationId and patientId
+    // Debug logs to trace Edit button and API response
+    console.log('Edit button clicked, member:', member);
     try {
       const response = await axiosClient.get(ApiRoutes.Employee.getRelation(member.relationId, member.patientId));
-      console.log('GetByPatientRelationAsync response:', response);
+      console.log('API response from getRelation:', response);
       let data = null;
       if (Array.isArray(response) && response.length > 0) {
         data = response[0];
       } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
         data = response.data[0];
+      } else if (response && typeof response === 'object' && response.relationId) {
+        // Handle object response
+        data = response;
       }
+      console.log('Parsed data for edit:', data);
       if (data) {
         setEditingMember(data);
         // Find relation name from relationTypes
@@ -217,8 +222,12 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
         setSelectedRelation(relationType || null); // <-- auto-populate selectedRelation
         setIsEditMode(true);
         setShowForm(true);
+        console.log('setShowForm(true) called');
+      } else {
+        console.warn('No data found for edit, setShowForm(true) not called');
       }
     } catch (error) {
+      console.error('Error in handleEditMember:', error);
       setToastMessage({
         title: 'Fetch Failed',
         subtitle: 'Could not fetch family member details.',
@@ -251,9 +260,10 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     };
     axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload)
       .then(async response => {
+        const isEdit = isEditMode && editingMember;
         setToastMessage({
-          title: "Family Member Saved",
-          subtitle: response?.data?.message || "Saved successfully!",
+          title: isEdit ? "Family Member Updated" : "Family Member Added",
+          subtitle: response?.data?.message || (isEdit ? "Updated successfully!" : "Added successfully!"),
           type: "success"
         });
         setShowToast(true);

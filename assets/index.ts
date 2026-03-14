@@ -75,6 +75,7 @@ import vitamins_iron from './AppIcons/Curonn_icons/lab_orders/vitamins_iron.svg'
 
 // Images
 export const images = {
+  arrowdown: require('./images/arrowdown.png'),
   labicon: require('./AppIcons/Curonn_icons/labicon.png'),
   medicalicon: require('./AppIcons/Curonn_icons/medicalicon.png'),
   consultationicon: require('./AppIcons/Curonn_icons/consultation.png'),

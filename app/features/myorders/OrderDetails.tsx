@@ -68,7 +68,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     // Helper: Resolve statusName from statusId if statusName is missing
     const [statusName, setstatusName] = useState<string | null>(null);
 
-    console.log("Order received in OrderDetails component:", order);
+    //console.log("Order received in OrderDetails component:", order);
     const insets = useSafeAreaInsets();
 
     const handleCancelPress = () => {
@@ -202,9 +202,11 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     };
     //  console.log("Order statusName:", order?.statusName, "statusId:", order?.statusId);
 
-    // Null check and debug log for orderDetails.data
-    if (orderDetails && !orderDetails.data) {
-        console.error("orderDetails.data is null at statusKey assignment");
+    // Extra null checks and debug logs
+    if (!orderDetails) {
+        console.warn("orderDetails is null");
+    } else if (!orderDetails.data) {
+        console.warn("orderDetails.data is null");
     }
     const statusKey = (order && (order.serviceName || order.statusName)) || (orderDetails && orderDetails.data ? orderDetails.data.statusName : "") || "";
     const statusColor = statusColors[statusKey] || "#666";
@@ -212,17 +214,29 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     //console.log("Status Color:", statusColor);
     //console.log("Status Text Color:", statusTextColor);
 
-    const selectedFile = orderDetails?.data?.prescriptions?.find(
-        (p: any) => p.fileUrl === selectedPdfUrl
-    );
+    const selectedFile = orderDetails && orderDetails.data && orderDetails.data.prescriptions
+        ? orderDetails.data.prescriptions.find((p: any) => p.fileUrl === selectedPdfUrl)
+        : null;
 
-    const candocReschedule = ["Pending", "Inprogress", "Assigned"].includes(orderDetails.data.statusName);
-    const canReschedule = ["Requested", "Inprogress"].includes(orderDetails.data.statusName);
-    const canCancelMed = ["Requested", "Inprogress"].includes(orderDetails.data.statusName);
-    const canCompleted = ["Completed"].includes(orderDetails.data.statusName);
-    const canOngoing = ["Ongoing", "ongoing"].includes(orderDetails.data.statusName);
+    const candocReschedule = orderDetails && orderDetails.data && orderDetails.data.statusName
+        ? ["Pending", "Inprogress", "Assigned"].includes(orderDetails.data.statusName)
+        : false;
+    const canReschedule = orderDetails && orderDetails.data && orderDetails.data.statusName
+        ? ["Requested", "Inprogress"].includes(orderDetails.data.statusName)
+        : false;
+    const canCancelMed = orderDetails && orderDetails.data && orderDetails.data.statusName
+        ? ["Requested", "Inprogress"].includes(orderDetails.data.statusName)
+        : false;
+    const canCompleted = orderDetails && orderDetails.data && orderDetails.data.statusName
+        ? ["Completed"].includes(orderDetails.data.statusName)
+        : false;
+    const canOngoing = orderDetails && orderDetails.data && orderDetails.data.statusName
+        ? ["Ongoing", "ongoing"].includes(orderDetails.data.statusName)
+        : false;
 
-    const isImageFile = selectedFile?.mimeType?.startsWith("image");
+    const isImageFile = selectedFile && selectedFile.mimeType
+        ? selectedFile.mimeType.startsWith("image")
+        : false;
     useEffect(() => {
         //  console.log("Order in useEffect1:", order);
         if (!order) return;
@@ -926,15 +940,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.value}>{displayDateLab(orderDetails.data.serviceDate?.split('T')[0]) || "N/A"}, {orderDetails.data.timeSlot || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.paymentsection}>
-                                                    {order.orderType === "Xray" ? (
-                                                        orderDetails.data.statusName === "Completed" ? (
-                                                            <Text style={styles.label}>Paid Amount</Text>
-                                                        ) : (
-                                                            <Text style={styles.paidlabel}>Pending Amount</Text>
-                                                        )
-                                                    ) : (
-                                                        <Text style={styles.label}>Paid Amount</Text>
-                                                    )}
+
+                                                    <Text style={styles.label}>Paid Amount</Text>
                                                     <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.servicesection}>

@@ -36,6 +36,7 @@ import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from '@/app/shared/styles/fonts';
 import { useUserStore } from '@/src/store/UserStore';
+import dayjs from "dayjs";
 // Guarded access to expo-router's useSearchParams hook (for medicine flow).
 let maybeUseSearchParams: any = null;
 try {
@@ -870,9 +871,42 @@ export default function BookingScreen({
       setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       setErrors("");
     }
+    try {
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
+      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  }
 
+
+  const saveBookNowScan = async (paymentData: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => {
+    // Build ambulance order payload (customize as needed)
     const payload: any = {
-
       labOrderId: 0,
       testName: serviceName,
       patientId: patientId || 0,
@@ -889,6 +923,10 @@ export default function BookingScreen({
       diagnosisCenter: selectedDiagCenter.centerName || "",
       statusId: statusId,
       paymentDetails: String(totalAmount),
+      paymentAmount: totalAmount,
+      razorpayOrderId: paymentData?.razorpayOrderId || "",
+      razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+      razorpaySignature: paymentData?.razorpaySignature || "",
       req: "web",
     };
     if (patientType === "others" && selectedRelation) {
@@ -935,6 +973,7 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
+
 
   const handleViewAddress = () => {
     setAddressVisible(true);
@@ -1296,7 +1335,31 @@ export default function BookingScreen({
   // ═══════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════
+  function convertTo24HourFormat(time12hr: string): string {
+    const [time, modifier] = time12hr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    if (modifier === "PM" && hours !== 12) {
+      hours += 12;
+    }
+    if (modifier === "AM" && hours === 12) {
+      hours = 0;
+    }
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  }
 
+  function isSlotCompleted(slot: string) {
+    const [, end] = slot.split(" - ");
+    console.log("End Time to Parse:", end);
+    const convertedEndTime = convertTo24HourFormat(end);
+    console.log("Converted End Time (24-hour):", convertedEndTime);
+    const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
+    const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
+    console.log("Parsed End Time:", endTime.toString());
+    const now = dayjs();
+    console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
+    console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
+    return endTime.isBefore(now);
+  }
   if (isFromMedicalFlag) {
     // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
     const content = (
@@ -1976,12 +2039,15 @@ export default function BookingScreen({
                           style={[
                             styles.timeSlot,
                             selectedTimeSlot === slot && styles.selectedTimeSlot,
+                            isSlotCompleted(slot) && { opacity: 0.5 },
                           ]}
                           onPress={() => {
-                            setSelectedTimeSlot(slot);
-                            if (errors === "Please select time slot")
-                              setErrors("");
+                            if (!isSlotCompleted(slot)) {
+                              setSelectedTimeSlot(slot);
+                              if (errors === "Please select time slot") setErrors("");
+                            }
                           }}
+                          disabled={isSlotCompleted(slot)}
                         >
                           <Text
                             style={[
@@ -2047,7 +2113,10 @@ export default function BookingScreen({
                               ? selectedRelation.name
                               : "Select"}
                           </Text>
-                          <View style={styles.dropdownIcon} />
+                          <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
                         </TouchableOpacity>
                         {fieldErrors.relation ? (
                           <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
@@ -2176,11 +2245,11 @@ export default function BookingScreen({
                   </Text>
                 </View>
               </View>
-              {(type === "scans") && (
+              {/* {(type === "scans") && (
                 <View style={styles.paydiacontainer}>
                   <Text style={styles.paytext}>Pay at Diagnstic Center</Text>
                 </View>
-              )}
+              )} */}
             </View>
 
 
@@ -2205,7 +2274,7 @@ export default function BookingScreen({
           {type === "scans" ? (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm & Book Now`}
+                title={`Confirm & Pay  \u20B9${totalAmount}`}
                 onPress={handleBookNowScan}
                 style={{ width: "100%" }}
               />
@@ -2338,6 +2407,14 @@ export default function BookingScreen({
                     });
                   } else if (type === "ambulance") {
                     saveAmbulanceOrder({
+                      razorpayOrderId:
+                        data.razorpay_order_id || razorpayOrderId || "",
+                      razorpayPaymentId: data.razorpay_payment_id || "",
+                      razorpaySignature: data.razorpay_signature || "",
+                    });
+                  }
+                  else if (type === "scans") {
+                    saveBookNowScan({
                       razorpayOrderId:
                         data.razorpay_order_id || razorpayOrderId || "",
                       razorpayPaymentId: data.razorpay_payment_id || "",

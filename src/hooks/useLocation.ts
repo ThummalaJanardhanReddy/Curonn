@@ -167,6 +167,7 @@ export const useLocation = () => {
           // Compose as: 'village\ndistrict, mandal, state'
           const formattedAddress = `${[district, village, state].filter(Boolean).join(', ')}`;
           setAddress(formattedAddress);
+          console.log("Geocoded address:", formattedAddress);
           await AsyncStorage.setItem("userAddress", formattedAddress);
           return formattedAddress;
         } else {

@@ -216,7 +216,7 @@ export interface ICreateAppointmentRequest {
 export interface IConsultationType {
   label: string; // what UI shows
   value: number; // id
-  key: "chat" | "video" | "phone"; // stable key
+  key: "chat" | "Video" | "Phone"; // stable key
 }
 
 export interface ChatMessage {

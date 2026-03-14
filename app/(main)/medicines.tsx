@@ -331,7 +331,7 @@ export default function MedicinesScreen() {
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for Medicines1"
+              placeholder="Search for Medicines"
               placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -367,11 +367,21 @@ export default function MedicinesScreen() {
             <View style={styles.categoriesSection}>
               <Text style={styles.categoriesTitle}>Popular Categories</Text>
               <View style={styles.categoriesGrid}>
-                {categories.map(category => (
-                  <View key={category.id} style={styles.categoryCardWrapper}>
-                    {renderCategoryCard({ item: category })}
+                {groupsLoading ? (
+                  <View style={{ width: '100%', alignItems: 'center', padding: 24 }}>
+                    <Text style={{ color: '#888', fontSize: 16, fontFamily: fonts.regular }}>Loading...</Text>
                   </View>
-                ))}
+                ) : categories.length === 0 ? (
+                  <View style={{ width: '100%', alignItems: 'center', padding: 24 }}>
+                    <Text style={{ color: '#888', fontSize: 16, fontFamily: fonts.regular }}>No popular Categories</Text>
+                  </View>
+                ) : (
+                  categories.map(category => (
+                    <View key={category.id} style={styles.categoryCardWrapper}>
+                      {renderCategoryCard({ item: category })}
+                    </View>
+                  ))
+                )}
               </View>
             </View>
           </ScrollView>

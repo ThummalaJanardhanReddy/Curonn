@@ -20,7 +20,7 @@ export const fontStyles = {
   headercontent: {
     fontFamily: fonts.semiBold,
     fontSize: 16,
-    lineHeight: 28,
+    lineHeight: 18,
   },
   heading1: {
     fontFamily: fonts.bold,

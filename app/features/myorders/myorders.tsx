@@ -259,7 +259,7 @@ export default function OrdersScreen() {
   // };
 
   const formatDate = (isoDate: string) => {
-    return dayjs(isoDate).format("MMM Do, YYYY - hh:mm A");
+    return dayjs(isoDate).format("MMM Do, YYYY");
   };
 
   const handleOrderPress = (order: any) => {

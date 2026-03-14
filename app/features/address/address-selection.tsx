@@ -95,10 +95,10 @@ export default function AddressSelection({
           setSelectedAddressId(selectedAddressId);
         } else {
           // ⭐ Priority 2: default address
-          const defaultAddr = addressList.find(a => a.isDefault);
-          if (defaultAddr) {
-            setSelectedAddressId(defaultAddr.addressId);
-          }
+            const defaultAddr = addressList.find((a: SavedAddress) => a.isDefault);
+            if (defaultAddr) {
+              setSelectedAddressId(defaultAddr.addressId);
+            }
         }
       }
     } catch (error) {
@@ -126,6 +126,43 @@ export default function AddressSelection({
     }
   }, [visible]);
 
+  const handlesetdefault = async (addressId: number) => {
+    try {
+      // Use query params as per Swagger
+      const url = `${ApiRoutes.Address.setDfaultaddress}?addressId=${addressId}&patientId=${patientId}`;
+      console.log("Set default address URL:", url);
+      const response: any = await axiosClient.post(url, {});
+      console.log("Set default response:", response);
+      if (response.isSuccess === true) {
+        setDefaultAddressId(addressId);
+        setAddresses(prev =>
+          prev.map(addr =>
+            addr.addressId === addressId
+              ? { ...addr, isDefault: true }
+              : { ...addr, isDefault: false }
+          )
+        );
+        setToastMessage({
+          title: "Success",
+          subtitle: response.message,
+          color: "#4BB543",
+        });
+        await fetchAddresses();
+        setShowToast(true);
+        // Notify parent (Booking screen) to refresh addresses
+        if (typeof onAddressChanged === "function") {
+          onAddressChanged();
+        }
+      }
+    } catch (error) {
+      setToastMessage({
+        title: "Error",
+        subtitle: "Failed to update default address",
+        color: "#FF3333",
+      });
+      setShowToast(true);
+    }
+  }
 
 
   return (
@@ -175,43 +212,10 @@ export default function AddressSelection({
                           <Text style={{ color: "#4BB543", fontFamily: fonts.medium, fontWeight: "bold" }}>Default</Text>
                         ) : (
                           <TouchableOpacity
-                            onPress={async () => {
-                              try {
-                                // Use query params as per Swagger
-                                const url = `${ApiRoutes.Address.setDfaultaddress}?addressId=${item.addressId}&patientId=${item.patientId}`;
-                                console.log("Set default address URL:", url);
-                                const response: any = await axiosClient.post(url, {});
-                                console.log("Set default response:", response);
-                                if (response.isSuccess === true) {
-                                  setDefaultAddressId(item.addressId);
-                                  setAddresses(prev =>
-                                    prev.map(addr =>
-                                      addr.addressId === item.addressId
-                                        ? { ...addr, isDefault: true }
-                                        : { ...addr, isDefault: false }
-                                    )
-                                  );
-                                  setToastMessage({
-                                    title: "Success",
-                                    subtitle: response.message,
-                                    color: "#4BB543",
-                                  });
-                                  setShowToast(true);
-                                  // Notify parent (Booking screen) to refresh addresses
-                                  if (typeof onAddressChanged === "function") {
-                                    onAddressChanged();
-                                  }
-                                }
-                              } catch (error) {
-                                setToastMessage({
-                                  title: "Error",
-                                  subtitle: "Failed to update default address",
-                                  color: "#FF3333",
-                                });
-                                setShowToast(true);
-                              }
-                            }}
-                          >
+                            onPress={ () => {
+                              handlesetdefault(item.addressId);
+                            }}>
+                          
                             <Text style={{ color: "#C35E9C", fontWeight: "bold", fontFamily: fonts.medium, }}>Set as Default</Text>
                           </TouchableOpacity>
                         )}

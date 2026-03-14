@@ -89,7 +89,7 @@ export default function BookingPayLaterScreen() {
   }>({ title: '', subtitle: '', type: 'success' });
 
   const genderOptions = ['Male', 'Female', 'Other'];
-   const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
@@ -636,7 +636,10 @@ export default function BookingPayLaterScreen() {
                     <Text style={styles.dropdownText}>
                       {selectedRelation ? selectedRelation.name : 'Select'}
                     </Text>
-                    <View style={styles.dropdownArrow} />
+                    <Image
+                      source={images.arrowdown}
+                      style={styles.dropdownIcon}
+                    />
                   </TouchableOpacity>
                   {fieldErrors.relation ? (
                     <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>

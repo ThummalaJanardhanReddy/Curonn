@@ -5,6 +5,7 @@ import {
   Image,
   ScrollView,
   StatusBar,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -54,8 +55,8 @@ export interface IDepartments {
 }
 const consultationTypes: IConsultationType[] = [
   { label: "Chat", value: 1340, key: "chat" },
-  { label: "Video Call", value: 1339, key: "video" },
-  { label: "Phone", value: 1341, key: "phone" },
+  { label: "Video Call", value: 1339, key: "Video" },
+  { label: "Phone", value: 1341, key: "Phone" },
 ];
 const chatId = 1340;
 export default function MyDoctorScreen() {
@@ -161,7 +162,7 @@ export default function MyDoctorScreen() {
         </View>
         <View style={styles.specialistTextContainer}>
           <Text style={styles.specialistName}>{item.specialityName}</Text>
-          <Text style={styles.specialistDescription}>{item.description}</Text>
+          {/* <Text style={styles.specialistDescription}>{item.description}</Text> */}
         </View>
       </TouchableOpacity>
     ),
@@ -188,29 +189,22 @@ export default function MyDoctorScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
       <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#ffffffff"
-        />
+       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         {/* Header */}
         {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
+        <View style={styles.defaultHeader}>
         <CommonHeader
           currentLocation={currentLocation}
           onProfilePress={() => console.log("Profile pressed")}
           onCartPress={() => console.log("Cart pressed")}
           showCart={false}
         />
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
+        </View>
+          <View style={styles.boxcolor}>
+             <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
+              {/* Search Bar */}
               {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
               <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
               <TextInput
@@ -229,14 +223,22 @@ export default function MyDoctorScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            <View style={{ paddingVertical: 10 }}>
+     
+          </View>
+          
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >       <View style={{ paddingVertical: 10,paddingHorizontal: 20}}>
               <AnimatedTabs
                 tabs={consultationTypes}
                 activeValue={consultationTypeId}
                 onChange={handleConsultationTypeChange}
               />
             </View>
-          </View>
+          
+         
 
           {consultationTypeId === chatId ? (
             <View
@@ -247,7 +249,7 @@ export default function MyDoctorScreen() {
                 gap: 15,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "400" }}>
+              <Text style={{ fontSize: 14, fontWeight: "400",fontFamily:fonts.regular, color: colors.text }}>
                 {" "}
                 Our doctors are available now
               </Text>
@@ -267,6 +269,7 @@ export default function MyDoctorScreen() {
           ) : (
             <>
               {/* Choose Your Specialist Title */}
+              <View style={styles.pageContainer}>
               <View style={styles.titleContainer}>
                 <Text style={styles.titleText}>Choose your specialist</Text>
               </View>
@@ -284,28 +287,39 @@ export default function MyDoctorScreen() {
                   ))}
                 </View>
               </View>
+              </View>
             </>
           )}
         </ScrollView>
+        </View>
       </View>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.container_layout,
-    backgroundColor: colors.bg_primary,
+   //...commonStyles.container_layout,
+   flex: 1,
+    backgroundColor: colors.white,
+     paddingTop: Platform.OS === 'android' ? getResponsiveSpacing(20) : 27,
     // backgroundColor: colors.white,
+    
   },
+    defaultHeader: {
+      paddingHorizontal: getResponsiveSpacing(20),
+       marginTop: Platform.OS === 'android' ? getResponsiveSpacing(0) : 0,
+    },
   content: {
     flex: 1,
   },
-  searchContainer: {
-    // paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(10),
-    paddingBottom: getResponsiveSpacing(10),
+    boxcolor: {
     backgroundColor: colors.bg_primary,
+    flex: 1
+  },
+  searchContainer: {
+     marginBottom: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(20),
+    marginTop: 8,
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -338,13 +352,18 @@ const styles = StyleSheet.create({
     ...getResponsiveImageSize(16, 16),
     tintColor: "#999",
   },
+  pageContainer: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    marginTop: getResponsiveSpacing(10),
+  },
   titleContainer: {
     // paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(14),
   },
   titleText: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(15),
+    fontFamily:fonts.medium,
+    fontWeight: "600",
     color: colors.text,
     textAlign: "left",
   },
@@ -390,22 +409,24 @@ const styles = StyleSheet.create({
   },
   specialistTextContainer: {
     position: "absolute",
-    bottom: 0,
+    bottom: 7,
     left: 0,
     right: 0,
-    // backgroundColor: "rgba(0, 0, 0, 0.6)",
+   // backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: getResponsiveSpacing(6),
     zIndex: 1,
   },
   specialistName: {
-    fontSize: getResponsiveFontSize(12),
-    fontWeight: "bold",
+    fontSize: getResponsiveFontSize(11.5),
+    fontFamily:fonts.semiBold,
+    fontWeight: "600",
     color: "#fff",
     marginBottom: getResponsiveSpacing(1),
     textAlign: "left",
-    paddingLeft:8
+    paddingLeft:7,
   },
   specialistDescription: {
+     fontFamily:fonts.regular,
     fontSize: getResponsiveFontSize(8),
     color: "#fff",
     textAlign: "center",

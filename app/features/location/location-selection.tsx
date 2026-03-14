@@ -32,6 +32,7 @@ import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { colors } from "@/app/shared/styles/commonStyles";
 import { useUserStore } from "@/src/store/UserStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocation } from "@/src/hooks/useLocation";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -94,10 +95,11 @@ export default function LocationSelection({
     subtitle: "",
     color: "#4BB543", // default to success green
   });
-   const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
+
   const patientId = Number(userData?.e_id || user?.eId);
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
@@ -131,20 +133,38 @@ export default function LocationSelection({
       latitude: lat,
       longitude: lng,
       address: address || "",
-      houseNumber: "", // Set to empty string for simple mode
-      landmark: "",
-      nickname: "home",
     };
     console.log("Saving simple location:", simpleLocation);
     try {
       await AsyncStorage.setItem('userLocationLatLng', JSON.stringify({ latitude: markerPosition?.latitude ?? currentLocation?.coords.latitude, longitude: markerPosition?.longitude ?? currentLocation?.coords.longitude }));
-      //await AsyncStorage.setItem("userLocationLatLng", JSON.stringify(simpleLocation));
-      // Toast.show && Toast.show({
-      //   title: "Location Saved",
-      //   subtitle: "Your location has been saved.",
-      //   color: "#4BB543",
-      // });
-      
+      const addressResult = (await Promise.race([
+        Location.reverseGeocodeAsync({
+          latitude: lat,
+          longitude: lng,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Geocoding timeout")), 8000)
+        ),
+      ])) as Location.LocationGeocodedAddress[];
+
+      let formattedAddress = address;
+      if (addressResult.length > 0) {
+        const addr = addressResult[0];
+        const mandal = addr.subregion || '';
+        const village = addr.city || '';
+        const district = addr.district || '';
+        const state = addr.region || '';
+        formattedAddress = `${[district, village, state].filter(Boolean).join(', ')}`;
+        setAddress(formattedAddress);
+        await AsyncStorage.setItem("userAddress", formattedAddress);
+        //console.log("Geocoded address:", formattedAddress);
+      } else {
+        // Fallback to coordinates if geocoding fails
+        formattedAddress = `Lat: ${markerPosition?.latitude ?? currentLocation?.coords.latitude.toFixed(4)}, Lng: ${markerPosition?.longitude ?? currentLocation?.coords.longitude.toFixed(4)}`;
+        setAddress(formattedAddress);
+        await AsyncStorage.setItem("userAddress", formattedAddress);
+      }
+      // ...existing code...
       onLocationSelected && onLocationSelected(simpleLocation);
       onClose && onClose();
     } catch (e) {
@@ -381,7 +401,7 @@ export default function LocationSelection({
             styles={{
               container: {
                 position: "absolute",
-                top: 80,
+                top: 30,
                 width: "85%",
                 alignSelf: "center",
                 zIndex: 10,

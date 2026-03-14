@@ -693,7 +693,8 @@ export default function HomeScreen() {
 };
 
   useEffect(() => {
-    async function fetchArticles() {
+    
+    const fetchArticles = async () => {
       try {
         console.log("Request URL:", ApiRoutes.ArticlesData.Allarticles);
         const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
@@ -708,7 +709,7 @@ export default function HomeScreen() {
     }
     fetchArticles();
 
-    async function fetchWelness() {
+    const fetchWelness= async () => {
       try {
         console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
         const res = await axiosClient.get(

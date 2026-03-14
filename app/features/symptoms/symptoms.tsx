@@ -13,6 +13,7 @@ import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { colors } from "../../shared/styles/commonStyles";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -25,7 +26,7 @@ import {
   ISymptomMasterApiResponse,
 } from "@/src/constants/constants";
 import ApiRoutes from "@/src/api/employee/employee";
-import { fonts } from "@/app/shared/styles/fonts";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
 
 interface Symptom {
@@ -157,6 +158,7 @@ export default function SymptomsScreen() {
   );
 
   return (
+     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -236,6 +238,7 @@ export default function SymptomsScreen() {
         </View>
       )}
     </View>
+    </SafeAreaView>
   );
 }
 
@@ -246,7 +249,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(50),
+    paddingTop: getResponsiveSpacing(10),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
     borderBottomWidth: 1,
@@ -256,8 +259,10 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerTitle: {
+        ...fontStyles.headercontent,
+        marginLeft: 5,
     fontSize: getResponsiveFontSize(18),
-    fontWeight: "bold",
+    fontWeight: "600",
     color: colors.black,
   },
   content: {
@@ -319,15 +324,18 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(4),
   },
   chipText: {
-    fontSize: getResponsiveFontSize(12),
+    fontSize: getResponsiveFontSize(11),
     color: colors.primary,
     fontWeight: "500",
+    fontFamily: fonts.semiBold,
     marginRight: getResponsiveSpacing(6),
   },
   chipCloseButton: {
     alignItems: "center",
     justifyContent: "center",
     marginLeft: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
+
   },
   chipCloseText: {
     fontSize: getResponsiveFontSize(16),
@@ -337,10 +345,12 @@ const styles = StyleSheet.create({
   titleContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
+    marginTop: getResponsiveSpacing(10),
   },
   titleText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontFamily: fonts.semiBold,
     color: colors.text,
   },
   symptomsContainer: {
@@ -360,14 +370,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
     borderRadius: getResponsiveSpacing(15),
-    paddingHorizontal: getResponsiveSpacing(12),
-    paddingVertical: getResponsiveSpacing(6),
+    paddingHorizontal: getResponsiveSpacing(10),
+    paddingVertical: getResponsiveSpacing(5),
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",
   },
   symptomName: {
-    fontSize: getResponsiveFontSize(12),
+    fontSize: getResponsiveFontSize(11),
+    fontFamily: fonts.medium,
     fontWeight: "500",
     color: colors.text,
     textAlign: "center",
@@ -377,13 +388,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: "absolute",
-    bottom: getResponsiveSpacing(60),
+    bottom: getResponsiveSpacing(0),
     left: 0,
     right: 0,
     paddingHorizontal: getResponsiveSpacing(20),
     // paddingBottom: getResponsiveSpacing(30),
     // paddingTop: getResponsiveSpacing(15),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.white,
+    paddingTop: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(10),
     borderTopWidth: 1,
     borderTopColor: "#eee",
     alignItems: "center",
