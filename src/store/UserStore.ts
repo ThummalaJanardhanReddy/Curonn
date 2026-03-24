@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { create } from "zustand";
 
 export interface IUser {
@@ -95,6 +96,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   isLoggedIn: () => !!get().user,
 
   restoreUserData: async () => {
+    if (Platform.OS === "web") return null;
     // Dynamically import SecureStore to avoid issues in SSR
     const SecureStore = await import('expo-secure-store');
     const userData = await SecureStore.getItemAsync('userData');

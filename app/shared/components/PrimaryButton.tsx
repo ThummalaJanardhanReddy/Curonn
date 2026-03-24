@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: getResponsiveFontSize(15),
+    fontSize: getResponsiveFontSize(13),
     textAlign: 'center',
     fontFamily: fonts.semiBold,
   },

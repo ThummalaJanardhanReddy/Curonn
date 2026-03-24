@@ -1639,7 +1639,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                             <View style={styles.footerRow}>
                                 <View style={styles.reschedulebox}>
                                     <TouchableOpacity style={styles.cancelOrderBtn1} onPress={handleCancelPress}>
-                                        <Text style={styles.cancelOrderBtnText}>Cancel Consul</Text>
+                                        <Text style={styles.cancelOrderBtnText}>Cancel</Text>
                                     </TouchableOpacity>
                                     {candocReschedule && (
                                         <TouchableOpacity style={styles.rescheduleBtn1} onPress={() => setShowRescheduleModal(true)}>
@@ -1786,7 +1786,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        height: 48,
+        height: 30,
         width: '70%',
     },
     rescheduleBtn1: {
@@ -1794,7 +1794,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        height: 48,
+        height: 30,
         paddingHorizontal: 20,
         minWidth: '45%',
     },
@@ -1802,7 +1802,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
         fontFamily: fonts.semiBold,
-        fontSize: 14,
+        fontSize: 11,
     },
     cancelOrderBtn: {
         backgroundColor: '#fff',
@@ -1811,7 +1811,7 @@ const styles = StyleSheet.create({
         borderColor: '#C35E9D',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 48,
+        height: 30,
         width: '70%',
         alignSelf: 'center',
     },
@@ -1828,7 +1828,7 @@ const styles = StyleSheet.create({
         borderColor: '#C35E9D',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 48,
+        height: 30,
         alignSelf: 'center',
         paddingHorizontal: 20,
         minWidth: '45%',
@@ -1836,7 +1836,7 @@ const styles = StyleSheet.create({
     cancelOrderBtnText: {
         color: '#C35E9D',
         fontFamily: fonts.semiBold,
-        fontSize: 14,
+        fontSize: 11,
     },
     // Modal styles
     modalOverlay: {
@@ -1922,12 +1922,12 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        height: 40,
+        height: 30,
         marginTop: 16,
     },
     reshduletext: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 11,
         fontWeight: '600',
         fontFamily: fonts.semiBold,
         paddingTop: 2,

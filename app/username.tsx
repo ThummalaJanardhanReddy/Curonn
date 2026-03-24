@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   View
@@ -24,6 +25,7 @@ export default function UsernameScreen() {
   const apiUsername = userData?.fullName || 'John Doe'; // This would come from API
   useEffect(() => {
   const fetchMobileDetailsUpdated = async () => {
+    if (Platform.OS === "web") return null;
     const value = await SecureStore.getItemAsync('mobile_details_updated');
     setMobileDetailsUpdated(value === 'true');
   };

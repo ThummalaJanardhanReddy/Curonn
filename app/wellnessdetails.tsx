@@ -240,6 +240,6 @@ const styles = StyleSheet.create({
     ...fontStyles.headercontent,
     marginBottom: 4,
     width: 130,
-    height: 40,
+    height: 30,
   },
 });

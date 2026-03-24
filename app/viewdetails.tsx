@@ -895,6 +895,6 @@ dateTimeCard: {
 
   bookButton: {
     width: 130,
-    height: 40,
+    height: 30,
   },
 });

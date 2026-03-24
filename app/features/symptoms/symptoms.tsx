@@ -104,13 +104,13 @@ export default function SymptomsScreen() {
     setSelectedSymptoms((prev) => [...prev, symptom]);
   };
 
-  const handleSymptomDeselect = (symptomId: string | number) => {
-    setSelectedSymptoms((prev) =>
-      prev.filter(
-        (symptom) => symptom.symptomMasterId.toString() !== symptomId,
-      ),
-    );
-  };
+const handleSymptomDeselect = (symptomId: string | number) => {
+  setSelectedSymptoms((prev) =>
+    prev.filter(
+      (symptom) => symptom.symptomMasterId.toString() !== symptomId.toString()
+    )
+  );
+};
 
   const handleProceedToChat = () => {
     router.push({
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   },
   proceedButton: {
     borderRadius: getResponsiveSpacing(23),
-    height: getResponsiveSpacing(45),
+    height: getResponsiveSpacing(40),
     width: "100%",
   },
 });

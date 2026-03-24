@@ -1611,7 +1611,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg_primary, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
-    paddingTop: 7,
+    paddingTop: 0,
     flex: 1,
   },
   boxcolor: {
@@ -1619,10 +1619,10 @@ const styles = StyleSheet.create({
     flex: 1
   },
   searchContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
     paddingHorizontal: 20,
     marginTop: 5,
-    backgroundColor: colors.bg_primary
+    backgroundColor: colors.bg_primary,
   },
   cardContainer: {
     width: '100%',
@@ -1661,8 +1661,11 @@ const styles = StyleSheet.create({
     tintColor: "#999",
   },
   categoriesContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
     paddingHorizontal: 20,
+   
+    // borderWidth: 1,
+    // borderColor: "#ff0000",
   },
   categoriesList: {
     gap: 12,
@@ -1672,11 +1675,13 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: "rgba(105, 70, 100, 0.33)",
-    // borderWidth: 1,
-    // borderColor: '#694664',
+    marginBottom: 1,
+    borderWidth: 1,
+    borderColor: '#rgba(105, 70, 100, 0.33)',
   },
   categoryButtonSelected: {
     backgroundColor: "#694664",
+    borderColor: '#694664',
   },
   categoryButtonText: {
     fontSize: 13,
@@ -1694,6 +1699,7 @@ const styles = StyleSheet.create({
   subTestTypesContainer: {
     marginBottom: 10,
     paddingHorizontal: 20,
+    
   },
   subTestTypesList: {
     gap: 3,
@@ -1749,7 +1755,9 @@ const styles = StyleSheet.create({
     // Note: This requires react-native-linear-gradient. If not available, fallback to a View with backgroundColor.
     overflow: "hidden", // To ensure borderRadius clips the gradient
     borderRadius: 20,
-    padding: 16,
+    //padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#DBDBDB',
@@ -1800,21 +1808,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: '#fff',
     width: 130,
-    height: 35,
+    height: 30,
     justifyContent: 'center',
     borderRadius: 20,
     alignItems: 'center',
   },
   viewdetailstext: {
     color: "#000000",
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.semiBold,
     paddingTop: 2,
   },
   bookButton: {
     marginBottom: 4,
     width: 130,
-    height: 35,
+    height: 30,
     backgroundColor: '#C35E9C',
     borderRadius: getResponsiveSpacing(23),
     alignItems: 'center',
@@ -1823,7 +1831,7 @@ const styles = StyleSheet.create({
   },
   bookButtontext: {
     color: "#fff",
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: fonts.semiBold,
   },
   atHomeText: {
@@ -1852,7 +1860,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#4B334E",
-    marginBottom: 16,
+    marginBottom: 5,
     textAlign: "justify",
     fontFamily: fonts.semiBold,
   },

@@ -1416,10 +1416,10 @@ export default function BookingScreen({
                             ? selectedRelation.name
                             : "Select Relation"}
                         </Text>
-                        <Image
-                          source={images.icons.edit as any}
-                          style={styles.dropdownIcon}
-                        />
+                         <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
                       </TouchableOpacity>
                       {fieldErrors.relation ? (
                         <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
@@ -1471,10 +1471,10 @@ export default function BookingScreen({
                         <Text style={styles.dropdownText}>
                           {gender || "Select"}
                         </Text>
-                        <Image
-                          source={images.icons.edit as any}
-                          style={styles.dropdownIcon}
-                        />
+                       <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
                       </TouchableOpacity>
                       {fieldErrors.gender ? (
                         <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
@@ -2168,7 +2168,10 @@ export default function BookingScreen({
                           <Text style={styles.dropdownText}>
                             {gender || "Select"}
                           </Text>
-                          <View style={styles.dropdownIcon} />
+                            <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
                         </TouchableOpacity>
                         {fieldErrors.gender ? (
                           <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
@@ -2692,10 +2695,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "400",
     color: "#333",
-    marginBottom: 3,
+    marginBottom: 0,
     fontFamily: fonts.medium
   },
   dateInput: {
@@ -2815,10 +2818,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular
   },
   othersForm: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    //marginTop: 16,
+    paddingTop: 10,
+    // borderTopWidth: 1,
+    // borderTopColor: "#f0f0f0",
   },
   selectedRadioOption: {
     borderColor: '#C15E9C',
@@ -2901,7 +2904,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
   },
   formField: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   textInput: {
     borderWidth: 1,

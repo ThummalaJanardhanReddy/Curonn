@@ -105,6 +105,7 @@ export default function OTPVerifyScreen() {
   };
 
   const handleVerify = async () => {
+    if (Platform.OS === "web") return null;
     const otpString = otp.join("");
     if (otpString.length !== 4) {
       showSnackbar("Please enter the complete 4-digit OTP");
@@ -192,6 +193,7 @@ export default function OTPVerifyScreen() {
 
   const getEmployeeDetails = async (id: string | number) => {
     try {
+      if (Platform.OS === "web") return null;
       const response = await axiosClient.get(ApiRoutes.Employee.getById(id));
       const employee = response?.data ?? response;
       console.log("employee: ", employee);

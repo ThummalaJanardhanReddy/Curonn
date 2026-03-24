@@ -17,6 +17,8 @@ import { fonts } from '../../shared/styles/fonts';
 import { useCart } from '../context/CartContext';
 import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
 import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
+import MenuIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/hamburger-menu.svg';
+import MenuHomeIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/hamburger-homemenu.svg';
 import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -240,7 +242,7 @@ export default function CommonHeader({
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              {profileForm?.image ? (
+              {/* {profileForm?.image ? (
                 <Image
                   source={{ uri: profileForm.image }}
                   style={styles.profileIcon}
@@ -249,7 +251,8 @@ export default function CommonHeader({
                 <WomenIcon width={40} height={40} style={styles.profileIcon} />
               ) : (
                 <MenIcon width={40} height={40} style={styles.profileIcon} />
-              )}
+              )} */}
+               <MenuHomeIcon width={25} height={25} style={styles.profileIcon} fill="white"  />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.locationInfo}
@@ -314,16 +317,18 @@ export default function CommonHeader({
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              {profileForm?.image ? (
-                <Image
-                  source={{ uri: profileForm.image }}
-                  style={styles.profileIcon}
-                />
-              ) : profileForm?.gender === "Female" ? (
-                <WomenIcon width={40} height={40} style={styles.profileIcon} />
-              ) : (
-                <MenIcon width={40} height={40} style={styles.profileIcon} />
-              )}
+              {/* {profileForm?.image ? (
+<Image
+source={{ uri: profileForm.image }}
+style={styles.profileIcon}
+/>
+) : profileForm?.gender === "Female" ? (
+<WomenIcon width={40} height={40} style={styles.profileIcon} />
+) : (
+<MenIcon width={40} height={40} style={styles.profileIcon} />
+)} */}
+              {/* Hamburger Icon instead of profile icon */}
+              <MenuIcon width={25} height={25} style={styles.profileIcon} />
             </TouchableOpacity>
           )}
           {showLocation ? (
@@ -389,11 +394,13 @@ const styles = StyleSheet.create({
     // paddingLeft: getResponsiveSpacing(16),
     // paddingRight: getResponsiveSpacing(16),
     paddingTop: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(15),
+    paddingBottom: getResponsiveSpacing(5),
     backgroundColor: "transparent",
     // borderBottomWidth: 1,
     // borderBottomColor: '#39193d4d',
     zIndex: 1,
+    // borderWidth: 1,
+    // borderColor:'#ff0000'
   },
   homeLocationText: {
     fontSize: getResponsiveFontSize(13),
@@ -417,6 +424,9 @@ const styles = StyleSheet.create({
   },
   notificationButton: {
     padding: getResponsiveSpacing(8),
+    paddingBottom: getResponsiveSpacing(0),
+    // borderWidth: 1,
+    // borderColor: '#00ff00'
   },
   notificationIcon: {
     ...getResponsiveImageSize(28, 28),
@@ -437,13 +447,16 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flexDirection: "row",
-    alignItems: "center",
+    //alignItems: "center",
     flex: 1,
     minWidth: 0,
+    // borderWidth: 1,
+    // borderColor: '#00ff00'
   },
   profileButton: {
     marginRight: getResponsiveSpacing(12),
     paddingHorizontal: getResponsiveSpacing(4),
+    marginTop: getResponsiveSpacing(8),
   },
   profileIcon: {
     width: 40,

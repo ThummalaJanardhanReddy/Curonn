@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useRef, useState,useEffect } from 'react';
-import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from './shared/components/BackButton';
@@ -23,7 +23,10 @@ export default function TermsScreen() {
   }, []);
 
   useEffect(() => {
+    
+    
   const fetchMobileDetailsUpdated = async () => {
+    if (Platform.OS === "web") return null;
     const value = await SecureStore.getItemAsync('mobile_details_updated');
     setMobileDetailsUpdated(value === 'true');
   };
@@ -44,6 +47,7 @@ export default function TermsScreen() {
 
   const handleContinue = () => {
     if (canContinue) {
+      if (Platform.OS === "web") return null;
       import('expo-secure-store').then(async (SecureStore) => {
         const isLoggedIn = await SecureStore.getItemAsync('isLoggedIn');
         if (isLoggedIn === 'true') {

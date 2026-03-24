@@ -412,6 +412,7 @@ useEffect(() => {
 
   const hideLogoutConfirmation = async () => {
     setLogoutConfirmVisible(false);
+    if (Platform.OS === "web") return null;
     try {
       await AsyncStorage.clear();
       if (typeof SecureStore !== 'undefined' && SecureStore.deleteItemAsync) {

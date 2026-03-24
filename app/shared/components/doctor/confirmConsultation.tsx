@@ -1385,7 +1385,7 @@ const styles = StyleSheet.create({
   },
   proceedButton: {
     borderRadius: getResponsiveSpacing(23),
-    height: getResponsiveSpacing(45),
+    height: getResponsiveSpacing(35),
     width: "100%",
   },
 

@@ -207,7 +207,7 @@ export default function MyDoctorScreen() {
         />
       </View>
       <View style={styles.boxcolor}>
-        <View style={{ paddingVertical: 10, paddingHorizontal: 20 }}>
+        <View style={{ paddingVertical: 5, paddingHorizontal: 20 }}>
           <AnimatedTabs
             tabs={consultationTypes}
             activeValue={consultationTypeId}

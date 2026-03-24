@@ -1,4 +1,4 @@
- 
+
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator } from "react-native";
@@ -6,7 +6,7 @@ import { Button } from "react-native-paper";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
 import { getResponsiveFontSize, getResponsiveSpacing } from '../../shared/utils/responsive';
-import { fonts,fontStyles } from '@/app/shared/styles/fonts';
+import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -172,8 +172,8 @@ export default function AmbulanceScreen() {
       setBookingVisible(true);
     }
   };
-  
- // Render function for FlatList
+
+  // Render function for FlatList
   const renderAmbulanceItem = ({ item }: { item: TestItem }) => (
     <LinearGradient
       colors={['#fff', '#D5CDDA']}
@@ -201,15 +201,8 @@ export default function AmbulanceScreen() {
           </View>
         </View>
         <View style={styles.testActioncard}>
-          <Button
-            mode="outlined"
-            style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-            contentStyle={{
-              height: 40,
-              paddingVertical: 0,
-              justifyContent: 'center',
-            }}
-            textColor="#000000"
+          <TouchableOpacity
+            style={styles.viewdetailsbutton}
             onPress={() =>
               router.push({
                 pathname: "/viewdetails",
@@ -219,9 +212,10 @@ export default function AmbulanceScreen() {
                 },
               })
             }
-          >
-            View Details
-          </Button>
+          > <Text style={styles.viewdetailstext}>View Details</Text>
+          </TouchableOpacity>
+
+
           <PrimaryButton
             title="Book Now"
             onPress={() => handleBookTest(item.id)}
@@ -232,40 +226,31 @@ export default function AmbulanceScreen() {
     </LinearGradient>
   );
 
- 
+
   return (<>
-         <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#ffffff"
-        />
+    <StatusBar
+      barStyle="dark-content"
+      translucent={false}
+      backgroundColor="#ffffff"
+    />
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
-   
+
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ paddingRight: 10 }}
-          >
-            <Ionicons name="arrow-back" size={24} color="#694664" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Ambulance Service</Text>
+        <View style={styles.defaultHeader}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{ paddingRight: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#694664" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Ambulance Service</Text>
+          </View>
         </View>
 
         {/* Search Bar */}
-        <LinearGradient
-          colors={[
-            "rgba(255, 255, 255, 1)",
-            "rgba(247, 84, 10, 0.2)",
-          ]}
-          start={{ x: 0.1, y: 0.4 }}
-          end={{ x: 0.1, y: 0.1 }}
-          style={{
-            paddingHorizontal: 20,
-            paddingVertical: 5,
-          }}
-        >
+        <View style={styles.boxcolor}>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
@@ -286,36 +271,24 @@ export default function AmbulanceScreen() {
               )}
             </View>
           </View>
-        </LinearGradient>
 
-        <View style={styles.containercontent}>
-          <FlatList
-            data={ambulanceItems}
-            renderItem={renderAmbulanceItem}
-            keyExtractor={(item) => item.id}
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.5}
-            onMomentumScrollBegin={() => setOnEndReachedCalledDuringMomentum(false)}
-            ListEmptyComponent={() => (
-              !loading && (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No data available</Text>
-                </View>
-              )
-            )}
-            ListFooterComponent={() => (
-              loading ? (
-                <View style={{ paddingVertical: 20 }}>
-                  <ActivityIndicator size="large" color="#694664" />
-                </View>
-              ) : null
-            )}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={true}
-            showsVerticalScrollIndicator={false}
-          />
+
+          <View style={styles.containercontent}>
+            <FlatList
+              data={ambulanceItems}
+              renderItem={renderAmbulanceItem}
+              keyExtractor={(item, index) => `${item.id}_${index}`}
+             contentContainerStyle={{ paddingBottom: 50 }}
+              onEndReached={() => {
+                if (!onEndReachedCalledDuringMomentum) {
+                  handleLoadMore();
+                  setOnEndReachedCalledDuringMomentum(true);
+                }
+              }}
+              onEndReachedThreshold={0.5}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
         </View>
 
         {/* Booking Modal */}
@@ -325,11 +298,11 @@ export default function AmbulanceScreen() {
             onClose={() => {
               setBookingVisible(false);
               setSelectedTest(null);
-            } }
+            }}
             serviceName={selectedTest.name}
             servicePrice={Number(selectedTest.price)}
             masterId={selectedTest.ambulanceMasterId}
-            type={"ambulance" as ServiceType} isAtHome={true}    
+            type={"ambulance" as ServiceType} isAtHome={true}
             reportTime={"10-12 hours"} />
         )}
       </View>
@@ -338,19 +311,40 @@ export default function AmbulanceScreen() {
 }
 
 const styles = StyleSheet.create({
-      container: {
+  container: {
     backgroundColor: colors.white, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingBottom: 0,
+    flex: 1,
+  },
+  viewdetailsbutton: {
+    borderColor: "#BDBABA",
+    borderWidth: 1,
+    backgroundColor: '#fff',
+    width: 130,
+    height: 30,
+    justifyContent: 'center',
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  viewdetailstext: {
+    color: "#000000",
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    paddingTop: 2,
+  },
+  defaultHeader: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(15),
     backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.2)",
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#E0E0E0',
     // shadowColor: "#000",
     // shadowOffset: {
     //   width: 0,
@@ -365,15 +359,16 @@ const styles = StyleSheet.create({
     ...fontStyles.headercontent,
     color: "#202427",
   },
-  defaultHeader: {
-    paddingHorizontal: getResponsiveSpacing(20),
-  },
+  // defaultHeader: {
+  //   paddingHorizontal: getResponsiveSpacing(20),
+  // },
   containercontent: {
-    backgroundColor: colors.white, // colors.bg_secondary,
+    backgroundColor: colors.bg_primary, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
     paddingTop: 0,
     paddingVertical: 7,
+    //flex: 1,
   },
   content: {
     flex: 1,
@@ -381,8 +376,15 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     // backgroundColor: colors.bg_primary,
   },
+  boxcolor: {
+    backgroundColor: colors.bg_primary,
+    flex: 1
+  },
   searchContainer: {
-    marginBottom: 5,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginTop: 0,
+    backgroundColor: colors.bg_primary,
   },
   cardContainer: {
     width: '100%',
@@ -517,7 +519,7 @@ const styles = StyleSheet.create({
   bookButton: {
     marginBottom: 4,
     width: 130,
-    height: 40,
+    height: 30,
   },
   atHomeText: {
     fontSize: 10,
@@ -587,7 +589,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   finalPrice: {
-   fontSize: 16,
+    fontSize: 16,
     color: '#000',
     fontFamily: fonts.bold,
   },

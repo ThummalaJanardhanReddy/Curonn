@@ -48,8 +48,12 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserStore } from "@/src/store/UserStore";
 
+const { width } = Dimensions.get("window");
+const guidelineBaseWidth = 375;
+const scale = (size: number) => (width / guidelineBaseWidth) * size;
 
 export default function HomeScreen() {
+
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
@@ -88,7 +92,7 @@ export default function HomeScreen() {
   const fetchNotifications = async () => {
     if (!patientId) return;
     try {
-      const response:any = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, "patient"));
+      const response: any = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, "patient"));
       console.log("Notifications API response:", response);
       setNotifications(response); // Set notifications in the state
     } catch (error) {
@@ -98,7 +102,7 @@ export default function HomeScreen() {
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
 
- useEffect(() => {
+  useEffect(() => {
     return () => {
       if (connectionRef.current) {
         connectionRef.current.stop(); // Stop the connection when the component is unmounted
@@ -109,7 +113,7 @@ export default function HomeScreen() {
 
 
 
-    useEffect(() => {
+  useEffect(() => {
     const setupSignalR = async () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token || !patientId) return;
@@ -555,7 +559,7 @@ export default function HomeScreen() {
               marginBottom: 3,
             }}
           >
-          
+
           </View>
           <View
             style={{
@@ -654,46 +658,46 @@ export default function HomeScreen() {
   const notificationCountRefreshRef = useRef<() => void>(null);
 
   const markNotificationAsRead = async (notificationId: number) => {
-  try {
-    // Optimistically update the state before the API call
-    setNotifications((prev: any) =>
-      Array.isArray(prev)
-        ? prev.map((n) =>
+    try {
+      // Optimistically update the state before the API call
+      setNotifications((prev: any) =>
+        Array.isArray(prev)
+          ? prev.map((n) =>
             n.notificationId === notificationId ? { ...n, isRead: true } : n
           )
-        : prev
-    );
+          : prev
+      );
 
-    // Call the backend API to mark the notification as read
-    const readnotific =await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
-      notificationId,
-    });
-    console.log(`Notification ${notificationId} marked as read on backend`);
-    console.log(`After read Notificaiton`,readnotific);
+      // Call the backend API to mark the notification as read
+      const readnotific = await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
+        notificationId,
+      });
+      console.log(`Notification ${notificationId} marked as read on backend`);
+      console.log(`After read Notificaiton`, readnotific);
 
-    // Refresh notification count in CommonHeader
-    if (notificationCountRefreshRef.current) {
-      notificationCountRefreshRef.current();
-    }
+      // Refresh notification count in CommonHeader
+      if (notificationCountRefreshRef.current) {
+        notificationCountRefreshRef.current();
+      }
 
-    // Add a short delay before re-fetching notifications to allow backend to update
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await fetchNotifications();  // Fetch notifications after successful API call
-  } catch (error) {
-    console.error("Failed to mark notification as read", error);
-    // Optionally, revert the state change if there's an error
-    setNotifications((prev: any) =>
-      Array.isArray(prev)
-        ? prev.map((n) =>
+      // Add a short delay before re-fetching notifications to allow backend to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchNotifications();  // Fetch notifications after successful API call
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+      // Optionally, revert the state change if there's an error
+      setNotifications((prev: any) =>
+        Array.isArray(prev)
+          ? prev.map((n) =>
             n.notificationId === notificationId ? { ...n, isRead: false } : n
           )
-        : prev
-    );
-  }
-};
+          : prev
+      );
+    }
+  };
 
   useEffect(() => {
-    
+
     const fetchArticles = async () => {
       try {
         console.log("Request URL:", ApiRoutes.ArticlesData.Allarticles);
@@ -709,7 +713,7 @@ export default function HomeScreen() {
     }
     fetchArticles();
 
-    const fetchWelness= async () => {
+    const fetchWelness = async () => {
       try {
         console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
         const res = await axiosClient.get(
@@ -941,23 +945,23 @@ export default function HomeScreen() {
           // Mark as read if not already
           if (!item.isRead) markNotificationAsRead(item.notificationId);
           // Set selectedOrderDetails and open modal
-            setSelectedOrderDetails({
-              ...item,
-              masterId: item.referenceId,
-              orderType:
-                item.source === "Lab"
-                  ? "Single Test"
-                  : item.source === "Scan"
+          setSelectedOrderDetails({
+            ...item,
+            masterId: item.referenceId,
+            orderType:
+              item.source === "Lab"
+                ? "Single Test"
+                : item.source === "Scan"
                   ? "Xray"
                   : item.source === "Wellness"
-                  ? "Wellness Program"
-                  : item.source === "ChatRequest"
-                  ? "ChatRequest"
-                  : item.source === "Consulation"
-                  ? "Consultation"
-                  : item.source,
-              statusName: item.statusName || ""
-            });
+                    ? "Wellness Program"
+                    : item.source === "ChatRequest"
+                      ? "ChatRequest"
+                      : item.source === "Consulation"
+                        ? "Consultation"
+                        : item.source,
+            statusName: item.statusName || ""
+          });
           setOrderDetailsModalVisible(true);
         }}
       >
@@ -1010,10 +1014,18 @@ export default function HomeScreen() {
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
           {/* <Image source={images.transformLife} resizeMode="contain" /> */}
-          <View style={{ alignItems: "center", paddingHorizontal: 30 }}>
+          {/* <View style={{ alignItems: "center", paddingHorizontal: 30 }}>
             <Text style={styles.transhead}>Transform</Text>
             <Text style={styles.transinner}>Your Life</Text>
             <Text style={styles.curonhealth}>with Curonn.health</Text>
+          </View> */}
+          <View style={styles.textContainer}>
+            <Text style={styles.transText}>
+              {"Transform\nYour Life"}
+            </Text>
+            <Text style={styles.curonhealth}>
+              with Curonn.health
+            </Text>
           </View>
 
           <Image
@@ -1047,8 +1059,8 @@ export default function HomeScreen() {
             />
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-              // width={'60%'}
-              // height={'60%'}
+            // width={'60%'}
+            // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -1265,7 +1277,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}
@@ -1554,6 +1566,20 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
+  textContainer: {
+    alignItems: "center",
+    paddingHorizontal: scale(20),
+    width: "100%", // important for centering
+  },
+
+  transText: {
+    fontSize: scale(50), // responsive font
+    color: "#fff",
+    fontFamily: fonts.bold,
+    textAlign: "center",
+    lineHeight: scale(58), // responsive line height
+    maxWidth: "95%", // prevents overflow on small screens
+  },
   articletitle: {
     fontSize: 20,
     color: "#000",
@@ -1594,10 +1620,11 @@ const styles = StyleSheet.create({
     lineHeight: 70,
   },
   curonhealth: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: colors.white,
+    fontSize: scale(14),
+    color: "#fff",
     fontFamily: fonts.regular,
+    marginTop: scale(6),
+    textAlign: "center",
   },
   yogaImage: {
     width: "100%",
@@ -1611,28 +1638,36 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: getResponsiveFontSize(16),
     color: "#333",
-    marginBottom: getResponsiveSpacing(10),
+    marginBottom: getResponsiveSpacing(5),
     fontFamily: fonts.semiBold,
     marginTop: getResponsiveSpacing(10),
   },
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    // borderWidth: 1,
+    // borderColor: "#ff0000",
+    marginHorizontal: -8,
   },
   serviceCardWrapper: {
-    // width: '48%',
+    width: "50%", // ✅ exact 2 columns
+    paddingHorizontal: 8, // ✅ spacing between cards
+    //marginBottom: 16,
+    //  width: '48%',
     // marginBottom: 8,
     gap: getResponsiveSpacing(15),
   },
   serviceCard: {
+    width: "100%",
     height: getResponsiveSpacing(160),
-    width: getResponsiveSpacing(170),
+    //  aspectRatio: 1,
+    // width: getResponsiveSpacing(170),
     backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(24),
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
     paddingTop: getResponsiveSpacing(12),
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: "#eee",
     // shadowColor: '#000',
@@ -1643,7 +1678,7 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.1,
     // shadowRadius: 3.84,
     // elevation: 5,
-    justifyContent: "space-between",
+    //justifyContent: "space-between",
   },
   serviceCardTitle: {
     fontSize: getResponsiveFontSize(16),
@@ -1718,7 +1753,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ambulanceCard: {
-    borderRadius: 16,
+    borderRadius: 23,
     overflow: "hidden",
     position: "relative",
     height: 140,
@@ -1774,6 +1809,7 @@ const styles = StyleSheet.create({
   divider: {
     alignItems: "center",
     paddingVertical: 10,
+    paddingBottom:5
   },
   dividerText: {
     fontSize: 16,
@@ -1966,7 +2002,7 @@ const styles = StyleSheet.create({
   articleCard: {
     width: 280,
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 23,
     // marginHorizontal: 10,
     marginRight: 15,
     overflow: "hidden",
@@ -2011,3 +2047,5 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
 });
+
+

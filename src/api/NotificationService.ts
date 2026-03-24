@@ -71,30 +71,60 @@ export function configureNotificationHandler() {
  * Initialize all notification listeners
  * Call this once in root layout (App.tsx or _layout.tsx)
  */
-export function initializeNotificationListeners() {
-  // 1️⃣ Foreground notification received
-  const foregroundSubscription = Notifications.addNotificationReceivedListener(
-    (notification) => {
-      console.log("Foreground notification:", notification);
-    },
-  );
+// export function initializeNotificationListeners() {
+//   // 1️⃣ Foreground notification received
+//   const foregroundSubscription = Notifications.addNotificationReceivedListener(
+//     (notification) => {
+//       console.log("Foreground notification:", notification);
+//     },
+//   );
 
-  // 2️⃣ When user taps notification (Background state)
+
+export function initializeNotificationListeners() {
+  if (Platform.OS === "web") return () => {};
+
+  // 1️⃣ Foreground notification
+  const foregroundSubscription =
+    Notifications.addNotificationReceivedListener((notification) => {
+      console.log("Foreground notification:", notification);
+    });
+
+  // 2️⃣ Background / tap
   const responseSubscription =
     Notifications.addNotificationResponseReceivedListener((response) => {
       console.log("Notification tapped:", response);
 
-      handleNotificationNavigation(response.notification.request.content.data);
+      handleNotificationNavigation(
+        response.notification.request.content.data
+      );
     });
 
-  // 3️⃣ App opened from KILLED state
+  // 3️⃣ Killed state
   checkInitialNotification();
 
+  // ✅ RETURN MUST BE INSIDE FUNCTION
   return () => {
     foregroundSubscription.remove();
     responseSubscription.remove();
   };
 }
+
+ 
+//   const responseSubscription =
+//     Notifications.addNotificationResponseReceivedListener((response) => {
+//       console.log("Notification tapped:", response);
+
+//       handleNotificationNavigation(response.notification.request.content.data);
+//     });
+
+//   // 3️⃣ App opened from KILLED state
+//   checkInitialNotification();
+
+//   return () => {
+//     foregroundSubscription.remove();
+//     responseSubscription.remove();
+//   };
+// }
 
 /**
  * Handle navigation based on notification data
@@ -133,12 +163,30 @@ function handleNotificationNavigation(data: any) {
 /**
  * Handle app opened from killed state
  */
+// async function checkInitialNotification() {
+//   const response = Notifications.getLastNotificationResponse();
+
+//   if (response) {
+//     console.log("App opened from killed state via notification");
+
+//     handleNotificationNavigation(response.notification.request.content.data);
+//   }
+// }
+
 async function checkInitialNotification() {
-  const response = Notifications.getLastNotificationResponse();
+  if (Platform.OS === "web") return; // 🚀 FIX: avoid web crash
 
-  if (response) {
-    console.log("App opened from killed state via notification");
+  try {
+    const response = await Notifications.getLastNotificationResponseAsync();
 
-    handleNotificationNavigation(response.notification.request.content.data);
+    if (response) {
+      console.log("App opened from killed state via notification");
+
+      handleNotificationNavigation(
+        response.notification.request.content.data
+      );
+    }
+  } catch (error) {
+    console.log("Error fetching last notification:", error);
   }
 }

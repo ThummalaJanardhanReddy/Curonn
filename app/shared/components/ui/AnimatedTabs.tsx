@@ -36,17 +36,20 @@ export default function AnimatedTabs({
     [tabs, activeValue],
   );
 
-  const usableWidth = containerWidth - CONTAINER_PADDING * 2;
+  const GAP = 6;
+  
+const usableWidth =
+  containerWidth - CONTAINER_PADDING * 2 - GAP * (tabs.length - 1);
   const tabWidth = tabs.length > 0 ? usableWidth / tabs.length : 0;
 
   const translateX = useSharedValue(0);
 
   useEffect(() => {
     if (tabWidth > 0 && activeIndex >= 0) {
-      translateX.value = withTiming(
-        activeIndex * tabWidth + CONTAINER_PADDING,
-        { duration: 250 },
-      );
+     translateX.value = withTiming(
+  activeIndex * tabWidth + CONTAINER_PADDING,
+  { duration: 250 }
+);
     }
   }, [activeIndex, tabWidth]);
 
@@ -66,7 +69,10 @@ export default function AnimatedTabs({
           backgroundColor: colors.white,
           borderColor: colors.primary,
           borderWidth: 1,
-          padding: CONTAINER_PADDING,
+          //padding: CONTAINER_PADDING,
+          paddingHorizontal: 4,
+
+          paddingVertical: 8,
         },
       ]}
       onLayout={onLayout}
@@ -95,6 +101,8 @@ export default function AnimatedTabs({
             style={[
               styles.tab,
               {
+                width: tabWidth,
+    //marginRight: index !== tabs.length - 1 ? GAP : 0,
                 // borderColor: isActive ? colors.white : "transparent",
                 // borderWidth: isActive ? 1 : 0,
                 // borderLeftWidth: 0,
@@ -126,17 +134,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 8,
     position: "relative",
+    paddingHorizontal:4
   },
   tab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 0,
+    //paddingHorizontal: 2,
     zIndex: 2,
   },
   indicator: {
     position: "absolute",
-    top: CONTAINER_PADDING,
-    bottom: CONTAINER_PADDING,
+    top: 4,
+    bottom: 4,
+    marginHorizontal: 4,
     borderRadius: 8,
     zIndex: 1,
   },
