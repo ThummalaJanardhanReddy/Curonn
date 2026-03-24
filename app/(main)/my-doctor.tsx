@@ -131,7 +131,7 @@ export default function MyDoctorScreen() {
   const handleSpecialistSelect = (
     specialistId: number,
     specialistName: string,
-    specialityImage: string
+    specialityImage: string,
   ) => {
     setDepartment(specialistId, specialistName, specialityImage);
 
@@ -145,7 +145,11 @@ export default function MyDoctorScreen() {
       <TouchableOpacity
         style={styles.specialistCard}
         onPress={() =>
-          handleSpecialistSelect(item.specialityMasterId, item.specialityName, item.image)
+          handleSpecialistSelect(
+            item.specialityMasterId,
+            item.specialityName,
+            item.image,
+          )
         }
         activeOpacity={0.8}
       >
@@ -172,10 +176,11 @@ export default function MyDoctorScreen() {
   const handleChatStart = async () => {
     if (!user) return;
     try {
-      const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
-      console.log("chat appointment created: ", res);
-      useChatStore.getState().setRequestId(res?.chatRequestId);
+      // const res = await axiosClient.post(ApiRoutes.Chat.start(user.eId));
+      // console.log("chat appointment created: ", res);
+      // useChatStore.getState().setRequestId(res?.chatRequestId);
       router.push("/features/chat/Chat");
+      // router.push("/features/chat/ChatStressTestScreen");
     } catch (error) {
       Alert.alert(
         "Chat Consultation Failed",
@@ -189,23 +194,31 @@ export default function MyDoctorScreen() {
   };
 
   return (
-      <View style={styles.container}>
-       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        {/* Header */}
-        {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
-        <View style={styles.defaultHeader}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      {/* Header */}
+      {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
+      <View style={styles.defaultHeader}>
         <CommonHeader
           currentLocation={currentLocation}
           onProfilePress={() => console.log("Profile pressed")}
           onCartPress={() => console.log("Cart pressed")}
           showCart={false}
         />
+      </View>
+      <View style={styles.boxcolor}>
+        <View style={{ paddingVertical: 10, paddingHorizontal: 20 }}>
+          <AnimatedTabs
+            tabs={consultationTypes}
+            activeValue={consultationTypeId}
+            onChange={handleConsultationTypeChange}
+          />
         </View>
-          <View style={styles.boxcolor}>
-             <View style={styles.searchContainer}>
+
+        {consultationTypeId !== chatId && (
+          <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               {/* Search Bar */}
-              {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
               <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
@@ -223,23 +236,14 @@ export default function MyDoctorScreen() {
                 </TouchableOpacity>
               )}
             </View>
-     
           </View>
-          
+        )}
+
         <ScrollView
           style={styles.content}
           contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
-        >       <View style={{ paddingVertical: 10,paddingHorizontal: 20}}>
-              <AnimatedTabs
-                tabs={consultationTypes}
-                activeValue={consultationTypeId}
-                onChange={handleConsultationTypeChange}
-              />
-            </View>
-          
-         
-
+        >
           {consultationTypeId === chatId ? (
             <View
               style={{
@@ -249,75 +253,82 @@ export default function MyDoctorScreen() {
                 gap: 15,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "400",fontFamily:fonts.regular, color: colors.text }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "400",
+                  fontFamily: fonts.regular,
+                  color: colors.text,
+                }}
+              >
                 {" "}
                 Our doctors are available now
               </Text>
               <PrimaryButton
                 title="Start Chat"
                 onPress={handleChatStart}
-                style={{ paddingHorizontal: 40, width: "auto", height:38, backgroundColor: 'transparent', borderColor: colors.primary, borderWidth:1 }}
-                textStyle={{color: colors.primary}}
+                style={{
+                  paddingHorizontal: 40,
+                  width: "auto",
+                  height: 38,
+                  backgroundColor: "transparent",
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                }}
+                textStyle={{ color: colors.primary }}
               />
-              {/* <TouchableOpacity
-              style={styles.chatStartButton}
-              onPress={handleChatStart}
-            >
-              <Text style={styles.chatStartButtonText}>Start Now</Text>
-            </TouchableOpacity> */}
             </View>
           ) : (
             <>
               {/* Choose Your Specialist Title */}
               <View style={styles.pageContainer}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.titleText}>Choose your specialist</Text>
-              </View>
-
-              {/* Specialists Grid */}
-              <View style={styles.specialistsContainer}>
-                <View style={styles.specialistsGrid}>
-                  {filteredSpecialists?.map((specialist) => (
-                    <View
-                      key={specialist.specialityMasterId}
-                      style={styles.specialistCardWrapper}
-                    >
-                      {renderSpecialistCard({ item: specialist })}
-                    </View>
-                  ))}
+                <View style={styles.titleContainer}>
+                  <Text style={styles.titleText}>Choose your specialist</Text>
                 </View>
-              </View>
+
+                {/* Specialists Grid */}
+                <View style={styles.specialistsContainer}>
+                  <View style={styles.specialistsGrid}>
+                    {filteredSpecialists?.map((specialist) => (
+                      <View
+                        key={specialist.specialityMasterId}
+                        style={styles.specialistCardWrapper}
+                      >
+                        {renderSpecialistCard({ item: specialist })}
+                      </View>
+                    ))}
+                  </View>
+                </View>
               </View>
             </>
           )}
         </ScrollView>
-        </View>
       </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-   //...commonStyles.container_layout,
-   flex: 1,
+    //...commonStyles.container_layout,
+    flex: 1,
     backgroundColor: colors.white,
-     paddingTop: Platform.OS === 'android' ? getResponsiveSpacing(20) : 27,
+    paddingTop: Platform.OS === "android" ? getResponsiveSpacing(20) : 27,
     // backgroundColor: colors.white,
-    
   },
-    defaultHeader: {
-      paddingHorizontal: getResponsiveSpacing(20),
-       marginTop: Platform.OS === 'android' ? getResponsiveSpacing(0) : 0,
-    },
+  defaultHeader: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    marginTop: Platform.OS === "android" ? getResponsiveSpacing(0) : 0,
+  },
   content: {
     flex: 1,
   },
-    boxcolor: {
+  boxcolor: {
     backgroundColor: colors.bg_primary,
-    flex: 1
+    flex: 1,
   },
   searchContainer: {
-     marginBottom: getResponsiveSpacing(10),
+    marginBottom: getResponsiveSpacing(10),
     paddingHorizontal: getResponsiveSpacing(20),
     marginTop: 8,
   },
@@ -362,7 +373,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: getResponsiveFontSize(15),
-    fontFamily:fonts.medium,
+    fontFamily: fonts.medium,
     fontWeight: "600",
     color: colors.text,
     textAlign: "left",
@@ -412,21 +423,21 @@ const styles = StyleSheet.create({
     bottom: 7,
     left: 0,
     right: 0,
-   // backgroundColor: "rgba(0, 0, 0, 0.6)",
+    // backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: getResponsiveSpacing(6),
     zIndex: 1,
   },
   specialistName: {
     fontSize: getResponsiveFontSize(11.5),
-    fontFamily:fonts.semiBold,
+    fontFamily: fonts.semiBold,
     fontWeight: "600",
     color: "#fff",
     marginBottom: getResponsiveSpacing(1),
     textAlign: "left",
-    paddingLeft:7,
+    paddingLeft: 7,
   },
   specialistDescription: {
-     fontFamily:fonts.regular,
+    fontFamily: fonts.regular,
     fontSize: getResponsiveFontSize(8),
     color: "#fff",
     textAlign: "center",

@@ -39,8 +39,7 @@ class SignalRService {
       this.registerListeners();
 
       await this.connection?.start();
-      useChatStore.getState().setChatStatus("connected");
-      console.log("✅ SignalR connected");
+
       try {
         if (!this.connection) return;
         await this.connection.invoke("JoinPatientGroup", this.UserId);
@@ -53,7 +52,8 @@ class SignalRService {
 
         return;
       }
-
+      useChatStore.getState().setChatStatus("connected");
+      console.log("✅ SignalR connected");
       useChatStore.getState().setConnectionState("connected");
 
       if (sessionId) {
@@ -77,7 +77,7 @@ class SignalRService {
     this.connection.on("ChatAccepted", (response) => {
       console.log("Chat accepted: ", response);
       useChatStore.getState().setChatStatus("connected");
-      useChatStore.getState().setChatEnabled(true);
+      // useChatStore.getState().setChatEnabled(true);
       useChatStore.getState().setChatAcceptDetails(response);
     });
     /**
@@ -86,7 +86,7 @@ class SignalRService {
     this.connection.on("ReceiveMessage", (message: any) => {
       console.log("📩 Received:", message);
 
-      const messageId = message.id ?? `server_${Date.now()}`;
+      const messageId = message.messageId ?? `server_${Date.now()}`;
       const messageSentOn = message.sentOn;
 
       const IsItsSenderMsg = message.senderId === this.UserId; // this.user.user?.eId;
@@ -95,7 +95,9 @@ class SignalRService {
         .getState()
         .messages.some((m) => m.id === messageId);
 
-      const isDuplicate = useChatStore.getState().messages.some((m)=>m.sentOn === messageSentOn);
+      const isDuplicate = useChatStore
+        .getState()
+        .messages.some((m) => m.sentOn === messageSentOn);
 
       if (exists || IsItsSenderMsg || isDuplicate) return;
 
@@ -104,6 +106,7 @@ class SignalRService {
         text: message.messageText ?? message.message ?? "",
         sender: "doctor",
         timestamp: Date.now(),
+        sentOn: messageSentOn,
         status: "received",
         type: message.fileUrl
           ? message.fileUrl.split(".").pop()?.toLowerCase()
@@ -133,7 +136,7 @@ class SignalRService {
     this.connection.on("ChatBusy", () => {
       console.log("ChatBusy");
       useChatStore.getState().setChatStatus("busy");
-      useChatStore.getState().setChatEnabled(false);
+      // useChatStore.getState().setChatEnabled(false);
     });
 
     /**
@@ -155,12 +158,12 @@ class SignalRService {
       useChatStore.getState().endChat("Consultation ended");
     });
 
-    this.connection.on("ConsultationCompleted", ()=>{
-      console.log('Consultation completed');
+    this.connection.on("ConsultationCompleted", () => {
+      console.log("Consultation completed");
       // useChatStore.getState().setChatStatus('ended');
-      useChatStore.getState().setChatEnabled(false);
+      // useChatStore.getState().setChatEnabled(false);
       // useChatStore.getState().endChat('Consultation Completed');
-    })
+    });
 
     /**
      * CONNECTION EVENTS
@@ -178,6 +181,7 @@ class SignalRService {
     this.connection.onreconnected(() => {
       console.log("✅ Reconnected");
       useChatStore.getState().setConnectionState("connected");
+      // useChatStore.getState().setChatStatus('connected');
     });
   }
 
@@ -273,7 +277,7 @@ class SignalRService {
     try {
       await this.connection?.stop();
       this.connection = null;
-      useChatStore.getState().reset();
+      // useChatStore.getState().reset();
       console.log("SignalR disconnected");
     } catch (err) {
       console.log("Disconnect error:", err);
