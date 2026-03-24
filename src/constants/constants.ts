@@ -249,6 +249,8 @@ export interface ChatHistoryItem {
   receiverRole: string | null;
 
   appointmentId: number;
+  defaultMessage: string | null;
+  isChat: boolean | null;
 }
 
 export interface IPatientReport {

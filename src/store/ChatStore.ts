@@ -16,6 +16,7 @@ export type ConnectionState = "connecting" | "connected" | "disconnected";
 export type ChatStatus =
   | "connected"
   | "idle"
+  | "requested"
   | "active"
   | "busy"
   | "expired"
@@ -45,6 +46,8 @@ export interface Message {
   fileUrl?: string;
   type: MessageType;
   sentOn?: string;
+  isChat?: boolean;
+  defaultMessage?: string;
 }
 
 export interface IAcceptRequest {
@@ -124,22 +127,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSession: (sessionId) =>
     set({
       sessionId,
-      chatEnabled: false,
-      chatStatus: "idle",
-      // chatStatus: 'connected',
       chatEndedReason: undefined,
     }),
 
-    setRequestId: (requestId) => set({
+  setRequestId: (requestId) =>
+    set({
       requestId,
       chatEnabled: false,
-      chatStatus: 'idle',
+      chatStatus: "requested",
     }),
   /**
    * SET ACCEPT DETAILS
    */
-  setChatAcceptDetails: (details) =>
-    set({ chatAcceptDetails: details }),
+  setChatAcceptDetails: (details) => set({ chatAcceptDetails: details }),
 
   /**
    * SET BULK MESSAGES (History)
@@ -168,7 +168,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateMessageStatus: (id, status) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
-        msg.id === id ? { ...msg, status } : msg
+        msg.id === id ? { ...msg, status } : msg,
       ),
     })),
 
@@ -186,7 +186,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setConnectionState: (connectionState) =>
     set({
       connectionState,
-      chatEnabled: connectionState === "connected",
     }),
 
   /**
@@ -195,7 +194,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setChatStatus: (chatStatus) =>
     set({
       chatStatus,
-      chatEnabled: chatStatus === 'connected',
+      chatEnabled: chatStatus === "connected" ? true : false,
     }),
 
   /**
@@ -211,9 +210,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
    */
   endChat: (reason) =>
     set({
-      chatStatus: "ended",
-      chatEnabled: false,
       typing: false,
+      chatEnabled: false,
+      chatStatus: "ended",
       chatEndedReason: reason,
     }),
 
@@ -225,7 +224,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [],
       typing: false,
       chatEnabled: false,
-      chatStatus: "ended",
+      // chatStatus: "ended",
     }),
 
   /**
