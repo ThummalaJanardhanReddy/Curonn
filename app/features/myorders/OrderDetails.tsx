@@ -18,6 +18,9 @@ import { colors } from "../..//shared/styles/commonStyles";
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 import { Linking } from 'react-native';
 import ChatConsultationDetails from "@/app/shared/components/doctor/ChatConsultationDetails";
+import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
+import { useUser } from "@/app/shared/context/UserContext";
+import { useUserStore } from "@/src/store/UserStore";
 interface OrderDetailsProps {
     visible: boolean;
     order: any;
@@ -65,9 +68,22 @@ interface LabOrderDetails {
 
 
 function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsProps) {
+    // Calculate total price for all medicines (prescription orders)
+    const [orderDetails, setOrderDetails] = useState<any>(null);
+    // ...existing code...
+    // totalPrice is always derived from orderDetails
+    const totalPrice = orderDetails && orderDetails.data && Array.isArray(orderDetails.data.medicines)
+        ? orderDetails.data.medicines.reduce((sum: number, med: any) => sum + (med.totalPrice || 0), 0)
+        : 0;
+      
     // Helper: Resolve statusName from statusId if statusName is missing
     const [statusName, setstatusName] = useState<string | null>(null);
-
+     const { userData } = useUser();
+    
+      const { restoreUserData, user } = useUserStore();
+      useEffect(() => {
+        restoreUserData();
+      }, []);
     //console.log("Order received in OrderDetails component:", order);
     const insets = useSafeAreaInsets();
 
@@ -81,8 +97,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     const [pdfLoading, setPdfLoading] = useState(false);
     const [labReports, setLabReports] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-
-
+    const [razorpayOrderId, setRazorpayOrderId] = useState("");
+    const [showPayment, setShowPayment] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [useDirectUrl, setUseDirectUrl] = useState(false);
     const SLOT_GROUPS = {
@@ -90,6 +106,13 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
         evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
     };
+    const [showToastMed, setShowToastMed] = useState(false);
+    const [toastMessageMed, setToastMessageMed] = useState({
+        title: "",
+        subtitle: "",
+        type: "success" as "success" | "error",
+    });
+    const [showConfirmExit, setShowConfirmExit] = useState(false);
 
 
     const labTimeSlots =
@@ -131,7 +154,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         return { category, iconSource };
     }
     const navigation = useNavigation();
-    const [orderDetails, setOrderDetails] = useState<any>(null);
+    // ...existing code...
     const [loading, setLoading] = useState(false);
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
@@ -273,6 +296,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                         data: details
                     });
                 }
+    // (Removed duplicate/incorrect totalPrice declaration from inside fetchMedicineOrderById)
                 if (details?.patientId) {
                     const pid = details.patientId;
                     setPatientId(pid);
@@ -335,6 +359,99 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
         setLabReports([]);
     }, [order]);
 
+    const handleBookNowPres = async () => {
+        console.log("Book Now for Prescription clicked. Calculating total price and creating Razorpay order...");
+        try {
+          
+            const query = `?amount=${Math.round(totalPrice * 100)}&patientId=${patientId || 0}`;
+             console.log("Total price calculated from orderDetails:", query);
+            const orderRes: any = await axiosClient.get(
+                ApiRoutes.LabOrders.RazopayOrder + query
+            );
+            console.log("Razorpay Order API response:", orderRes);
+            console.log("📥 Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+            if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+                setRazorpayOrderId(orderRes.order_id);
+                setShowPayment(true);
+            } else {
+                setToastMessage({
+                    title: "Order Error",
+                    subtitle: orderRes?.message || "Failed to create payment order.",
+                    type: "error",
+                });
+                setShowToast(true);
+            }
+        } catch (err) {
+            setToastMessage({
+                title: "Order Error",
+                subtitle: "Failed to create payment order.",
+                type: "error",
+            });
+            setShowToast(true);
+        }
+    };
+
+    const saveMedOrder = async (paymentData: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+    }) => {
+        const payload = {
+            medicineOrderId: orderDetails.data.medicineOrderId,
+            paymentDetails:String(totalPrice.toFixed(2)),
+            isPaymentDone: true,
+            razorpayOrderId: paymentData?.razorpayOrderId || "",
+            razorpayPaymentId: paymentData?.razorpayPaymentId || "",
+            razorpaySignature: paymentData?.razorpaySignature || "",
+            paymentAmount: Number(totalPrice.toFixed(2)),
+        };
+       
+        try {
+            console.log("Saving medicine order with payload:", payload);
+            const response: any = await axiosClient.post(
+                ApiRoutes.MedicalOrders.payprescriptionOrder,
+                payload
+            );
+            console.log("Presncription Save Order Response:", JSON.stringify(response, null, 2));
+            if (response === true || (response && (response.isSuccess || response.success))) {
+                console.log("✅ Prescirption Payment Success. Showing toast and starting timeout...");
+                setToastMessage({
+                    title: "Payment Success",
+                    subtitle: response.message || "Your prescription payment successfully completed!",
+                    type: "success",
+                });
+                setShowToast(true);
+                setTimeout(() => {
+                    console.log("🕒 Timeout finished. Closing modal and navigating...");
+                    setShowToast(false);
+                    setShowPayment(false);
+                    if (onClose) {
+                        console.log("Calling onClose...");
+                        onClose();
+                    }
+                    console.log("Navigating to orders screen...");
+                   // router.replace("/(main)/orders");
+                }, 1500);
+            } else {
+                console.log("❌ Medicine Order Failed:", response?.message);
+                setToastMessage({
+                    title: "Order Failed",
+                    subtitle: response?.message || "Failed to place order.",
+                    type: "error",
+                });
+                setShowToast(true);
+            }
+        } catch (error) {
+            console.error("[Booking] saveMedOrder error:", error);
+            setToastMessage({
+                title: "Order Error",
+                subtitle: "Something went wrong.",
+                type: "error",
+            });
+            setShowToast(true);
+        }
+    };
+
     // Fetch lab reports after orderDetails is set and has patientId
     useEffect(() => {
         if (
@@ -376,7 +493,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
     async function fetchMedicineOrderById(medicineOrderId: number): Promise<any> {
         try {
             const response = await axiosClient.get(ApiRoutes.MedicalOrders.getMedicalOrderFullById(medicineOrderId));
-            console.log("Medicine Order Details:", response);
+            console.log("Medicine Order Details1234:", response);
             return response;
         } catch (error) {
             return { success: false, data: {} };
@@ -1188,51 +1305,107 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                     {orderDetails.type === "prescription" && (
                                         <View style={styles.servicepage}>
                                             <Text style={styles.sectionTitle}>Prescriptions</Text>
-                                            <View style={styles.databox1}>
-                                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
-                                                    {Array.isArray(orderDetails.data.prescriptions) && orderDetails.data.prescriptions.length > 0 ? (
-                                                        orderDetails.data.prescriptions.map((presc: any, idx: number) => {
-                                                            const isImage = presc.mimeType && presc.mimeType.startsWith('image');
-                                                            const isPdf = presc.mimeType && presc.mimeType === 'application/pdf';
-                                                            return (
-                                                                <View key={presc.prescriptionId || idx} style={{ marginRight: 16, alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <TouchableOpacity
-                                                                        style={{ borderWidth: 1, borderColor: '#E1E8F1', borderRadius: 6, padding: 8, alignItems: 'center', backgroundColor: '#fff', width: 140 }}
-                                                                        onPress={() => {
-                                                                            setSelectedPdfUrl(presc.fileUrl);
+                                            <View style={styles.databox2}>
+                                                {/* Prescription Images */}
+                                                <View style={styles.labelheaderprescription}>
+                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                                                        {Array.isArray(orderDetails.data.prescriptions) && orderDetails.data.prescriptions.length > 0 ? (
+                                                            orderDetails.data.prescriptions.map((presc: any, idx: number) => {
+                                                                const isImage = presc.mimeType && presc.mimeType.startsWith('image');
+                                                                const isPdf = presc.mimeType && presc.mimeType === 'application/pdf';
+                                                                return (
+                                                                    <View key={presc.prescriptionId || idx} style={{ marginRight: 16, alignItems: 'center', justifyContent: 'center' }}>
+                                                                        <TouchableOpacity
+                                                                            style={{ borderWidth: 1, borderColor: '#E1E8F1', borderRadius: 6, padding: 8, alignItems: 'center', backgroundColor: '#fff', width: 140 }}
+                                                                            onPress={() => {
+                                                                                setSelectedPdfUrl(presc.fileUrl);
+                                                                                if (isImage) {
+                                                                                    setPdfModalVisible(true);
+                                                                                } else {
+                                                                                    setPdfLoading(true);
+                                                                                    setEncodedPdfUrl(presc.fileUrl);
+                                                                                    setPdfModalVisible(true);
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            {isImage ? (
+                                                                                <Image source={{ uri: presc.fileUrl }} style={{ width: 120, height: 120, resizeMode: 'cover', marginBottom: 6 }} onError={() => console.log('Image load error:', presc.fileUrl)} />
+                                                                            ) : (
+                                                                                <Image source={images.icons.pdf} style={{ width: 40, height: 40, marginBottom: 6 }} />
+                                                                            )}
+                                                                            <Text style={{ color: '#000', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <Text style={styles.itemSubText}>No prescriptions found.</Text>
+                                                        )}
+                                                    </ScrollView>
+                                                </View>
 
-                                                                            if (isImage) {
-                                                                                setPdfModalVisible(true);
-                                                                            } else {
-                                                                                setPdfLoading(true);
-                                                                                setEncodedPdfUrl(presc.fileUrl);
-                                                                                setPdfModalVisible(true);
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        {isImage ? (
-                                                                            <Image source={{ uri: presc.fileUrl }} style={{ width: 120, height: 120, resizeMode: 'cover', marginBottom: 6 }} onError={() => console.log('Image load error:', presc.fileUrl)} />
-                                                                        ) : (
-                                                                            <Image source={images.icons.pdf} style={{ width: 40, height: 40, marginBottom: 6 }} />
-                                                                        )}
-                                                                        <Text style={{ color: '#000', fontFamily: fonts.semiBold, fontSize: 12 }}>Preview</Text>
-                                                                    </TouchableOpacity>
+                                                {/* Medicines Table Section */}
+                                                {Array.isArray(orderDetails.data.medicines) && orderDetails.data.medicines.length > 0 && (
+                                                    <View style={{ marginTop: 10 }}>
+                                                        <Text style={[styles.sectionTitle, { marginBottom: 2 }]}>Medicines List</Text>
+                                                        {/* Headings Row */}
+                                                        {/* <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 6, paddingVertical: 6, marginBottom: 6 }}>
+                                                            <Text style={{ flex: 2, fontFamily: fonts.bold, fontSize: 12, color: '#333' }}>Medicine Name</Text>
+                                                            <Text style={{ flex: 1, textAlign: 'center', fontFamily: fonts.bold, fontSize: 12, color: '#333' }}>Qty</Text>
+                                                            <Text style={{ flex: 1, textAlign: 'right', fontFamily: fonts.bold, fontSize: 12, color: '#333' }}>Actual Price</Text>
+                                                            <Text style={{ flex: 1, textAlign: 'right', fontFamily: fonts.bold, fontSize: 12, color: '#333' }}>Discount</Text>
+                                                            <Text style={{ flex: 1, textAlign: 'right', fontFamily: fonts.bold, fontSize: 12, color: '#333' }}>Final Price</Text>
+                                                        </View> */}
+                                                        {orderDetails.data.medicines.map((med: any, idx: number) => (
+                                                            <View key={med.cartId || idx} style={{ marginBottom: 10, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#E1E8F1', padding: 10 }}>
+                                                                {/* Row 1: Name | Qty | Price | Discount | Final Price */}
+                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <Text style={{ flex: 2, fontFamily: fonts.semiBold, fontSize: 12, color: '#000' }}>{med.medicineName}</Text>
+                                                                    <Text style={{ flex: 1, textAlign: 'center', fontFamily: fonts.regular, fontSize: 12 }}>{med.quantity}</Text>
+                                                                    <Text style={{
+                                                                        flex: 1, textAlign: 'right', fontFamily: fonts.regular, fontSize: 13, textDecorationLine: 'line-through',
+                                                                        textDecorationStyle: 'solid', color: '#888'
+                                                                    }}>₹{med.price}</Text>
+                                                                    <Text style={{ flex: 1, textAlign: 'right', fontFamily: fonts.regular, fontSize: 13, color: '#888' }}>₹{med.discount}</Text>
+                                                                    <Text style={{ flex: 1, textAlign: 'right', fontFamily: fonts.bold, fontSize: 13, color: '#C35E9D' }}>₹{med.totalPrice}</Text>
                                                                 </View>
-                                                            );
-                                                        })
-                                                    ) : (
-                                                        <Text style={styles.itemSubText}>No prescriptions found.</Text>
-                                                    )}
-                                                </ScrollView>
+                                                                {/* Row 2: Description only */}
+                                                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 0 }}>
+                                                                    <Text style={{ flex: 2, color: '#694664', fontFamily: fonts.regular, fontSize: 11 }}>{med.description}</Text>
+                                                                </View>
+                                                            </View>
+                                                        ))}
+                                                        {/* Total Amount Row */}
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
+                                                            <Text style={{ fontFamily: fonts.semiBold, fontSize: 15, color: '#000', marginRight: 8 }}>
+                                                                {orderDetails.data.paymentStatus === 'PENDING' ? "Total Amount:":"Paid Amount:"}</Text>
+                                                            <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#C35E9D' }}>
+                                                                ₹{orderDetails.data.medicines.reduce((sum: number, med: any) => sum + (med.totalPrice || 0), 0)}
+                                                            </Text>
+                                                        </View>
+                                                        {/* Pay Now Button if payment is pending */}
+                                                        {orderDetails.data.paymentStatus === 'PENDING' && (
+                                                            <TouchableOpacity style={{ marginTop: 12, backgroundColor: '#C35E9D', borderRadius: 23, paddingVertical: 10, alignItems: 'center' }} onPress={handleBookNowPres}>
+                                                                <Text style={{ color: '#fff', fontFamily: fonts.semiBold, fontSize: 13 }}>Pay Now </Text>
+                                                            </TouchableOpacity>
+                                                        )}
+                                                    </View>
+                                                )}
 
                                                 {/* Status Section */}
-                                                <View style={styles.paidAmountRow}>
-                                                    <Text style={styles.paidAmountLabel}>Status</Text>
-                                                    <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 15 }]}>
+                                                <View style={styles.paidAmountPresc}>
+                                                    <Text style={styles.paidAmountLabel1}>Status</Text>
+                                                    <Text style={[styles.paidAmountValue, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                             ? "Pending"
                                                             : (orderDetails.data.statusName || order.statusName || "N/A")}
                                                     </Text>
+
+                                                    {/* <Text style={[styles.paidAmountValue, { color: statusTextColor, fontSize: 13,fontFamily: fonts.regular }]}>
+                                                        {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
+                                                            ? "Pending"
+                                                            : (orderDetails.data.statusName || order.statusName || "N/A")}
+                                                    </Text> */}
                                                 </View>
                                             </View>
                                             {/* Patient Details */}
@@ -1713,6 +1886,62 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
 
                         </SafeAreaView>
                     </Modal>
+                    {/* Payment Gateway Modal for Medicine (like lab flow) */}
+                    <Modal
+                        visible={showPayment}
+                        animationType="slide"
+                        presentationStyle="fullScreen"
+                        onRequestClose={() => {
+                            setShowPayment(false);
+                            setToastMessage({
+                                title: "Payment Not Completed",
+                                subtitle: "You exited before completing the payment.",
+                                type: "error",
+                            });
+                            setShowToast(true);
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <RazorpayPaymentScreen
+                                key={razorpayOrderId}
+                                amount={Math.round(totalPrice * 100)}
+                                name={userData?.fullName || ""}
+                                email={userData?.emailAddress || ""}
+                                contact={userData?.mobileNo || ""}
+                                orderId={razorpayOrderId}
+                                onSuccess={(data) => {
+                                    setShowPayment(false);
+                                    saveMedOrder({
+                                        razorpayOrderId:
+                                            data.razorpay_order_id || razorpayOrderId || "",
+                                        razorpayPaymentId: data.razorpay_payment_id || "",
+                                        razorpaySignature: data.razorpay_signature || "",
+                                    });
+                                }}
+                                onFailure={(err) => {
+                                    setShowConfirmExit(false);
+                                    setTimeout(() => {
+                                        setShowPayment(false);
+                                        if (err?.cancelled) {
+                                            setToastMessage({
+                                                title: "Payment Cancelled",
+                                                subtitle: "Payment not completed.",
+                                                type: "error",
+                                            });
+                                            setShowToast(true);
+                                        } else {
+                                            setToastMessage({
+                                                title: "Payment Failed",
+                                                subtitle: "Your payment was not completed.",
+                                                type: "error",
+                                            });
+                                            setShowToast(true);
+                                        }
+                                    }, 300);
+                                }}
+                            />
+                        </View>
+                    </Modal>
                 </View>
             </SafeAreaView>
             {/* Toast Notification */}
@@ -2068,6 +2297,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
+
+    labelheaderprescription: {
+
+        flex: 1,
+        //    flexDirection: 'row',
+        //     justifyContent: 'space-between',
+        //     alignItems: 'flex-start',
+    },
+
     itemRow: {
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -2117,10 +2355,29 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#E1E8F1',
     },
+    paidAmountPresc: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderColor: '#E1E8F1',
+        paddingVertical: 6,
+        paddingBottom: 10,
+        flex: 1,
+        marginTop: 10,
+    },
     paidAmountLabel: {
         fontSize: 13,
         color: '#000',
         fontFamily: fonts.semiBold,
+    },
+    paidAmountLabel1: {
+        fontSize: 13,
+        color: '#000',
+        fontFamily: fonts.semiBold,
+        lineHeight: 15,
     },
     DeliveryLabel: {
         fontSize: 15,

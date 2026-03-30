@@ -394,7 +394,7 @@ function isSlotCompleted(slot: string) {
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Confirm Order</Text>
+          <Text style={styles.headerTitle}>Confirm Order1</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} />
           </TouchableOpacity>
@@ -625,10 +625,10 @@ function isSlotCompleted(slot: string) {
                           ? selectedRelation.name
                           : "Select Relation"}
                       </Text>
-                      <Image
-                        source={images.arrowdown}
-                        style={styles.dropdownIcon}
-                      />
+                     <Image
+                                                 source={images.arrowdown}
+                                                 style={styles.dropdownIcon}
+                                               />
                     </TouchableOpacity>
                     {fieldErrors.relation ? (
                       <Text
@@ -1347,7 +1347,7 @@ const styles = StyleSheet.create({
   dropdownIcon: {
     width: 16,
     height: 16,
-    // tintColor: "#666",
+    tintColor: "#666",
   },
   dropdownModal: {
     backgroundColor: "#fff",

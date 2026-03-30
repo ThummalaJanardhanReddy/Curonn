@@ -166,6 +166,7 @@ export const MedicalOrdersApi = {
   ) =>
     `/Medicines/GetAll?pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ""}&createdBy=${createdBy}`,
   saveOrder: "/medicine-orders/save-order",
+  payprescriptionOrder: "/medicine-orders/MedicineOrderPayment",
 } as const;
 
 export const ConsultationApi = {

@@ -119,28 +119,28 @@ interface ScansResponse {
 type ServiceType = "lab-test" | "health-checks" | "scans";
 
 export default function LabTestsScreen() {
-    const [isTodayAvailable, setIsTodayAvailable] = useState(true);
-      // Restrict Service Start Date based on labTimeSlots
-      useEffect(() => {
-        const now = new Date();
-        // Find latest slot end time
-        const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
-          const end = getSlotEndTime(slot);
-          return end > latest ? end : latest;
-        }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
-        setIsTodayAvailable(now < latestSlotEnd);
-      }, []);
+  const [isTodayAvailable, setIsTodayAvailable] = useState(true);
+  // Restrict Service Start Date based on labTimeSlots
+  useEffect(() => {
+    const now = new Date();
+    // Find latest slot end time
+    const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
+      const end = getSlotEndTime(slot);
+      return end > latest ? end : latest;
+    }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
+    setIsTodayAvailable(now < latestSlotEnd);
+  }, []);
 
-      // Helper to get end time of slot
-      function getSlotEndTime(slot: string): Date {
-        const [, end] = slot.split("-");
-        const [endTime, endPeriod] = end.trim().split(" ");
-        let [hour, minute] = endTime.split(":");
-        hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
-        const now = new Date();
-        const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
-        return slotDate;
-      }
+  // Helper to get end time of slot
+  function getSlotEndTime(slot: string): Date {
+    const [, end] = slot.split("-");
+    const [endTime, endPeriod] = end.trim().split(" ");
+    let [hour, minute] = endTime.split(":");
+    hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
+    const now = new Date();
+    const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
+    return slotDate;
+  }
   const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("lab-test");
   const [selectedSubTest, setSelectedSubTest] = useState<string | null>(null);
@@ -533,7 +533,7 @@ export default function LabTestsScreen() {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-     return `${day}/${month}/${year}`;
+    return `${day}/${month}/${year}`;
   };
 
   const handleMedDateChange = (event: any, selectedDate?: Date) => {
@@ -641,7 +641,7 @@ export default function LabTestsScreen() {
     }
   };
 
-   const handleLocationChange = async (location: string) => {
+  const handleLocationChange = async (location: string) => {
     setCurrentLocation(location); // Update the location
     await fetchDiagCenters(); // Re-fetch diagnostic centers when location changes
   };
@@ -929,14 +929,14 @@ export default function LabTestsScreen() {
   );
 
   // Handler for address change from CommonHeader
-const handleHeaderLocationChange = async (locationData: any) => {
-  await fetchDiagCenters();
-  console.log("Location updated from header new:", locationData);
-  
-  
-  setCurrentLocation(locationData.address || "");
-};
-// Removed useEffect that incorrectly depended on handleHeaderLocationChange
+  const handleHeaderLocationChange = async (locationData: any) => {
+    await fetchDiagCenters();
+    console.log("Location updated from header new:", locationData);
+
+
+    setCurrentLocation(locationData.address || "");
+  };
+  // Removed useEffect that incorrectly depended on handleHeaderLocationChange
 
   return (
     <>
@@ -1315,38 +1315,33 @@ const handleHeaderLocationChange = async (locationData: any) => {
 
                                 <View style={styles.healthprice}>
                                   <Text style={styles.priceRow}>
-  <Text style={styles.originalPrice}>
-    ₹{selectedTest?.price ? String(selectedTest.price) : ""}
-  </Text>{" "}
-  <Text style={styles.finalPrice1}>
-    ₹{selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : ""}
-  </Text>
-</Text>
+                                    <Text style={styles.originalPrice}>
+                                      ₹{selectedTest?.price ? String(selectedTest.price) : ""}
+                                    </Text>{" "}
+                                    <Text style={styles.finalPrice1}>
+                                      ₹{selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : ""}
+                                    </Text>
+                                  </Text>
                                 </View>
                               </View>
 
                               <View style={styles.testActioncard}>
-                                <Button
-                                  mode="outlined"
-                                  style={{ width: 130, height: 40, borderColor: '#BDBABA', backgroundColor: '#fff' }}
-                                  contentStyle={{
-                                    height: 40,
-                                    paddingVertical: 0,
-                                    justifyContent: 'center',
-                                  }}
-                                  textColor="#000000"
+                                <TouchableOpacity
+                                  style={styles.viewdetailsbutton}
                                   onPress={() =>
                                     router.push({
                                       pathname: "/viewdetails",
                                       params: {
                                         id: center.id,
                                         type: 'diagncenter',
+                                        price: selectedTest?.price ? String(selectedTest.price) : '',
+                                        curonnPrice: selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : '',
                                       },
                                     })
                                   }
-                                >
-                                  View Details
-                                </Button>
+                                > <Text style={styles.viewdetailstext}>View Details</Text>
+                                </TouchableOpacity>
+
                                 <PrimaryButton
                                   title="Book Now"
                                   onPress={() => {
@@ -1663,7 +1658,7 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     marginBottom: 10,
     paddingHorizontal: 20,
-   
+
     // borderWidth: 1,
     // borderColor: "#ff0000",
   },
@@ -1699,7 +1694,7 @@ const styles = StyleSheet.create({
   subTestTypesContainer: {
     marginBottom: 10,
     paddingHorizontal: 20,
-    
+
   },
   subTestTypesList: {
     gap: 3,

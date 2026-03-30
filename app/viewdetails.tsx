@@ -31,22 +31,25 @@ import CommonHeader from "./shared/components/CommonHeader";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "react-native-paper";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Path } from 'react-native-svg';
 interface RouteParams {
   id: string;
   type: "lab-test" | "health-checks" | "scans" | "ambulance" | "diagncenter";
+  price?: string;
+  curonnPrice?: string;
 }
 
 export default function ViewDetailsScreen() {
-    // Helper for diagnostic center modal (scans)
-    const getDisplayedData = () => {
-      if (type === "scans" && details) {
-        return [details];
-      }
-      return [];
-    };
+  // Helper for diagnostic center modal (scans)
+  const getDisplayedData = () => {
+    if (type === "scans" && details) {
+      return [details];
+    }
+    return [];
+  };
   const route = useRoute();
   const router = useRouter();
-  const { id, type } = route.params as RouteParams;
+  const { id, type, price: routePrice, curonnPrice: routeCuronnPrice } = route.params as RouteParams;
 
   const [details, setDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -57,11 +60,11 @@ export default function ViewDetailsScreen() {
   const [selectedDiagCenter, setSelectedDiagCenter] = useState<any>(null);
   const [diagCenters, setDiagCenters] = useState<any[]>([]);
   const [diagLoading, setDiagLoading] = useState(false);
- const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [errors, setErrors] = useState("");
-    // Lab-test time slots
+  // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
     "08:00 AM - 09:00 AM",
@@ -91,8 +94,8 @@ export default function ViewDetailsScreen() {
 
         case "scans":
           response = await axiosClient.get(ApiRoutes.Xray.getById(id));
-           console.log("Diagnostic center details response:", response.data);
-           setDetails(response.data);
+          console.log("Diagnostic center details response:", response.data);
+          setDetails(response.data);
           fetchDiagCenters();
           break;
 
@@ -106,7 +109,7 @@ export default function ViewDetailsScreen() {
           response = await axiosClient.get(
             ApiRoutes.DiagCenter.GetById(id)
           );
-          console.log("Diagnostic center details response:", response.data);
+          //;console.log("Diagnostic center details response:", response.data);
           setDetails(response.data);
           break;
       }
@@ -121,24 +124,24 @@ export default function ViewDetailsScreen() {
     }
   };
 
-    const formatDateLab = (date: Date) => {
+  const formatDateLab = (date: Date) => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
   };
-    const handleMedDateChange = (event: any, selectedDate?: Date) => {
-      setShowDatePicker(Platform.OS === "ios");
-      if (selectedDate) {
-        setSelectedDate(selectedDate);
-        if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
-      }
-    };
+  const handleMedDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+      if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
+    }
+  };
 
   const fetchDiagCenters = async () => {
     try {
       setDiagLoading(true);
-       const latLngStr = await AsyncStorage.getItem('userLocationLatLng');
+      const latLngStr = await AsyncStorage.getItem('userLocationLatLng');
       let latitude = 0;
       let longitude = 0;
       if (latLngStr) {
@@ -156,6 +159,7 @@ export default function ViewDetailsScreen() {
         ApiRoutes.DiagCenter.Diagsticcenter,
         payload
       );
+     
 
       setDiagCenters(Array.isArray(response) ? response : []);
     } catch (error) {
@@ -183,8 +187,8 @@ export default function ViewDetailsScreen() {
         details.programName ||
         details.name,
 
-      servicePrice: Number( details.curonnprice || details.curonnPrice
-      ),
+      servicePrice: Number(details.curonnprice || details.curonnPrice
+      ) || Number(details.price) || Number(routeCuronnPrice) || Number(routePrice) || 0,
 
       reportTime: details.reportTime || details.duration || "",
       isAtHome: details.isAtHome ?? false,
@@ -197,35 +201,35 @@ export default function ViewDetailsScreen() {
 
       type,
     };
-const handleBookscanTest = (testId: string, centerId: string) => {
-  if (!details) {
-    setErrors("No scan selected. Please select a scan before booking.");
-    return;
-  }
-  if (!selectedDate) {
-    setErrors("Please select service start date");
-    return;
-  }
-  if (!selectedTimeSlot) {
-    setErrors("Please select time slot");
-    return;
-  }
-  const testItem = getDisplayedData().find(
-    (item) => item.id === testId
-  );
-  const center = diagCenters.find((c: any) => c.id === centerId);
-  console.log("Selected test for booking:", testItem);
-  if (testItem && center) {
-    setSelectedDiagCenter(center); // Set selected diagnostic center for BookingScreen
-    setDetails({
-      ...testItem,
-      selectedDate,
-      selectedTimeSlot,
-      selectedDiagCenter: center,
-    });
-    setBookingVisible(true);
-  }
-};
+  const handleBookscanTest = (testId: string, centerId: string) => {
+    if (!details) {
+      setErrors("No scan selected. Please select a scan before booking.");
+      return;
+    }
+    if (!selectedDate) {
+      setErrors("Please select service start date");
+      return;
+    }
+    if (!selectedTimeSlot) {
+      setErrors("Please select time slot");
+      return;
+    }
+    const testItem = getDisplayedData().find(
+      (item) => item.id === testId
+    );
+    const center = diagCenters.find((c: any) => c.id === centerId);
+    console.log("Selected test for booking:", testItem);
+    if (testItem && center) {
+      setSelectedDiagCenter(center); // Set selected diagnostic center for BookingScreen
+      setDetails({
+        ...testItem,
+        selectedDate,
+        selectedTimeSlot,
+        selectedDiagCenter: center,
+      });
+      setBookingVisible(true);
+    }
+  };
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -260,42 +264,57 @@ const handleBookscanTest = (testId: string, centerId: string) => {
           </Text>
         </View>
 
-        <ScrollView style={styles.content}>
-          <Image
-            source={images.healthpackage}
-            style={styles.image}
-            resizeMode="contain"
-          />
+        <ScrollView style={styles.contentlabtest}>
 
-          <Text style={styles.title}>
-            {details.centerName ||
-              details.packageName ||
-              details.testName}
-          </Text>
-
-          {/* Diagnostic Center */}
-          {type === "diagncenter" && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Address</Text>
-
-              <Text style={styles.address}>
-                {details.address}, {details.locality}
-              </Text>
-
-              <Text style={styles.address}>
-                {details.city}, {details.state}
-              </Text>
-
-              <Text style={styles.phonenum}>{details.phoneNo}</Text>
+          <View style={styles.Iocnbox}>
+            <View style={styles.viewimage}>
+              <Svg width="150" height="150" viewBox="0 0 24 10" fill="none">
+                <Path
+                  d="M9 2V6L4 14C3.4 15 4.1 16 5.2 16H18.8C19.9 16 20.6 15 20 14L15 6V2"
+                  stroke="#C35E9C"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Path
+                  d="M7 12H17"
+                  stroke="#C35E9C"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                />
+              </Svg>
             </View>
-          )}
-
-          {/* Health Package Tests */}
+            <Text style={styles.title}>
+              {details.centerName ||
+                details.packageName ||
+                details.testName}
+            </Text>
+            {type !== "ambulance" && (
+            <View style={styles.reports}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+                <Ionicons name="document-text-outline" size={18} color="#A259C6" style={{ marginRight: 6 }} />
+                <Text style={styles.reportTime}>
+                  {/* {details.reportTime || details.duration} */}
+                  reports with in <Text style={styles.reportsdetails}>{type === "lab-test" ? "10 to 12 hours" : "48 to 72 hours"}</Text>
+                </Text>
+              </View>
+            </View>
+            )}
+          </View>
+          {/* --- New Sections Start --- */}
+           {/* Health Package Tests */}
+          
           {type === "health-checks" && details.testsList && (
+             <View style={styles.section1}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {getTestCount(details.testsList)} Tests Included
+                {getTestCount(details.testsList)}+ Tests Included
               </Text>
+              <View style={styles.testcontent}> {/* This adds a vertical gap */}
+                <Text style={styles.testsinclude}>
+                  The content is uniquely informative and provides an educationa; purpose. Kindly use the content only in consultation with an appropriate certified or registered healthcare provider.
+                </Text>
+              </View>
 
               {details.testsList
                 .split(",")
@@ -304,23 +323,129 @@ const handleBookscanTest = (testId: string, centerId: string) => {
                     • {test.trim()}
                   </Text>
                 ))}
+                  </View>
             </View>
+          )}
+        
+          {/* What is in this test? */}
+          <View style={styles.section1}>
+            <Text style={styles.sectionTitle}>What is in this test?</Text>
+            <Text style={styles.testsList}>
+              • This test is done to determine vitamin B12 levels in the body.
+            </Text>
+          </View>
+
+          {/* Why is this test done? */}
+          <View style={styles.section1}>
+            <Text style={styles.sectionTitle}>Why is this test done?</Text>
+            <Text style={[styles.testsList, {marginTop: 5}]}> 
+              Doctor may advise this test-
+            </Text>
+            <View style={{ height: 8 }} /> 
+            <Text style={styles.testsList}>
+              1. To detect anemia or neuropathy associated with Vitamin B12 deficiency.
+            </Text>
+            <View style={{ height: 8 }} /> {/* This adds a vertical gap */}
+            <Text style={styles.testsList}>
+              2. To maintain good nutritional status and to screen for the efficacy of the Vitamin B12 deficiency treatment.
+            </Text>
+          </View>
+
+          {/* Prerequisite */}
+          <View style={styles.section1}>
+            <Text style={styles.sectionTitle}>Prerequisite</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop:5,marginBottom: 10 }}>
+              <Ionicons name="restaurant-outline" size={18} color="#A259C6" style={{ marginRight: 8, marginTop: 3 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.testsList}>
+                  In case of Home Collection - It is advisable to follow all the precautionary requisites as directed by the doctor.
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <Ionicons name="business-outline" size={18} color="#A259C6" style={{ marginRight: 8, marginTop: 3 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.testsList}>
+                  In case of Center Visit - It is advisable to follow all the precautionary requisites as directed by the doctor.
+                </Text>
+              </View>
+            </View>
+          </View>
+             {/* Scan Organs */}
+          {type === "scans" && details.vitalOrgans && (
+              <View style={[styles.section1]}>
+            <Text style={styles.sectionTitle}> Vital Organs Covered:</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="body-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
+              <Text style={styles.testsList}>{details.vitalOrgans}</Text>
+            </View>
+          </View>
+          
           )}
 
-          {/* Scan Organs */}
-          {type === "scans" && details.vitalOrgans && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Vital Organs Covered: {details.vitalOrgans}
-              </Text>
+           {/* Diagnostic Center */}
+          {type === "diagncenter" && (
+            <View style={styles.section1}>
+              <Text style={styles.sectionTitle}>Diagstic Center Address</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <Ionicons name="business-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.address}>
+                    {details.address}, {details.locality}
+                  </Text>
+                  <Text style={styles.address}>
+                    {details.city}, {details.state}
+                  </Text>
+                  <Text style={styles.phonenum}>{details.phoneNo}</Text>
+             
+                </View>
+              </View>
             </View>
           )}
+          {/* Samples Collected */}
+          <View style={[styles.section1, {marginBottom: 15}]}>
+            <Text style={styles.sectionTitle}>Samples Collected</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="flask-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
+              <Text style={styles.testsList}>Blood</Text>
+            </View>
+          </View>
+          {/* --- New Sections End --- */}
+
+
+
+
+
+          {/* <Image
+            source={images.healthpackage}
+            style={styles.image}
+            resizeMode="contain"
+          /> */}
+
+
+
+         
+
+         
+
+       
         </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>
-            <>
+          <>
+           {type === "diagncenter" && (routePrice || routeCuronnPrice) ? (
               <View style={styles.priceContainer}>
+                {routePrice ? (
+                  <Text style={styles.originalPrice}>₹{routePrice}</Text>
+                ) : null}
+                {routeCuronnPrice ? (
+                  <Text style={styles.finalPrice}> ₹{routeCuronnPrice}</Text>
+                ) : null}
+              </View>
+            ) : (
+              <View style={styles.priceContainer}>
+                 {type !== "ambulance" ? (<>
                 {details.price && (
                   <Text style={styles.originalPrice}>
                     ₹ {details.price}
@@ -331,21 +456,31 @@ const handleBookscanTest = (testId: string, centerId: string) => {
                     ₹ {type === "scans" ? details.curonnprice : details.curonnPrice}
                   </Text>
                 )}
+              </>):(<>
+                {details.price && (
+                  <Text style={styles.finalPrice}>
+                    ₹ {details.price}
+                  </Text>
+                )}
+               
+              </>)}
               </View>
+            )}
+            
 
-              <PrimaryButton
-                title="Book Now"
-                onPress={() => {
-                  if (type === "scans") {
-                    setdiagsticVisible(true);
-                    fetchDiagCenters();
-                  } else {
-                    setBookingVisible(true);
-                  }
-                }}
-                style={styles.bookButton}
-              />
-            </>
+            <PrimaryButton
+              title="Book Now"
+              onPress={() => {
+                if (type === "scans") {
+                  setdiagsticVisible(true);
+                  fetchDiagCenters();
+                } else {
+                  setBookingVisible(true);
+                }
+              }}
+              style={styles.bookButton}
+            />
+          </>
         </View>
 
         {bookingVisible && bookingData && (
@@ -360,194 +495,194 @@ const handleBookscanTest = (testId: string, centerId: string) => {
           />
         )}
       </View>
-       {/* Diagnostic Center Modal */}
-        <Modal
-          visible={diagsticVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => {
-            setdiagsticVisible(false);
-            setSelectedDate(null);
-            setSelectedTimeSlot("");
-            setErrors("");
-          }}
-        >
-          <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+      {/* Diagnostic Center Modal */}
+      <Modal
+        visible={diagsticVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setdiagsticVisible(false);
+          setSelectedDate(null);
+          setSelectedTimeSlot("");
+          setErrors("");
+        }}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
 
-            <View style={[styles.defaultHeader, { flexDirection: 'row', position: 'relative', alignItems: 'center', justifyContent: 'space-between' }]}>
-              <CommonHeader
-                currentLocation={currentLocation}
-                onProfilePress={() => console.log("Profile pressed")}
-                showCart={false}
-              />
-              <TouchableOpacity onPress={() => {
-                setdiagsticVisible(false);
-                setSelectedDate(null);
-                setSelectedTimeSlot("");
-                setErrors("");
-              }} style={styles.closeButton}>
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.defaultHeader, { flexDirection: 'row', position: 'relative', alignItems: 'center', justifyContent: 'space-between' }]}>
+            <CommonHeader
+              currentLocation={currentLocation}
+              onProfilePress={() => console.log("Profile pressed")}
+              showCart={false}
+            />
+            <TouchableOpacity onPress={() => {
+              setdiagsticVisible(false);
+              setSelectedDate(null);
+              setSelectedTimeSlot("");
+              setErrors("");
+            }} style={styles.closeButton}>
+              <Image source={images.icons.close} style={styles.closeIcon} />
+            </TouchableOpacity>
+          </View>
 
 
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
-              <View style={styles.content}>
-                {/* Sample Pickup Date & Time */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>
-                    Date & Time
-                  </Text>
-                  <View style={styles.dateTimeCard}>
-                    <View style={styles.dateSection}>
-                      <Text style={styles.fieldLabel}>Service Start Date</Text>
-                      <TouchableOpacity
-                        style={styles.dateInput}
-                        onPress={() => setShowDatePicker(true)}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
+            <View style={styles.content}>
+              {/* Sample Pickup Date & Time */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Date & Time
+                </Text>
+                <View style={styles.dateTimeCard}>
+                  <View style={styles.dateSection}>
+                    <Text style={styles.fieldLabel}>Service Start Date</Text>
+                    <TouchableOpacity
+                      style={styles.dateInput}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text
+                        style={[
+                          styles.dateText,
+                          !selectedDate && styles.placeholderText,
+                        ]}
                       >
-                        <Text
+                        {selectedDate
+                          ? formatDateLab(selectedDate)
+                          : "dd/mm/yyyy"}
+                      </Text>
+                      <Image
+                        source={images.icons.calendar}
+                        style={styles.calendarIcon}
+                      />
+                    </TouchableOpacity>
+                    {(!selectedDate && errors === "Please select service start date") && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
+
+                  </View>
+
+                  <View style={styles.timeSection}>
+                    <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                    <View style={styles.timeSlotsContainer}>
+                      {labTimeSlots.map((slot, index) => (
+                        <TouchableOpacity
+                          key={index}
                           style={[
-                            styles.dateText,
-                            !selectedDate && styles.placeholderText,
+                            styles.timeSlot,
+                            selectedTimeSlot === slot && styles.selectedTimeSlot,
                           ]}
+                          onPress={() => {
+                            setSelectedTimeSlot(slot);
+                            if (errors === "Please select time slot")
+                              setErrors("");
+                          }}
                         >
-                          {selectedDate
-                            ? formatDateLab(selectedDate)
-                            : "dd/mm/yyyy"}
-                        </Text>
-                        <Image
-                          source={images.icons.calendar}
-                          style={styles.calendarIcon}
-                        />
-                      </TouchableOpacity>
-                      {(!selectedDate && errors === "Please select service start date") && (
-                        <Text
-                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
-
-                    </View>
-
-                    <View style={styles.timeSection}>
-                      <Text style={styles.fieldLabel}>Select Time Slot</Text>
-                      <View style={styles.timeSlotsContainer}>
-                        {labTimeSlots.map((slot, index) => (
-                          <TouchableOpacity
-                            key={index}
+                          <Text
                             style={[
-                              styles.timeSlot,
-                              selectedTimeSlot === slot && styles.selectedTimeSlot,
+                              styles.timeSlotText,
+                              selectedTimeSlot === slot &&
+                              styles.selectedTimeSlotText,
                             ]}
-                            onPress={() => {
-                              setSelectedTimeSlot(slot);
-                              if (errors === "Please select time slot")
-                                setErrors("");
-                            }}
                           >
-                            <Text
-                              style={[
-                                styles.timeSlotText,
-                                selectedTimeSlot === slot &&
-                                styles.selectedTimeSlotText,
-                              ]}
-                            >
-                              {slot}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                      {errors === "Please select time slot" && (
-                        <Text
-                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
+                            {slot}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
+                    {errors === "Please select time slot" && (
+                      <Text
+                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      >
+                        {errors}
+                      </Text>
+                    )}
                   </View>
                 </View>
-                <View style={styles.modalHeader}>
+              </View>
+              <View style={styles.modalHeader}>
 
+              </View>
+              {diagLoading ? (
+                <View style={{ alignItems: 'center', padding: 20 }}>
+                  <ActivityIndicator size="large" color="#694664" />
                 </View>
-                {diagLoading ? (
-                  <View style={{ alignItems: 'center', padding: 20 }}>
-                    <ActivityIndicator size="large" color="#694664" />
-                  </View>
-                ) : (
-                  <View style={styles.modalScrollableContent}>
-                    {diagCenters.length === 0 ? (
-                      <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
-                    ) : (
-                      <>
+              ) : (
+                <View style={styles.modalScrollableContent}>
+                  {diagCenters.length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found.</Text>
+                  ) : (
+                    <>
 
-                        {diagCenters.map((center: any) => (<>
-                          <LinearGradient
-                            key={center.id}
-                            colors={['#fff', '#D5CDDA']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.testCard}
-                          >
+                      {diagCenters.map((center: any) => (<>
+                        <LinearGradient
+                          key={center.id}
+                          colors={['#fff', '#D5CDDA']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.testCard}
+                        >
 
-                            <View style={styles.cardContainer}>
-                              <View style={styles.testCard1}>
-                                <View style={styles.testInfo}>
-                                  <Text style={styles.testName}>{center.centerName}</Text>
+                          <View style={styles.cardContainer}>
+                            <View style={styles.testCard1}>
+                              <View style={styles.testInfo}>
+                                <Text style={styles.testName}>{center.centerName}</Text>
 
 
 
-                                  <Text style={styles.testReportTime}>
-                                    {center.address}
-                                  </Text>
+                                <Text style={styles.testReportTime}>
+                                  {center.address}
+                                </Text>
 
 
-                                </View>
-
-                                <View style={styles.healthprice}>
-                                  <Text style={styles.priceRow}>
-                                    {details?.price && (
-                                      <Text style={styles.originalPrice}>
-                                        ₹{details?.price}
-                                      </Text>
-                                    )}
-                                    {' '}
-                                    {(type === "scans" ? details?.curonnprice : details?.curonnPrice) && (
-                                      <Text style={styles.finalPrice1}>
-                                        ₹{type === "scans" ? details?.curonnprice : details?.curonnPrice}
-                                      </Text>
-                                    )}
-                                  </Text>
-                                </View>
                               </View>
 
-                              <View style={styles.testActioncard}>
-                               
-                                <PrimaryButton
-                                  title="Book Now"
-                                  onPress={() => {
-                                    if (!details) {
-                                      setErrors("No scan selected. Please select a scan before booking.");
-                                      return;
-                                    }
-                                    handleBookscanTest(details.id, center.id);
-                                  }}
-                                  style={styles.bookButton}
-                                />
-                                {!details && errors === "No scan selected. Please select a scan before booking." && (
-                                  <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
-                                )}
-
+                              <View style={styles.healthprice}>
+                                <Text style={styles.priceRow}>
+                                  {details?.price && (
+                                    <Text style={styles.originalPrice}>
+                                      ₹{details?.price}
+                                    </Text>
+                                  )}
+                                  {' '}
+                                  {(type === "scans" ? details?.curonnprice : details?.curonnPrice) && (
+                                    <Text style={styles.finalPrice1}>
+                                      ₹{type === "scans" ? details?.curonnprice : details?.curonnPrice}
+                                    </Text>
+                                  )}
+                                </Text>
                               </View>
                             </View>
 
-                          </LinearGradient>
-                        </>))}
+                            <View style={styles.testActioncard}>
+
+                              <PrimaryButton
+                                title="Book Now"
+                                onPress={() => {
+                                  if (!details) {
+                                    setErrors("No scan selected. Please select a scan before booking.");
+                                    return;
+                                  }
+                                  handleBookscanTest(details.id, center.id);
+                                }}
+                                style={styles.bookButton}
+                              />
+                              {!details && errors === "No scan selected. Please select a scan before booking." && (
+                                <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
+                              )}
+
+                            </View>
+                          </View>
+
+                        </LinearGradient>
+                      </>))}
 
 
-                        {/* <PrimaryButton
+                      {/* <PrimaryButton
                       title="Next"
                       style={styles.nextButton}
                       disabled={selectedDiagCenterId === null}
@@ -561,27 +696,27 @@ const handleBookscanTest = (testId: string, centerId: string) => {
                         }
                       }}
                     /> */}
-                      </>
-                    )}
-                  </View>
-                )}
-              </View>
-            </ScrollView>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          </ScrollView>
 
-          </SafeAreaView>
-        </Modal>
-         {/* Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate || new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleMedDateChange}
-            minimumDate={new Date()}
-          />
-        )}
+        </SafeAreaView>
+      </Modal>
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate || new Date()}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={handleMedDateChange}
+          minimumDate={new Date()}
+        />
+      )}
     </SafeAreaView>
-    
+
   );
 }
 
@@ -593,12 +728,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(20),
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    
-    
+
+
   },
   modalScrollableContent: {
     flexGrow: 1,
-    
+
   },
   cardContainer: {
     width: '100%',
@@ -622,7 +757,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginBottom: 4,
     fontFamily: fonts.regular,
-    
+
   },
   finalPrice1: {
     fontSize: 16,
@@ -739,7 +874,9 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    ...fontStyles.headercontent,
+     fontFamily: fonts.semiBold,
+    fontSize: 16,
+    lineHeight: 18,
     marginLeft: 10,
   },
 
@@ -747,6 +884,24 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
     backgroundColor: "#f5f4f9",
+  },
+
+  contentlabtest: {
+    flex: 1,
+    //paddingHorizontal: getResponsiveSpacing(20),
+    backgroundColor: "#f5f4f9",
+  },
+
+  Iocnbox: {
+    width: '100%',
+    backgroundColor: '#fff',
+    paddingBottom: 20,
+
+  },
+
+  viewimage: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   image: {
@@ -757,19 +912,60 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    ...fontStyles.heading3,
-    color: "#c55e9c",
-    marginBottom: 10,
+    //...fontStyles.heading3,
+    color: "#000",
+    marginBottom: 4,
+    alignItems: 'flex-start',
+    fontFamily: fonts.semiBold,
+    paddingHorizontal: 20,
+    fontSize: 18,
+    marginTop: 13
+  },
+  reports: {
+    backgroundColor: 'rgba(195, 94, 156, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    paddingVertical: 4,
+  },
+  reportTime: {
+    fontSize: 13,
+    color: "#000",
+    fontFamily: fonts.medium,
   },
 
+  reportsdetails: {
+    fontSize: 13,
+    color: "#C35E9C",
+    fontFamily: fonts.bold,
+  },
   section: { marginTop: 10, marginBottom: 15 },
 
+  section1: { backgroundColor: "#fff", paddingHorizontal: 20, paddingVertical: 10, marginTop: 15 },
+
   sectionTitle: {
-    ...fontStyles.button,
     fontFamily: fonts.semiBold,
-    marginBottom: 10,
+    marginBottom: 0,
+    fontSize: 16,
+    lineHeight: 26,
+    color: "#000",
   },
-dateTimeCard: {
+  testcontent: {
+    marginBottom: 12,
+    marginTop: 5,
+     backgroundColor: 'rgba(195, 94, 156, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 15,
+    marginHorizontal: 0,
+    borderRadius: 20,
+  },
+  testsinclude: {
+    fontSize: 13,
+    color: "#000",
+    fontFamily: fonts.regular,
+  },
+  dateTimeCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
@@ -822,7 +1018,7 @@ dateTimeCard: {
   timeSection: {
     marginTop: 6,
   },
-    modalHeader: {
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -866,14 +1062,17 @@ dateTimeCard: {
   },
 
   testsList: {
-    ...fontStyles.bodySmall,
-    lineHeight: 26,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 22,
   },
 
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
   },
 
   priceContainer: {
@@ -888,13 +1087,13 @@ dateTimeCard: {
   },
 
   finalPrice: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
-    color: "#C35E9C",
+    color: "#000",
   },
 
   bookButton: {
     width: 130,
-    height: 30,
+    height: 40,
   },
 });

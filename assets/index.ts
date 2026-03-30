@@ -89,7 +89,11 @@ export const images = {
 
   // Welcome Screen
   welcome: require('./images/welcome.png'),
-
+  wellnessbooster: require('./images/immune-system-infographic.jpg'),
+  strongimmunity: require('./images/strong_Immunity.jpg'),
+  energylevel: require('./images/energylevel.jpg'),
+  betterdigestion: require('./images/betterdigestion.jpg'),
+  overallhealth: require('./images/overallhealth.jpg'),
   // Logo
   curonnLogo: CuronnLogo,
 
