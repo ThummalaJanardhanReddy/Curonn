@@ -32,6 +32,8 @@ import { fonts } from '@/app/shared/styles/fonts';
 import { LinearGradient } from "expo-linear-gradient";
 import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+type ServiceType = "medcines";
 interface Medicine {
   id: string;
   name: string;
@@ -297,6 +299,7 @@ export default function MedicineListScreen() {
 
   const renderMedicineCard = useCallback(
     ({ item }: { item: Medicine }) => {
+      console.log('Rendering medicine:', item.id);
       const itemInCart = cartItems.find(i => i.id === item.id);
       const quantity = itemInCart?.quantity || 0;
       const isInCart = quantity > 0;
@@ -308,11 +311,22 @@ export default function MedicineListScreen() {
         <View style={styles.medicineCardLarge}>
           <View style={styles.cardRow}>
             <View style={styles.imageColumn}>
+               <TouchableOpacity
+                            onPress={() =>
+                              router.push({
+                                pathname: "/viewdetails",
+                                params: {
+                                  id: item.id,
+                                  type: 'medicine',
+                                },
+                              })
+                            }>
               {item.image ? (
                 <Image source={{ uri: item.image }} style={styles.cardImage} />
               ) : (
                 <View style={[styles.cardImage, { backgroundColor: '#f5f5f5' }]} />
               )}
+              </TouchableOpacity>
               <View style={styles.imagePriceContainer}>
                 {displayOriginal && displayOriginal > displayPrice ? (
                   <Text style={styles.imageOriginalPrice}>₹{displayOriginal}</Text>
@@ -363,6 +377,16 @@ export default function MedicineListScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>
+            {getCategoryTitle()}
+          </Text>
+          </View>
+
+          {/* <View style={styles.headerLeft}>
             <BackButton
               title={getCategoryTitle()}
               onPress={handleBack}
@@ -370,7 +394,7 @@ export default function MedicineListScreen() {
               textStyle={styles.headerTitle}
               arrowColor={colors.black}
             />
-          </View>
+          </View> */}
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
               {/* <Image source={images.icons.cart} style={styles.cartIcon} /> */}
@@ -462,12 +486,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(0),
-    paddingBottom: getResponsiveSpacing(0),
+        paddingVertical: getResponsiveSpacing(5),
+        borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
     backgroundColor: '#fff',
+    height:56
   },
+
+   
   headerLeft: {
-    flex: 1,
+    flexDirection: 'row',
     color: colors.black,
   },
   headerRight: {
@@ -482,6 +510,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
+    marginLeft: 8,
   },
   cartButton: {
     padding: getResponsiveSpacing(3),

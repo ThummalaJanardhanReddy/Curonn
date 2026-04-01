@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Modal,
 } from "react-native";
 
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,9 +32,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "react-native-paper";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
+import { useCart } from "./shared/context/CartContext";
 interface RouteParams {
   id: string;
-  type: "lab-test" | "health-checks" | "scans" | "ambulance" | "diagncenter";
+  type: "lab-test" | "health-checks" | "scans" | "ambulance" | "diagncenter" | 'medicine';
   price?: string;
   curonnPrice?: string;
 }
@@ -50,7 +51,7 @@ export default function ViewDetailsScreen() {
   const route = useRoute();
   const router = useRouter();
   const { id, type, price: routePrice, curonnPrice: routeCuronnPrice } = route.params as RouteParams;
-
+  const { refreshCart, cartCount, cartItems, addItem, updateQuantity, removeItem } = useCart();
   const [details, setDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
@@ -72,9 +73,13 @@ export default function ViewDetailsScreen() {
     "10:00 AM - 11:00 AM",
   ];
 
-  useEffect(() => {
-    fetchDetails();
-  }, []);
+
+  // Use useFocusEffect to always fetch details when the page is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchDetails();
+    }, [id, type])
+  );
 
   const fetchDetails = async () => {
     try {
@@ -86,10 +91,12 @@ export default function ViewDetailsScreen() {
         case "lab-test":
           response = await axiosClient.get(ApiRoutes.LabTests.getById(id));
           setDetails(response.data);
+          //console.log("Lab test details response:", response.data);
           break;
 
         case "health-checks":
           response = await axiosClient.get(ApiRoutes.LabPackages.getById(id));
+          console.log("health check details response:", response.data);
           break;
 
         case "scans":
@@ -103,6 +110,7 @@ export default function ViewDetailsScreen() {
           response = await axiosClient.get(
             ApiRoutes.Ambulance.getdataById(id)
           );
+          console.log("Ambulance details response:", response.data);
           break;
 
         case "diagncenter":
@@ -110,6 +118,14 @@ export default function ViewDetailsScreen() {
             ApiRoutes.DiagCenter.GetById(id)
           );
           //;console.log("Diagnostic center details response:", response.data);
+          setDetails(response.data);
+          break;
+
+        case "medicine":
+          response = await axiosClient.get(
+            ApiRoutes.MedicalOrders.getdataById(id)
+          );
+          console.log("Medcine details response:", response.data);
           setDetails(response.data);
           break;
       }
@@ -159,7 +175,7 @@ export default function ViewDetailsScreen() {
         ApiRoutes.DiagCenter.Diagsticcenter,
         payload
       );
-     
+
 
       setDiagCenters(Array.isArray(response) ? response : []);
     } catch (error) {
@@ -230,6 +246,47 @@ export default function ViewDetailsScreen() {
       setBookingVisible(true);
     }
   };
+
+
+
+  // Use correct argument and always use details for medicine
+  const handleIncrement = useCallback(async (medicineDetails: any) => {
+    const medicineId = medicineDetails.medicineMasterId;
+    const medicineName = medicineDetails.medicineName;
+    setLoading((prev: any) => ({ ...prev, [medicineId]: true }));
+    try {
+      // Prepare medicine object with required id, name, subtitle, and description fields
+      const medicine = {
+        //...medicineDetails,
+        id: medicineId.toString(),
+        name: medicineName,
+        subtitle: medicineDetails.streepBoxQty ?? '',
+        curonnPrice
+          : medicineDetails.curonnPrice ?? medicineDetails.curonnprice ?? 0,
+      };
+      // Find if item is already in cart
+      const itemInCart = cartItems?.find((i: any) => i.id === medicineId.toString());
+      if (itemInCart) {
+        if (itemInCart.cartId) {
+          await updateQuantity(itemInCart.cartId, itemInCart.quantity + 1, medicineId);
+        } else {
+          await addItem(medicine, 1);
+        }
+        await refreshCart();
+        router.push('/cart' as unknown as any);
+      } else {
+        await addItem(medicine, 1);
+        await refreshCart();
+        router.push('/cart' as unknown as any);
+      }
+    } catch (e) {
+      // Optionally handle error
+      console.log('Add to cart error:', e);
+    } finally {
+      setLoading((prev: any) => ({ ...prev, [medicineId]: false }));
+    }
+  }, [cartItems, setLoading, addItem, updateQuantity, refreshCart]);
+
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -254,141 +311,190 @@ export default function ViewDetailsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#694664" />
+            <Ionicons name="arrow-back" size={24} color="#000" />
+            
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>
             {details.centerName ||
               details.packageName ||
-              details.testName}
+              details.testName || details.medicineName}
           </Text>
         </View>
 
         <ScrollView style={styles.contentlabtest}>
+          <View style={styles.viewimage}>
+            <View style={styles.Iocnbox}>
+              {type === "lab-test" ? (
+                <View style={styles.newbanner}>
+                  <Image source={images.labtextviewdetails} style={styles.bannerimage} resizeMode="cover" />
+                </View>
+              ) : type === "health-checks" ? (
+                <View style={styles.newbanner}>
+                  <Image source={images.labpackge} style={styles.bannerimage} resizeMode="cover" />
+                </View>
+              ) : (type === "scans" || type === "diagncenter") ? (
+                <View style={styles.newbanner}>
+                  <Image source={images.xray} style={styles.bannerimage} resizeMode="cover" />
+                </View>
 
-          <View style={styles.Iocnbox}>
-            <View style={styles.viewimage}>
-              <Svg width="150" height="150" viewBox="0 0 24 10" fill="none">
-                <Path
-                  d="M9 2V6L4 14C3.4 15 4.1 16 5.2 16H18.8C19.9 16 20.6 15 20 14L15 6V2"
-                  stroke="#C35E9C"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              ) : type !== "ambulance" ? (
+                <Image
+                  source={{
+                    uri: details.imageUrl
+                      ? `https://drive.google.com/uc?export=view&id=${details.imageUrl
+                        .split("/d/")[1]
+                        ?.split("/")[0]}`
+                      : undefined
+                  }}
+                  style={styles.bannerimage}
+                  resizeMode="contain"
                 />
-                <Path
-                  d="M7 12H17"
-                  stroke="#C35E9C"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                />
-              </Svg>
+              ) : (
+                <View style={styles.newbanner}>
+                  <Image source={images.ambulanceviewdetails} style={styles.bannerimage1} resizeMode="cover" />
+                </View>
+              )}
+
+              <Text style={styles.title}>
+                {details.centerName ||
+                  details.packageName ||
+                  details.testName || details.medicineName}
+              </Text>
+
+              {type === 'medicine' && (
+                <View style={styles.section2}>
+                  <Text style={styles.testsList2}>{details.streepBoxQty
+                  }</Text>
+
+                </View>
+              )}
+
+              {(type === "ambulance" || type === 'medicine') && (
+                <View style={styles.section2}>
+                  <Text style={styles.sectionTitle1}>Manufacturer</Text>
+
+                  <Text style={styles.testsList1}>{details.manufacturerDetails
+                  }</Text>
+
+                </View>
+              )}
+
+
+
+
+
+
+              {(type !== "ambulance" && type !== 'medicine') && (
+                <View style={styles.reports}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+                    <Ionicons name="document-text-outline" size={18} color="#A259C6" style={{ marginRight: 6 }} />
+                    <Text style={styles.reportTime}>
+                      {/* {details.reportTime || details.duration} */}
+                      reports with in <Text style={styles.reportsdetails}>{type === "lab-test" ? "10 to 12 hours" : "48 to 72 hours"}</Text>
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-            <Text style={styles.title}>
-              {details.centerName ||
-                details.packageName ||
-                details.testName}
-            </Text>
-            {type !== "ambulance" && (
-            <View style={styles.reports}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-                <Ionicons name="document-text-outline" size={18} color="#A259C6" style={{ marginRight: 6 }} />
-                <Text style={styles.reportTime}>
-                  {/* {details.reportTime || details.duration} */}
-                  reports with in <Text style={styles.reportsdetails}>{type === "lab-test" ? "10 to 12 hours" : "48 to 72 hours"}</Text>
-                </Text>
-              </View>
-            </View>
-            )}
           </View>
           {/* --- New Sections Start --- */}
-           {/* Health Package Tests */}
-          
-          {type === "health-checks" && details.testsList && (
-             <View style={styles.section1}>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                {getTestCount(details.testsList)}+ Tests Included
-              </Text>
-              <View style={styles.testcontent}> {/* This adds a vertical gap */}
-                <Text style={styles.testsinclude}>
-                  The content is uniquely informative and provides an educationa; purpose. Kindly use the content only in consultation with an appropriate certified or registered healthcare provider.
-                </Text>
-              </View>
+          {/* Health Package Tests */}
 
-              {details.testsList
-                .split(",")
-                .map((test: string, index: number) => (
-                  <Text key={index} style={styles.testsList}>
-                    • {test.trim()}
+          {/* {type === "health-checks" && details.testsList && (
+            <View style={styles.section1}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {getTestCount(details.testsList)}+ Tests Included
+                </Text>
+                <View style={styles.testcontent}> 
+                  <Text style={styles.testsinclude}>
+                    The content is uniquely informative and provides an educationa; purpose. Kindly use the content only in consultation with an appropriate certified or registered healthcare provider.
                   </Text>
-                ))}
-                  </View>
+                </View>
+
+                {details.testsList
+                  .split(",")
+                  .map((test: string, index: number) => (
+                    <Text key={index} style={styles.testsList}>
+                      • {test.trim()}
+                    </Text>
+                  ))}
+              </View>
             </View>
-          )}
-        
+          )} */}
+
+          {(type === "ambulance" || type === 'medicine') && (<>
+            <View style={styles.section1}>
+              <Text style={styles.sectionTitle}>Product Introduction</Text>
+
+              <Text style={styles.testsList}>{details.description}</Text>
+
+            </View>
+          </>)}
+
+
           {/* What is in this test? */}
-          <View style={styles.section1}>
-            <Text style={styles.sectionTitle}>What is in this test?</Text>
-            <Text style={styles.testsList}>
-              • This test is done to determine vitamin B12 levels in the body.
-            </Text>
-          </View>
-
-          {/* Why is this test done? */}
-          <View style={styles.section1}>
-            <Text style={styles.sectionTitle}>Why is this test done?</Text>
-            <Text style={[styles.testsList, {marginTop: 5}]}> 
-              Doctor may advise this test-
-            </Text>
-            <View style={{ height: 8 }} /> 
-            <Text style={styles.testsList}>
-              1. To detect anemia or neuropathy associated with Vitamin B12 deficiency.
-            </Text>
-            <View style={{ height: 8 }} /> {/* This adds a vertical gap */}
-            <Text style={styles.testsList}>
-              2. To maintain good nutritional status and to screen for the efficacy of the Vitamin B12 deficiency treatment.
-            </Text>
-          </View>
-
-          {/* Prerequisite */}
-          <View style={styles.section1}>
-            <Text style={styles.sectionTitle}>Prerequisite</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop:5,marginBottom: 10 }}>
-              <Ionicons name="restaurant-outline" size={18} color="#A259C6" style={{ marginRight: 8, marginTop: 3 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.testsList}>
-                  In case of Home Collection - It is advisable to follow all the precautionary requisites as directed by the doctor.
-                </Text>
-              </View>
+          {(type !== "ambulance" && type !== 'medicine') && (<>
+            <View style={styles.section1}>
+              <Text style={styles.sectionTitle}>What is in this test?</Text>
+              {Array.isArray(details.whatTest) && details.whatTest.length > 0 ? (
+                details.whatTest.map((item: string, idx: number) => (
+                  <Text key={idx} style={styles.testsList}>• {item}</Text>
+                ))
+              ) : (
+                <Text style={styles.testsList}>No information available.</Text>
+              )}
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <Ionicons name="business-outline" size={18} color="#A259C6" style={{ marginRight: 8, marginTop: 3 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.testsList}>
-                  In case of Center Visit - It is advisable to follow all the precautionary requisites as directed by the doctor.
-                </Text>
-              </View>
+
+
+            <View style={styles.section1}>
+              <Text style={styles.sectionTitle}>Why is this test done?</Text>
+              {Array.isArray(details.whyTest) && details.whyTest.length > 0 ? (
+                details.whyTest.map((item: string, idx: number) => (
+                  <Text key={idx} style={styles.testsList}>{idx + 1}. {item}</Text>
+                ))
+              ) : (
+                <Text style={styles.testsList}>No information available.</Text>
+              )}
             </View>
-          </View>
-             {/* Scan Organs */}
+
+
+            <View style={styles.section1}>
+              <Text style={styles.sectionTitle}>Prerequisite</Text>
+              {Array.isArray(details.prerequisites) && details.prerequisites.length > 0 ? (
+                details.prerequisites.map((item: string, idx: number) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: idx === 0 ? 5 : 0, marginBottom: 10 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#C35E9C" style={{ marginRight: 8, marginTop: 3 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.testsList}>{item}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.testsList}>No prerequisites specified.</Text>
+              )}
+            </View>
+          </>)}
+          {/* Scan Organs */}
           {type === "scans" && details.vitalOrgans && (
-              <View style={[styles.section1]}>
-            <Text style={styles.sectionTitle}> Vital Organs Covered:</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="body-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
-              <Text style={styles.testsList}>{details.vitalOrgans}</Text>
+            <View style={[styles.section1]}>
+              <Text style={styles.sectionTitle}> Vital Organs Covered:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="body-outline" size={18} color="#C35E9C" style={{ marginRight: 8 }} />
+                <Text style={styles.testsList}>{details.vitalOrgans}</Text>
+              </View>
             </View>
-          </View>
-          
+
           )}
 
-           {/* Diagnostic Center */}
+
+          {/* Diagnostic Center */}
           {type === "diagncenter" && (
             <View style={styles.section1}>
               <Text style={styles.sectionTitle}>Diagstic Center Address</Text>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <Ionicons name="business-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
+                <Ionicons name="business-outline" size={18} color="#C35E9C" style={{ marginRight: 8 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.address}>
                     {details.address}, {details.locality}
@@ -397,19 +503,21 @@ export default function ViewDetailsScreen() {
                     {details.city}, {details.state}
                   </Text>
                   <Text style={styles.phonenum}>{details.phoneNo}</Text>
-             
+
                 </View>
               </View>
             </View>
           )}
-          {/* Samples Collected */}
-          <View style={[styles.section1, {marginBottom: 15}]}>
-            <Text style={styles.sectionTitle}>Samples Collected</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="flask-outline" size={18} color="#A259C6" style={{ marginRight: 8 }} />
-              <Text style={styles.testsList}>Blood</Text>
+          {(type !== "ambulance" && type !== 'medicine') && (<>
+            {/* Samples Collected */}
+            <View style={[styles.section1, { marginBottom: 15 }]}>
+              <Text style={styles.sectionTitle}>Samples Collected</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="flask-outline" size={18} color="#C35E9C" style={{ marginRight: 8 }} />
+                <Text style={styles.testsList}>{details.samplecollected}</Text>
+              </View>
             </View>
-          </View>
+          </>)}
           {/* --- New Sections End --- */}
 
 
@@ -424,64 +532,87 @@ export default function ViewDetailsScreen() {
 
 
 
-         
 
-         
 
-       
+
+
+
         </ScrollView>
 
         {/* Footer */}
-        <View style={styles.footer}>
-          <>
-           {type === "diagncenter" && (routePrice || routeCuronnPrice) ? (
-              <View style={styles.priceContainer}>
-                {routePrice ? (
-                  <Text style={styles.originalPrice}>₹{routePrice}</Text>
-                ) : null}
-                {routeCuronnPrice ? (
-                  <Text style={styles.finalPrice}> ₹{routeCuronnPrice}</Text>
-                ) : null}
-              </View>
-            ) : (
-              <View style={styles.priceContainer}>
-                 {type !== "ambulance" ? (<>
-                {details.price && (
-                  <Text style={styles.originalPrice}>
-                    ₹ {details.price}
-                  </Text>
-                )}
-                {(type === "scans" ? details.curonnprice : details.curonnPrice) && (
-                  <Text style={styles.finalPrice}>
-                    ₹ {type === "scans" ? details.curonnprice : details.curonnPrice}
-                  </Text>
-                )}
-              </>):(<>
-                {details.price && (
-                  <Text style={styles.finalPrice}>
-                    ₹ {details.price}
-                  </Text>
-                )}
-               
-              </>)}
-              </View>
-            )}
-            
+        {type !== 'medicine' ? (
+          <View style={styles.footer}>
+            <>
+              {type === "diagncenter" && (routePrice || routeCuronnPrice) ? (
+                <View style={styles.priceContainer}>
+                  {routePrice ? (
+                    <Text style={styles.originalPrice}>₹{routePrice}</Text>
+                  ) : null}
+                  {routeCuronnPrice ? (
+                    <Text style={styles.finalPrice}> ₹{routeCuronnPrice}</Text>
+                  ) : null}
+                </View>
+              ) : (
+                <View style={styles.priceContainer}>
+                  {type !== "ambulance" ? (<>
+                    {details.price && (
+                      <Text style={styles.originalPrice}>
+                        ₹ {details.price}
+                      </Text>
+                    )}
+                    {(type === "scans" ? details.curonnprice : details.curonnPrice) && (
+                      <Text style={styles.finalPrice}>
+                        ₹ {type === "scans" ? details.curonnprice : details.curonnPrice}
+                      </Text>
+                    )}
+                  </>) : (<>
+                    {details.price && (
+                      <Text style={styles.finalPrice}>
+                        ₹ {details.price}
+                      </Text>
+                    )}
 
+                  </>)}
+                </View>
+              )}
+
+
+              <PrimaryButton
+                title="Book Now"
+                onPress={() => {
+                  if (type === "scans") {
+                    setdiagsticVisible(true);
+                    fetchDiagCenters();
+                  } else {
+                    setBookingVisible(true);
+                  }
+                }}
+                style={styles.bookButton}
+              />
+            </>
+          </View>
+        ) : (
+          <View style={styles.footer}>
+            <View style={styles.priceContainer}>
+              {details.streepBoxPrice && (
+                <Text style={styles.originalPrice}>
+                  ₹ {details.streepBoxPrice}
+                </Text>
+              )}
+              {(details.curonnPrice) && (
+                <Text style={styles.finalPrice}>
+                  ₹ {details.curonnPrice}
+                </Text>
+              )}
+            </View>
             <PrimaryButton
-              title="Book Now"
-              onPress={() => {
-                if (type === "scans") {
-                  setdiagsticVisible(true);
-                  fetchDiagCenters();
-                } else {
-                  setBookingVisible(true);
-                }
-              }}
+              title="Add Cart"
+              onPress={() => handleIncrement(details)}
               style={styles.bookButton}
             />
-          </>
-        </View>
+          </View>
+        )}
+
 
         {bookingVisible && bookingData && (
           <BookingScreen
@@ -871,13 +1002,15 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(15),
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+    minHeight:56
   },
 
   headerTitle: {
-     fontFamily: fonts.semiBold,
+    fontFamily: fonts.semiBold,
     fontSize: 16,
     lineHeight: 18,
     marginLeft: 10,
+    color: "#000",
   },
 
   content: {
@@ -897,6 +1030,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingBottom: 20,
 
+  },
+  bannerimage: {
+    width: '100%',
+    backgroundSize: 'cover',
+    height: 180,
+    borderRadius: 20,
+  },
+
+  bannerimage1: {
+    width: '100%',
+    backgroundSize: 'cover',
+    height: 180,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#dcdcdc',
+  },
+  newbanner: {
+    marginTop: 15,
+    marginHorizontal: 20,
+    backgroundColor: '#fff',
   },
 
   viewimage: {
@@ -943,18 +1096,26 @@ const styles = StyleSheet.create({
   section: { marginTop: 10, marginBottom: 15 },
 
   section1: { backgroundColor: "#fff", paddingHorizontal: 20, paddingVertical: 10, marginTop: 15 },
+  section2: { backgroundColor: "#fff", paddingHorizontal: 20, marginBottom: 10 },
 
   sectionTitle: {
     fontFamily: fonts.semiBold,
     marginBottom: 0,
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 26,
     color: "#000",
+  },
+  sectionTitle1: {
+    fontFamily: fonts.semiBold,
+    marginBottom: 0,
+    fontSize: 14,
+    lineHeight: 26,
+    color: "#C35E9C",
   },
   testcontent: {
     marginBottom: 12,
     marginTop: 5,
-     backgroundColor: 'rgba(195, 94, 156, 0.1)',
+    backgroundColor: 'rgba(195, 94, 156, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 15,
     marginHorizontal: 0,
@@ -1043,6 +1204,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#C15E9C",
     borderColor: "#C15E9C",
   },
+  testsList1: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 20,
+    color: "#C15E9C",
+  },
+
+  testsList2: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#303030",
+  },
   timeSlotText: {
     fontSize: 11,
     color: "#333",
@@ -1063,8 +1237,9 @@ const styles = StyleSheet.create({
 
   testsList: {
     fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 12,
+    color: "#333",
+    lineHeight: 20,
   },
 
   footer: {

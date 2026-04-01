@@ -295,7 +295,7 @@ export default function MedicinesScreen() {
 
   const renderCategoryCard = useCallback(({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[styles.categoryCard, { backgroundColor: item.backgroundColor || '#fff' }]}
+      style={[styles.categoryCard, { backgroundColor: item.backgroundColor || '000' }]}
       onPress={() => {
         // Navigate to MedicineListScreen and pass the selected drug group as groupName
         const encoded = encodeURIComponent(item.title || '');
@@ -496,6 +496,8 @@ const styles = StyleSheet.create({
   },
   prescriptionCard: {
     padding: getResponsiveSpacing(16),
+    paddingBottom: getResponsiveSpacing(8),
+    paddingTop: getResponsiveSpacing(10),
     alignItems: 'center',
     justifyContent: 'center',
     // minHeight: getResponsiveSpacing(100),
@@ -518,7 +520,7 @@ const styles = StyleSheet.create({
   },
   categoriesTitle: {
     fontSize: getResponsiveFontSize(15),
-    color: '#4B334E',
+    color: '#000',
     marginBottom: getResponsiveSpacing(6),
     fontFamily: fonts.medium,
   },

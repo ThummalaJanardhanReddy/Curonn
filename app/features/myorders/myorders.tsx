@@ -314,6 +314,7 @@ export default function OrdersScreen() {
       // Format createdOn date
       const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
       const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
+      const duration = item.duration ? `${item.duration}` : "";
       // Status color mapping
       const statusColors: { [key: string]: string } = {
         Requested: "#d0eaff",
@@ -323,7 +324,7 @@ export default function OrdersScreen() {
         Inprogress: "#f8d7a7",
           Assigned: "#f7cdff",
         Ongoing: "#f7cdff",
-        Pending: "#ffeeba",
+        Pending: "#d0eaff",
         Rescheduled: "#bbecf3",
          "Admin Doctor": "#f7cdff",
       };
@@ -337,7 +338,7 @@ export default function OrdersScreen() {
         Inprogress: "#FF9800",
          Assigned: "#9C27B0",
         Ongoing: "#9C27B0",
-        Pending: "#9e7600",
+        Pending: "#006cc5",
         Rescheduled: "#00BCD4",
          "Admin Doctor": "#9C27B0",
       };
@@ -356,11 +357,13 @@ export default function OrdersScreen() {
             <View style={styles.orderRight}>
               {/* Title */}
               <Text style={styles.title}>{item.title}</Text>
-              <View style={styles.categoryrow}>
-                <Text style={styles.categorytitle}>{createdOn}{timeSlot}</Text>
-                {/* <Text style={styles.category}>{category}</Text> */}
-                {/* CreatedOn Date */}
+               {duration ? ( <View style={styles.categoryrow}><Text style={styles.categorytitle1}>Duration: {duration}</Text></View>
+               ):(
+                 <View style={styles.categoryrow}>
+                <Text style={styles.categorytitle}>{createdOn}{timeSlot} </Text>
               </View>
+               )}
+             
               <View style={styles.categoryrow}>
                 {/* StatusName with background color */}
                 <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2, paddingTop: 4, marginTop: 0 }}>
@@ -613,6 +616,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   categorytitle: {
+    fontSize: 12,
+    color: "#666",
+    fontFamily: fonts.regular,
+    marginBottom: 4,
+  },
+    categorytitle1: {
     fontSize: 12,
     color: "#666",
     fontFamily: fonts.regular,

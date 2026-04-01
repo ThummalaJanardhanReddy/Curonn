@@ -243,7 +243,7 @@ export default function AmbulanceScreen() {
               onPress={() => router.back()}
               style={{ paddingRight: 10 }}
             >
-              <Ionicons name="arrow-back" size={24} color="#694664" />
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Ambulance Service</Text>
           </View>

@@ -11,7 +11,6 @@ interface CartItem {
     originalPrice?: number;
     quantity: number;
     subtitle?: string;
-    description?: string;
     medicineId?: number;
     cartId?: number;
     image?: string;
@@ -54,6 +53,7 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
                                     {!!ci.subtitle ? (
                                         <Text style={styles.medicinePack}>{ci.subtitle}</Text>
                                     ) : null}
+                                    
                                 </View>
 
                                 <View style={styles.medicineActionGroup}>
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     },
     medicinePack: {
         fontFamily: fonts.regular,
-        fontSize: getResponsiveFontSize(14),
+        fontSize: getResponsiveFontSize(12),
         color: '#000',
         marginTop: 6,
     },

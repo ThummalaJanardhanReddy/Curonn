@@ -1061,8 +1061,8 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.label}>Paid Amount</Text>
                                                     <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentDetails || "N/A"}</Text>
                                                 </View>
-                                                <View style={styles.servicesection}>
-                                                    <Text style={styles.label}>Service Status:</Text>
+                                                <View style={styles.paymentsection}>
+                                                    <Text style={styles.label}>Service Status</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                             ? "Pending"
@@ -1507,7 +1507,7 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
                                                 </View>
                                                 <View style={styles.servicesection}>
-                                                    <Text style={styles.label}>Service Status:</Text>
+                                                    <Text style={styles.label}>Service Status</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                             ? "Pending"
@@ -1646,13 +1646,18 @@ function OrderDetails({ visible, order, onClose, refreshOrders }: OrderDetailsPr
                                                     Report within 10-12 hours
                                                 </Text> */}
                                                 </View>
-
+                                                {orderDetails.data.duration && (
+                                                    <View style={styles.paymentsection}>
+                                                    <Text style={styles.paidlabel1}>Duration</Text>
+                                                    <Text style={styles.durationvalue}>{orderDetails.data.duration || "N/A"}</Text>
+                                                </View> 
+                                                )}             
                                                 <View style={styles.paymentsection}>
                                                     <Text style={styles.paidlabel}>Paid Amount</Text>
                                                     <Text style={styles.paymentvalue}>₹{orderDetails.data.paymentAmount || "N/A"}</Text>
                                                 </View>
-                                                <View style={styles.servicesection}>
-                                                    <Text style={styles.label}>Service Status:</Text>
+                                                <View style={styles.paymentsection}>
+                                                    <Text style={styles.label}>Service Status</Text>
                                                     <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
                                                         {(orderDetails.data.statusName === "Requested" || order.statusName === "Requested")
                                                             ? "Pending"
@@ -2041,7 +2046,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: 30,
-        width: '70%',
+        width: '50%',
         alignSelf: 'center',
     },
     reschedulebox: {
@@ -2065,7 +2070,7 @@ const styles = StyleSheet.create({
     cancelOrderBtnText: {
         color: '#C35E9D',
         fontFamily: fonts.semiBold,
-        fontSize: 11,
+        fontSize: 12,
     },
     // Modal styles
     modalOverlay: {
@@ -2454,7 +2459,7 @@ const styles = StyleSheet.create({
     },
     labelheaderdatabox: {
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(212,212,212,1)",
+        borderBottomColor: "#E1E8F1",
         paddingBottom: 6,
         paddingHorizontal: 20,
         paddingTop: 10,
@@ -2468,14 +2473,14 @@ const styles = StyleSheet.create({
     labelheaderdatabox1: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(212,212,212,1)",
+        borderBottomColor: "#E1E8F1",
         paddingBottom: 6,
         paddingHorizontal: 20,
         paddingTop: 10,
     },
     labelheaderdatabox3: {
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(212,212,212,1)",
+        borderBottomColor: "#E1E8F1",
         paddingBottom: 6,
         paddingTop: 10,
     },
@@ -2497,10 +2502,10 @@ const styles = StyleSheet.create({
     paymentsection: {
         paddingHorizontal: 20,
         borderTopWidth: 1,
-        borderTopColor: "rgba(212,212,212,1)",
+        borderTopColor: "#E1E8F1",
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: 13
+        paddingVertical: 10
     },
     paymentsection1: {
         paddingHorizontal: 20,
@@ -2510,15 +2515,19 @@ const styles = StyleSheet.create({
     },
     servicesection: {
         paddingHorizontal: 20,
+        paddingVertical: 6,
         borderTopWidth: 1,
-        paddingBottom: 5,
-        borderTopColor: "rgba(212,212,212,1)",
+        borderTopColor: "#E1E8F1",
+        flexDirection: 'row',
+        justifyContent: 'space-between',
 
     },
     labelheader: {
-        fontFamily: fonts.semiBold,
-        fontSize: 13
+        fontFamily: fonts.bold,
+        fontSize: 14
     },
+
+
     labelinner: {
         fontSize: 11,
         color: "#694664",
@@ -2535,9 +2544,15 @@ const styles = StyleSheet.create({
         fontFamily: fonts.semiBold,
         fontSize: 13
     },
+       paidlabel1: {
+        marginTop: 5,
+        fontFamily: fonts.semiBold,
+        fontSize: 13
+    },
+    
     paidlabel: {
-        fontFamily: fonts.bold,
-        fontSize: 14,
+        fontFamily: fonts.semiBold,
+        fontSize: 13,
         color: '#000'
     },
     value: {
@@ -2550,6 +2565,13 @@ const styles = StyleSheet.create({
         fontFamily: fonts.bold,
         fontSize: 14
     },
+    durationvalue: {
+        color: '#000',
+        fontFamily: fonts.semiBold,
+        fontSize: 12,
+        marginTop:4
+    },
+    
     patientname: {
         fontSize: 15,
         fontWeight: '600',

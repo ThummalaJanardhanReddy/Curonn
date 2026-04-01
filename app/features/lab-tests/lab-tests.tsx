@@ -33,6 +33,7 @@ import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
 import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from "react-native-safe-area-context";
+import SamplecollectionIcon from '../../../assets/images/howtosamplecollect.svg';
 
 interface TestCategory {
   id: string;
@@ -179,6 +180,7 @@ export default function LabTestsScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [errors, setErrors] = useState("");
   useFocusEffect(
@@ -447,6 +449,7 @@ export default function LabTestsScreen() {
           },
         }
       );
+      console.log("Health Checks Response:", response);
 
       // axiosClient already unwraps response.data
       if (!response.isSuccess) {
@@ -767,7 +770,7 @@ export default function LabTestsScreen() {
               onError={() => setImageError(true)}
             />
           )} */}
-          <Image
+          {/* <Image
             source={
               imageError
                 ? images.labdefault
@@ -775,7 +778,18 @@ export default function LabTestsScreen() {
             }
             style={[styles.subTestImage, { width: 45, height: 45 }]}
             onError={() => setImageError(true)}
+          /> */}
+          <Image
+            source={
+              item.groupImage && !imgError
+                ? { uri: item.groupImage }
+                : images.labdefault
+            }
+            style={{ width: 45, height: 45 }}
+            resizeMode="contain"
+            onError={() => setImgError(true)}
           />
+
         </View>
         <Text
           style={[
@@ -1104,24 +1118,8 @@ export default function LabTestsScreen() {
                   How does sample collection work?
                 </Text>
                 <View style={styles.sampleCollectionImages}>
-                  <View style={styles.sampleImageContainer}>
-                    <Image
-                      source={images.sampleCollectionStep1}
-                      style={styles.sampleImage}
-                    />
-                  </View>
-                  <View style={styles.sampleImageContainer}>
-                    <Image
-                      source={images.sampleCollectionStep2}
-                      style={styles.sampleImage}
-                    />
-                  </View>
-                  <View style={styles.sampleImageContainer}>
-                    <Image
-                      source={images.sampleCollectionStep3}
-                      style={styles.sampleImage}
-                    />
-                  </View>
+                  <SamplecollectionIcon style={styles.sampleIcon} width="100%" height="100%" />
+
                 </View>
               </View>
             </ScrollView>
@@ -1638,6 +1636,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
     tintColor: "#808080",
   },
+  sampleIcon: {
+    width: '100%'
+  },
   searchInput: {
     flex: 1,
     fontSize: 12,
@@ -1701,7 +1702,8 @@ const styles = StyleSheet.create({
   },
   subTestContainer: {
     alignItems: "center",
-    width: 80,
+    width: 70,
+    marginTop: 5,
   },
   subTestCircle: {
     width: 46,
@@ -1855,13 +1857,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#4B334E",
-    marginBottom: 5,
+    marginBottom: 0,
     textAlign: "justify",
     fontFamily: fonts.semiBold,
   },
   sampleCollectionImages: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    width: '100%',
+    height: 100,
   },
   sampleImageContainer: {
     alignItems: "flex-start",

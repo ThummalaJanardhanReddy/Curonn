@@ -92,8 +92,26 @@ export default function BookingScreen({
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
-  const { userData } = useUser();
+  const { userData: userDataFromHook } = useUser();
+  const [userData, setUserData] = useState<any>(null);
+    
 
+  const { restoreUserData, user } = useUserStore();
+  useEffect(() => {
+    restoreUserData();
+  }, []);
+
+  // Fetch employee data and assign to userData
+  useEffect(() => {
+    if (!patientId) return;
+    axiosClient
+      .get(ApiRoutes.Employee.getById(patientId))
+      .then((response) => {
+        const pdata = response?.data ?? response;
+        setUserData(pdata);
+      })
+      .catch(() => setUserData(null));
+  }, [patientId]);
 
 
   // ─── Medicine-flow flag (parsed from search params / global) ───────
@@ -105,11 +123,7 @@ export default function BookingScreen({
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
   // ...existing code...
 
-  const { restoreUserData, user } = useUserStore();
-  useEffect(() => {
-    restoreUserData();
-  }, []);
-  console.log("👤 User Data ID:", userData?.e_id, user?.eId);
+
   // Sync state with props when modal opens
   useEffect(() => {
     if (visible) {
@@ -124,6 +138,9 @@ export default function BookingScreen({
   const [showRelationDropdown, setShowRelationDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  
+  
+  
 
   // ─── Lab-test flow state ───────────────────────────────────────────
   // Only use field-specific errors for relation, fullName, age, gender in LAB flow
@@ -183,7 +200,8 @@ export default function BookingScreen({
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
-  const patientId = Number(userData?.e_id || user?.eId);
+  const effectiveUserData = userData ?? userDataFromHook;
+  const patientId = Number(effectiveUserData?.e_id || user?.eId);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -192,7 +210,9 @@ export default function BookingScreen({
     "10:00 AM - 11:00 AM",
   ];
 
+  //const userdetails: PatientDetails = orderManager.getPatientDetails();
 
+       
   // Lab-test date format: YYYY-MM-DD
   // API format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
@@ -677,6 +697,7 @@ export default function BookingScreen({
       timeSlot: "",
       createdBy: patientId,
       paymentAmount: totalAmount,
+      duration: duration || "",
       razorpayOrderId: paymentData?.razorpayOrderId || "",
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
@@ -1416,10 +1437,10 @@ export default function BookingScreen({
                             ? selectedRelation.name
                             : "Select Relation"}
                         </Text>
-                         <Image
-                            source={images.arrowdown}
-                            style={styles.dropdownIcon}
-                          />
+                        <Image
+                          source={images.arrowdown}
+                          style={styles.dropdownIcon}
+                        />
                       </TouchableOpacity>
                       {fieldErrors.relation ? (
                         <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
@@ -1471,10 +1492,10 @@ export default function BookingScreen({
                         <Text style={styles.dropdownText}>
                           {gender || "Select"}
                         </Text>
-                       <Image
-                            source={images.arrowdown}
-                            style={styles.dropdownIcon}
-                          />
+                        <Image
+                          source={images.arrowdown}
+                          style={styles.dropdownIcon}
+                        />
                       </TouchableOpacity>
                       {fieldErrors.gender ? (
                         <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
@@ -2168,7 +2189,7 @@ export default function BookingScreen({
                           <Text style={styles.dropdownText}>
                             {gender || "Select"}
                           </Text>
-                            <Image
+                          <Image
                             source={images.arrowdown}
                             style={styles.dropdownIcon}
                           />
