@@ -263,6 +263,8 @@ export const SymptomsApi = {
 
 export const AppointmentAPi = {
   save: "/Appointment/save",
+  cancel: (id: number, statusId: number, modifiedBy: number) =>
+    `/Appointment/Completeorcancelappointment?appointmentId=${id}&statusId=${statusId}&modifiedBy=${modifiedBy}`,
 };
 
 export const SurgicalHistoryApi = {
