@@ -15,7 +15,7 @@ import {
 LogBox.ignoreLogs([
   "Text strings must be rendered within a <Text> component",
 ]);
-
+LogBox.ignoreAllLogs(true);
 const theme = {
   ...MD3LightTheme,
   colors: {

@@ -697,11 +697,19 @@ export default function BookingScreen({
       timeSlot: "",
       createdBy: patientId,
       paymentAmount: totalAmount,
+      isSelfService: patientType === "self",
       duration: duration || "",
       razorpayOrderId: paymentData?.razorpayOrderId || "",
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
     };
+    // Add relation info if for others
+    if (patientType === "others" && selectedRelation) {
+      payload.relationId = selectedRelation.masterDataId;
+      payload.relationName = fullName;
+      payload.relationAge = age ? Number(age) : 0;
+      payload.relationGender = gender;
+    }
     // Add relation info if for others
     console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -1993,7 +2001,115 @@ export default function BookingScreen({
             )}
 
             {(type == "wellness") && (<>
-              <View style={styles.section}>
+             <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Patient Details</Text>
+                <View style={styles.patientCard}>
+                  <View style={styles.radioGroup}>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="self"
+                        status={patientType === "self" ? "checked" : "unchecked"}
+                        onPress={() => setPatientType("self")}
+                        color="#C15E9C"
+
+                      />
+                      <Text style={styles.radioLabel}>Self Service</Text>
+                    </View>
+                    <View style={styles.radioOption}>
+                      <RadioButton
+                        value="others"
+                        status={
+                          patientType === "others" ? "checked" : "unchecked"
+                        }
+                        onPress={() => setPatientType("others")}
+                        color="#C15E9C"
+                      />
+                      <Text style={styles.radioLabel}>For Others</Text>
+                    </View>
+                  </View>
+
+                  {patientType === "others" && (
+                    <View style={styles.othersForm}>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Relation Type</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowRelationDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {selectedRelation
+                              ? selectedRelation.name
+                              : "Select"}
+                          </Text>
+                          <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
+                        </TouchableOpacity>
+                        {fieldErrors.relation ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Full Name</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={fullName}
+                          onChangeText={(text) => {
+                            setFullName(text);
+                            if (fieldErrors.fullName) {
+                              setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                        />
+                        {fieldErrors.fullName ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Age</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={age}
+                          onChangeText={(text) => {
+                            setAge(text);
+                            if (fieldErrors.age) {
+                              setFieldErrors((prev) => ({ ...prev, age: "" }));
+                            }
+                          }}
+                          placeholder="Enter"
+                          placeholderTextColor="#999"
+                          keyboardType="numeric"
+                        />
+                        {fieldErrors.age ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.formField}>
+                        <Text style={styles.fieldLabel}>Gender</Text>
+                        <TouchableOpacity
+                          style={styles.dropdown}
+                          onPress={() => setShowGenderDropdown(true)}
+                        >
+                          <Text style={styles.dropdownText}>
+                            {gender || "Select"}
+                          </Text>
+                          <Image
+                            source={images.arrowdown}
+                            style={styles.dropdownIcon}
+                          />
+                        </TouchableOpacity>
+                        {fieldErrors.gender ? (
+                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+              {/* <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
                   Patient Details
                 </Text>
@@ -2008,7 +2124,7 @@ export default function BookingScreen({
 
                   </View>
                 </View>
-              </View>
+              </View> */}
 
             </>)}
 

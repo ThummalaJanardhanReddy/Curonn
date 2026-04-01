@@ -457,6 +457,7 @@ export default function HomeScreen() {
 
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
     const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+     const duration = item.duration ? `${item.duration}` : "";
     const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
     // Status display
     const status =
@@ -580,16 +581,13 @@ export default function HomeScreen() {
               {category}
             </Text>
           </View>
-          <Text
-            style={{
-              fontSize: 12,
-              color: "#333",
-              marginBottom: 4,
-              fontFamily: fonts.medium,
-            }}
-          >
-            {createdOn}{timeSlot}
-          </Text>
+          {duration ? ( <View style={styles.categoryrow}><Text style={styles.categorytitle1}>Duration: {duration}</Text></View>
+                         ):(
+                           <View style={styles.categoryrow}>
+                          <Text style={styles.categorytitle}>{createdOn}{timeSlot} </Text>
+                        </View>
+                         )}
+         
           <View
             style={{
               flexDirection: "row",
@@ -1579,6 +1577,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: scale(58), // responsive line height
     maxWidth: "95%", // prevents overflow on small screens
+  },
+    categoryrow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+   categorytitle: {
+    fontSize: 12,
+    color: "#333",
+    fontFamily: fonts.regular,
+    marginBottom: 6,
+
+    
+  },
+    categorytitle1: {
+    fontSize: 12,
+    color: "#666",
+    fontFamily: fonts.regular,
+    marginBottom: 6,
   },
   articletitle: {
     fontSize: 20,

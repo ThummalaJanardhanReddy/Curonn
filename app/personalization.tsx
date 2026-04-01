@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -89,6 +90,8 @@ export default function PersonalizationScreen() {
   const { userData } = useUser();
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   // Auto-focus TextInput when on step 2 (age input), step 3 (height input), or step 4 (weight input)
   useEffect(() => {
     if (currentStep === 2 && textInputRef.current) {
@@ -211,15 +214,14 @@ export default function PersonalizationScreen() {
         console.log('Employee update response:', response);
         let message = "Employee registration completed successfully";
         if (response?.id) {
-          setToastMessage({
-            title: "Employee Details Saved Successfully",
-            subtitle: response?.data?.message || "Saved successfully!",
-            type: "success"
-          });
-          setShowToast(true);
           await setRegistrationCompleted(true);
           await saveUserData(data);
-          router.push('/home');
+          setShowLoading(true);
+          setTimeout(() => {
+            setShowLoading(false);
+            setNavigating(true);
+            router.push('/home');
+          }, 2000); // 2 seconds delay
         } else {
           // Show error or handle failure
           const msg = response?.message || response?.data?.message || 'Failed to update employee details.';
@@ -232,9 +234,13 @@ export default function PersonalizationScreen() {
         }
       } catch (err) {
         console.error('Failed to update employee:', err);
-        router.push('/home');
+        setShowLoading(true);
+        setTimeout(() => {
+          setShowLoading(false);
+          setNavigating(true);
+          router.push('/home');
+        }, 2000);
       }
-
     }
   };
 
@@ -675,69 +681,88 @@ export default function PersonalizationScreen() {
     }
   };
 
-  return (<>
-
-    <RegistrationLayout headerBackgroundColor={colors.bg_primary}>
-      <View style={styles.header}>
-        <BackButton
-          title="Back"
-          onPress={handleBack}
-          style={styles.backButton}
-        />
-      </View>
-      <View style={styles.stepTextContainer}>
-        <Text style={styles.stepsText}>
-          Step {currentStep} of {totalSteps}
-        </Text>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${(currentStep / totalSteps) * 100}%` },
-            ]}
-          />
+  if (navigating) {
+    return null;
+  }
+  return (
+    <>
+      {showLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(195,94,156,0.9)' }}>
+          <View style={{ marginBottom: 24 }}>
+            {/* Replace below with your preferred loading spinner */}
+            <ActivityIndicator size="large" color={colors.white} />
+          </View>
+          <Text style={{ fontSize: 20,  fontFamily: fonts.semiBold, color: colors.white, marginBottom: 8 }}>
+            Registration Complete
+          </Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.regular,color: '#fff', textAlign: 'center', maxWidth: 300 }}>
+            Your registration has been successfully completed.
+          </Text>
         </View>
-      </View>
+      ) : (
+        <RegistrationLayout headerBackgroundColor={colors.bg_primary}>
+          <View style={styles.header}>
+            <BackButton
+              title="Back"
+              onPress={handleBack}
+              style={styles.backButton}
+            />
+          </View>
+          <View style={styles.stepTextContainer}>
+            <Text style={styles.stepsText}>
+              Step {currentStep} of {totalSteps}
+            </Text>
+          </View>
 
-      <ScrollView
-        style={styles.contentContainer}
-        showsVerticalScrollIndicator={true}
-      >
-        {renderStepContent()}
-      </ScrollView>
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${(currentStep / totalSteps) * 100}%` },
+                ]}
+              />
+            </View>
+          </View>
 
-      <View style={styles.buttonContainer}>
-        <PrimaryButton
-          title={currentStep === totalSteps ? 'Submit' : 'Continue'}
-          onPress={handleContinue}
-          disabled={!isStepValid()}
-          style={styles.continueButton}
-        />
-      </View>
+          <ScrollView
+            style={styles.contentContainer}
+            showsVerticalScrollIndicator={true}
+          >
+            {renderStepContent()}
+          </ScrollView>
 
-      {/* Background Image */}
-      <View style={styles.backgroundImageContainer}>
-        <Image
-          source={images.panels.personalization_bottom}
-          style={styles.backgroundImage}
-          resizeMode="stretch"
-        />
-      </View>
+          <View style={styles.buttonContainer}>
+            <PrimaryButton
+              title={currentStep === totalSteps ? 'Submit' : 'Continue'}
+              onPress={handleContinue}
+              disabled={!isStepValid()}
+              style={styles.continueButton}
+            />
+          </View>
 
-    </RegistrationLayout>
-    <Toast
-      visible={showToast}
-      title={toastMessage.title}
-      subtitle={toastMessage.subtitle}
-      type={toastMessage.type}
-      onHide={() => setShowToast(false)}
-      duration={3000}
-    />
-  </>);
+          {/* Background Image */}
+          <View style={styles.backgroundImageContainer}>
+            <Image
+              source={images.panels.personalization_bottom}
+              style={styles.backgroundImage}
+              resizeMode="stretch"
+            />
+          </View>
+
+        </RegistrationLayout>
+      )}
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        type={toastMessage.type}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
