@@ -55,7 +55,8 @@ const styles = StyleSheet.create({
   banner: {
     textAlign: "center",
     justifyContent: "center",
-    padding: 6,
+    fontSize: 12,
+    padding: 2,
     color: "white",
     marginVertical: 3,
     zIndex:10

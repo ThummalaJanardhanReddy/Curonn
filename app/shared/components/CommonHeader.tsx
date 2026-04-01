@@ -76,20 +76,20 @@ export default function CommonHeader({
     fetchNotiCounts();
   }, []);
   const patientId = Number(userData?.e_id || user?.eId);
-  console.log("[CommonHeader] patientId:", patientId);
+  // console.log("[CommonHeader] patientId:", patientId);
   // Expose fetchNotiCounts to parent if callback provided
 
   const fetchNotiCounts = async () => {
     try {
-      console.log(
-        "[CommonHeader] Fetching notification count for patientId:",
-        patientId,
-      );
+      // console.log(
+      //   "[CommonHeader] Fetching notification count for patientId:",
+      //   patientId,
+      // );
       const response = await axiosClient.get(
         ApiRoutes.Notification.GetCount(patientId, "patient"),
       );
       const data = response?.data ?? response;
-      console.log("[CommonHeader] Notification count response:", response);
+      // console.log("[CommonHeader] Notification count response:", response);
       setCount(data);
     } catch (error) {
       console.error("[ProfileModal] Failed to fetch profile data:", error);

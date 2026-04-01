@@ -12,6 +12,9 @@
       "bundleIdentifier": "com.curonn.health",
       "entitlements": {
         "aps-environment": "production"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

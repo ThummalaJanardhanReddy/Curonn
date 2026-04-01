@@ -1,251 +1,387 @@
 import * as signalR from "@microsoft/signalr";
 import { useChatStore } from "../store/ChatStore";
-import axiosClient from "./axiosClient";
 import { useUserStore } from "../store/UserStore";
+import axiosClient from "./axiosClient";
+import type { Message, ChatAcceptDetails, MessageType } from "../store/ChatStore";
 
-const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;
+// Constants
+const SIGNALR_HUB_URL = "https://api.curonn.com/hubs/chat";
+const S3_BASE_URL = "https://curonndatabucket.s3.ap-south-1.amazonaws.com/";
+const MAX_RECONNECT_DELAY_MS = 5000;
+const INITIAL_RECONNECT_DELAY_MS = 1000;
+
+// Types
+interface ReceiveMessagePayload {
+  messageId?: string;
+  messageText?: string;
+  message?: string;
+  senderId: number;
+  sentOn: string;
+  fileUrl?: string;
+  defaultMessage?: string;
+}
+
+interface ChatAcceptedPayload extends ChatAcceptDetails {}
+
+interface ConsultationCompletedPayload {
+  appointmentId: number;
+  reason?: string;
+}
+
+interface SendMessageParams {
+  text: string;
+  senderId?: number;
+  receiverId?: number;
+  appointmentId?: number;
+  file?: {
+    uri: string;
+    name?: string;
+    type?: string;
+  };
+  userType?: "user" | "doctor";
+}
 
 class SignalRService {
-  connection: signalR.HubConnection | null = null;
+  private connection: signalR.HubConnection | null = null;
+  private isConnecting = false;
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
 
-  private get UserId() {
+  /**
+   * Get current user ID from store
+   */
+  private get userId(): number | undefined {
     return useUserStore.getState().user?.eId;
   }
 
   /**
-   * CONNECT
+   * Check if connection is active
    */
-  async connect(sessionId?: string) {
+  get isConnected(): boolean {
+    return this.connection?.state === signalR.HubConnectionState.Connected;
+  }
+
+  /**
+   * Get connection state
+   */
+  get connectionState(): signalR.HubConnectionState | null {
+    return this.connection?.state ?? null;
+  }
+
+  /**
+   * CONNECT TO SIGNALR HUB
+   */
+  async connect(sessionId?: string): Promise<boolean> {
     try {
-      if (this.connection?.state === signalR.HubConnectionState.Connected) {
-        console.log("Already connected");
-        return;
+      // Prevent duplicate connections
+      if (this.isConnected) {
+        console.log("[SignalR] Already connected");
+        return true;
       }
 
+      if (this.isConnecting) {
+        console.log("[SignalR] Connection already in progress");
+        return false;
+      }
+
+      if (!this.userId) {
+        console.log("[SignalR] Cannot connect: No user ID available");
+        return false;
+      }
+
+      this.isConnecting = true;
       useChatStore.getState().setConnectionState("connecting");
 
+      // Build connection
       this.connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://api.curonn.com/hubs/chat", {
+        .withUrl(SIGNALR_HUB_URL, {
           transport: signalR.HttpTransportType.WebSockets,
+          skipNegotiation: true,
         })
         .withAutomaticReconnect({
-          nextRetryDelayInMilliseconds: (ctx) =>
-            Math.min(1000 * (ctx.previousRetryCount + 1), 5000),
+          nextRetryDelayInMilliseconds: (ctx) => {
+            const delay = Math.min(
+              INITIAL_RECONNECT_DELAY_MS * (ctx.previousRetryCount + 1),
+              MAX_RECONNECT_DELAY_MS
+            );
+            console.log(`[SignalR] Retry attempt ${ctx.previousRetryCount + 1}, delay: ${delay}ms`);
+            return delay;
+          },
         })
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
-      // 🔥 IMPORTANT: Register listeners BEFORE start
+      // Register listeners BEFORE starting connection
       this.registerListeners();
 
-      await this.connection?.start();
+      // Start connection
+      await this.connection.start();
+      console.log("[SignalR] Connection started");
 
-      try {
-        if (!this.connection) return;
-        await this.connection.invoke("JoinPatientGroup", this.UserId);
-        console.log("✅ Joined chat group:", this.UserId);
-      } catch (invokeError) {
-        console.log("❌ Join chat UserGroup failed:", invokeError);
+      // Join user group
+      await this.joinUserGroup();
 
-        await this.connection.stop();
-        this.connection = null;
-
-        return;
-      }
-      useChatStore.getState().setChatStatus("connected");
-      console.log("✅ SignalR connected");
+      // Update store
       useChatStore.getState().setConnectionState("connected");
 
       if (sessionId) {
         useChatStore.getState().setSession(sessionId);
       }
-    } catch (err) {
-      console.log("❌ SignalR connect error:", err);
+
+      this.isConnecting = false;
+      this.reconnectAttempts = 0;
+      console.log("✅ [SignalR] Connected successfully");
+
+      return true;
+    } catch (error) {
+      console.log("❌ [SignalR] Connection failed:", error);
       useChatStore.getState().setConnectionState("disconnected");
+      this.isConnecting = false;
+      this.cleanup();
+      return false;
     }
   }
 
   /**
-   * REGISTER LISTENERS
+   * JOIN USER GROUP
    */
-  private registerListeners() {
+  private async joinUserGroup(): Promise<void> {
+    if (!this.connection || !this.userId) {
+      throw new Error("Cannot join group: No connection or user ID");
+    }
+
+    try {
+      await this.connection.invoke("JoinPatientGroup", this.userId);
+      console.log(`✅ [SignalR] Joined patient group: ${this.userId}`);
+    } catch (error) {
+      console.log("❌ [SignalR] Failed to join group:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * REGISTER EVENT LISTENERS
+   */
+  private registerListeners(): void {
     if (!this.connection) return;
 
-    /**
-     * CHAT ACCEPTED
-     */
-    this.connection.on("ChatAccepted", (response) => {
-      console.log("Chat accepted: ", response);
-      useChatStore.getState().setChatStatus("connected");
-      // useChatStore.getState().setChatEnabled(true);
-      useChatStore.getState().setChatAcceptDetails(response);
-    });
-    /**
-     * RECEIVE MESSAGE
-     */
-    this.connection.on("ReceiveMessage", (message: any) => {
-      console.log("📩 Received:", message);
+    // Chat Accepted
+    this.connection.on("ChatAccepted", this.handleChatAccepted.bind(this));
 
-      const messageId = message.messageId ?? `server_${Date.now()}`;
-      const messageSentOn = message.sentOn;
+    // Receive Message
+    this.connection.on("ReceiveMessage", this.handleReceiveMessage.bind(this));
 
-      const IsItsSenderMsg = message.senderId === this.UserId; // this.user.user?.eId;
+    // Typing Indicators
+    this.connection.on("Typing", this.handleTyping.bind(this));
+    this.connection.on("StopTyping", this.handleStopTyping.bind(this));
 
-      const exists = useChatStore
-        .getState()
-        .messages.some((m) => m.id === messageId);
+    // Chat Status Events
+    this.connection.on("ChatBusy", this.handleChatBusy.bind(this));
+    this.connection.on("ChatExpired", this.handleChatExpired.bind(this));
+    this.connection.on("ChatEnded", this.handleChatEnded.bind(this));
+    this.connection.on("ConsultationCompleted", this.handleConsultationCompleted.bind(this));
 
-      const isDuplicate = useChatStore
-        .getState()
-        .messages.some((m) => m.sentOn === messageSentOn);
+    // Connection Events
+    this.connection.onclose(this.handleConnectionClose.bind(this));
+    this.connection.onreconnecting(this.handleReconnecting.bind(this));
+    this.connection.onreconnected(this.handleReconnected.bind(this));
+  }
 
-      if (exists || IsItsSenderMsg || isDuplicate) return;
+  /**
+   * EVENT HANDLERS
+   */
 
-      useChatStore.getState().addMessage({
-        id: messageId,
-        text: message.messageText ?? message.message ?? "",
-        sender: "doctor",
-        timestamp: Date.now(),
-        sentOn: messageSentOn,
-        status: "received",
-        type: message.fileUrl
-          ? message.fileUrl.split(".").pop()?.toLowerCase()
-          : "text",
-        attachment: message.fileUrl
-          ? {
-              uri: `${S3Link}${message.fileUrl}`,
-              name: message.fileUrl.split("/").pop() || "file",
-              type: message.fileUrl.split(".").pop()?.toLowerCase(),
-            }
-          : undefined,
-      });
-    });
+  private handleChatAccepted(response: ChatAcceptedPayload): void {
+    console.log("✅ [SignalR] Chat accepted:", response);
+    
+    const chatStore = useChatStore.getState();
+    chatStore.setChatAcceptDetails(response);
+    // Status is automatically set to 'connected' in setChatAcceptDetails
+  }
 
-    /**
-     * TYPING
-     */
-    this.connection.on("Typing", () => useChatStore.getState().setTyping(true));
+  private handleReceiveMessage(payload: ReceiveMessagePayload): void {
+    console.log("📩 [SignalR] Message received:", payload);
 
-    this.connection.on("StopTyping", () =>
-      useChatStore.getState().setTyping(false),
+    const messageId = payload.messageId ?? `server_${Date.now()}`;
+    const chatStore = useChatStore.getState();
+
+    // Check if message is from current user (don't add own messages)
+    if (payload.senderId === this.userId) {
+      console.log("[SignalR] Ignoring own message");
+      return;
+    }
+
+    // Check for duplicates
+    const isDuplicate = chatStore.messages.some(
+      (m) => m.id === messageId || m.sentOn === payload.sentOn
     );
 
-    /**
-     * CHAT BUSY
-     */
-    this.connection.on("ChatBusy", () => {
-      console.log("ChatBusy");
-      useChatStore.getState().setChatStatus("busy");
-      // useChatStore.getState().setChatEnabled(false);
-    });
+    if (isDuplicate) {
+      console.log("[SignalR] Duplicate message, ignoring");
+      return;
+    }
 
-    /**
-     * CHAT EXPIRED
-     */
-    this.connection.on("ChatExpired", () => {
-      console.log("ChatExpired");
-      useChatStore.getState().setChatStatus("expired");
-      // useChatStore
-      //   .getState()
-      //   .endChat("No doctors available. Please try again later.");
-    });
+    // Determine message type
+    const messageType = this.getMessageType(payload.fileUrl);
+    const messageText = payload.messageText ?? payload.message ?? "";
 
-    /**
-     * CHAT ENDED
-     */
-    this.connection.on("ChatEnded", () => {
-      console.log("ChatEnded");
-      useChatStore.getState().endChat("Consultation ended");
-    });
+    // Create message object
+    const message: Message = {
+      id: messageId,
+      text: messageText,
+      sender: "doctor",
+      timestamp: Date.now(),
+      sentOn: payload.sentOn,
+      status: "received",
+      type: messageType,
+      attachment: payload.fileUrl
+        ? {
+            uri: `${S3_BASE_URL}${payload.fileUrl}`,
+            name: this.getFileName(payload.fileUrl),
+            type: this.getFileExtension(payload.fileUrl),
+          }
+        : undefined,
+      defaultMessage: payload.defaultMessage,
+    };
 
-    this.connection.on("ConsultationCompleted", () => {
-      console.log("Consultation completed");
-      // useChatStore.getState().setChatStatus('ended');
-      // useChatStore.getState().setChatEnabled(false);
-      // useChatStore.getState().endChat('Consultation Completed');
-    });
+    chatStore.addMessage(message);
+  }
 
-    /**
-     * CONNECTION EVENTS
-     */
-    this.connection.onclose((err) => {
-      console.log("❌ SignalR disconnected", err);
-      useChatStore.getState().setConnectionState("disconnected");
-    });
+  private handleTyping(): void {
+    useChatStore.getState().setTyping(true);
+  }
 
-    this.connection.onreconnecting(() => {
-      console.log("🔄 Reconnecting...");
-      useChatStore.getState().setConnectionState("connecting");
-    });
+  private handleStopTyping(): void {
+    useChatStore.getState().setTyping(false);
+  }
 
-    this.connection.onreconnected(() => {
-      console.log("✅ Reconnected");
-      useChatStore.getState().setConnectionState("connected");
-      // useChatStore.getState().setChatStatus('connected');
+  private handleChatBusy(): void {
+    console.log("⏳ [SignalR] Chat is busy");
+    useChatStore.getState().setChatStatus("busy");
+  }
+
+  private handleChatExpired(): void {
+    console.log("⏱️ [SignalR] Chat expired");
+    useChatStore.getState().setChatStatus("expired");
+  }
+
+  private handleChatEnded(): void {
+    console.log("👋 [SignalR] Chat ended by doctor");
+    useChatStore.getState().endChat("doctor_ended");
+  }
+
+  private handleConsultationCompleted(data: ConsultationCompletedPayload): void {
+    console.log("✅ [SignalR] Consultation completed:", data);
+    useChatStore.getState().endChat("doctor_ended");
+  }
+
+  private handleConnectionClose(error?: Error): void {
+    console.log("❌ [SignalR] Connection closed:", error);
+    useChatStore.getState().setConnectionState("disconnected");
+    this.reconnectAttempts++;
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log("[SignalR] Max reconnection attempts reached");
+      useChatStore.getState().endChat("error");
+    }
+  }
+
+  private handleReconnecting(error?: Error): void {
+    console.log("🔄 [SignalR] Reconnecting...", error);
+    useChatStore.getState().setConnectionState("connecting");
+  }
+
+  private handleReconnected(connectionId?: string): void {
+    console.log("✅ [SignalR] Reconnected:", connectionId);
+    useChatStore.getState().setConnectionState("connected");
+    this.reconnectAttempts = 0;
+
+    // Rejoin group after reconnection
+    this.joinUserGroup().catch((error) => {
+      console.log("[SignalR] Failed to rejoin group after reconnection:", error);
     });
   }
 
   /**
    * SEND MESSAGE
    */
-  async sendMessage(
-    text: string,
-    senderId?: number,
-    receiverId?: number,
-    appointmentId?: number,
-    file?: any,
-    userType?: "user" | "doctor",
-  ) {
-    if (!text && !file) return;
+  async sendMessage(params: SendMessageParams): Promise<boolean> {
+    const { text, senderId, receiverId, appointmentId, file, userType = "user" } = params;
+
+    if (!text && !file) {
+      console.warn("[SignalR] Cannot send empty message");
+      return false;
+    }
+
+    if (!this.isConnected) {
+      console.log("[SignalR] Cannot send message: Not connected");
+      return false;
+    }
 
     const messageId = `local_${Date.now()}`;
+    const chatStore = useChatStore.getState();
 
-    useChatStore.getState().addMessage({
+    // Add optimistic message to UI
+    const optimisticMessage: Message = {
       id: messageId,
       text,
-      sender: userType || "user",
+      sender: userType,
       timestamp: Date.now(),
       status: "sending",
+      type: file ? this.getMessageType(file.name) : "text",
       attachment: file,
-      type: file ? "image" : "text",
-    });
+    };
+
+    chatStore.addMessage(optimisticMessage);
 
     try {
-      const res = await this.handleSend(
+      await this.sendMessageToServer({
         senderId,
         receiverId,
-        text,
+        message: text,
         appointmentId,
         file,
-      );
-      useChatStore.getState().updateMessageStatus(messageId, "sent");
-    } catch (err) {
-      console.log("Send failed:", err);
-      useChatStore.getState().updateMessageStatus(messageId, "failed");
+      });
+
+      chatStore.updateMessageStatus(messageId, "sent");
+      console.log("✅ [SignalR] Message sent successfully");
+      return true;
+    } catch (error) {
+      console.log("❌ [SignalR] Failed to send message:", error);
+      chatStore.updateMessageStatus(messageId, "failed");
+      return false;
     }
   }
 
   /**
-   * REST SEND API
+   * SEND MESSAGE TO SERVER VIA REST API
    */
-  private async handleSend(
-    senderId?: number,
-    receiverId?: number,
-    message?: string,
-    appointmentId?: number,
-    file?: any,
-  ) {
+  private async sendMessageToServer(params: {
+    senderId?: number;
+    receiverId?: number;
+    message?: string;
+    appointmentId?: number;
+    file?: any;
+  }): Promise<void> {
+    const { senderId, receiverId, message, appointmentId, file } = params;
+
     const formData = new FormData();
 
-    if (senderId != null) formData.append("SenderId", senderId.toString());
+    if (senderId != null) {
+      formData.append("SenderId", senderId.toString());
+    }
 
-    if (receiverId != null)
+    if (receiverId != null) {
       formData.append("ReceiverId", receiverId.toString());
+    }
 
-    if (message) formData.append("Message", message);
+    if (message) {
+      formData.append("Message", message);
+    }
 
-    if (appointmentId != null)
+    if (appointmentId != null) {
       formData.append("AppointmentId", appointmentId.toString());
+    }
 
     if (file) {
       formData.append("File", {
@@ -255,34 +391,99 @@ class SignalRService {
       } as any);
     }
 
-    // if (file) {
-    const _res = await axiosClient.post("/chat/TestsendImage", formData, {
+    const response = await axiosClient.post("/chat/TestsendImage", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    console.log("network:", _res);
-    // } else {
-    //   const _res = await axiosClient.post("/chat/send", formData, {
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //   });
-    //   console.log('network file: ', _res);
-    // }
+
+    console.log("[SignalR] Server response:", response);
+  }
+
+  /**
+   * SEND TYPING INDICATOR
+   */
+  async sendTyping(): Promise<void> {
+    if (!this.isConnected || !this.connection) return;
+
+    try {
+      await this.connection.invoke("Typing");
+    } catch (error) {
+      console.log("[SignalR] Failed to send typing indicator:", error);
+    }
+  }
+
+  /**
+   * SEND STOP TYPING INDICATOR
+   */
+  async sendStopTyping(): Promise<void> {
+    if (!this.isConnected || !this.connection) return;
+
+    try {
+      await this.connection.invoke("StopTyping");
+    } catch (error) {
+      console.log("[SignalR] Failed to send stop typing indicator:", error);
+    }
   }
 
   /**
    * DISCONNECT
    */
-  async disconnect() {
+  async disconnect(): Promise<void> {
     try {
-      await this.connection?.stop();
-      this.connection = null;
-      // useChatStore.getState().reset();
-      console.log("SignalR disconnected");
-    } catch (err) {
-      console.log("Disconnect error:", err);
+      if (this.connection) {
+        await this.connection.stop();
+        console.log("✅ [SignalR] Disconnected");
+      }
+      this.cleanup();
+    } catch (error) {
+      console.log("❌ [SignalR] Disconnect error:", error);
+      this.cleanup();
     }
+  }
+
+  /**
+   * CLEANUP
+   */
+  private cleanup(): void {
+    this.connection = null;
+    this.isConnecting = false;
+    useChatStore.getState().setConnectionState("disconnected");
+  }
+
+  /**
+   * UTILITY METHODS
+   */
+
+  private getMessageType(fileUrl?: string): MessageType {
+    if (!fileUrl) return "text";
+
+    const extension = this.getFileExtension(fileUrl)?.toLowerCase();
+
+    if (!extension) return "text";
+
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension)) {
+      return "image";
+    }
+
+    if (extension === "pdf") {
+      return "pdf";
+    }
+
+    return "file";
+  }
+
+  private getFileExtension(filename?: string): string | undefined {
+    if (!filename) return undefined;
+    return filename.split(".").pop()?.toLowerCase();
+  }
+
+  private getFileName(filepath?: string): string {
+    if (!filepath) return "file";
+    return filepath.split("/").pop() || "file";
   }
 }
 
+// Export singleton instance
 export const signalRService = new SignalRService();
+
+// Export type for external use
+export type { SignalRService };
