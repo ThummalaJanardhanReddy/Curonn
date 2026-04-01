@@ -99,8 +99,10 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     const fetchFamilyMembers = async () => {
       try {
         const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log('Fetched family members response:', response);
         if (Array.isArray(response)) {
           setFamilyMembers(response);
+          console.log('Fetched family members (array response):', response);
         } else if (response && response.data && Array.isArray(response.data)) {
           setFamilyMembers(response.data);
         }
@@ -258,6 +260,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       createdBy,
       createdOn: new Date().toISOString(),
     };
+    console.log('Payload for save/update:', payload);
     axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload)
       .then(async response => {
         const isEdit = isEditMode && editingMember;

@@ -19,6 +19,7 @@ import { Button, RadioButton } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import SelectPatientModal from "../../shared/components/SelectPatientModal";
 import SecondaryButton from "../../shared/components/SecondaryButton";
 import Toast from "../../shared/components/Toast";
 import {
@@ -108,6 +109,7 @@ export default function BookingScreen({
       .get(ApiRoutes.Employee.getById(patientId))
       .then((response) => {
         const pdata = response?.data ?? response;
+        console.log("Fetched employee data for booking screen:", pdata);
         setUserData(pdata);
       })
       .catch(() => setUserData(null));
@@ -135,9 +137,13 @@ export default function BookingScreen({
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
+  const [relationPatientId, setrelationPatientId] = useState("");
   const [showRelationDropdown, setShowRelationDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  // Wellness: Select Patient Modal
+  const [showSelectPatientModal, setShowSelectPatientModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
   
   
   
@@ -689,27 +695,34 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     // Build ambulance order payload (customize as needed)
+    const isSelfService = patientType === "self";
     const payload: any = {
       programId: masterId,
       programName: serviceName,
-      patientId: patientId,
+      patientId: relationPatientId || patientId,
       address: "",
       timeSlot: "",
       createdBy: patientId,
       paymentAmount: totalAmount,
-      isSelfService: patientType === "self",
+      isSelfService,
       duration: duration || "",
       razorpayOrderId: paymentData?.razorpayOrderId || "",
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
     };
-    // Add relation info if for others
-    if (patientType === "others" && selectedRelation) {
+
+        if (isSelfService) {
+      payload.relationId = 0;
+      payload.relationName = "";
+      payload.relationAge = 0;
+      payload.relationGender = "";
+    } else if (patientType === "others" && selectedRelation) {
       payload.relationId = selectedRelation.masterDataId;
       payload.relationName = fullName;
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
+ 
     // Add relation info if for others
     console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -828,32 +841,8 @@ export default function BookingScreen({
 
   // Lab-test: handleBookNow
   const handleBookWellness = async () => {
-    try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
-      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
-      const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
-      );
-      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
-      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
-        setRazorpayOrderId(orderRes.order_id);
-        setShowPayment(true);
-      } else {
-        setToastMessageLab({
-          title: "Wellness Order Error",
-          subtitle: orderRes?.message || "Failed to create payment order.",
-          type: "error",
-        });
-        setShowToastLab(true);
-      }
-    } catch (err) {
-      setToastMessageLab({
-        title: "Order Error",
-        subtitle: "Failed to create payment order.",
-        type: "error",
-      });
-      setShowToastLab(true);
-    }
+    setShowSelectPatientModal(true);
+    // The rest of the logic will run after a member is selected in handlePatientSelected
   };
 
   const handleBookNowScan = async () => {
@@ -1030,62 +1019,112 @@ export default function BookingScreen({
   };
 
   const handleEdit = () => {
-    onClose();
+    setShowSelectPatientModal(true);
   };
 
-  // ═══════════════════════════════════════════════════════════════════
-  // MEDICINE FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === true)
-  // ═══════════════════════════════════════════════════════════════════
-
-  // Parse search params for cart items / isFromMedical
-  const searchParams = maybeUseSearchParams ? maybeUseSearchParams() : null;
-
-  useEffect(() => {
-    try {
-      const sp = searchParams;
-      console.log("🔍 Search Params received:", JSON.stringify(sp));
-      const flag =
-        sp.isFromMedical === "true" ||
-        sp.isFromMedical === true ||
-        sp.isFromMedical === "1";
-      console.log("🚩 Setting isFromMedicalFlag to:", !!flag);
-      setIsFromMedicalFlag(!!flag);
-      if (sp.cartItems) {
-        try {
-          const decoded = decodeURIComponent(sp.cartItems as string);
-          const parsed = JSON.parse(decoded);
-          if (Array.isArray(parsed)) {
-            const normalized = parsed.map((it: any) => ({
-              ...it,
-              medicineName:
-                it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
-              medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
-            }));
-            // Since we use the global Cart Context, we do not need to populate incoming cart items.
-          }
-        } catch (e) {
-          console.warn("Failed to parse cartItems from query params", e);
-        }
-      }
-    } catch (e) {
-      console.warn("Error parsing search params", e);
+  // Called after patient is selected in modal
+  const handlePatientSelected = async (member: any) => {
+    setShowSelectPatientModal(false);
+    setSelectedPatient(member);
+    // Set booking details from selected member
+    setFullName(member.fullName || member.name || member.relationName || "");
+    setAge(member.age ? String(member.age) : "");
+    setGender(member.gender || "");
+    setrelationPatientId(member.relationPatientId || member.patientId ||  0);
+    // If relation info exists, set it
+    if (member.relationId && member.relationName) {
+      setSelectedRelation({ masterDataId: member.relationId, name: member.relationName });
+      setPatientType("others");
+    } else {
+      setSelectedRelation(null);
+      setPatientType("self");
     }
-  }, [searchParams?.isFromMedical, searchParams?.cartItems]);
-
-  // Fallback: global cart
-  useEffect(() => {
-    try {
-      const g = (global as any).__BOOKING_CART;
-      if (g && Array.isArray(g) && g.length > 0) {
-        setIsFromMedicalFlag(true);
-        try {
-          (global as any).__BOOKING_CART = null;
-        } catch (e) { }
-      }
-    } catch (e) {
-      // ignore
+    // Now run the API logic that was in handleBookWellness, using the selected member's details
+    // Validate only relation, fullName, age, gender as field errors
+    let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
+    let hasError = false;
+    if (!member.relationId) {
+      newFieldErrors.relation = "Please select relation type";
+      hasError = true;
     }
-  }, []);
+    if (!member.fullName && !member.name && !member.relationName) {
+      newFieldErrors.fullName = "Please enter full name";
+      hasError = true;
+    }
+    if (!member.age) {
+      newFieldErrors.age = "Please enter age";
+      hasError = true;
+    }
+    if (!member.gender) {
+      newFieldErrors.gender = "Please select gender";
+      hasError = true;
+    }
+    setFieldErrors(newFieldErrors);
+    setErrors("");
+    if (hasError) return;
+
+    try {
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${member.patientId || patientId || 0}`;
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Wellness Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
+
+  // New: Booking logic using selected member for wellness
+  const handleBookWellnessApiWithMember = async (member: any) => {
+    // Use member details for API payload
+    let bookingPayload = {
+      ...buildLabOrderPayload(),
+      relationId: member.relationTypeId || 0,
+      relationName: member.fullName || member.name || "",
+      relationAge: member.age ? Number(member.age) : 0,
+      relationGender: member.gender || "",
+      patientId: member.e_id || member.id || patientId,
+    };
+    try {
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${bookingPayload.patientId || 0}`;
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query
+      );
+      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
+        setRazorpayOrderId(orderRes.order_id);
+        setShowPayment(true);
+      } else {
+        setToastMessageLab({
+          title: "Wellness Order Error",
+          subtitle: orderRes?.message || "Failed to create payment order.",
+          type: "error",
+        });
+        setShowToastLab(true);
+      }
+    } catch (err) {
+      setToastMessageLab({
+        title: "Order Error",
+        subtitle: "Failed to create payment order.",
+        type: "error",
+      });
+      setShowToastLab(true);
+    }
+  };
 
   // Medicine cart totals
   const itemsTotal = useMemo(() => {
@@ -2000,7 +2039,7 @@ export default function BookingScreen({
               </View>
             )}
 
-            {(type == "wellness") && (<>
+            {/* {(type == "wellness") && (<>
              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Patient Details</Text>
                 <View style={styles.patientCard}>
@@ -2109,24 +2148,9 @@ export default function BookingScreen({
                   )}
                 </View>
               </View>
-              {/* <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Patient Details
-                </Text>
-                <View style={styles.addressCard}>
-                  <View style={styles.addressInfoNew}>
-                    <Text style={styles.addressNameBold}>
-                      {userData?.fullName}
-                    </Text>
-                    <Text style={styles.addressTextNew}>
-                      {userData?.address} | {userData?.gender} | {userData?.age} yrs
-                    </Text>
+    
 
-                  </View>
-                </View>
-              </View> */}
-
-            </>)}
+            </>)} */}
 
             {(type !== "wellness") && (<>
               {/* Sample Pickup Date & Time */}
@@ -2425,6 +2449,13 @@ export default function BookingScreen({
                 title={`Confirm & Pay wellness \u20B9${totalAmount}`}
                 onPress={handleBookWellness}
                 style={{ width: "100%" }}
+              />
+              {/* Select Patient Modal for Wellness */}
+              <SelectPatientModal
+                visible={showSelectPatientModal}
+                onClose={() => setShowSelectPatientModal(false)}
+                onSelect={handlePatientSelected}
+                patientId={patientId}
               />
             </View>
           ) : (

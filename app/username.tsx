@@ -39,8 +39,8 @@ export default function UsernameScreen() {
     if (mobileDetailsUpdated) {
       await setRegistrationCompleted(true);
       console.log("Mobile details updated, redirecting to home...");
-      router.push('/personalization');
-     // router.push('/home');
+      //router.push('/personalization');
+     router.push('/home');
     } else {
       router.push('/personalization');
     }
