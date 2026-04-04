@@ -167,7 +167,7 @@ export const MedicalOrdersApi = {
     `/Medicines/GetAll?pageNo=${pageNo}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ""}&createdBy=${createdBy}`,
   saveOrder: "/medicine-orders/save-order",
   payprescriptionOrder: "/medicine-orders/MedicineOrderPayment",
-   getdataById: (id: string | number) => `/Medicines/GetById/${id}`,
+  getdataById: (id: string | number) => `/Medicines/GetById/${id}`,
 } as const;
 
 export const ConsultationApi = {
@@ -278,7 +278,9 @@ export const ChatApi = {
   history: (senderId: number, receiverId?: number) =>
     `/chat/history?senderId=${senderId}`,
   start: (patientId: number) => `/chat/start?patientId=${patientId}`,
-  cancel: `/chat/CancelChat`,
+  SendChatRequestWithRelation: "/chat/SendChatRequestWithRelation",
+  cancel: (chatRequestId: string | number, patientid: string | number) =>
+    `/chat/CancelChat?chatRequestId=${chatRequestId}&patientid=${patientid}`,
 };
 
 export const PatientReportsApi = {

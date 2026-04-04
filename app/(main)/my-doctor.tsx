@@ -55,6 +55,7 @@ import {
 import dayjs from "dayjs";
 import { useChatStore, Message, useChatAcceptance } from "@/src/store/ChatStore";
 import { fonts } from "@/app/shared/styles/fonts";
+import SelectPatientModal from "../shared/components/SelectPatientModal";
 
 export interface IDepartments {
   charges: number;
@@ -226,7 +227,7 @@ const buildListItems = (
     // A non-empty defaultMessage means a new session just opened.
     // We open the session tracker here so subsequent isChat checks
     // know they are operating inside a valid session.
-    if(msg.defaultMessage && msg.defaultMessage.trim() !== "" && msg.defaultMessage === 'Chat Ended' && sessionOpen) {
+    if (msg.defaultMessage && msg.defaultMessage.trim() !== "" && msg.defaultMessage === 'Chat Ended' && sessionOpen) {
       if (sessionOpen) {
         result.push(msg);
         result.push({
@@ -279,6 +280,17 @@ const buildListItems = (
 export default function MyDoctorScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
+  const [showSelectPatientModal, setShowSelectPatientModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [fullName, setFullName] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
+  const [relationPatientId, setrelationPatientId] = useState("");
+  const [selectedRelation, setSelectedRelation] = useState<{
+    masterDataId: number;
+    name: string;
+  } | null>(null);
+  const [patientType, setPatientType] = useState("self");
   // const [consultationTypeIndex, setConsultationTypeIndex] = useState(0);
   const [consultationTypeId, setConsultationTypeId] = useState(
     consultationTypes[0].value,
@@ -310,7 +322,7 @@ export default function MyDoctorScreen() {
   const { isVisible } = useKeyboardState();
   const isNearBottom = useRef(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  const{acceptDetails, doctorName} = useChatAcceptance();
+  const { acceptDetails, doctorName } = useChatAcceptance();
   // Pass doctorName into buildListItems so "Chat Ended" can include it
   const listItems = useMemo(
     () => buildListItems(messages, doctorName),
@@ -352,8 +364,8 @@ export default function MyDoctorScreen() {
     }
   }, [messages.length, isHistoryLoading]);
   useEffect(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, [listItems.length]);
+    flatListRef.current?.scrollToEnd({ animated: true });
+  }, [listItems.length]);
 
 
   // Fetch history on connect
@@ -370,7 +382,7 @@ export default function MyDoctorScreen() {
       const response = await axiosClient.get<ChatHistoryItem[]>(
         ApiRoutes.Chat.history(user.eId),
       );
-      setMessages(mapChatHistory(response, user.eId));
+      setMessages(mapChatHistory(response.data, user.eId));
     } catch (error) {
       console.log("Chat history error:", error);
     } finally {
@@ -401,8 +413,8 @@ export default function MyDoctorScreen() {
         fileUrl: item.fileUrl ?? undefined,
         timestamp: new Date(item.sentOn).getTime(),
         status: item.isRead ? "received" : "sent",
-        isChat: item.isChat,
-        defaultMessage: item.defaultMessage,
+        isChat: typeof item.isChat === "boolean" ? item.isChat : undefined,
+        defaultMessage: item.defaultMessage ?? undefined,
       }));
   };
 
@@ -480,13 +492,89 @@ export default function MyDoctorScreen() {
     ),
     [],
   );
+  const patientId = user?.eId || 0;
+  const handleChatStart1 = async () => {
+    setShowSelectPatientModal(false);
+    setTimeout(() => {
+      setSelectedPatient(null);
+      setShowSelectPatientModal(true);
+      console.log("Modal opened for patient selection");
+    }, 0);
+  }
 
-  const handleChatStart = async () => {
+  const handlePatientSelected = async (member: any) => {
+    console.log("Selected member from modal:", member);
+    const normalized = {
+      relationId: member.relationId || 0,
+      relationName: member.fullName || member.name || member.relationName || "",
+      patientId: member.patientId || member.e_id || member.id || "",
+      gender: member.gender || "",
+      age: member.age || "",
+      relationPatientId: member.relationPatientId || member.patientId || "",
+    };
+    console.log("Selected member normalized:", normalized);
+
+    setSelectedPatient(null);
+    setShowSelectPatientModal(false);
+    setSelectedPatient(normalized);
+    setFullName(normalized.relationName);
+    setAge(normalized.age ? String(normalized.age) : "");
+    setGender(normalized.gender);
+    setrelationPatientId(normalized.relationPatientId);
+
+    // Only set as 'self' if relationId is 0 and relationName is 'Self' or matches user name
+    const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
+    const userName = (user?.fullName || "").trim().toLowerCase();
+    if (
+      normalized.relationId === 0 &&
+      (normalizedRelationName === "self" || normalizedRelationName === userName)
+    ) {
+      setSelectedRelation(null);
+      setPatientType("self");
+    } else {
+      setSelectedRelation({ masterDataId: normalized.relationId, name: normalized.relationName });
+      setPatientType("others");
+    }
+
+
     if (!user) return;
     try {
-      const res = await axiosClient.post(ApiRoutes.Chat.start(user?.eId));
+      // Use normalized values directly to avoid async state issues
+      const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
+      const userName = (user?.fullName || "").trim().toLowerCase();
+
+      const isSelfService =
+        normalized.relationId === 0 &&
+        (
+          normalizedRelationName === "" ||
+          normalizedRelationName === userName
+        );
+
+      const payload: any = {
+        patientId: Number(normalized.relationPatientId || user?.eId),
+        isSelfService,
+      };
+      console.log("Chat start payload before relation details:", payload);
+      if (isSelfService) {
+        payload.relationId = 0;
+        payload.relationName = "";
+        payload.relationAge = 0;
+        payload.relationGender = "";
+      } else {
+        payload.isSelfService = false; // IMPORTANT
+        payload.relationId = normalized.relationId || 0; // fallback
+        payload.relationName = normalized.relationName?.trim();
+        payload.relationAge = Number(normalized.age) || 0;
+        payload.relationGender = normalized.gender || "";
+      }
+      const res: any = await axiosClient.post(
+        ApiRoutes.Chat.SendChatRequestWithRelation,
+        payload
+      );
+      const relationPatientId = payload.patientId;
       useChatStore.getState().setRequestId(res?.chatRequestId);
-      console.log("Chat started with request ID:", res?.chatRequestId);
+      useChatStore.getState().setrelationPationId(relationPatientId);
+      console.log("Chat started with request ID:", res);
       router.push("/features/chat/Chat");
     } catch (error) {
       Alert.alert(
@@ -689,7 +777,7 @@ export default function MyDoctorScreen() {
             >
               <PrimaryButton
                 title="Start New Consultation"
-                onPress={handleChatStart}
+                onPress={handleChatStart1}
                 style={{
                   paddingHorizontal: 40,
                   width: "auto",
@@ -704,6 +792,13 @@ export default function MyDoctorScreen() {
                   fontSize: 14,
                   fontFamily: fonts.semiBold,
                 }}
+              />
+
+              <SelectPatientModal
+                visible={showSelectPatientModal}
+                onClose={() => setShowSelectPatientModal(false)}
+                onSelect={handlePatientSelected}
+                patientId={patientId}
               />
             </View>
           </View>

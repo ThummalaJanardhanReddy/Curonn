@@ -377,15 +377,15 @@ export default function ConfirmConsultationScreen() {
 
 function isSlotCompleted(slot: string) {
   const [, end] = slot.split(" - "); 
-  console.log("End Time to Parse:", end);
+  //console.log("End Time to Parse:", end);
   const convertedEndTime = convertTo24HourFormat(end);
-  console.log("Converted End Time (24-hour):", convertedEndTime);
+  //console.log("Converted End Time (24-hour):", convertedEndTime);
   const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
   const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
-  console.log("Parsed End Time:", endTime.toString());
+  //console.log("Parsed End Time:", endTime.toString());
   const now = dayjs();
-  console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
-  console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
+  //console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
+  //console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
   return endTime.isBefore(now);
 }
 

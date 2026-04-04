@@ -299,7 +299,7 @@ export default function MedicineListScreen() {
 
   const renderMedicineCard = useCallback(
     ({ item }: { item: Medicine }) => {
-      console.log('Rendering medicine:', item.id);
+     // console.log('Rendering medicine:', item.id);
       const itemInCart = cartItems.find(i => i.id === item.id);
       const quantity = itemInCart?.quantity || 0;
       const isInCart = quantity > 0;

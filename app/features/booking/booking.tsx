@@ -1,3 +1,5 @@
+
+
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { getResponsiveFontSize, getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import CartItemsList from "@/app/shared/components/CartItemsList";
@@ -73,6 +75,7 @@ interface BookingScreenProps {
 }
 
 export default function BookingScreen({
+
   visible,
   onClose,
   onSuccess,
@@ -95,7 +98,7 @@ export default function BookingScreen({
   // ─── Shared context ────────────────────────────────────────────────
   const { userData: userDataFromHook } = useUser();
   const [userData, setUserData] = useState<any>(null);
-    
+
 
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
@@ -124,7 +127,10 @@ export default function BookingScreen({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
   // ...existing code...
-
+  // Edit mode state for relation form
+  const [isEditMode, setIsEditMode] = useState(false);
+  // Track the member being edited (if any)
+  const [editingMember, setEditingMember] = useState<any>(null);
 
   // Sync state with props when modal opens
   useEffect(() => {
@@ -144,9 +150,9 @@ export default function BookingScreen({
   // Wellness: Select Patient Modal
   const [showSelectPatientModal, setShowSelectPatientModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  
-  
-  
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+
+
 
   // ─── Lab-test flow state ───────────────────────────────────────────
   // Only use field-specific errors for relation, fullName, age, gender in LAB flow
@@ -218,7 +224,7 @@ export default function BookingScreen({
 
   //const userdetails: PatientDetails = orderManager.getPatientDetails();
 
-       
+
   // Lab-test date format: YYYY-MM-DD
   // API format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
@@ -467,35 +473,40 @@ export default function BookingScreen({
 
   const fetchRelationDetails = async (relationId: number) => {
     try {
+      console.log("Fetching relation details for relationId:", relationId, "patientId:", patientId);
       setLoading(true);
       if (!patientId) return;
       const response: any = await axiosClient.get(
         ApiRoutes.Employee.getRelation(relationId, patientId)
       );
+      console.log("Fetched relation details:", response);
 
       // Handle both wrapped response { isSuccess: true, data: {...} } and raw response {...}
       const detail =
         response && response.isSuccess && response.data
           ? response.data
           : response;
-
+      console.log("Using Details relation detail:", detail);
       if (detail && (detail.relationName || detail.fullName)) {
         setFullName(detail.relationName || detail.fullName || "");
         setAge(detail.age ? detail.age.toString() : "");
         // Capitalize gender if it's 'male'/'female'
         const g = detail.gender || "";
         setGender(g.charAt(0).toUpperCase() + g.slice(1).toLowerCase());
+        setIsEditMode(true);
       } else {
         // Clear fields if no detail found for this relation type
         setFullName("");
         setAge("");
         setGender("");
+        setIsEditMode(false);
       }
     } catch (error) {
       // console.error('Fetch relation details error:', error);
       setFullName("");
       setAge("");
       setGender("");
+      setIsEditMode(false);
     } finally {
       setLoading(false);
     }
@@ -507,11 +518,35 @@ export default function BookingScreen({
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => {
+    // Get current date in yyyy-mm-dd format
     const isSelfService = patientType === "self";
+    const today = new Date();
+    // const formattedDate = today.toISOString().split('T')[0];
+
+    // Prefer relationPatientId from selectedRelation if available
+    let medPatientId = Number(patientId);
+    if (selectedRelation && typeof selectedRelation === 'object') {
+      // Find the matching family member by relationId
+      const familyMember = Array.isArray(familyMembers)
+        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        : null;
+      console.log("Matching family member for selected relation:", familyMember);
+      if (familyMember && familyMember.relationPatientId) {
+        medPatientId = familyMember.relationPatientId;
+        console.log("Using relationPatientId from familyMembers:", medPatientId);
+      } else if (relationPatientId) {
+        medPatientId = Number(relationPatientId);
+        console.log("Using relationPatientId from state:", medPatientId);
+      }
+    } else if (relationPatientId) {
+      medPatientId = Number(relationPatientId);
+      console.log("Using relationPatientId from state:", medPatientId);
+    }
+
     const payload: any = {
       labOrderId: 0,
       testName: serviceName,
-      patientId: patientId,
+      patientId: medPatientId || 0,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -590,6 +625,15 @@ export default function BookingScreen({
         setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
+          if (patientType === "others") {
+            setSelectedRelation(null);
+            setFullName("");
+            setAge("");
+            setGender("");
+            setrelationPatientId("");
+            setIsEditMode(false);
+            setEditingMember(null); // if you use this state
+          }
           if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
@@ -666,6 +710,15 @@ export default function BookingScreen({
         setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
+          if (patientType === "others") {
+            setSelectedRelation(null);
+            setFullName("");
+            setAge("");
+            setGender("");
+            setrelationPatientId("");
+            setIsEditMode(false);
+            setEditingMember(null); // if you use this state
+          }
           if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
@@ -711,7 +764,7 @@ export default function BookingScreen({
       razorpaySignature: paymentData?.razorpaySignature || "",
     };
 
-        if (isSelfService) {
+    if (isSelfService) {
       payload.relationId = 0;
       payload.relationName = "";
       payload.relationAge = 0;
@@ -722,7 +775,7 @@ export default function BookingScreen({
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
- 
+
     // Add relation info if for others
     console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
     try {
@@ -810,6 +863,124 @@ export default function BookingScreen({
       setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       setErrors("");
     }
+
+    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationId = relationObj ? relationObj.masterDataId : 0;
+    let newRelationPatientId = null;
+
+    // Always check if we need to save/update family member
+    let shouldSaveOrUpdate = false;
+    let oldMember = null;
+    if (relationId !== 0 && Array.isArray(familyMembers)) {
+      oldMember = familyMembers.find(m => m.relationId === relationId);
+      if (oldMember) {
+        // Compare old and new data
+        if (
+          oldMember.fullName !== fullName ||
+          String(oldMember.age) !== String(age) ||
+          (oldMember.gender || "").toLowerCase() !== gender.toLowerCase()
+        ) {
+          shouldSaveOrUpdate = true;
+        }
+      } else {
+        // No old member found, treat as new
+        shouldSaveOrUpdate = true;
+      }
+    } else {
+      // New member (relationId === 0)
+      shouldSaveOrUpdate = true;
+    }
+
+    if (shouldSaveOrUpdate) {
+      const payload = {
+        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        relationId,
+        relationName: fullName,
+        patientId: patientId,
+        gender: gender,
+        age: age ? Number(age) : 0,
+        createdOn: new Date().toISOString(),
+      };
+      console.log('Payload for save/update:', payload);
+      try {
+        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        // Fetch updated family members
+        console.log("Saved Responsive data:", saveResponse);
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        setToastMessageMed({
+          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
+          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
+          type: "success"
+        });
+        setShowToastMed(true);
+      } catch (error) {
+        let errorMsg = 'Something went wrong';
+        if (error && typeof error === 'object') {
+          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if ('message' in error) {
+            errorMsg = error.message;
+          }
+        }
+        setToastMessageMed({
+          title: "Save Failed",
+          subtitle: errorMsg,
+          type: "error"
+        });
+        setShowToastMed(true);
+        return;
+      }
+    } else {
+      // No changes, just use existing data
+      if (relationId !== 0) {
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        // Optionally show a toast for no changes
+        // setToastMessageMed({
+        //   title: "No Changes",
+        //   subtitle: "No changes detected in family member details.",
+        //   type: "success"
+        // });
+        // setShowToastMed(true);
+      }
+      newRelationPatientId = relationId;
+    }
+
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
@@ -841,8 +1012,29 @@ export default function BookingScreen({
 
   // Lab-test: handleBookNow
   const handleBookWellness = async () => {
-    setShowSelectPatientModal(true);
-    // The rest of the logic will run after a member is selected in handlePatientSelected
+    // Always clear selection and form fields before opening modal
+    setSelectedPatient(null);
+    setFullName("");
+    setAge("");
+    setGender("");
+    setrelationPatientId("");
+    setSelectedRelation(null);
+    setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
+    setErrors("");
+    setPatientType("self");
+
+    // If only one patient/member, auto-select and proceed
+    if (Array.isArray(savedAddresses) && savedAddresses.length === 1) {
+      const member = savedAddresses[0];
+      await handlePatientSelected(member);
+    } else {
+      // Always open modal with cleared selection
+      setShowSelectPatientModal(false);
+      setTimeout(() => {
+        setSelectedPatient(null);
+        setShowSelectPatientModal(true);
+      }, 0);
+    }
   };
 
   const handleBookNowScan = async () => {
@@ -889,6 +1081,124 @@ export default function BookingScreen({
       setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
       setErrors("");
     }
+
+    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationId = relationObj ? relationObj.masterDataId : 0;
+    let newRelationPatientId = null;
+
+    // Always check if we need to save/update family member
+    let shouldSaveOrUpdate = false;
+    let oldMember = null;
+    if (relationId !== 0 && Array.isArray(familyMembers)) {
+      oldMember = familyMembers.find(m => m.relationId === relationId);
+      if (oldMember) {
+        // Compare old and new data
+        if (
+          oldMember.fullName !== fullName ||
+          String(oldMember.age) !== String(age) ||
+          (oldMember.gender || "").toLowerCase() !== gender.toLowerCase()
+        ) {
+          shouldSaveOrUpdate = true;
+        }
+      } else {
+        // No old member found, treat as new
+        shouldSaveOrUpdate = true;
+      }
+    } else {
+      // New member (relationId === 0)
+      shouldSaveOrUpdate = true;
+    }
+
+    if (shouldSaveOrUpdate) {
+      const payload = {
+        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        relationId,
+        relationName: fullName,
+        patientId: patientId,
+        gender: gender,
+        age: age ? Number(age) : 0,
+        createdOn: new Date().toISOString(),
+      };
+      console.log('Payload for save/update:', payload);
+      try {
+        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        // Fetch updated family members
+        console.log("Saved Responsive data:", saveResponse);
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        setToastMessageMed({
+          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
+          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
+          type: "success"
+        });
+        setShowToastMed(true);
+      } catch (error) {
+        let errorMsg = 'Something went wrong';
+        if (error && typeof error === 'object') {
+          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if ('message' in error) {
+            errorMsg = error.message;
+          }
+        }
+        setToastMessageMed({
+          title: "Save Failed",
+          subtitle: errorMsg,
+          type: "error"
+        });
+        setShowToastMed(true);
+        return;
+      }
+    } else {
+      // No changes, just use existing data
+      if (relationId !== 0) {
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        // Optionally show a toast for no changes
+        // setToastMessageMed({
+        //   title: "No Changes",
+        //   subtitle: "No changes detected in family member details.",
+        //   type: "success"
+        // });
+        // setShowToastMed(true);
+      }
+      newRelationPatientId = relationId;
+    }
+
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
@@ -924,10 +1234,34 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     // Build ambulance order payload (customize as needed)
+    // Get current date in yyyy-mm-dd format
+    const isSelfService = patientType === "self";
+    const today = new Date();
+    // const formattedDate = today.toISOString().split('T')[0];
+
+    // Prefer relationPatientId from selectedRelation if available
+    let medPatientId = Number(patientId);
+    if (selectedRelation && typeof selectedRelation === 'object') {
+      // Find the matching family member by relationId
+      const familyMember = Array.isArray(familyMembers)
+        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        : null;
+      console.log("Matching family member for selected relation:", familyMember);
+      if (familyMember && familyMember.relationPatientId) {
+        medPatientId = familyMember.relationPatientId;
+        console.log("Using relationPatientId from familyMembers:", medPatientId);
+      } else if (relationPatientId) {
+        medPatientId = Number(relationPatientId);
+        console.log("Using relationPatientId from state:", medPatientId);
+      }
+    } else if (relationPatientId) {
+      medPatientId = Number(relationPatientId);
+      console.log("Using relationPatientId from state:", medPatientId);
+    }
     const payload: any = {
       labOrderId: 0,
       testName: serviceName,
-      patientId: patientId || 0,
+      patientId: medPatientId | patientId || 0,
       address: "",
       hNo: "",
       landMark: "",
@@ -953,6 +1287,7 @@ export default function BookingScreen({
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
+    console.log("📤 Xray Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.DiagCenter.saveUpdate,
@@ -969,6 +1304,15 @@ export default function BookingScreen({
         setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
+          if (patientType === "others") {
+            setSelectedRelation(null);
+            setFullName("");
+            setAge("");
+            setGender("");
+            setrelationPatientId("");
+            setIsEditMode(false);
+            setEditingMember(null); // if you use this state
+          }
           if (onClose) onClose();
           if (onSuccess) onSuccess();
           router.replace("/(main)/orders");
@@ -1019,43 +1363,117 @@ export default function BookingScreen({
   };
 
   const handleEdit = () => {
-    setShowSelectPatientModal(true);
+    onClose();
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MEDICINE FLOW EFFECTS & HELPERS (only when isFromMedicalFlag === true)
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Parse search params for cart items / isFromMedical
+  const searchParams = maybeUseSearchParams ? maybeUseSearchParams() : null;
+
+  useEffect(() => {
+    try {
+      const sp = searchParams;
+      console.log("🔍 Search Params received:", JSON.stringify(sp));
+      const flag =
+        sp.isFromMedical === "true" ||
+        sp.isFromMedical === true ||
+        sp.isFromMedical === "1";
+      console.log("🚩 Setting isFromMedicalFlag to:", !!flag);
+      setIsFromMedicalFlag(!!flag);
+      if (sp.cartItems) {
+        try {
+          const decoded = decodeURIComponent(sp.cartItems as string);
+          const parsed = JSON.parse(decoded);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed.map((it: any) => ({
+              ...it,
+              medicineName:
+                it.medicineName ?? it.name ?? it.title ?? it.subtitle ?? "",
+              medicineId: it.medicineId ?? it.id ?? it.productId ?? null,
+            }));
+            // Since we use the global Cart Context, we do not need to populate incoming cart items.
+          }
+        } catch (e) {
+          console.warn("Failed to parse cartItems from query params", e);
+        }
+      }
+    } catch (e) {
+      console.warn("Error parsing search params", e);
+    }
+  }, [searchParams?.isFromMedical, searchParams?.cartItems]);
+
+  // Fallback: global cart
+  useEffect(() => {
+    try {
+      const g = (global as any).__BOOKING_CART;
+      if (g && Array.isArray(g) && g.length > 0) {
+        setIsFromMedicalFlag(true);
+        try {
+          (global as any).__BOOKING_CART = null;
+        } catch (e) { }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+
 
   // Called after patient is selected in modal
   const handlePatientSelected = async (member: any) => {
+    // Normalize member object for consistent field usage
+    const normalized = {
+      relationId: member.relationId || member.empRelationId || 0,
+      relationName: member.fullName || member.name || member.relationName || "",
+      patientId: member.patientId || member.e_id || member.id || "",
+      gender: member.gender || "",
+      age: member.age || "",
+      relationPatientId: member.relationPatientId || member.patientId || "",
+    };
+    console.log("Selected member normalized:", normalized);
+
+    setSelectedPatient(null);
     setShowSelectPatientModal(false);
-    setSelectedPatient(member);
-    // Set booking details from selected member
-    setFullName(member.fullName || member.name || member.relationName || "");
-    setAge(member.age ? String(member.age) : "");
-    setGender(member.gender || "");
-    setrelationPatientId(member.relationPatientId || member.patientId ||  0);
-    // If relation info exists, set it
-    if (member.relationId && member.relationName) {
-      setSelectedRelation({ masterDataId: member.relationId, name: member.relationName });
+    setSelectedPatient(normalized);
+    setFullName(normalized.relationName);
+    setAge(normalized.age ? String(normalized.age) : "");
+    setGender(normalized.gender);
+    setrelationPatientId(normalized.relationPatientId);
+
+    if (normalized.relationId && normalized.relationName) {
+      setSelectedRelation({ masterDataId: normalized.relationId, name: normalized.relationName });
       setPatientType("others");
     } else {
       setSelectedRelation(null);
       setPatientType("self");
     }
-    // Now run the API logic that was in handleBookWellness, using the selected member's details
+
     // Validate only relation, fullName, age, gender as field errors
     let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
     let hasError = false;
-    if (!member.relationId) {
+    // Accept relationId === 0 if relationName is 'Self' or matches user's name
+    const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
+    const userName = (userData?.fullName || userDataFromHook?.fullName || "").trim().toLowerCase();
+    if (
+      normalized.relationId === 0 &&
+      normalizedRelationName !== "self" &&
+      normalizedRelationName !== userName
+    ) {
       newFieldErrors.relation = "Please select relation type";
       hasError = true;
     }
-    if (!member.fullName && !member.name && !member.relationName) {
+    if (!normalized.relationName) {
       newFieldErrors.fullName = "Please enter full name";
       hasError = true;
     }
-    if (!member.age) {
+    if (!normalized.age) {
       newFieldErrors.age = "Please enter age";
       hasError = true;
     }
-    if (!member.gender) {
+    if (!normalized.gender) {
       newFieldErrors.gender = "Please select gender";
       hasError = true;
     }
@@ -1063,8 +1481,9 @@ export default function BookingScreen({
     setErrors("");
     if (hasError) return;
 
+    // Always trigger API call for new selection
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${member.patientId || patientId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${normalized.patientId || patientId || 0}`;
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
       );
@@ -1089,42 +1508,7 @@ export default function BookingScreen({
     }
   };
 
-  // New: Booking logic using selected member for wellness
-  const handleBookWellnessApiWithMember = async (member: any) => {
-    // Use member details for API payload
-    let bookingPayload = {
-      ...buildLabOrderPayload(),
-      relationId: member.relationTypeId || 0,
-      relationName: member.fullName || member.name || "",
-      relationAge: member.age ? Number(member.age) : 0,
-      relationGender: member.gender || "",
-      patientId: member.e_id || member.id || patientId,
-    };
-    try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${bookingPayload.patientId || 0}`;
-      const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
-      );
-      if (orderRes && orderRes.isSuccess && orderRes.order_id) {
-        setRazorpayOrderId(orderRes.order_id);
-        setShowPayment(true);
-      } else {
-        setToastMessageLab({
-          title: "Wellness Order Error",
-          subtitle: orderRes?.message || "Failed to create payment order.",
-          type: "error",
-        });
-        setShowToastLab(true);
-      }
-    } catch (err) {
-      setToastMessageLab({
-        title: "Order Error",
-        subtitle: "Failed to create payment order.",
-        type: "error",
-      });
-      setShowToastLab(true);
-    }
-  };
+
 
   // Medicine cart totals
   const itemsTotal = useMemo(() => {
@@ -1204,10 +1588,31 @@ export default function BookingScreen({
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
 
+    // Prefer relationPatientId from selectedRelation if available
+    let medPatientId = Number(patientId);
+    if (selectedRelation && typeof selectedRelation === 'object') {
+      // Find the matching family member by relationId
+      const familyMember = Array.isArray(familyMembers)
+        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        : null;
+      console.log("Matching family member for selected relation:", familyMember);
+      if (familyMember && familyMember.relationPatientId) {
+        medPatientId = familyMember.relationPatientId;
+        console.log("Using relationPatientId from familyMembers:", medPatientId);
+      } else if (relationPatientId) {
+        medPatientId = Number(relationPatientId);
+        console.log("Using relationPatientId from state:", medPatientId);
+      }
+    } else if (relationPatientId) {
+      medPatientId = Number(relationPatientId);
+      console.log("Using relationPatientId from state:", medPatientId);
+    }
+
+
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
-      patientId: patientId || 0,
+      patientId: medPatientId || 0,
       address: selectedLocation?.address || "",
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
@@ -1264,7 +1669,7 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    // console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
@@ -1286,6 +1691,15 @@ export default function BookingScreen({
           if (onClose) {
             console.log("Calling onClose...");
             onClose();
+          }
+          if (patientType === "others") {
+            setSelectedRelation(null);
+            setFullName("");
+            setAge("");
+            setGender("");
+            setrelationPatientId("");
+            setIsEditMode(false);
+            setEditingMember(null); // if you use this state
           }
           console.log("Navigating to orders screen...");
           router.replace("/(main)/orders");
@@ -1312,24 +1726,8 @@ export default function BookingScreen({
 
   // Medicine: handleBookNow (now like lab flow)
   const handleBookNowMed = async () => {
-    if (cartItems.length === 0) {
-      setToastMessageMed({
-        title: "Cart Empty",
-        subtitle: "No medicines selected",
-        type: "error",
-      });
-      setShowToastMed(true);
-      return;
-    }
 
-    // Validate address, date, timeSlot
-    if (!selectedLocation) {
-      setErrors("Please select or add new address");
-      setFieldErrors({ relation: "", fullName: "", age: "", gender: "" });
-      return;
-    }
-
-    // Validate patient details
+    // Validate only relation, fullName, age, gender as field errors
     if (patientType === "others") {
       let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
       let hasError = false;
@@ -1357,13 +1755,130 @@ export default function BookingScreen({
       setErrors("");
     }
 
+    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationId = relationObj ? relationObj.masterDataId : 0;
+    let newRelationPatientId = null;
+
+    // Always check if we need to save/update family member
+    let shouldSaveOrUpdate = false;
+    let oldMember = null;
+    if (relationId !== 0 && Array.isArray(familyMembers)) {
+      oldMember = familyMembers.find(m => m.relationId === relationId);
+      if (oldMember) {
+        // Compare old and new data
+        if (
+          oldMember.fullName !== fullName ||
+          String(oldMember.age) !== String(age) ||
+          (oldMember.gender || "").toLowerCase() !== gender.toLowerCase()
+        ) {
+          shouldSaveOrUpdate = true;
+        }
+      } else {
+        // No old member found, treat as new
+        shouldSaveOrUpdate = true;
+      }
+    } else {
+      // New member (relationId === 0)
+      shouldSaveOrUpdate = true;
+    }
+
+    if (shouldSaveOrUpdate) {
+      const payload = {
+        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        relationId,
+        relationName: fullName,
+        patientId: patientId,
+        gender: gender,
+        age: age ? Number(age) : 0,
+        createdOn: new Date().toISOString(),
+      };
+      console.log('Payload for save/update:', payload);
+      try {
+        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        // Fetch updated family members
+        console.log("Saved Responsive data:", saveResponse);
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        setToastMessageMed({
+          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
+          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
+          type: "success"
+        });
+        setShowToastMed(true);
+      } catch (error) {
+        let errorMsg = 'Something went wrong';
+        if (error && typeof error === 'object') {
+          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if ('message' in error) {
+            errorMsg = error.message;
+          }
+        }
+        setToastMessageMed({
+          title: "Save Failed",
+          subtitle: errorMsg,
+          type: "error"
+        });
+        setShowToastMed(true);
+        return;
+      }
+    } else {
+      // No changes, just use existing data
+      if (relationId !== 0) {
+        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        console.log("Updated family members response:", response);
+        let familyList = [];
+        if (Array.isArray(response)) {
+          familyList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          familyList = response.data;
+        }
+        // Try to find the just-saved/updated member by name, age, gender
+        const match = familyList.find(m =>
+          m.fullName === fullName &&
+          String(m.age) === String(age) &&
+          m.gender === gender
+        );
+        if (match && match.patientId) {
+          setrelationPatientId(match.patientId);
+          newRelationPatientId = match.patientId;
+        }
+        setFamilyMembers(familyList);
+        // Optionally show a toast for no changes
+        // setToastMessageMed({
+        //   title: "No Changes",
+        //   subtitle: "No changes detected in family member details.",
+        //   type: "success"
+        // });
+        // setShowToastMed(true);
+      }
+      newRelationPatientId = relationId;
+    }
+
     try {
-      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${patientId}`;
-      console.log("📤 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${newRelationPatientId || patientId}`;
+      console.log("\uD83D\uDCE4 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query
       );
-      console.log("📥 Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      console.log("\uD83D\uDCE5 Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
@@ -1417,15 +1932,15 @@ export default function BookingScreen({
 
   function isSlotCompleted(slot: string) {
     const [, end] = slot.split(" - ");
-    console.log("End Time to Parse:", end);
+    //console.log("End Time to Parse:", end);
     const convertedEndTime = convertTo24HourFormat(end);
-    console.log("Converted End Time (24-hour):", convertedEndTime);
+    // console.log("Converted End Time (24-hour):", convertedEndTime);
     const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
     const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
-    console.log("Parsed End Time:", endTime.toString());
+    // console.log("Parsed End Time:", endTime.toString());
     const now = dayjs();
-    console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
-    console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
+    // console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
+    // console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
     return endTime.isBefore(now);
   }
   if (isFromMedicalFlag) {
@@ -1485,7 +2000,7 @@ export default function BookingScreen({
                             : "Select Relation"}
                         </Text>
                         <Image
-                          source={images.arrowdown}
+                          source={images.icons.edit as any}
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
@@ -1540,7 +2055,7 @@ export default function BookingScreen({
                           {gender || "Select"}
                         </Text>
                         <Image
-                          source={images.arrowdown}
+                          source={images.icons.edit as any}
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
@@ -1737,19 +2252,37 @@ export default function BookingScreen({
                   setTimeout(() => {
                     setShowPayment(false);
                     if (err?.cancelled) {
-                      setToastMessageMed({
-                        title: "Payment Cancelled",
-                        subtitle: "Payment not completed.",
-                        type: "error",
-                      });
-                      setShowToastMed(true);
+                      if (isFromMedicalFlag) {
+                        setToastMessageMed({
+                          title: "Payment Cancelled",
+                          subtitle: "Payment not completed.",
+                          type: "error",
+                        });
+                        setShowToastMed(true);
+                      } else {
+                        setToastMessageLab({
+                          title: "Payment Cancelled",
+                          subtitle: "Payment not completed.",
+                          type: "error",
+                        });
+                        setShowToastLab(true);
+                      }
                     } else {
-                      setToastMessageMed({
-                        title: "Payment Failed",
-                        subtitle: "Your payment was not completed.",
-                        type: "error",
-                      });
-                      setShowToastMed(true);
+                      if (isFromMedicalFlag) {
+                        setToastMessageMed({
+                          title: "Payment Failed",
+                          subtitle: "Your payment was not completed.",
+                          type: "error",
+                        });
+                        setShowToastMed(true);
+                      } else {
+                        setToastMessageLab({
+                          title: "Payment Failed",
+                          subtitle: "Your payment was not completed.",
+                          type: "error",
+                        });
+                        setShowToastLab(true);
+                      }
                     }
                   }, 300);
                 }}
@@ -2039,118 +2572,6 @@ export default function BookingScreen({
               </View>
             )}
 
-            {/* {(type == "wellness") && (<>
-             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Patient Details</Text>
-                <View style={styles.patientCard}>
-                  <View style={styles.radioGroup}>
-                    <View style={styles.radioOption}>
-                      <RadioButton
-                        value="self"
-                        status={patientType === "self" ? "checked" : "unchecked"}
-                        onPress={() => setPatientType("self")}
-                        color="#C15E9C"
-
-                      />
-                      <Text style={styles.radioLabel}>Self Service</Text>
-                    </View>
-                    <View style={styles.radioOption}>
-                      <RadioButton
-                        value="others"
-                        status={
-                          patientType === "others" ? "checked" : "unchecked"
-                        }
-                        onPress={() => setPatientType("others")}
-                        color="#C15E9C"
-                      />
-                      <Text style={styles.radioLabel}>For Others</Text>
-                    </View>
-                  </View>
-
-                  {patientType === "others" && (
-                    <View style={styles.othersForm}>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Relation Type</Text>
-                        <TouchableOpacity
-                          style={styles.dropdown}
-                          onPress={() => setShowRelationDropdown(true)}
-                        >
-                          <Text style={styles.dropdownText}>
-                            {selectedRelation
-                              ? selectedRelation.name
-                              : "Select"}
-                          </Text>
-                          <Image
-                            source={images.arrowdown}
-                            style={styles.dropdownIcon}
-                          />
-                        </TouchableOpacity>
-                        {fieldErrors.relation ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Full Name</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={fullName}
-                          onChangeText={(text) => {
-                            setFullName(text);
-                            if (fieldErrors.fullName) {
-                              setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                            }
-                          }}
-                          placeholder="Enter"
-                          placeholderTextColor="#999"
-                        />
-                        {fieldErrors.fullName ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Age</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={age}
-                          onChangeText={(text) => {
-                            setAge(text);
-                            if (fieldErrors.age) {
-                              setFieldErrors((prev) => ({ ...prev, age: "" }));
-                            }
-                          }}
-                          placeholder="Enter"
-                          placeholderTextColor="#999"
-                          keyboardType="numeric"
-                        />
-                        {fieldErrors.age ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Gender</Text>
-                        <TouchableOpacity
-                          style={styles.dropdown}
-                          onPress={() => setShowGenderDropdown(true)}
-                        >
-                          <Text style={styles.dropdownText}>
-                            {gender || "Select"}
-                          </Text>
-                          <Image
-                            source={images.arrowdown}
-                            style={styles.dropdownIcon}
-                          />
-                        </TouchableOpacity>
-                        {fieldErrors.gender ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-    
-
-            </>)} */}
 
             {(type !== "wellness") && (<>
               {/* Sample Pickup Date & Time */}
@@ -2233,32 +2654,31 @@ export default function BookingScreen({
               </View>
 
 
+
+
               {/* Patient Details */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Patient Details</Text>
                 <View style={styles.patientCard}>
                   <View style={styles.radioGroup}>
-                    <View style={styles.radioOption}>
-                      <RadioButton
-                        value="self"
-                        status={patientType === "self" ? "checked" : "unchecked"}
-                        onPress={() => setPatientType("self")}
-                        color="#C15E9C"
-
-                      />
-                      <Text style={styles.radioLabel}>Self Service</Text>
-                    </View>
-                    <View style={styles.radioOption}>
-                      <RadioButton
-                        value="others"
-                        status={
-                          patientType === "others" ? "checked" : "unchecked"
-                        }
-                        onPress={() => setPatientType("others")}
-                        color="#C15E9C"
-                      />
-                      <Text style={styles.radioLabel}>For Others</Text>
-                    </View>
+                    <TouchableOpacity
+                      style={[styles.radioOption, patientType === "self" && styles.selectedRadioOption]}
+                      onPress={() => setPatientType("self")}
+                    >
+                      <View style={[styles.customRadio, patientType === "self" && styles.customRadioSelected]}>
+                        {patientType === "self" && <View style={styles.customRadioInner} />}
+                      </View>
+                      <Text style={[styles.radioLabel, patientType === "self" && styles.selectedRadioLabel]}>Self Service</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.radioOption, patientType === "others" && styles.selectedRadioOption]}
+                      onPress={() => setPatientType("others")}
+                    >
+                      <View style={[styles.customRadio, patientType === "others" && styles.customRadioSelected]}>
+                        {patientType === "others" && <View style={styles.customRadioInner} />}
+                      </View>
+                      <Text style={[styles.radioLabel, patientType === "others" && styles.selectedRadioLabel]}>For Others</Text>
+                    </TouchableOpacity>
                   </View>
 
                   {patientType === "others" && (
@@ -2272,10 +2692,10 @@ export default function BookingScreen({
                           <Text style={styles.dropdownText}>
                             {selectedRelation
                               ? selectedRelation.name
-                              : "Select"}
+                              : "Select Relation"}
                           </Text>
                           <Image
-                            source={images.arrowdown}
+                            source={images.icons.edit as any}
                             style={styles.dropdownIcon}
                           />
                         </TouchableOpacity>
@@ -2330,7 +2750,7 @@ export default function BookingScreen({
                             {gender || "Select"}
                           </Text>
                           <Image
-                            source={images.arrowdown}
+                            source={images.icons.edit as any}
                             style={styles.dropdownIcon}
                           />
                         </TouchableOpacity>
@@ -2343,7 +2763,6 @@ export default function BookingScreen({
                 </View>
               </View>
             </>)}
-
             {/* Order Summary */}
 
             <View style={styles.section}>
@@ -2438,7 +2857,7 @@ export default function BookingScreen({
           {type === "scans" ? (
             <View style={styles.footer}>
               <PrimaryButton
-                title={`Confirm & Pay  \u20B9${totalAmount}`}
+                title={`Confirm & Pay \u20B9${totalAmount}`}
                 onPress={handleBookNowScan}
                 style={{ width: "100%" }}
               />
@@ -2685,6 +3104,7 @@ export default function BookingScreen({
               }}
               onClose={() => setAddressVisible(false)}
               onAddressChanged={() => {
+                // Refresh addresses in Booking screen when changed from AddressSelection
                 if (typeof fetchAddresses === "function") fetchAddresses();
               }}
             />

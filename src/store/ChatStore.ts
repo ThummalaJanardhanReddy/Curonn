@@ -101,9 +101,13 @@ interface ChatState {
   // End State
   chatEndedReason: ChatEndReason | null;
 
+  // Patient relation
+  relationPatientId?: number;
+
   // Actions - Session Management
   setSession: (sessionId: string) => void;
   setRequestId: (requestId: number) => void;
+  setrelationPationId: (relationPatientId: number) => void;
   setChatAcceptDetails: (details: ChatAcceptDetails) => void;
   clearChatAcceptDetails: () => void;
 
@@ -151,6 +155,7 @@ const initialState = {
   chatEnabled: false,
   chatStatus: "idle" as ChatStatus,
   chatEndedReason: null,
+  relationPatientId: undefined,
 };
 
 /**
@@ -178,6 +183,11 @@ export const useChatStore = create<ChatState>()(
           chatEnabled: false,
           chatStatus: "requested",
         });
+      },
+
+      setrelationPationId: (relationPatientId) => {
+        // Store the relationPatientId in the state (add to initialState if needed)
+        set({ relationPatientId });
       },
 
       setChatAcceptDetails: (details) => {

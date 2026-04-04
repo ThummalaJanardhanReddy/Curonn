@@ -43,6 +43,9 @@ interface FamilyMember {
   gender: string;
   age: string;
   image: string;
+  empRelationId: number;
+  relationId: number;
+  patientId: number;
 }
 
 // Removed hardcoded relationTypes. Now using relationTypes state from API.
@@ -251,7 +254,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     const relationObj = relationTypes.find(r => r.name === formData.relation);
     const relationId = relationObj ? relationObj.masterDataId : 0;
     const payload = {
-      empRelationId: isEditMode && editingMember ? editingMember.id : 0,
+      empRelationId: isEditMode && editingMember ? editingMember.empRelationId : 0,
       relationId,
       relationName: formData.name,
       patientId: patientId,

@@ -59,7 +59,6 @@ const SelectPatientModal: React.FC<SelectPatientModalProps> = ({ visible, onClos
             patientId: selfRes.eId || selfRes.e_id,
             gender: selfRes.gender || "",
             age: selfRes.age || 0,
-            image: undefined,
             relation: "Self",
           };
         }
@@ -123,8 +122,13 @@ const SelectPatientModal: React.FC<SelectPatientModalProps> = ({ visible, onClos
 
 
                       onPress={() => {
-                        setSelectedMember(member)
-                        if (selectedMember) onSelect(selectedMember);
+                        setSelectedMember(member);
+                        let memberToSend = member;
+                        if ((member.empRelationId === 0 || member.relationId === 0) && (member.relation === 'Self' || (member.relationName || '').trim().toLowerCase() === 'self')) {
+                          memberToSend = { ...member, empRelationId: member.patientId };
+                        }
+                        console.log("Modal onSelect called", memberToSend);
+                        onSelect(memberToSend);
                         onClose();
                       }}
 

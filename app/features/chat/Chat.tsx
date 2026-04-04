@@ -177,10 +177,10 @@ const mapChatHistory = (
       text: item.messageText ?? undefined,
       attachment: item.fileUrl
         ? {
-            uri: `${S3_BASE_URL}${item.fileUrl}`,
-            name: item.fileUrl.split("/").pop() || "file",
-            type: item.fileUrl.split(".").pop()?.toLowerCase(),
-          }
+          uri: `${S3_BASE_URL}${item.fileUrl}`,
+          name: item.fileUrl.split("/").pop() || "file",
+          type: item.fileUrl.split(".").pop()?.toLowerCase(),
+        }
         : undefined,
       type: item.fileUrl ? "image" : "text",
       fileUrl: item.fileUrl ?? undefined,
@@ -204,6 +204,7 @@ export default function ChatScreen() {
     chatEnabled,
     clearChat,
     requestId,
+    relationPatientId,
     setMessages,
     reset: chatStoreReset,
   } = useChatStore();
@@ -225,11 +226,11 @@ export default function ChatScreen() {
   } | null>(null);
 
   const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState({
-      title: "",
-      subtitle: "",
-      type: "success" as "success" | "error",
-    });
+  const [toastMessage, setToastMessage] = useState({
+    title: "",
+    subtitle: "",
+    type: "success" as "success" | "error",
+  });
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -499,11 +500,19 @@ export default function ChatScreen() {
         Alert.alert("Error", "User information not available");
         return;
       }
+      console.log("[ChatScreen] Attempting to cancel appointment with requestId:", requestId, "and userId:", relationPatientId);
 
-      await axiosClient.post(ApiRoutes.Chat.cancel, {
-        chatRequestId: requestId,
-        patientid: user.eId,
-      });
+
+      const res = await axiosClient.post(
+        ApiRoutes.Chat.cancel(
+          requestId,
+          relationPatientId || user.eId
+        )
+      );
+      console.log("[ChatScreen] Cancelling appointment with requestId:", requestId, "and userId:", relationPatientId);
+     
+      console.log("[ChatScreen] Cancel appointment response:", res);
+
 
       chatStoreReset();
       router.replace("/(main)/my-doctor");
@@ -511,7 +520,7 @@ export default function ChatScreen() {
       console.error("[ChatScreen] Cancel appointment error:", error);
       Alert.alert("Error", "Failed to cancel appointment");
     }
-  }, [requestId, user, chatStoreReset]);
+  }, [requestId, relationPatientId, user, chatStoreReset]);
 
   /**
    * Fetch chat history (optional)
@@ -834,16 +843,16 @@ export default function ChatScreen() {
           </View>
         )}
 
-        
+
       </KeyboardStickyView>
       {/* Toast Notification */}
-        <Toast
-          visible={showToast}
-          title={toastMessage.title}
-          subtitle={toastMessage.subtitle}
-          onHide={() => setShowToast(false)}
-          duration={3000}
-        />
+      <Toast
+        visible={showToast}
+        title={toastMessage.title}
+        subtitle={toastMessage.subtitle}
+        onHide={() => setShowToast(false)}
+        duration={3000}
+      />
     </View>
   );
 }
