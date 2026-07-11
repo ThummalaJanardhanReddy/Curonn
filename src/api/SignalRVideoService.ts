@@ -16,7 +16,7 @@ class SignalRVideoService {
       videoStore.setReconnecting();
 
       this.connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://api.curonn.com/hubs/video", {
+        .withUrl("https://api.curonnhealth.com/hubs/video", {
           transport: signalR.HttpTransportType.WebSockets,
         })
         .withAutomaticReconnect()

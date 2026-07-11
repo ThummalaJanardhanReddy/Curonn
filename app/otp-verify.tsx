@@ -310,16 +310,15 @@ export default function OTPVerifyScreen() {
                   style={styles.linkText}
                   onPress={() => console.log("Terms of services")}
                 >
-                  Terms of services
-                </Text>{" "}
-                and{" "}
+                  Terms of services and
+                </Text>
+                
                 <Text
                   style={styles.linkText}
                   onPress={() => console.log("privacy policy")}
                 >
-                  privacy policy
+                  privacy policy.
                 </Text>
-                .
               </Text>
             </View>
 

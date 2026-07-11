@@ -382,7 +382,8 @@ export default function MyDoctorScreen() {
       const response = await axiosClient.get<ChatHistoryItem[]>(
         ApiRoutes.Chat.history(user.eId),
       );
-      setMessages(mapChatHistory(response.data, user.eId));
+      const data = response?.data || response;
+      setMessages(mapChatHistory(data, user.eId));
     } catch (error) {
       console.log("Chat history error:", error);
     } finally {

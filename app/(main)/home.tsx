@@ -120,7 +120,7 @@ export default function HomeScreen() {
 
       // Create the SignalR connection
       connectionRef.current = new signalR.HubConnectionBuilder()
-        .withUrl("https://api.curonn.com/hubs/video", {
+        .withUrl("https://api.curonnhealth.com/hubs/video", {
           accessTokenFactory: () => token || "",
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000])
@@ -227,7 +227,7 @@ export default function HomeScreen() {
       const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
       const isLast = index === wellnessall.length - 1;
       return (
-        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
+        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}>
           <Image
             source={bgImage}
             style={styles.featureBackground}

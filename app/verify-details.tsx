@@ -339,16 +339,14 @@ export default function VerifyDetailsScreen() {
                   style={styles.linkText}
                  
                 >
-                  Terms of services
-                </Text>{" "}
-                and{" "}
-                <Text
+                  Terms of services and privacy policy.
+                </Text>
+                {/* <Text
                   style={styles.linkText}
                  
                 >
-                  privacy policy
-                </Text>
-                .
+                  
+                </Text> */}
               </Text>
     
               {/* Buttons */}
