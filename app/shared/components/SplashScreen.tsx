@@ -7,7 +7,7 @@ import { useUserStore } from "@/src/store/UserStore";
 import { colors } from "../styles/commonStyles";
 const { width, height } = Dimensions.get("window");
 export default function AppSplashScreen() {
-  const { restoreUserData, user } = useUserStore();
+  const { restoreUserData } = useUserStore();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -16,7 +16,10 @@ export default function AppSplashScreen() {
         await restoreUserData();
         // Wait a bit for the app to be ready
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        // Redirect based on user presence
+        // Redirect based on user presence — read the store fresh here rather
+        // than a destructured `user`, which would still be the pre-restore
+        // (usually null) value captured when this component first rendered.
+        const { user } = useUserStore.getState();
         if (user) {
           router.replace("/home");
         } else {
