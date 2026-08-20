@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { Button, Chip } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 const { height: screenHeight } = Dimensions.get("window");
 import MapView, { Marker } from "react-native-maps";
@@ -58,6 +58,7 @@ export default function LocationSelection({
   addressId,
   isSimpleLocationSelect = false, // Default to false if not provided
 }: LocationSelectionProps) {
+  const insets = useSafeAreaInsets();
   const { userData } = useUser();
 
   const isEditMode = !!addressId;
@@ -362,7 +363,7 @@ export default function LocationSelection({
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
             <Text style={styles.headerTitle}>{headerTitle}</Text>
             <View style={styles.headerSpacer} />
             <TouchableOpacity

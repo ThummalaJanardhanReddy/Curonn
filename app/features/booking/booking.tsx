@@ -4,7 +4,7 @@ import {
   getResponsiveSpacing,
 } from "@/app/shared/utils/responsive";
 import CartItemsList from "@/app/shared/components/CartItemsList";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "@/app/shared/components/NativeDatePickerModal";
 import { router } from "expo-router";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -116,6 +116,9 @@ export default function BookingScreen({
     restoreUserData();
   }, []);
 
+  const effectiveUserData = userData ?? userDataFromHook;
+  const patientId = Number(effectiveUserData?.e_id || user?.eId);
+
   // Fetch employee data and assign to userData
   useEffect(() => {
     if (!patientId) return;
@@ -224,8 +227,6 @@ export default function BookingScreen({
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
-  const effectiveUserData = userData ?? userDataFromHook;
-  const patientId = Number(effectiveUserData?.e_id || user?.eId);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -1485,12 +1486,10 @@ export default function BookingScreen({
     }
   };
 
-  const handleLabDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (date) {
-      setSelectedDate(date);
-      if (errors === "Please select service start date") setErrors("");
-    }
+  const handleConfirmLabDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (errors === "Please select service start date") setErrors("");
   };
 
   const handleEdit = () => {
@@ -2099,12 +2098,10 @@ export default function BookingScreen({
     }
   };
 
-  const handleMedDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      if (errors === "Please select delivery date") setErrors("");
-    }
+  const handleConfirmMedDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (errors === "Please select delivery date") setErrors("");
   };
 
   const closeHandler = () => {
@@ -2688,15 +2685,13 @@ export default function BookingScreen({
           </Modal>
 
           {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate || new Date()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleMedDateChange}
-              minimumDate={new Date()}
-            />
-          )}
+          <NativeDatePickerModal
+            visible={showDatePicker}
+            value={selectedDate || new Date()}
+            onCancel={() => setShowDatePicker(false)}
+            onConfirm={handleConfirmMedDate}
+            minimumDate={new Date()}
+          />
 
           {/* All Address View Modal */}
           {patientId && (
@@ -3546,23 +3541,21 @@ export default function BookingScreen({
           </Modal>
 
           {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate || new Date()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleLabDateChange}
-              minimumDate={
-                isTodayAvailable
-                  ? new Date()
-                  : (() => {
-                      let d = new Date();
-                      d.setDate(d.getDate() + 1);
-                      return d;
-                    })()
-              }
-            />
-          )}
+          <NativeDatePickerModal
+            visible={showDatePicker}
+            value={selectedDate || new Date()}
+            onCancel={() => setShowDatePicker(false)}
+            onConfirm={handleConfirmLabDate}
+            minimumDate={
+              isTodayAvailable
+                ? new Date()
+                : (() => {
+                    let d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    return d;
+                  })()
+            }
+          />
 
           {/* All Address View Modal */}
           {patientId && (

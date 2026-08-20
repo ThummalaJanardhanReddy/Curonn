@@ -20,7 +20,7 @@ import {
 import { Platform, StatusBar } from "react-native";
 import { images } from "../../../assets";
 import axiosClient from "@/src/api/axiosClient";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "@/app/shared/components/NativeDatePickerModal";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { Button } from "react-native-paper";
@@ -213,20 +213,11 @@ function OrderDetails({
       setErrors("");
     }
   }, [showRescheduleModal]);
-  const handleMedDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      if (errors === "Please select reschedule date") setErrors("");
-    }
-  };
-  const handleLabDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      setNewRescheduleDate(formatDateLab(selectedDate));
-      if (errors === "Please select service start date") setErrors("");
-    }
+  const handleConfirmDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    setNewRescheduleDate(formatDateLab(date));
+    if (errors === "Please select reschedule date") setErrors("");
   };
 
   const formatDateLab = (date: Date) => {
@@ -786,15 +777,13 @@ function OrderDetails({
                 />
               </TouchableOpacity>
               {/* DateTimePicker rendered inside modal */}
-              {showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate || new Date()}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={handleLabDateChange}
-                  minimumDate={new Date()}
-                />
-              )}
+              <NativeDatePickerModal
+                visible={showDatePicker}
+                value={selectedDate || new Date()}
+                onCancel={() => setShowDatePicker(false)}
+                onConfirm={handleConfirmDate}
+                minimumDate={new Date()}
+              />
               {errors === "Please select reschedule date" && (
                 <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
                   {errors}
@@ -1174,17 +1163,6 @@ function OrderDetails({
       </SafeAreaView>
     </Modal>
   );
-  {
-    showDatePicker && (
-      <DateTimePicker
-        value={selectedDate || new Date()}
-        mode="date"
-        display={Platform.OS === "ios" ? "spinner" : "default"}
-        onChange={handleMedDateChange}
-        minimumDate={new Date()}
-      />
-    );
-  }
   return (
     <Modal
       visible={visible}

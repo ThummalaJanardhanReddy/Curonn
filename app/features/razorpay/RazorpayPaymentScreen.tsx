@@ -5,7 +5,7 @@ import {
   BackHandler,
   StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
@@ -29,6 +29,7 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   onSuccess,
   onFailure,
 }) => {
+  const insets = useSafeAreaInsets();
   // ✅ Handle Android hardware back
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -101,7 +102,10 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* <StatusBar barStyle="light-content" backgroundColor={colors.primary} /> */}
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      <SafeAreaView
+        style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
+        edges={[]}
+      >
         <WebView
           originWhitelist={["*"]}
           source={{ html: htmlContent }}

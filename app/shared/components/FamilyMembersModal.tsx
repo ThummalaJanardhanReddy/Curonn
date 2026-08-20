@@ -1,4 +1,3 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
 import {
@@ -15,7 +14,7 @@ import {
   Alert
 } from 'react-native';
 import { IconButton, RadioButton } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import commonStyles, { colors } from '../styles/commonStyles';
 import { getResponsivePadding } from '../utils/responsive';
@@ -52,7 +51,7 @@ interface FamilyMember {
 // Removed hardcoded relationTypes. Now using relationTypes state from API.
 
 export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers }: FamilyMembersModalProps) {
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const insets = useSafeAreaInsets();
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   // TODO: Replace with actual patientId and createdBy from context/user
@@ -544,15 +543,15 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
   return (
     <Modal
-      visible={visible}
+      visible={visible && !showRelationDropdown}
       animationType="slide"
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+      <SafeAreaView style={{ flex: 1, height: screenHeight }} edges={['bottom']}>
         <View style={styles.modalContent}>
           {/* Header */}
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + getResponsivePadding(20) }]}>
             <Text style={styles.modalTitle}>Family Members</Text>
             <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
               <Image

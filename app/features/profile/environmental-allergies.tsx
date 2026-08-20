@@ -12,7 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
@@ -45,6 +45,7 @@ interface EnvironmentalAllergiesScreenProps {
 }
 
 export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChange }: EnvironmentalAllergiesScreenProps) {
+  const insets = useSafeAreaInsets();
   const [allergies, setAllergies] = useState<EnvironmentalAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -599,8 +600,8 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
           onRequestClose={handleCloseSearchModal}
         >
           <View style={styles.searchModalOverlay}>
-            <SafeAreaView style={styles.searchModalContent}>
-              <View style={styles.searchModalHeader}>
+            <SafeAreaView style={styles.searchModalContent} edges={['bottom']}>
+              <View style={[styles.searchModalHeader, { paddingTop: insets.top + getResponsiveSpacing(16) }]}>
                 <Text style={styles.searchModalTitle}>Search of Environmental Allergies</Text>
                 <TouchableOpacity
                   onPress={handleCloseSearchModal}

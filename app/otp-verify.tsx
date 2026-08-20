@@ -10,7 +10,6 @@ import * as SecureStore from 'expo-secure-store';
 import { Dimensions } from "react-native";
 
 import {
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -225,20 +224,15 @@ export default function OTPVerifyScreen() {
     <SafeAreaView style={{ flex: 1, height: screenHeight }}>
       {/* <StatusBar style="dark" backgroundColor={colors.bg_primary} /> */}
       {/* <RegistrationLayout headerBackgroundColor="#f5f5f5"> */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={80}
+        showsVerticalScrollIndicator={false}
       >
-        <KeyboardAwareScrollView
-          style={styles.container}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid
-          extraScrollHeight={80}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
+        <View style={styles.header}>
             <View>
               <images.curonnLogo style={styles.image} width={234} height={60} />
             </View>
@@ -350,8 +344,7 @@ export default function OTPVerifyScreen() {
           >
             {snackbarMessage}
           </Snackbar>
-        </KeyboardAwareScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
 
       {/* </RegistrationLayout> */}
     </SafeAreaView>
@@ -451,14 +444,11 @@ const styles = StyleSheet.create({
     // textDecorationLine: 'underline',
   },
   bottomContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: colors.bg_primary,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
+    marginTop: "auto",
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },

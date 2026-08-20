@@ -14,7 +14,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import HealthFeedScreen from "../../features/health-feed/health-feed";
 import LocationSelection from "../../features/location/location-selection";
@@ -71,8 +74,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     subtitle: string;
     type: "success" | "error";
   }>({ title: "", subtitle: "", type: "success" });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState("");
   const [profileForm, setProfileForm] = useState({
     fullName: "",
@@ -108,6 +109,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     gender: "",
   });
   const { userData } = useUser();
+  const insets = useSafeAreaInsets();
 
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
@@ -206,9 +208,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   ] = useState(false);
   const [menstrualHistoryModalVisible, setMenstrualHistoryModalVisible] =
     useState(false);
-  const [myOrdersModalVisible, setMyOrdersModalVisible] = useState(false);
   const [healthFeedModalVisible, setHealthFeedModalVisible] = useState(false);
-  const [ambulanceModalVisible, setAmbulanceModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [rateAppModalVisible, setRateAppModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
@@ -442,6 +442,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   // Settings handlers
   const handleMyOrders = () => {
+    onClose();
     router.push("/orders");
   };
 
@@ -450,7 +451,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const handleAmbulance = () => {
-    // setAmbulanceModalVisible(true);
+    onClose();
     router.push("/features/ambulance/ambulanceservices");
   };
 
@@ -644,14 +645,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       </View>
     </ScrollView>
   );
-  const handleDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (date) {
-      setSelectedDate(date);
-      if (errors === "Please select service start date") setErrors("");
-    }
-  };
-
   const renderSettingsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Settings Items */}
@@ -755,18 +748,40 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     </ScrollView>
   );
 
+  // LocationSelection still renders its own native <Modal> (it's a shared
+  // component also used outside this screen, e.g. booking.tsx), so iOS's
+  // "only one Modal at a time" restriction still applies to it specifically —
+  // hide this outer modal while it's open. FamilyMembersModal is also still
+  // a real <Modal> for now (same restriction applies) even though it's only
+  // used here — a candidate for the same overlay conversion later. Everything
+  // else below (Edit Profile, Logout, the ProfileScreenModal-wrapped screens,
+  // Food Allergies, About/Rate App/T&C/Privacy) renders as a plain overlay
+  // nested *inside* this modal instead, so it stays visible underneath and
+  // never needs to hide.
+  const isThirdPartyModalVisible =
+    familyMembersModalVisible || locationSelectionVisible;
+
   return (
     <>
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <Modal
+        visible={visible && !isThirdPartyModalVisible}
+        animationType="slide"
+        onRequestClose={onClose}
+      >
         <SafeAreaView
           style={{ flex: 1, backgroundColor: colors.primary }}
-          edges={["top", "bottom"]}
+          edges={["bottom"]}
         >
           <View style={styles.container}>
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 {/* Header */}
-                <View style={styles.modalHeaderContainer}>
+                <View
+                  style={[
+                    styles.modalHeaderContainer,
+                    { paddingTop: insets.top + getResponsivePadding(10) },
+                  ]}
+                >
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>User Profile</Text>
                     <TouchableOpacity
@@ -866,15 +881,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
           </View>
         </SafeAreaView>
-      </Modal>
 
-      {/* Edit Profile Modal */}
-      <Modal
-        visible={editProfileVisible}
-        animationType="none"
-        transparent={true}
-        onRequestClose={hideEditProfileModal}
-      >
+        {/* Edit Profile Modal */}
+        {editProfileVisible && (
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={styles.modalBackdrop}
@@ -889,7 +898,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 },
               ]}
             >
-              <View style={styles.editProfileModalHeader}>
+              <View
+                style={[
+                  styles.editProfileModalHeader,
+                  { paddingTop: insets.top + getResponsivePadding(16) },
+                ]}
+              >
                 <Text style={styles.editProfileModalTitle}>
                   Personal Profile
                 </Text>
@@ -1061,15 +1075,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             duration={3000}
           />
         </View>
-      </Modal>
+        )}
 
-      {/* Logout Confirmation Modal */}
-      <Modal
-        visible={logoutConfirmVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={hideLogoutConfirmation}
-      >
+        {/* Logout Confirmation Modal */}
+        {logoutConfirmVisible && (
         <View style={styles.logoutModalOverlay}>
           <TouchableOpacity
             style={styles.logoutModalBackdrop}
@@ -1103,33 +1112,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* Family Members Modal */}
-      <FamilyMembersModal
-        visible={familyMembersModalVisible}
-        onClose={hideFamilyMembersModal}
-        maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
-      />
-
-      {/* Location Selection Modal */}
-      <LocationSelection
-        visible={locationSelectionVisible}
-        onClose={hideLocationSelection}
-        onLocationSelected={handleLocationSelected}
-      />
-
-      {/* Food Allergies Modal */}
-      <FoodAllergiesModal
-        visible={foodAllergiesModalVisible}
-        onClose={() => setFoodAllergiesModalVisible(false)}
-        onDataStatusChange={(hasData) =>
-          setProfileStatus((prev) => ({
-            ...prev,
-            foodAllergies: hasData,
-          }))
-        }
-      />
+        )}
 
       {/* Medical History Modal */}
       <ProfileScreenModal
@@ -1243,34 +1226,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         />
       </ProfileScreenModal>
 
-      {/* My Orders Modal */}
-      <Modal
-        visible={myOrdersModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setMyOrdersModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.settingsModalContent}>
-            <View style={styles.settingsModalHeader}>
-              <Text style={styles.settingsModalTitle}>My Orders</Text>
-              <TouchableOpacity
-                onPress={() => setMyOrdersModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.settingsModalBody}>
-              <Text style={styles.comingSoonText}>Coming Soon!</Text>
-              <Text style={styles.comingSoonSubtext}>
-                Your order history will be displayed here.
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       {/* Health Feed Modal */}
       <ProfileScreenModal
         visible={healthFeedModalVisible}
@@ -1279,44 +1234,16 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         <HealthFeedScreen />
       </ProfileScreenModal>
 
-      {/* Ambulance Modal */}
-      <Modal
-        visible={ambulanceModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAmbulanceModalVisible(false)}
-      >
+        {/* About Modal */}
+        {aboutModalVisible && (
         <View style={styles.modalOverlay}>
           <SafeAreaView style={styles.settingsModalContent}>
-            <View style={styles.settingsModalHeader}>
-              <Text style={styles.settingsModalTitle}>Emergency Ambulance</Text>
-              <TouchableOpacity
-                onPress={() => setAmbulanceModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Image source={images.icons.close} style={styles.closeIcon} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.settingsModalBody}>
-              <Text style={styles.comingSoonText}>Emergency Service</Text>
-              <Text style={styles.comingSoonSubtext}>
-                Ambulance booking and emergency services will be available here.
-              </Text>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* About Modal */}
-      <Modal
-        visible={aboutModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAboutModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.settingsModalContent}>
-            <View style={styles.settingsModalHeader}>
+            <View
+              style={[
+                styles.settingsModalHeader,
+                { paddingTop: insets.top + getResponsivePadding(16) },
+              ]}
+            >
               <Text style={styles.settingsModalTitle}>About Curonn</Text>
               <TouchableOpacity
                 onPress={() => setAboutModalVisible(false)}
@@ -1335,18 +1262,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
           </SafeAreaView>
         </View>
-      </Modal>
+        )}
 
-      {/* Rate App Modal */}
-      <Modal
-        visible={rateAppModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setRateAppModalVisible(false)}
-      >
+        {/* Rate App Modal */}
+        {rateAppModalVisible && (
         <View style={styles.modalOverlay}>
           <View style={styles.settingsModalContent}>
-            <View style={styles.settingsModalHeader}>
+            <View
+              style={[
+                styles.settingsModalHeader,
+                { paddingTop: insets.top + getResponsivePadding(16) },
+              ]}
+            >
               <Text style={styles.settingsModalTitle}>Rate Our App</Text>
               <TouchableOpacity
                 onPress={() => setRateAppModalVisible(false)}
@@ -1399,18 +1326,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
           </View>
         </View>
-      </Modal>
+        )}
 
-      {/* Terms & Conditions Modal */}
-      <Modal
-        visible={termsModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setTermsModalVisible(false)}
-      >
+        {/* Terms & Conditions Modal */}
+        {termsModalVisible && (
         <View style={styles.fullModalOverlay}>
           <SafeAreaView style={styles.fullModalContent}>
-            <View style={styles.fullModalHeader}>
+            <View
+              style={[
+                styles.fullModalHeader,
+                { paddingTop: insets.top + getResponsivePadding(16) },
+              ]}
+            >
               <Text style={styles.fullModalTitle}>Terms & Conditions</Text>
               <TouchableOpacity
                 onPress={() => setTermsModalVisible(false)}
@@ -1486,18 +1413,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </ScrollView>
           </SafeAreaView>
         </View>
-      </Modal>
+        )}
 
-      {/* Privacy Policy Modal */}
-      <Modal
-        visible={privacyModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setPrivacyModalVisible(false)}
-      >
+        {/* Privacy Policy Modal */}
+        {privacyModalVisible && (
         <View style={styles.modalOverlay}>
           <View style={styles.settingsModalContent}>
-            <View style={styles.settingsModalHeader}>
+            <View
+              style={[
+                styles.settingsModalHeader,
+                { paddingTop: insets.top + getResponsivePadding(16) },
+              ]}
+            >
               <Text style={styles.settingsModalTitle}>Privacy Policy</Text>
               <TouchableOpacity
                 onPress={() => setPrivacyModalVisible(false)}
@@ -1514,7 +1441,34 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </View>
           </View>
         </View>
+        )}
+
+        {/* Food Allergies Modal */}
+        <FoodAllergiesModal
+          visible={foodAllergiesModalVisible}
+          onClose={() => setFoodAllergiesModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              foodAllergies: hasData,
+            }))
+          }
+        />
       </Modal>
+
+      {/* Family Members Modal */}
+      <FamilyMembersModal
+        visible={familyMembersModalVisible}
+        onClose={hideFamilyMembersModal}
+        maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
+      />
+
+      {/* Location Selection Modal */}
+      <LocationSelection
+        visible={locationSelectionVisible}
+        onClose={hideLocationSelection}
+        onLocationSelected={handleLocationSelected}
+      />
     </>
   );
 }
@@ -1524,6 +1478,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
     flex: 1,
     backgroundColor: "#f5f4f9",
   },
@@ -1903,6 +1860,9 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   logoutModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
@@ -2044,6 +2004,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   fullModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",

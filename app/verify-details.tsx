@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -231,21 +230,16 @@ export default function VerifyDetailsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* <StatusBar style="dark" backgroundColor={colors.bg_primary} /> */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} />
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={80}
+        showsVerticalScrollIndicator={false}
       >
-        <KeyboardAwareScrollView
-          style={styles.container}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid
-          extraScrollHeight={80}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
+        {/* Header */}
           <View style={styles.header}>
             <images.curonnLogo style={styles.image} width={234} height={60} />
             <Text style={styles.title}>Verify your details</Text>
@@ -376,8 +370,7 @@ export default function VerifyDetailsScreen() {
               />
             </View>
           </View>
-        </KeyboardAwareScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -481,14 +474,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: colors.bg_primary,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
+    marginTop: "auto",
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },
