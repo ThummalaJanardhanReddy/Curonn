@@ -22,6 +22,7 @@ import { fontStyles, fonts, fontWeights } from "../../shared/styles/fonts";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import { router } from "expo-router";
 import { RadioButton } from "react-native-paper";
+import { colors } from "@/app/shared/styles/commonStyles";
 
 interface SavedAddress {
   landMark: any;
@@ -166,7 +167,7 @@ export default function AddressSelection({
 
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+    <Modal visible={visible} animationType="slide" >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
 
         <View style={styles.container}>
@@ -199,8 +200,8 @@ export default function AddressSelection({
                               setSelectedAddressId(item.addressId);
                               onSelect(item.addressId);
                             }}
-                            color="#C35E9C"
-                            uncheckedColor="#C35E9C"
+                            color={colors.primary}
+                            uncheckedColor={colors.primary}
                           />
 
                           <Text style={styles.nickname}>
@@ -216,7 +217,7 @@ export default function AddressSelection({
                               handlesetdefault(item.addressId);
                             }}>
                           
-                            <Text style={{ color: "#C35E9C", fontWeight: "bold", fontFamily: fonts.medium, }}>Set as Default</Text>
+                            <Text style={{ color: colors.primary, fontWeight: "bold", fontFamily: fonts.medium, }}>Set as Default</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -236,7 +237,7 @@ export default function AddressSelection({
                     <View style={{ flexDirection: "row", gap: 10 }}>
                       <TouchableOpacity style={styles.editbutton}
                         onPress={() => onEdit(item.addressId)}>
-                        <Text style={{ color: "#C35E9C", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Edit</Text>
+                        <Text style={{ color: colors.primary, paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.deletebutton}
                         onPress={async () => {
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   nickname: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     marginBottom: 4,
     fontWeight: 'bold'
   },
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   headerSpacer: {
     width: 40,
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
   },
   editbutton: {
     borderWidth: 1,
-    borderColor: "#C35E9C",
+    borderColor: colors.primary,
     paddingHorizontal: 12,
     borderRadius: 5,
     paddingVertical: 3,
@@ -410,8 +411,8 @@ const styles = StyleSheet.create({
   },
   selectbutton: {
     borderWidth: 1,
-    borderColor: "#C35E9C",
-    backgroundColor: "#C35E9C",
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     borderRadius: 20,
     paddingVertical: 3,

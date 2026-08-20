@@ -53,6 +53,11 @@ export interface Message {
   sentOn?: string;
   isChat?: boolean;
   defaultMessage?: string;
+  appointmentId?: number;
+  senderId?: number;
+  receiverId?: number;
+  isRead?: boolean;
+  isActive?: boolean;
 }
 
 /**

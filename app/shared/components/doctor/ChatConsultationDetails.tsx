@@ -35,7 +35,7 @@ export default function ChatConsultationDetails({
   const data = orderDetails?.data || {};
   return (
     <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#fff', flex: 1 }}>
-      <Text style={{ color: '#ff0000', fontSize: 16, marginBottom: 8,fontFamily: fonts.semiBold }}>
+      <Text style={{ color: '#ff0000', fontSize: 16, marginBottom: 8,fontWeight: "700" }}>
         {data.title || 'Notification'}
       </Text>
       <Text style={{ color: '#888', fontSize: 15, textAlign: 'center',fontFamily: fonts.regular }}>
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     color: "#000",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontWeight: '600',
     marginBottom: 2,
     marginTop: 10,
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
 
   primaryText: {
     fontSize: 15,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     color: "#222",
   },
 
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
 
   primaryButtonText: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: 14,
   },
 
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
 
   secondaryButtonText: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   statusContainer: {
     backgroundColor: "#FFF4E5",
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
 
   primaryTextPending: {
     fontSize: 15,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     // color: "#B91C1C",
   },
   infoRow: {
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
 
   infoTitle: {
     fontSize: 14,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     color: "#222",
   },
 

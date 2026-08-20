@@ -1,10 +1,10 @@
 
-// Font family constants for Poppins
+// Font family constants for Lato
 export const fonts = {
-  regular: 'Poppins-Regular',
-  medium: 'Poppins-Medium',
-  semiBold: 'Poppins-SemiBold',
-  bold: 'Poppins-Bold',
+  regular: 'Lato-Regular',
+  medium: 'Lato-Bold',
+  semiBold: 'Lato-Bold',
+  bold: 'Lato-Black',
 };
 
 // Font weight mappings
@@ -18,7 +18,7 @@ export const fontWeights = {
 // Common font styles
 export const fontStyles = {
   headercontent: {
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
     fontSize: 16,
     lineHeight: 18,
   },
@@ -33,7 +33,7 @@ export const fontStyles = {
     lineHeight: 32,
   },
   heading3: {
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
     fontSize: 20,
     lineHeight: 28,
   },
@@ -53,7 +53,7 @@ export const fontStyles = {
     lineHeight: 16,
   },
   button: {
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
     fontSize: 16,
     lineHeight: 24,
   },

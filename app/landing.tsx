@@ -30,7 +30,7 @@ export default function LandingScreen() {
     message: '',
   });
   const slideAnim = useRef(new Animated.Value(screenWidth)).current;
-  const bottomSlideAnim = useRef(new Animated.Value(400)).current;
+  const bottomSlideAnim = useRef(new Animated.Value(300)).current;
   const [profileVisible, setProfileVisible] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -357,7 +357,7 @@ export default function LandingScreen() {
         style={styles.backgroundImage}
         resizeMode="cover"
       />
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg_primary} />
+      {/* <StatusBar barStyle="dark-content" backgroundColor={colors.bg_primary} /> */}
       
       {/* Header Section */}
       <View style={styles.header}>
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
   serviceCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.primaryText,
     textAlign: 'left',
     flex: 1,
   },

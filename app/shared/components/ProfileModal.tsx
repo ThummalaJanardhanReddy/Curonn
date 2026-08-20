@@ -1,6 +1,5 @@
 import * as Linking from "expo-linking";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { setStatusBarStyle, setStatusBarBackgroundColor } from 'expo-status-bar';
 import {
   Alert,
   Animated,
@@ -10,15 +9,11 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  StatusBar as RNStatusBar,
-  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import HealthFeedScreen from "../../features/health-feed/health-feed";
@@ -44,13 +39,16 @@ import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from "./Toast";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
-import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
+import MenIcon from "../../../assets/AppIcons/Curonn_icons/menu/new/man.svg";
+import WomenIcon from "../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 import { useUserStore } from "@/src/store/UserStore";
+import {
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+} from "react-native-keyboard-controller";
 const { height: screenHeight } = Dimensions.get("window");
 interface ProfileModalProps {
   visible: boolean;
@@ -68,7 +66,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [toastMessage, setToastMessage] = useState<{
+    title: string;
+    subtitle: string;
+    type: "success" | "error";
+  }>({ title: "", subtitle: "", type: "success" });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState("");
@@ -87,7 +89,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     department: "",
     address: "",
     branch: "",
-    noFamilyMembers: ""
+    noFamilyMembers: "",
   });
   const [profileStatus, setProfileStatus] = useState({
     medicalHistory: false,
@@ -103,23 +105,24 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [originalProfile, setOriginalProfile] = useState({
     fullName: "",
     age: "",
-    gender: ""
+    gender: "",
   });
   const { userData } = useUser();
 
-
-    const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
- const patientId = Number(userData?.e_id || user?.eId);
+  const patientId = Number(userData?.e_id || user?.eId);
   React.useEffect(() => {
     if (!visible || !patientId) return;
     // console.log("[ProfileModal] userData:", userData);
     // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
     const fetchProfile = async () => {
       try {
-        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.getById(patientId),
+        );
         // console.log("[ProfileModal] Profile data response:", response);
         const data = response?.data ?? response;
         setProfileForm({
@@ -142,7 +145,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         setOriginalProfile({
           fullName: data.fullName || "",
           age: data.age ? String(data.age) : "",
-          gender: data.gender || ""
+          gender: data.gender || "",
         });
       } catch (error) {
         console.error("[ProfileModal] Failed to fetch profile data:", error);
@@ -160,12 +163,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     };
     fetchProfile();
   }, [visible, patientId]);
-  useEffect(() => {
-    if (visible) {
-      setStatusBarStyle('dark');
-      setStatusBarBackgroundColor('#7E6781');
-    }
-  }, [visible]);
+  // useEffect(() => {
+  //   if (visible) {
+  //     setStatusBarStyle("dark");
+  //     setStatusBarBackgroundColor("#7E6781");
+  //   }
+  // }, [visible]);
 
   //   useEffect(() => {
   //   if (Platform.OS !== "android") return;
@@ -211,19 +214,17 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === 'android') {
-        const timeout = setTimeout(() => {
-          // Use React Native StatusBar API to set background color on Android
-          RNStatusBar.setBackgroundColor("#7E6781", true);
-        }, 400); // Adjust timeout as needed
-        return () => clearTimeout(timeout);
-      }
-    }, [])
-  );
-
-
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     if (Platform.OS === "android") {
+  //       const timeout = setTimeout(() => {
+  //         // Use React Native StatusBar API to set background color on Android
+  //         RNStatusBar.setBackgroundColor("#7E6781", true);
+  //       }, 400); // Adjust timeout as needed
+  //       return () => clearTimeout(timeout);
+  //     }
+  //   }, []),
+  // );
 
   // Profile data
   const baseProfileItems: ProfileItem[] = [
@@ -275,23 +276,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const profileItems: ProfileItem[] =
     profileForm.gender?.toLowerCase() === "male"
       ? [
-        ...baseProfileItems,
-        {
-          id: 8,
-          title: "Menstrual History",
-          subtext: "Your menstrual history",
-          image: images.profileModal.menstrualHistory_png,
-        },
-      ]
+          ...baseProfileItems,
+          {
+            id: 8,
+            title: "Menstrual History",
+            subtext: "Your menstrual history",
+            image: images.profileModal.menstrualHistory_png,
+          },
+        ]
       : baseProfileItems;
 
   const showEditProfileModal = () => {
     setShowToast(false);
-    setToastMessage({ title: '', subtitle: '', type: 'success' });
+    setToastMessage({ title: "", subtitle: "", type: "success" });
     setEditProfileVisible(true);
     Animated.timing(editProfileSlideAnim, {
       toValue: 0,
-      duration: 300,
+      duration: 400,
       useNativeDriver: true,
     }).start();
   };
@@ -299,7 +300,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const hideEditProfileModal = () => {
     Animated.timing(editProfileSlideAnim, {
       toValue: screenWidth,
-      duration: 300,
+      duration: 400,
       useNativeDriver: true,
     }).start(() => {
       setEditProfileVisible(false);
@@ -311,8 +312,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     if (!profileForm.fullName || !profileForm.age || !profileForm.gender) {
       setToastMessage({
         title: "Missing Required Fields",
-        subtitle: "Please fill in Full Name, Age, and Gender before updating your profile.",
-        type: "error"
+        subtitle:
+          "Please fill in Full Name, Age, and Gender before updating your profile.",
+        type: "error",
       });
       setShowToast(true);
       return;
@@ -335,12 +337,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         age: formData.age ? Number(formData.age) : undefined,
       };
       console.log("Profile update payload:", payload);
-      const response = await axiosClient.post(ApiRoutes.Employee.update, payload);
+      const response = await axiosClient.post(
+        ApiRoutes.Employee.update,
+        payload,
+      );
       console.log("Profile update response:", response);
       setToastMessage({
         title: "Profile Update Successfully",
         subtitle: response?.data?.message || "",
-        type: "success"
+        type: "success",
       });
       setShowToast(true);
       // Wait for 1 second before hiding the modal so the toast is visible
@@ -348,21 +353,20 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         hideEditProfileModal();
       }, 1000);
     } catch (error) {
-      let errorMsg = 'Something went wrong';
+      let errorMsg = "Something went wrong";
       setToastMessage({
         title: "Profile Update Failed",
         subtitle: errorMsg,
-        type: "error"
+        type: "error",
       });
       setShowToast(true);
     }
   };
 
-
-useEffect(() => {
-  if (!visible || !patientId) return;
-  fetchProfileStatus();
-}, [visible, patientId]);
+  useEffect(() => {
+    if (!visible || !patientId) return;
+    fetchProfileStatus();
+  }, [visible, patientId]);
 
   const fetchProfileStatus = async () => {
     try {
@@ -374,7 +378,7 @@ useEffect(() => {
         food,
         drug,
         environment,
-        menstrual
+        menstrual,
       ] = await Promise.all([
         axiosClient.post(ApiRoutes.MedicalHistory.getAll, { patientId }),
         axiosClient.post(ApiRoutes.FamilyHistory.getAll, { patientId }),
@@ -386,7 +390,7 @@ useEffect(() => {
         axiosClient.post(ApiRoutes.MenstrualHistory.getAll, {
           patientId,
           pageNo: 1,
-          pageSize: 10
+          pageSize: 10,
         }),
       ]);
 
@@ -400,7 +404,6 @@ useEffect(() => {
         environmentalAllergies: environment?.items?.length > 0,
         menstrualHistory: menstrual?.items?.length > 0,
       });
-
     } catch (error) {
       console.log("Profile status fetch error:", error);
     }
@@ -415,16 +418,16 @@ useEffect(() => {
     if (Platform.OS === "web") return null;
     try {
       await AsyncStorage.clear();
-      if (typeof SecureStore !== 'undefined' && SecureStore.deleteItemAsync) {
-        await SecureStore.deleteItemAsync('userToken');
-        await SecureStore.deleteItemAsync('userData'); // Clear userData
-        await SecureStore.deleteItemAsync('isLoggedIn');
-        await SecureStore.deleteItemAsync('mobile_details_updated');
+      if (typeof SecureStore !== "undefined" && SecureStore.deleteItemAsync) {
+        await SecureStore.deleteItemAsync("userToken");
+        await SecureStore.deleteItemAsync("userData"); // Clear userData
+        await SecureStore.deleteItemAsync("isLoggedIn");
+        await SecureStore.deleteItemAsync("mobile_details_updated");
       }
     } catch (e) {
-      console.error('Error clearing user data:', e);
+      console.error("Error clearing user data:", e);
     }
-    if (typeof window !== 'undefined' && window.localStorage) {
+    if (typeof window !== "undefined" && window.localStorage) {
       window.localStorage.clear();
     }
     router.push("/verify-details");
@@ -451,8 +454,10 @@ useEffect(() => {
     router.push("/features/ambulance/ambulanceservices");
   };
 
-  const handleAbout = () => {
-    setAboutModalVisible(true);
+  const handleAbout = async () => {
+    // https://www.curonn.com/
+    await Linking.openURL("https://www.curonn.com/");
+    // setAboutModalVisible(true);
   };
 
   const handleRateApp = async () => {
@@ -490,12 +495,14 @@ useEffect(() => {
     }
   };
 
-  const handleTermsAndConditions = () => {
-    setTermsModalVisible(true);
+  const handleTermsAndConditions = async () => {
+    await Linking.openURL("https://www.curonn.com/terms");
+    // setTermsModalVisible(true);
   };
 
-  const handlePrivacyPolicy = () => {
-    setPrivacyModalVisible(true);
+  const handlePrivacyPolicy = async () => {
+    await Linking.openURL("https://www.curonn.com/privacy");
+    // setPrivacyModalVisible(true);
   };
 
   const showFamilyMembersModal = () => {
@@ -588,7 +595,8 @@ useEffect(() => {
       {/* <TouchableOpacity style={styles.addButton}>
         <IconButton icon="plus" size={20} iconColor="#6200ee" />
       </TouchableOpacity> */}
-      <TouchableOpacity style={styles.addupdateButton}
+      <TouchableOpacity
+        style={styles.addupdateButton}
         onPress={() => {
           if (item.id === 1) {
             // Medical History
@@ -644,7 +652,6 @@ useEffect(() => {
     }
   };
 
-
   const renderSettingsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Settings Items */}
@@ -658,7 +665,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>Add my family</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleMyOrders}>
@@ -666,7 +673,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>My orders</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleHealthFeed}>
@@ -674,7 +681,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>Health feed</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleAmbulance}>
@@ -682,7 +689,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>Ambulance</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         {/* <View style={styles.divider} /> */}
@@ -692,7 +699,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>About curonn</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleRateApp}>
@@ -700,7 +707,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>Rate app</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -711,7 +718,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>T&C</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -722,7 +729,7 @@ useEffect(() => {
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingText}>Privacy policy</Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
 
         {/* <View style={styles.divider} /> */}
@@ -731,11 +738,13 @@ useEffect(() => {
           style={styles.settingItem}
           onPress={showLogoutConfirmation}
         >
-          <images.icons.settings.logout width={24} height={24} />
+          {/* <images.icons.settings.logout width={24} height={24} color={colors.white}/> */}
           <View style={styles.logoutTextContainer}>
-            <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
+            <Text style={[styles.settingText, styles.logoutText]}>
+              Sign Out
+            </Text>
           </View>
-          <images.icons.settings.arrowRight width={20} height={20} />
+          <images.icons.settings.arrowRight width={16} height={16} />
         </TouchableOpacity>
       </View>
 
@@ -747,729 +756,766 @@ useEffect(() => {
   );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg_secondary }}>
-        <View style={styles.container}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {/* Header */}
-              <View style={styles.modalHeaderContainer}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>User Profile</Text>
-                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Tab Buttons */}
-                <View style={styles.tabButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.tabButton,
-                      activeTab === 0 && styles.activeTabButton,
-                    ]}
-                    onPress={() => setActiveTab(0)}
-                  >
-                    <Text
-                      style={[
-                        styles.tabButtonText,
-                        activeTab === 0 && styles.activeTabButtonText,
-                      ]}
-                    >
-                      Profile
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.tabButton,
-                      activeTab === 1 && styles.activeTabButton,
-                    ]}
-                    onPress={() => setActiveTab(1)}
-                  >
-                    <Text
-                      style={[
-                        styles.tabButtonText,
-                        activeTab === 1 && styles.activeTabButtonText,
-                      ]}
-                    >
-                      Settings
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* User Card */}
-                <View style={styles.userCard}>
-                  <View style={styles.userInfo}>
-                    {profileForm?.image ? (
-                      <Image
-                        source={{ uri: profileForm.image }}
-                        style={styles.userImage}
-                      />
-                    ) : profileForm?.gender === 'Female' ? (
-                      <WomenIcon width={45} height={45} style={styles.userImage} />
-                    ) : (
-                      <MenIcon width={45} height={45} style={styles.userImage} />
-                    )}
-
-                    <View style={styles.userDetails}>
-                      <Text style={styles.userName}>{profileForm.fullName}</Text>
-                      <Text style={styles.userInfo}>{profileForm.age ? `${profileForm.age} yrs` : "N/A"}  {profileForm.gender ? `| ${profileForm.gender}` : "N/A"}</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity onPress={showEditProfileModal}>
-                    <images.icons.edit
-                      style={styles.editButton}
-                      width={24}
-                      height={24}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Tab Content */}
-              {activeTab === 0 ? renderProfileTab() : renderSettingsTab()}
-            </View>
-          </View>
-
-
-          {/* Edit Profile Modal */}
-          <Modal
-            visible={editProfileVisible}
-            animationType="none"
-            transparent={true}
-            onRequestClose={hideEditProfileModal}
-          >
+    <>
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: colors.primary }}
+          edges={["top", "bottom"]}
+        >
+          <View style={styles.container}>
             <View style={styles.modalOverlay}>
-              <TouchableOpacity
-                style={styles.modalBackdrop}
-                onPress={hideEditProfileModal}
-              />
-              <SafeAreaView style={styles.editProfileModalContent}>
-                <Animated.View
-                  style={[
-                    {
-                      transform: [{ translateX: editProfileSlideAnim }],
-                    },
-                  ]}
-                >
-                  <View style={styles.editProfileModalHeader}>
-                    <Text style={styles.editProfileModalTitle}>
-                      Personal Profile
-                    </Text>
+              <View style={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeaderContainer}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>User Profile</Text>
                     <TouchableOpacity
-                      onPress={hideEditProfileModal}
+                      onPress={onClose}
                       style={styles.closeButton}
                     >
-                      <Image source={images.icons.close} style={styles.closeIcon} />
+                      <Image
+                        source={images.icons.close}
+                        style={styles.closeIcon}
+                      />
                     </TouchableOpacity>
                   </View>
 
-                  <ScrollView
-                    style={styles.editProfileForm}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <SafeAreaView style={{ flex: 1 }}>
-                      {/* Full Name Field */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Full Name</Text>
-                        <TextInput
-                          style={styles.input}
-                          underlineColorAndroid="transparent"
-                          selectionColor="transparent"
-                          placeholder="Enter"
-                          value={profileForm.fullName}
-                          onChangeText={(text) =>
-                            setProfileForm({ ...profileForm, fullName: text })
-                          }
-                        />
-                      </View>
+                  {/* Tab Buttons */}
+                  <View style={styles.tabButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.tabButton,
+                        activeTab === 0 && styles.activeTabButton,
+                      ]}
+                      onPress={() => setActiveTab(0)}
+                    >
+                      <Text
+                        style={[
+                          styles.tabButtonText,
+                          activeTab === 0 && styles.activeTabButtonText,
+                        ]}
+                      >
+                        Profile
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.tabButton,
+                        activeTab === 1 && styles.activeTabButton,
+                      ]}
+                      onPress={() => setActiveTab(1)}
+                    >
+                      <Text
+                        style={[
+                          styles.tabButtonText,
+                          activeTab === 1 && styles.activeTabButtonText,
+                        ]}
+                      >
+                        Settings
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                      {/* Employee ID Field */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Employee ID</Text>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: '#f1f1f1' }]}
-                          underlineColorAndroid="transparent"
-                          selectionColor="transparent"
-                          placeholder="Enter your employee ID"
-                          value={profileForm.EmployeeCode}
-                          editable={false}
+                  {/* User Card */}
+                  <View style={styles.userCard}>
+                    <View style={styles.userInfo}>
+                      {profileForm?.image ? (
+                        <Image
+                          source={{ uri: profileForm.image }}
+                          style={styles.userImage}
                         />
-                      </View>
-
-                      {/* Email ID Field */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Email ID</Text>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: '#f1f1f1' }]}
-                          underlineColorAndroid="transparent"
-                          selectionColor="transparent"
-                          placeholder="Enter your email address"
-                          value={profileForm.emailAddress}
-                          editable={false}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
+                      ) : profileForm?.gender === "Female" ? (
+                        <WomenIcon
+                          width={45}
+                          height={45}
+                          style={styles.userImage}
                         />
-                      </View>
-
-                      {/* Phone Number Field */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Phone Number</Text>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: '#f1f1f1' }]}
-                          underlineColorAndroid="transparent"
-                          selectionColor="transparent"
-                          placeholder="Enter your phone number"
-                          value={profileForm.mobileNo}
-                          editable={false}
-                          keyboardType="phone-pad"
+                      ) : (
+                        <MenIcon
+                          width={45}
+                          height={45}
+                          style={styles.userImage}
                         />
-                      </View>
+                      )}
 
-                      {/* Age Field or Calendar Picker */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Age</Text>
-                        <TextInput
-                          style={styles.input}
-                          underlineColorAndroid="transparent"
-                          selectionColor="transparent"
-                          placeholder="Enter"
-                          value={profileForm.age}
-                          onChangeText={(text) => {
-                            const numeric = text.replace(/[^0-9]/g, "").slice(0, 2);
-                            setProfileForm({ ...profileForm, age: numeric });
-                          }}
-                          keyboardType="numeric"
-                          maxLength={2}
-                          editable={true}
-                        />
+                      <View style={styles.userDetails}>
+                        <Text style={styles.userName}>
+                          {profileForm.fullName}
+                        </Text>
+                        <Text style={styles.userInfo}>
+                          {profileForm.age ? `${profileForm.age} yrs` : "N/A"}{" "}
+                          {profileForm.gender
+                            ? `| ${profileForm.gender}`
+                            : "N/A"}
+                        </Text>
                       </View>
+                    </View>
+                    <TouchableOpacity onPress={showEditProfileModal}>
+                      <images.icons.edit
+                        style={styles.editButton}
+                        width={20}
+                        height={20}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-                      {/* Gender Field */}
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldLabel}>Gender</Text>
-                        <View style={styles.radioContainer}>
-                          <TouchableOpacity
-                            style={styles.radioOption}
-                            onPress={() =>
-                              setProfileForm({ ...profileForm, gender: "Male" })
-                            }
-                          >
-                            <View style={styles.radioButton}>
-                              {(profileForm.gender === "Male" || profileForm.gender === "male") && (
-                                <View style={styles.radioButtonSelected} />
-                              )}
-                            </View>
-                            <Text style={styles.radioLabel}>Male</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.radioOption}
-                            onPress={() =>
-                              setProfileForm({ ...profileForm, gender: "Female" })
-                            }
-                          >
-                            <View style={styles.radioButton}>
-                              {profileForm.gender === "Female" && (
-                                <View style={styles.radioButtonSelected} />
-                              )}
-                            </View>
-                            <Text style={styles.radioLabel}>Female</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.radioOption}
-                            onPress={() =>
-                              setProfileForm({ ...profileForm, gender: "Other" })
-                            }
-                          >
-                            <View style={styles.radioButton}>
-                              {profileForm.gender === "Other" && (
-                                <View style={styles.radioButtonSelected} />
-                              )}
-                            </View>
-                            <Text style={styles.radioLabel}>Other</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </SafeAreaView>
-                  </ScrollView>
-                  <View style={styles.updateButtonContainer}>
-                    <PrimaryButton
-                      title="Update"
-                      onPress={handleProfileUpdate}
-                      style={styles.updateButton}
-                      disabled={
-                        profileForm.fullName === originalProfile.fullName &&
-                        profileForm.age === originalProfile.age &&
-                        profileForm.gender === originalProfile.gender
+                {/* Tab Content */}
+                {activeTab === 0 ? renderProfileTab() : renderSettingsTab()}
+              </View>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={editProfileVisible}
+        animationType="none"
+        transparent={true}
+        onRequestClose={hideEditProfileModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={hideEditProfileModal}
+          />
+          <SafeAreaView style={styles.editProfileModalContent}>
+            <Animated.View
+              style={[
+                {
+                  transform: [{ translateX: editProfileSlideAnim }],
+                  flex: 1,
+                },
+              ]}
+            >
+              <View style={styles.editProfileModalHeader}>
+                <Text style={styles.editProfileModalTitle}>
+                  Personal Profile
+                </Text>
+                <TouchableOpacity
+                  onPress={hideEditProfileModal}
+                  style={styles.closeButton}
+                >
+                  <Image source={images.icons.close} style={styles.closeIcon} />
+                </TouchableOpacity>
+              </View>
+
+              <KeyboardAwareScrollView
+                style={styles.editProfileForm}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bottomOffset={40}
+              >
+                <View style={{ flex: 1 }}>
+                  {/* Full Name Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Full Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      underlineColorAndroid="transparent"
+                      // selectionColor="red"
+                      placeholder="Enter"
+                      value={profileForm.fullName}
+                      onChangeText={(text) =>
+                        setProfileForm({ ...profileForm, fullName: text })
                       }
                     />
                   </View>
-                </Animated.View>
-              </SafeAreaView>
-              <Toast
-                visible={showToast}
-                title={toastMessage.title}
-                subtitle={toastMessage.subtitle}
-                type={toastMessage.type}
-                onHide={() => setShowToast(false)}
-                duration={3000}
-              />
-            </View>
-          </Modal>
 
-          {/* Logout Confirmation Modal */}
-          <Modal
-            visible={logoutConfirmVisible}
-            animationType="fade"
-            transparent={true}
-            onRequestClose={hideLogoutConfirmation}
-          >
-            <View style={styles.logoutModalOverlay}>
-              <TouchableOpacity
-                style={styles.logoutModalBackdrop}
-                onPress={hideLogoutConfirmation}
-                activeOpacity={1}
-              />
-              <View style={styles.logoutConfirmModalContent}>
-                <View style={styles.logoutIconContainer}>
-                  <images.icons.settings.logout width={48} height={48} />
+                  {/* Employee ID Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Employee ID</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: "#f1f1f1" }]}
+                      underlineColorAndroid="transparent"
+                      // selectionColor="transparent"
+                      placeholder="Enter your employee ID"
+                      value={profileForm.EmployeeCode}
+                      editable={false}
+                    />
+                  </View>
+
+                  {/* Email ID Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Email ID</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: "#f1f1f1" }]}
+                      underlineColorAndroid="transparent"
+                      // selectionColor="transparent"
+                      placeholder="Enter your email address"
+                      value={profileForm.emailAddress}
+                      editable={false}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  {/* Phone Number Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Phone Number</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: "#f1f1f1" }]}
+                      underlineColorAndroid="transparent"
+                      // selectionColor="transparent"
+                      placeholder="Enter your phone number"
+                      value={profileForm.mobileNo}
+                      editable={false}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  {/* Age Field or Calendar Picker */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Age</Text>
+                    <TextInput
+                      style={styles.input}
+                      underlineColorAndroid="transparent"
+                      // selectionColor="transparent"
+                      placeholder="Enter"
+                      value={profileForm.age}
+                      onChangeText={(text) => {
+                        const numeric = text.replace(/[^0-9]/g, "").slice(0, 2);
+                        setProfileForm({ ...profileForm, age: numeric });
+                      }}
+                      keyboardType="numeric"
+                      maxLength={2}
+                      editable={true}
+                    />
+                  </View>
+
+                  {/* Gender Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Gender</Text>
+                    <View style={styles.radioContainer}>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() =>
+                          setProfileForm({ ...profileForm, gender: "Male" })
+                        }
+                      >
+                        <View style={styles.radioButton}>
+                          {(profileForm.gender === "Male" ||
+                            profileForm.gender === "male") && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Male</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() =>
+                          setProfileForm({
+                            ...profileForm,
+                            gender: "Female",
+                          })
+                        }
+                      >
+                        <View style={styles.radioButton}>
+                          {profileForm.gender === "Female" && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Female</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() =>
+                          setProfileForm({
+                            ...profileForm,
+                            gender: "Other",
+                          })
+                        }
+                      >
+                        <View style={styles.radioButton}>
+                          {profileForm.gender === "Other" && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.radioLabel}>Other</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.logoutConfirmTitle}>Logout</Text>
-                <Text style={styles.logoutConfirmMessage}>
-                  Are you sure you want to logout?{"\n"}You&apos;ll need to sign in
-                  again to access your account.
-                </Text>
-                <View style={styles.logoutConfirmButtons}>
-                  <TouchableOpacity
-                    style={styles.logoutCancelButton}
-                    onPress={hideLogoutConfirmation}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.logoutCancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.logoutConfirmButton}
-                    onPress={handleLogout}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.logoutConfirmButtonText}>Logout</Text>
-                  </TouchableOpacity>
-                </View>
+              </KeyboardAwareScrollView>
+              <View style={styles.updateButtonContainer}>
+                <PrimaryButton
+                  title="Update"
+                  onPress={handleProfileUpdate}
+                  style={styles.updateButton}
+                  disabled={
+                    profileForm.fullName === originalProfile.fullName &&
+                    profileForm.age === originalProfile.age &&
+                    profileForm.gender === originalProfile.gender
+                  }
+                />
               </View>
-            </View>
-          </Modal>
-
-          {/* Family Members Modal */}
-          <FamilyMembersModal
-            visible={familyMembersModalVisible}
-            onClose={hideFamilyMembersModal}
-            maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
+            </Animated.View>
+          </SafeAreaView>
+          <Toast
+            visible={showToast}
+            title={toastMessage.title}
+            subtitle={toastMessage.subtitle}
+            type={toastMessage.type}
+            onHide={() => setShowToast(false)}
+            duration={3000}
           />
-
-          {/* Location Selection Modal */}
-          <LocationSelection
-            visible={locationSelectionVisible}
-            onClose={hideLocationSelection}
-            onLocationSelected={handleLocationSelected}
-          />
-
-          {/* Food Allergies Modal */}
-          <FoodAllergiesModal
-            visible={foodAllergiesModalVisible}
-            onClose={() => setFoodAllergiesModalVisible(false)}
-            onDataStatusChange={(hasData) =>
-              setProfileStatus(prev => ({
-                ...prev,
-                foodAllergies: hasData
-              }))
-            }
-          />
-
-          {/* Medical History Modal */}
-          <ProfileScreenModal
-            visible={medicalHistoryModalVisible}
-            onClose={() => setMedicalHistoryModalVisible(false)}
-          >
-            <MedicalHistoryScreen
-              onClose={() => setMedicalHistoryModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  medicalHistory: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* Family History Modal */}
-          <ProfileScreenModal
-            visible={familyHistoryModalVisible}
-            onClose={() => setFamilyHistoryModalVisible(false)}
-          >
-            <FamilyHistoryScreen
-              onClose={() => setFamilyHistoryModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  familyHistory: hasData
-                }))
-              } />
-          </ProfileScreenModal>
-
-          {/* Past Procedures Modal */}
-          <ProfileScreenModal
-            visible={pastProceduresModalVisible}
-            onClose={() => setPastProceduresModalVisible(false)}
-          >
-            <PastProceduresScreen
-              onClose={() => setPastProceduresModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  pastProcedures: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* Social Habits Modal */}
-          <ProfileScreenModal
-            visible={socialHabitsModalVisible}
-            onClose={() => setSocialHabitsModalVisible(false)}
-          >
-            <SocialHabitsScreen
-              onClose={() => setSocialHabitsModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  socialHabits: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* Drug Allergies Modal */}
-          <ProfileScreenModal
-            visible={drugAllergiesModalVisible}
-            onClose={() => setDrugAllergiesModalVisible(false)}
-          >
-            <DrugAllergiesScreen
-              onClose={() => setSocialHabitsModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  drugAllergies: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* Environmental Allergies Modal */}
-          <ProfileScreenModal
-            visible={environmentalAllergiesModalVisible}
-            onClose={() => setEnvironmentalAllergiesModalVisible(false)}
-          >
-            <EnvironmentalAllergiesScreen
-              onClose={() => setEnvironmentalAllergiesModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  environmentalAllergies: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* Menstrual History Modal */}
-          <ProfileScreenModal
-            visible={menstrualHistoryModalVisible}
-            onClose={() => setMenstrualHistoryModalVisible(false)}
-          >
-            <MenstrualHistoryScreen
-              onClose={() => setMenstrualHistoryModalVisible(false)}
-              onDataStatusChange={(hasData) =>
-                setProfileStatus(prev => ({
-                  ...prev,
-                  menstrualHistory: hasData
-                }))
-              }
-            />
-          </ProfileScreenModal>
-
-          {/* My Orders Modal */}
-          <Modal
-            visible={myOrdersModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setMyOrdersModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.settingsModalContent}>
-                <View style={styles.settingsModalHeader}>
-                  <Text style={styles.settingsModalTitle}>My Orders</Text>
-                  <TouchableOpacity
-                    onPress={() => setMyOrdersModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingsModalBody}>
-                  <Text style={styles.comingSoonText}>Coming Soon!</Text>
-                  <Text style={styles.comingSoonSubtext}>
-                    Your order history will be displayed here.
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </Modal>
-
-          {/* Health Feed Modal */}
-          <ProfileScreenModal
-            visible={healthFeedModalVisible}
-            onClose={() => setHealthFeedModalVisible(false)}
-          >
-            <HealthFeedScreen />
-          </ProfileScreenModal>
-
-          {/* Ambulance Modal */}
-          <Modal
-            visible={ambulanceModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setAmbulanceModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <SafeAreaView style={styles.settingsModalContent}>
-                <View style={styles.settingsModalHeader}>
-                  <Text style={styles.settingsModalTitle}>Emergency Ambulance</Text>
-                  <TouchableOpacity
-                    onPress={() => setAmbulanceModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingsModalBody}>
-                  <Text style={styles.comingSoonText}>Emergency Service</Text>
-                  <Text style={styles.comingSoonSubtext}>
-                    Ambulance booking and emergency services will be available here.
-                  </Text>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-
-          {/* About Modal */}
-          <Modal
-            visible={aboutModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setAboutModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <SafeAreaView style={styles.settingsModalContent}>
-                <View style={styles.settingsModalHeader}>
-                  <Text style={styles.settingsModalTitle}>About Curonn</Text>
-                  <TouchableOpacity
-                    onPress={() => setAboutModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingsModalBody}>
-                  <Text style={styles.aboutText}>
-                    Curonn is a comprehensive healthcare platform designed to
-                    provide you with easy access to medical services, health
-                    tracking, and wellness management.
-                  </Text>
-                  <Text style={styles.versionInfo}>Version 1.0.0</Text>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-
-          {/* Rate App Modal */}
-          <Modal
-            visible={rateAppModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setRateAppModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.settingsModalContent}>
-                <View style={styles.settingsModalHeader}>
-                  <Text style={styles.settingsModalTitle}>Rate Our App</Text>
-                  <TouchableOpacity
-                    onPress={() => setRateAppModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingsModalBody}>
-                  <Text style={styles.comingSoonText}>⭐ Rate Curonn</Text>
-                  <Text style={styles.comingSoonSubtext}>
-                    We&apos;d love your feedback! Please rate our app on the{" "}
-                    {Platform.OS === "ios" ? "App Store" : "Play Store"} to help us
-                    improve.
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.rateAppButton}
-                    onPress={async () => {
-                      try {
-                        const appStoreUrl = "https://apps.apple.com/app/id123456789";
-                        const playStoreUrl = "https://play.google.com/store/apps/details?id=com.curonn.app";
-                        const storeUrl = Platform.OS === "ios" ? appStoreUrl : playStoreUrl;
-
-                        await Linking.openURL(storeUrl);
-                        setRateAppModalVisible(false);
-                      } catch (error) {
-                        console.error("Error opening store:", error);
-                        Alert.alert(
-                          "Error",
-                          "Unable to open the app store. Please try again later."
-                        );
-                      }
-                    }}
-                  >
-                    <Text style={styles.rateAppButtonText}>
-                      Open {Platform.OS === "ios" ? "App Store" : "Play Store"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.rateAppCancelButton}
-                    onPress={() => setRateAppModalVisible(false)}
-                  >
-                    <Text style={styles.rateAppCancelButtonText}>Maybe Later</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </Modal>
-
-          {/* Terms & Conditions Modal */}
-          <Modal
-            visible={termsModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setTermsModalVisible(false)}
-          >
-            <View style={styles.fullModalOverlay}>
-              <SafeAreaView style={styles.fullModalContent}>
-                <View style={styles.fullModalHeader}>
-                  <Text style={styles.fullModalTitle}>Terms & Conditions</Text>
-                  <TouchableOpacity
-                    onPress={() => setTermsModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView
-                  style={styles.fullModalBody}
-                  showsVerticalScrollIndicator={true}
-                >
-                  <Text style={styles.termsSectionTitle}>1. Acceptance of Terms</Text>
-                  <Text style={styles.termsText}>
-                    By accessing and using the Curronn application, you accept and
-                    agree to be bound by the terms and provision of this agreement.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>2. Use License</Text>
-                  <Text style={styles.termsText}>
-                    Permission is granted to temporarily download one copy of the
-                    application for personal, non-commercial transitory viewing
-                    only. This is the grant of a license, not a transfer of title.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>3. Disclaimer</Text>
-                  <Text style={styles.termsText}>
-                    The materials on Curronn&apos;s application are provided on an
-                    &apos;as is&apos; basis. Curronn makes no warranties, expressed
-                    or implied, and hereby disclaims and negates all other
-                    warranties including without limitation, implied warranties or
-                    conditions of merchantability, fitness for a particular purpose,
-                    or non-infringement of intellectual property or other violation
-                    of rights.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>4. Limitations</Text>
-                  <Text style={styles.termsText}>
-                    In no event shall Curronn or its suppliers be liable for any
-                    damages (including, without limitation, damages for loss of data
-                    or profit, or due to business interruption) arising out of the
-                    use or inability to use the materials on Curronn&apos;s
-                    application.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>5. Accuracy of Materials</Text>
-                  <Text style={styles.termsText}>
-                    The materials appearing on Curronn&apos;s application could
-                    include technical, typographical, or photographic errors.
-                    Curronn does not warrant that any of the materials on its
-                    application are accurate, complete or current.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>6. Links</Text>
-                  <Text style={styles.termsText}>
-                    Curronn has not reviewed all of the sites linked to its
-                    application and is not responsible for the contents of any such
-                    linked site. The inclusion of any link does not imply
-                    endorsement by Curronn of the site.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>7. Modifications</Text>
-                  <Text style={styles.termsText}>
-                    Curronn may revise these terms of service for its application at
-                    any time without notice. By using this application you are
-                    agreeing to be bound by the then current version of these Terms
-                    of Service.
-                  </Text>
-                  <Text style={styles.termsSectionTitle}>8. Governing Law</Text>
-                  <Text style={styles.termsText}>
-                    These terms and conditions are governed by and construed in
-                    accordance with the laws and you irrevocably submit to the
-                    exclusive jurisdiction of the courts in that state or location.
-                  </Text>
-                </ScrollView>
-              </SafeAreaView>
-            </View>
-          </Modal>
-
-          {/* Privacy Policy Modal */}
-          <Modal
-            visible={privacyModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setPrivacyModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <SafeAreaView style={styles.settingsModalContent}>
-                <View style={styles.settingsModalHeader}>
-                  <Text style={styles.settingsModalTitle}>Privacy Policy</Text>
-                  <TouchableOpacity
-                    onPress={() => setPrivacyModalVisible(false)}
-                    style={styles.closeButton}
-                  >
-                    <Image source={images.icons.close} style={styles.closeIcon} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingsModalBody}>
-                  <Text style={styles.comingSoonText}>Privacy Policy</Text>
-                  <Text style={styles.comingSoonSubtext}>
-                    Our privacy policy will be displayed here.
-                  </Text>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
         </View>
-      </SafeAreaView>
-    </Modal>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={logoutConfirmVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={hideLogoutConfirmation}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <TouchableOpacity
+            style={styles.logoutModalBackdrop}
+            onPress={hideLogoutConfirmation}
+            activeOpacity={1}
+          />
+          <View style={styles.logoutConfirmModalContent}>
+            <View style={styles.logoutIconContainer}>
+              <images.icons.settings.logout width={48} height={48} />
+            </View>
+            <Text style={styles.logoutConfirmTitle}>Sign Out</Text>
+            <Text style={styles.logoutConfirmMessage}>
+              Are you sure you want to sign out?{"\n"}You&apos;ll need to sign
+              in again to access your account.
+            </Text>
+            <View style={styles.logoutConfirmButtons}>
+              <TouchableOpacity
+                style={styles.logoutCancelButton}
+                onPress={hideLogoutConfirmation}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.logoutCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.logoutConfirmButton}
+                onPress={handleLogout}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.logoutConfirmButtonText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Family Members Modal */}
+      <FamilyMembersModal
+        visible={familyMembersModalVisible}
+        onClose={hideFamilyMembersModal}
+        maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
+      />
+
+      {/* Location Selection Modal */}
+      <LocationSelection
+        visible={locationSelectionVisible}
+        onClose={hideLocationSelection}
+        onLocationSelected={handleLocationSelected}
+      />
+
+      {/* Food Allergies Modal */}
+      <FoodAllergiesModal
+        visible={foodAllergiesModalVisible}
+        onClose={() => setFoodAllergiesModalVisible(false)}
+        onDataStatusChange={(hasData) =>
+          setProfileStatus((prev) => ({
+            ...prev,
+            foodAllergies: hasData,
+          }))
+        }
+      />
+
+      {/* Medical History Modal */}
+      <ProfileScreenModal
+        visible={medicalHistoryModalVisible}
+        onClose={() => setMedicalHistoryModalVisible(false)}
+      >
+        <MedicalHistoryScreen
+          onClose={() => setMedicalHistoryModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              medicalHistory: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Family History Modal */}
+      <ProfileScreenModal
+        visible={familyHistoryModalVisible}
+        onClose={() => setFamilyHistoryModalVisible(false)}
+      >
+        <FamilyHistoryScreen
+          onClose={() => setFamilyHistoryModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              familyHistory: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Past Procedures Modal */}
+      <ProfileScreenModal
+        visible={pastProceduresModalVisible}
+        onClose={() => setPastProceduresModalVisible(false)}
+      >
+        <PastProceduresScreen
+          onClose={() => setPastProceduresModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              pastProcedures: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Social Habits Modal */}
+      <ProfileScreenModal
+        visible={socialHabitsModalVisible}
+        onClose={() => setSocialHabitsModalVisible(false)}
+      >
+        <SocialHabitsScreen
+          onClose={() => setSocialHabitsModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              socialHabits: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Drug Allergies Modal */}
+      <ProfileScreenModal
+        visible={drugAllergiesModalVisible}
+        onClose={() => setDrugAllergiesModalVisible(false)}
+      >
+        <DrugAllergiesScreen
+          onClose={() => setDrugAllergiesModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              drugAllergies: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Environmental Allergies Modal */}
+      <ProfileScreenModal
+        visible={environmentalAllergiesModalVisible}
+        onClose={() => setEnvironmentalAllergiesModalVisible(false)}
+      >
+        <EnvironmentalAllergiesScreen
+          onClose={() => setEnvironmentalAllergiesModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              environmentalAllergies: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* Menstrual History Modal */}
+      <ProfileScreenModal
+        visible={menstrualHistoryModalVisible}
+        onClose={() => setMenstrualHistoryModalVisible(false)}
+      >
+        <MenstrualHistoryScreen
+          onClose={() => setMenstrualHistoryModalVisible(false)}
+          onDataStatusChange={(hasData) =>
+            setProfileStatus((prev) => ({
+              ...prev,
+              menstrualHistory: hasData,
+            }))
+          }
+        />
+      </ProfileScreenModal>
+
+      {/* My Orders Modal */}
+      <Modal
+        visible={myOrdersModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setMyOrdersModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.settingsModalContent}>
+            <View style={styles.settingsModalHeader}>
+              <Text style={styles.settingsModalTitle}>My Orders</Text>
+              <TouchableOpacity
+                onPress={() => setMyOrdersModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsModalBody}>
+              <Text style={styles.comingSoonText}>Coming Soon!</Text>
+              <Text style={styles.comingSoonSubtext}>
+                Your order history will be displayed here.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Health Feed Modal */}
+      <ProfileScreenModal
+        visible={healthFeedModalVisible}
+        onClose={() => setHealthFeedModalVisible(false)}
+      >
+        <HealthFeedScreen />
+      </ProfileScreenModal>
+
+      {/* Ambulance Modal */}
+      <Modal
+        visible={ambulanceModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAmbulanceModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <SafeAreaView style={styles.settingsModalContent}>
+            <View style={styles.settingsModalHeader}>
+              <Text style={styles.settingsModalTitle}>Emergency Ambulance</Text>
+              <TouchableOpacity
+                onPress={() => setAmbulanceModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsModalBody}>
+              <Text style={styles.comingSoonText}>Emergency Service</Text>
+              <Text style={styles.comingSoonSubtext}>
+                Ambulance booking and emergency services will be available here.
+              </Text>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* About Modal */}
+      <Modal
+        visible={aboutModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAboutModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <SafeAreaView style={styles.settingsModalContent}>
+            <View style={styles.settingsModalHeader}>
+              <Text style={styles.settingsModalTitle}>About Curonn</Text>
+              <TouchableOpacity
+                onPress={() => setAboutModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsModalBody}>
+              <Text style={styles.aboutText}>
+                Curonn is a comprehensive healthcare platform designed to
+                provide you with easy access to medical services, health
+                tracking, and wellness management.
+              </Text>
+              <Text style={styles.versionInfo}>Version 1.0.0</Text>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* Rate App Modal */}
+      <Modal
+        visible={rateAppModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setRateAppModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.settingsModalContent}>
+            <View style={styles.settingsModalHeader}>
+              <Text style={styles.settingsModalTitle}>Rate Our App</Text>
+              <TouchableOpacity
+                onPress={() => setRateAppModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsModalBody}>
+              <Text style={styles.comingSoonText}>⭐ Rate Curonn</Text>
+              <Text style={styles.comingSoonSubtext}>
+                We&apos;d love your feedback! Please rate our app on the{" "}
+                {Platform.OS === "ios" ? "App Store" : "Play Store"} to help us
+                improve.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.rateAppButton}
+                onPress={async () => {
+                  try {
+                    const appStoreUrl =
+                      "https://apps.apple.com/app/id123456789";
+                    const playStoreUrl =
+                      "https://play.google.com/store/apps/details?id=com.curonn.app";
+                    const storeUrl =
+                      Platform.OS === "ios" ? appStoreUrl : playStoreUrl;
+
+                    await Linking.openURL(storeUrl);
+                    setRateAppModalVisible(false);
+                  } catch (error) {
+                    console.error("Error opening store:", error);
+                    Alert.alert(
+                      "Error",
+                      "Unable to open the app store. Please try again later.",
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.rateAppButtonText}>
+                  Open {Platform.OS === "ios" ? "App Store" : "Play Store"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.rateAppCancelButton}
+                onPress={() => setRateAppModalVisible(false)}
+              >
+                <Text style={styles.rateAppCancelButtonText}>Maybe Later</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Terms & Conditions Modal */}
+      <Modal
+        visible={termsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setTermsModalVisible(false)}
+      >
+        <View style={styles.fullModalOverlay}>
+          <SafeAreaView style={styles.fullModalContent}>
+            <View style={styles.fullModalHeader}>
+              <Text style={styles.fullModalTitle}>Terms & Conditions</Text>
+              <TouchableOpacity
+                onPress={() => setTermsModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.fullModalBody}
+              showsVerticalScrollIndicator={true}
+            >
+              <Text style={styles.termsSectionTitle}>
+                1. Acceptance of Terms
+              </Text>
+              <Text style={styles.termsText}>
+                By accessing and using the Curronn application, you accept and
+                agree to be bound by the terms and provision of this agreement.
+              </Text>
+              <Text style={styles.termsSectionTitle}>2. Use License</Text>
+              <Text style={styles.termsText}>
+                Permission is granted to temporarily download one copy of the
+                application for personal, non-commercial transitory viewing
+                only. This is the grant of a license, not a transfer of title.
+              </Text>
+              <Text style={styles.termsSectionTitle}>3. Disclaimer</Text>
+              <Text style={styles.termsText}>
+                The materials on Curronn&apos;s application are provided on an
+                &apos;as is&apos; basis. Curronn makes no warranties, expressed
+                or implied, and hereby disclaims and negates all other
+                warranties including without limitation, implied warranties or
+                conditions of merchantability, fitness for a particular purpose,
+                or non-infringement of intellectual property or other violation
+                of rights.
+              </Text>
+              <Text style={styles.termsSectionTitle}>4. Limitations</Text>
+              <Text style={styles.termsText}>
+                In no event shall Curronn or its suppliers be liable for any
+                damages (including, without limitation, damages for loss of data
+                or profit, or due to business interruption) arising out of the
+                use or inability to use the materials on Curronn&apos;s
+                application.
+              </Text>
+              <Text style={styles.termsSectionTitle}>
+                5. Accuracy of Materials
+              </Text>
+              <Text style={styles.termsText}>
+                The materials appearing on Curronn&apos;s application could
+                include technical, typographical, or photographic errors.
+                Curronn does not warrant that any of the materials on its
+                application are accurate, complete or current.
+              </Text>
+              <Text style={styles.termsSectionTitle}>6. Links</Text>
+              <Text style={styles.termsText}>
+                Curronn has not reviewed all of the sites linked to its
+                application and is not responsible for the contents of any such
+                linked site. The inclusion of any link does not imply
+                endorsement by Curronn of the site.
+              </Text>
+              <Text style={styles.termsSectionTitle}>7. Modifications</Text>
+              <Text style={styles.termsText}>
+                Curronn may revise these terms of service for its application at
+                any time without notice. By using this application you are
+                agreeing to be bound by the then current version of these Terms
+                of Service.
+              </Text>
+              <Text style={styles.termsSectionTitle}>8. Governing Law</Text>
+              <Text style={styles.termsText}>
+                These terms and conditions are governed by and construed in
+                accordance with the laws and you irrevocably submit to the
+                exclusive jurisdiction of the courts in that state or location.
+              </Text>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal
+        visible={privacyModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setPrivacyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.settingsModalContent}>
+            <View style={styles.settingsModalHeader}>
+              <Text style={styles.settingsModalTitle}>Privacy Policy</Text>
+              <TouchableOpacity
+                onPress={() => setPrivacyModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Image source={images.icons.close} style={styles.closeIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsModalBody}>
+              <Text style={styles.comingSoonText}>Privacy Policy</Text>
+              <Text style={styles.comingSoonSubtext}>
+                Our privacy policy will be displayed here.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -1500,7 +1546,7 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsivePadding(12),
     // borderBottomWidth: 1,
     // borderBottomColor: '#eee',
-    backgroundColor: colors.bg_secondary,
+    backgroundColor: colors.primary,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1515,19 +1561,19 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     color: "white",
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   closeButton: {
     padding: 4,
   },
   closeIcon: {
-    width: 28,
-    height: 28,
-    tintColor: "black",
+    width: 24,
+    height: 24,
+    // tintColor: "black",
   },
   tabButtons: {
     flexDirection: "row",
-    gap: 20,
+    gap: 10,
     // paddingHorizontal: 32,
     paddingVertical: 8,
     marginTop: 5,
@@ -1545,34 +1591,34 @@ const styles = StyleSheet.create({
     // width: 90,
     paddingHorizontal: 24,
     // marginHorizontal: 8,
-    backgroundColor: "#9A638C",
+    backgroundColor: "#EB856E",
   },
   activeTabButton: {
-    backgroundColor: "#C35E9C",
+    backgroundColor: colors.white,
   },
   tabButtonText: {
     fontSize: 16,
-    color: "white",
-    fontFamily: fonts.semiBold
+    color: colors.white,
+    fontWeight: "700",
   },
   activeTabButtonText: {
-    color: "#fff",
+    color: colors.primary,
   },
   tabContent: {
     flex: 1,
     // backgroundColor: 'blue',
     paddingTop: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.bg_rest,
   },
-    tabContent1: {
+  tabContent1: {
     flex: 1,
     // backgroundColor: 'blue',
     paddingTop: 10,
     marginBottom: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.bg_rest,
   },
   userCard: {
-    backgroundColor: "#B0A3B1",
+    backgroundColor: colors.white,
     borderRadius: 18,
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -1590,7 +1636,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   userImage: {
     width: 60,
@@ -1603,10 +1649,10 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 17,
-    color: "#000000",
+    color: colors.primaryText,
     marginBottom: 4,
-    fontFamily: fonts.semiBold,
-    lineHeight: 22
+    fontWeight: "900",
+    lineHeight: 22,
   },
   editButton: {
     // padding: 12,
@@ -1650,22 +1696,22 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 16,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   profileItemContent: {
     flex: 1,
+    gap: 2,
   },
   profileItemTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.black,
     marginBottom: 0,
-    fontFamily: fonts.semiBold
   },
   profileItemSubtext: {
     fontSize: 12,
-    color: "#000000",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   addButton: {
     padding: 8,
@@ -1677,12 +1723,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#C35E9C",
+    borderColor: colors.primary,
     paddingVertical: 3,
   },
   addupdatetext: {
     fontFamily: fonts.regular,
-    color: "#C35E9C",
+    color: colors.primary,
     fontSize: 13,
     paddingTop: 2,
   },
@@ -1704,6 +1750,7 @@ const styles = StyleSheet.create({
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 18,
     paddingHorizontal: getResponsivePadding(25),
     borderBottomWidth: 1,
@@ -1714,7 +1761,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     marginLeft: 16,
-    fontFamily: fonts.medium
+    // fontFamily: fonts.medium
+    fontWeight: "900",
+    marginTop: 3,
   },
   settingTextContainer: {
     flex: 1,
@@ -1773,19 +1822,17 @@ const styles = StyleSheet.create({
     // },
     // shadowOpacity: 0.1,
     // shadowRadius: 4,
-
   },
   editProfileModalTitle: {
     fontSize: 18,
     // lineHeight: 44,
     color: "#202427",
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   editProfileForm: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: "#f5f4f9",
-
+    backgroundColor: colors.bg_rest,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -1795,9 +1842,9 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
-    color: "#A72675",
+    color: colors.primaryText,
     marginBottom: 3,
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   input: {
     borderWidth: 1,
@@ -1810,9 +1857,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     fontFamily: fonts.regular,
     color: "#000",
+    height: 40,
   },
   updateButtonContainer: {
     paddingHorizontal: 20,
+    paddingVertical: 40,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "flex-end",
   },
   radioContainer: {
     flexDirection: "row",
@@ -1830,7 +1882,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#A72675",
+    borderColor: colors.primary,
     marginRight: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -1839,15 +1891,15 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#A72675",
+    backgroundColor: colors.primary,
   },
   radioLabel: {
     fontSize: 16,
     color: "#333",
   },
   updateButton: {
-    marginTop: 16,
-    marginBottom: 32,
+    // marginTop: 16,
+    // marginBottom: 32,
     width: "100%",
   },
   logoutModalOverlay: {

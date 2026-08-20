@@ -269,3 +269,17 @@ export interface IPatientReport {
   typeId: number;
 }
  export const S3Link = `https://curonndatabucket.s3.ap-south-1.amazonaws.com/`;
+
+ export const domVisitors = {
+    onElement: (element: any) => {
+      // If it's a paragraph tag and has no text content inside, remove it
+      if (
+        element.tagName === "p" &&
+        (!element.children || element.children.length === 0)
+      ) {
+        element.parent.children = element.parent.children.filter(
+          (child: any) => child !== element,
+        );
+      }
+    },
+  };

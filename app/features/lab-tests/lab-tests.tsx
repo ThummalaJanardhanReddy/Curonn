@@ -1,14 +1,18 @@
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Modal, TouchableWithoutFeedback } from "react-native";
-import { AntDesign } from '@expo/vector-icons';
-
-import { Button } from "react-native-paper";
+import {
+  ActivityIndicator,
+  Modal,
+  TouchableWithoutFeedback,
+} from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
-import { getResponsiveFontSize, getResponsiveSpacing } from '../../shared/utils/responsive';
-import { fonts } from '@/app/shared/styles/fonts';
+import {
+  getResponsiveFontSize,
+  getResponsiveSpacing,
+} from "../../shared/utils/responsive";
+import { fonts } from "@/app/shared/styles/fonts";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   FlatList,
@@ -16,7 +20,6 @@ import {
   Platform,
   StatusBar as RNStatusBar,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -29,11 +32,15 @@ import PrimaryButton from "../../shared/components/PrimaryButton";
 import BookingScreen from "../booking/booking";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
-import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
-import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from "react-native-safe-area-context";
-import SamplecollectionIcon from '../../../assets/images/howtosamplecollect.svg';
+import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
+import LabdefaultIcon from "../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import SamplecollectionIcon from "../../../assets/images/howtosamplecollect.svg";
+import { StatusBar } from "expo-status-bar";
 
 interface TestCategory {
   id: string;
@@ -125,10 +132,13 @@ export default function LabTestsScreen() {
   useEffect(() => {
     const now = new Date();
     // Find latest slot end time
-    const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
-      const end = getSlotEndTime(slot);
-      return end > latest ? end : latest;
-    }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
+    const latestSlotEnd = labTimeSlots.reduce(
+      (latest, slot) => {
+        const end = getSlotEndTime(slot);
+        return end > latest ? end : latest;
+      },
+      new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0),
+    );
     setIsTodayAvailable(now < latestSlotEnd);
   }, []);
 
@@ -137,12 +147,21 @@ export default function LabTestsScreen() {
     const [, end] = slot.split("-");
     const [endTime, endPeriod] = end.trim().split(" ");
     let [hour, minute] = endTime.split(":");
-    hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
+    hour = String((Number(hour) % 12) + (endPeriod === "PM" ? 12 : 0));
     const now = new Date();
-    const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
+    const slotDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      Number(hour),
+      Number(minute),
+    );
     return slotDate;
   }
-  const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
+  const [
+    onEndReachedCalledDuringMomentum,
+    setOnEndReachedCalledDuringMomentum,
+  ] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("lab-test");
   const [selectedSubTest, setSelectedSubTest] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,7 +171,9 @@ export default function LabTestsScreen() {
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
   const [diagCenters, setDiagCenters] = useState<any[]>([]);
   const [diagLoading, setDiagLoading] = useState(false);
-  const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<number | null>(null);
+  const [selectedDiagCenterId, setSelectedDiagCenterId] = useState<
+    number | null
+  >(null);
   // Lab Test Groups
   const [subTestTypes, setSubTestTypes] = useState<SubTestType[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -183,9 +204,10 @@ export default function LabTestsScreen() {
   const [imgError, setImgError] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [errors, setErrors] = useState("");
+  const insets = useSafeAreaInsets();
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         const timeout = setTimeout(() => {
           // Use React Native StatusBar API to set background color on Android
           RNStatusBar.setBackgroundColor("#ffffff", true);
@@ -193,8 +215,7 @@ export default function LabTestsScreen() {
         return () => clearTimeout(timeout);
       }
       // Always reset diagsticVisible when leaving LabTestsScreen
-
-    }, [])
+    }, []),
   );
 
   // Test categories
@@ -226,7 +247,7 @@ export default function LabTestsScreen() {
 
       const response: any = await axiosClient.get<ApiResponse<any[]>>(
         ApiRoutes.LabTests.globalSearch,
-        { params: { search } }
+        { params: { search } },
       );
       console.log("Global Search Response:", response);
       if (!response?.isSuccess) {
@@ -277,7 +298,6 @@ export default function LabTestsScreen() {
           setSelectedCategory("lab-test");
         }
       }
-
     } catch (error) {
       console.error("Global search error:", error);
     } finally {
@@ -285,9 +305,7 @@ export default function LabTestsScreen() {
     }
   };
 
-
   useEffect(() => {
-
     const delayDebounce = setTimeout(() => {
       if (searchQuery.trim().length > 2) {
         fetchGlobalSearch(searchQuery);
@@ -314,8 +332,7 @@ export default function LabTestsScreen() {
         if (selectedCategory === "health-checks")
           return item.sourceType === "Package";
 
-        if (selectedCategory === "scans")
-          return item.sourceType === "Xray";
+        if (selectedCategory === "scans") return item.sourceType === "Xray";
 
         return false;
       });
@@ -334,7 +351,9 @@ export default function LabTestsScreen() {
       setLoadingGroups(true);
       try {
         // axiosClient already returns the API payload
-        const response: any = await axiosClient.get(ApiRoutes.LabTests.getGroups);
+        const response: any = await axiosClient.get(
+          ApiRoutes.LabTests.getGroups,
+        );
 
         console.log("FULL RESPONSE:", response);
         console.log("isSuccess:", response?.isSuccess);
@@ -354,26 +373,23 @@ export default function LabTestsScreen() {
     loadLabTestGroups();
   }, [selectedCategory]);
 
-
-
   const fetchLabTestsByGroup = async (
     groupName: string,
     pageNo = 1,
     pageSize = 10,
-    createdBy = 1
+    createdBy = 1,
   ): Promise<{ tests: TestItem[]; hasMore: boolean }> => {
     try {
-      const response: any = await axiosClient.get<ApiResponse<LabTestsResponse>>(
-        ApiRoutes.LabTests.getAll,
-        {
-          params: {
-            PageNo: pageNo,
-            PageSize: pageSize,
-            CreatedBy: createdBy,
-            GroupName: groupName,
-          },
-        }
-      );
+      const response: any = await axiosClient.get<
+        ApiResponse<LabTestsResponse>
+      >(ApiRoutes.LabTests.getAll, {
+        params: {
+          PageNo: pageNo,
+          PageSize: pageSize,
+          CreatedBy: createdBy,
+          GroupName: groupName,
+        },
+      });
 
       if (!response.isSuccess) {
         console.warn("API returned failure:", response.message);
@@ -387,8 +403,8 @@ export default function LabTestsScreen() {
         id: String(item.labTestMasterId),
         labTestMasterId: item.labTestMasterId,
         name: item.testName,
-        price: String(item.price),               // original price
-        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined,   // discounted price
+        price: String(item.price), // original price
+        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined, // discounted price
         reportTime: "10 to 12 hours",
         isAtHome: true,
       }));
@@ -403,9 +419,6 @@ export default function LabTestsScreen() {
     }
   };
 
-
-
-
   // Lazy load more lab tests
   useEffect(() => {
     if (selectedCategory !== "lab-test" || !selectedSubTest) return;
@@ -418,7 +431,7 @@ export default function LabTestsScreen() {
         selectedSubTest,
         1,
         10,
-        1
+        1,
       );
 
       setTestItems(tests);
@@ -429,26 +442,21 @@ export default function LabTestsScreen() {
     loadLabTests();
   }, [selectedCategory, selectedSubTest]);
 
-
-
-
-
   // Fetch Health Checks
 
   const fetchHealthChecks = async (
     pageNo = 1,
-    pageSize = 10
+    pageSize = 10,
   ): Promise<{ items: TestItem[]; hasMore: boolean }> => {
     try {
-      const response: any = await axiosClient.get<ApiResponse<HealthChecksResponse>>(
-        ApiRoutes.LabPackages.getAll,
-        {
-          params: {
-            PageNo: pageNo,
-            PageSize: pageSize,
-          },
-        }
-      );
+      const response: any = await axiosClient.get<
+        ApiResponse<HealthChecksResponse>
+      >(ApiRoutes.LabPackages.getAll, {
+        params: {
+          PageNo: pageNo,
+          PageSize: pageSize,
+        },
+      });
       console.log("Health Checks Response:", response);
 
       // axiosClient already unwraps response.data
@@ -460,11 +468,10 @@ export default function LabTestsScreen() {
         if (!testsList) return 0;
 
         return testsList
-          .split(',')
-          .map(test => test.trim())
+          .split(",")
+          .map((test) => test.trim())
           .filter(Boolean).length;
       };
-
 
       const items = response.data.items ?? [];
 
@@ -473,7 +480,7 @@ export default function LabTestsScreen() {
         labPackageMasterId: item.labPackageMasterId,
         name: item.testName,
         price: String(item.price),
-        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined,   // discounted price
+        curonnPrice: item.curonnPrice ? String(item.curonnPrice) : undefined, // discounted price
         testsList: item.testsList,
         testCount: getTestCount(item.testsList),
         reportTime: "48 to 72 hours",
@@ -496,13 +503,10 @@ export default function LabTestsScreen() {
     const loadHealthChecks = async () => {
       setLoadingHealthChecks(true);
 
-      const { items, hasMore } = await fetchHealthChecks(
-        healthCheckPageNo,
-        10
-      );
+      const { items, hasMore } = await fetchHealthChecks(healthCheckPageNo, 10);
 
-      setHealthCheckItems(prev =>
-        healthCheckPageNo === 1 ? items : [...prev, ...items]
+      setHealthCheckItems((prev) =>
+        healthCheckPageNo === 1 ? items : [...prev, ...items],
       );
 
       setHasMoreHealthChecks(hasMore);
@@ -511,8 +515,6 @@ export default function LabTestsScreen() {
 
     loadHealthChecks();
   }, [selectedCategory, healthCheckPageNo]);
-
-
 
   const handleLoadMoreTests = async () => {
     if (loadingTests || !hasMoreTests || !selectedSubTest) return;
@@ -523,10 +525,10 @@ export default function LabTestsScreen() {
       selectedSubTest,
       nextPage,
       10,
-      1
+      1,
     );
 
-    setTestItems(prev => [...prev, ...tests]);
+    setTestItems((prev) => [...prev, ...tests]);
     setHasMoreTests(hasMore);
     setTestPageNo(nextPage);
     setLoadingTests(false);
@@ -543,13 +545,17 @@ export default function LabTestsScreen() {
     setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setSelectedDate(selectedDate);
-      if (errors === "Please select service start date" || errors === "Please select delivery date") setErrors("");
+      if (
+        errors === "Please select service start date" ||
+        errors === "Please select delivery date"
+      )
+        setErrors("");
     }
   };
   // Fetch Scans
   const fetchScans = async (
     pageNo = 1,
-    pageSize = 10
+    pageSize = 10,
   ): Promise<{ items: TestItem[]; hasMore: boolean }> => {
     try {
       const response: any = await axiosClient.get<ApiResponse<ScansResponse>>(
@@ -560,7 +566,7 @@ export default function LabTestsScreen() {
             PageSize: pageSize,
             CreatedBy: 1,
           },
-        }
+        },
       );
 
       if (!response.isSuccess) {
@@ -575,7 +581,7 @@ export default function LabTestsScreen() {
         xrayMasterId: item.xrayMasterId,
         name: item.testName,
         price: String(item.price),
-        curonnPrice: item.curonnprice,   // discounted price
+        curonnPrice: item.curonnprice, // discounted price
         reportTime: "48 to 72 hours",
         isAtHome: false,
       }));
@@ -594,14 +600,9 @@ export default function LabTestsScreen() {
     if (selectedCategory !== "scans") return;
     const loadScans = async () => {
       setLoadingScans(true);
-      const { items, hasMore } = await fetchScans(
-        scanPageNo,
-        10
-      );
+      const { items, hasMore } = await fetchScans(scanPageNo, 10);
 
-      setScanItems(prev =>
-        scanPageNo === 1 ? items : [...prev, ...items]
-      );
+      setScanItems((prev) => (scanPageNo === 1 ? items : [...prev, ...items]));
 
       setHasMoreScans(hasMore);
       setLoadingScans(false);
@@ -631,12 +632,8 @@ export default function LabTestsScreen() {
     setTestItems([]);
   };
 
-
-
   const handleBookTest = (id: string) => {
-    const testItem = getDisplayedData().find(
-      (item) => item.id === id
-    );
+    const testItem = getDisplayedData().find((item) => item.id === id);
     console.log("Selected test for booking:", testItem);
     if (testItem) {
       setSelectedTest(testItem);
@@ -648,7 +645,6 @@ export default function LabTestsScreen() {
     setCurrentLocation(location); // Update the location
     await fetchDiagCenters(); // Re-fetch diagnostic centers when location changes
   };
-
 
   const handleBookscanTest = (testId: string, centerId: string) => {
     if (!selectedTest) {
@@ -663,9 +659,7 @@ export default function LabTestsScreen() {
       setErrors("Please select time slot");
       return;
     }
-    const testItem = getDisplayedData().find(
-      (item) => item.id === testId
-    );
+    const testItem = getDisplayedData().find((item) => item.id === testId);
     const center = diagCenters.find((c: any) => c.id === centerId);
     console.log("Selected test for booking:", testItem);
     if (testItem && center) {
@@ -693,31 +687,35 @@ export default function LabTestsScreen() {
   const fetchDiagCenters = async () => {
     setDiagLoading(true);
     try {
-      const latLngStr = await AsyncStorage.getItem('userLocationLatLng');
+      const latLngStr = await AsyncStorage.getItem("userLocationLatLng");
       let latitude = 0;
       let longitude = 0;
-
+      console.log('latlong: ', latLngStr);
       if (latLngStr) {
         try {
           const parsedLatLng = JSON.parse(latLngStr);
+           console.log('latlong parsed: ', parsedLatLng);
           latitude = Number(parsedLatLng.latitude);
           longitude = Number(parsedLatLng.longitude);
         } catch (parseError) {
-          console.error('Failed to parse latLngStr:', parseError);
+          console.error("Failed to parse latLngStr:", parseError);
         }
       } else {
-        console.warn('No latLng found in AsyncStorage, using default 0,0');
+        console.warn("No latLng found in AsyncStorage, using default 0,0");
       }
 
       const payload = { latitude, longitude, radiusKm: 10 };
-      const response = await axiosClient.post(ApiRoutes.DiagCenter.Diagsticcenter, payload);
+      const response = await axiosClient.post(
+        ApiRoutes.DiagCenter.Diagsticcenter,
+        payload,
+      );
       if (Array.isArray(response)) {
         setDiagCenters(response);
       } else {
         setDiagCenters([]);
       }
     } catch (error) {
-      console.error('Error fetching diagnostic centers:', error);
+      console.error("Error fetching diagnostic centers:", error);
       setDiagCenters([]);
     } finally {
       setDiagLoading(false);
@@ -749,7 +747,6 @@ export default function LabTestsScreen() {
   );
 
   const renderSubTestType = ({ item }: { item: any }) => {
-
     return (
       <TouchableOpacity
         style={styles.subTestContainer}
@@ -761,24 +758,6 @@ export default function LabTestsScreen() {
             selectedSubTest === item.groupName && styles.subTestCircleSelected,
           ]}
         >
-          {/* {imageError ? (
-            <LabdefaultIcon width={45} height={45} />
-          ) : (
-            <Image
-              source={{ uri: item.groupImage }}
-              style={[styles.subTestImage, { width: 45, height: 45 }]}
-              onError={() => setImageError(true)}
-            />
-          )} */}
-          {/* <Image
-            source={
-              imageError
-                ? images.labdefault
-                : { uri: item.groupImage }
-            }
-            style={[styles.subTestImage, { width: 45, height: 45 }]}
-            onError={() => setImageError(true)}
-          /> */}
           <Image
             source={
               item.groupImage && !imgError
@@ -789,7 +768,6 @@ export default function LabTestsScreen() {
             resizeMode="contain"
             onError={() => setImgError(true)}
           />
-
         </View>
         <Text
           style={[
@@ -805,61 +783,68 @@ export default function LabTestsScreen() {
 
   const renderTestItem = ({ item }: { item: TestItem }) => (
     <LinearGradient
-      colors={['#fff', '#D5CDDA']}
+      colors={["#fff", "#FFF"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.testCard}
     >
-      {selectedCategory === "lab-test" && (<>
-        <View style={styles.cardContainer}>
-          <View style={styles.testCard1}>
-            <View style={styles.testInfo}>
-              <Text style={styles.testName}>{item.name}</Text>
+      {selectedCategory === "lab-test" && (
+        <>
+          <View style={styles.cardContainer}>
+            <View style={styles.testCard1}>
+              <View style={styles.testInfo}>
+                <Text style={styles.testName}>{item.name}</Text>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+                >
+                  <Text style={styles.priceRow}>Starting from </Text>
+                  <Text style={styles.originalPrice}>
+                    ₹{String(item.price)}
+                  </Text>
+                  <Text style={[styles.finalPrice, {paddingLeft: 2}]}>
+                    ₹{item.curonnPrice ? String(item.curonnPrice) : ""}
+                  </Text>
+                </View>
 
-              <Text style={styles.priceRow}>
-                Starting from{" "}
-                <Text style={styles.originalPrice}>₹{String(item.price)}</Text>{" "}
-                <Text style={styles.finalPrice}>
-                  ₹{item.curonnPrice ? String(item.curonnPrice) : ""}
-                </Text>
-              </Text>
+                {item.reportTime && (
+                  <Text style={styles.testReportTime}>
+                    Report within {item.reportTime}
+                  </Text>
+                )}
 
-              {item.reportTime && (
-                <Text style={styles.testReportTime}>
-                  Report within {item.reportTime}
-                </Text>
-              )}
+                {item.testsList && (
+                  <Text style={styles.testReportTime}>
+                    Tests: {item.testsList}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.testActioncard}>
+              <TouchableOpacity
+                style={styles.viewdetailsbutton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/viewdetails",
+                    params: {
+                      id: item.id,
+                      type: selectedCategory,
+                    },
+                  })
+                }
+              >
+                <Text style={styles.viewdetailstext}>View Details</Text>
+              </TouchableOpacity>
 
-              {item.testsList && (
-                <Text style={styles.testReportTime}>
-                  Tests: {item.testsList}
-                </Text>
-              )}
+              <TouchableOpacity
+                style={styles.bookButton}
+                onPress={() => handleBookTest(item.id)}
+              >
+                
+                <Text style={styles.bookButtontext}>Book Now</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.testActioncard}>
-            <TouchableOpacity
-              style={styles.viewdetailsbutton}
-              onPress={() =>
-                router.push({
-                  pathname: "/viewdetails",
-                  params: {
-                    id: item.id,
-                    type: selectedCategory,
-                  },
-                })
-              }
-            > <Text style={styles.viewdetailstext}>View Details</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bookButton}
-              onPress={() => handleBookTest(item.id)}
-            > <Text style={styles.bookButtontext}>Book Now</Text>
-            </TouchableOpacity>
-
-          </View> </View>
-        {/* <View style={styles.testAction}>
+          {/* <View style={styles.testAction}>
           <PrimaryButton
             title="Book Now"
             onPress={() => handleBookTest(item.id)}
@@ -868,10 +853,11 @@ export default function LabTestsScreen() {
           {item.isAtHome && <Text style={styles.atHomeText}>AT-Home</Text>}
 
         </View> */}
-      </>)}
+        </>
+      )}
 
-
-      {(selectedCategory === 'health-checks' || selectedCategory === 'scans') && (
+      {(selectedCategory === "health-checks" ||
+        selectedCategory === "scans") && (
         <>
           <View style={styles.cardContainer}>
             <View style={styles.testCard1}>
@@ -888,19 +874,18 @@ export default function LabTestsScreen() {
                     Report within {item.reportTime}
                   </Text>
                 ) : null}
-
-
               </View>
 
               <View style={styles.healthprice}>
-                <Text style={styles.priceRow}>
-                  <Text style={styles.originalPrice}>₹{String(item.price)}</Text>{" "}
-                  <Text style={styles.finalPrice1}>
+                {/* <Text style={styles.priceRow}> */}
+                  <Text style={styles.originalPrice}>
+                    ₹{String(item.price)}
+                  </Text>
+                  <Text style={[styles.finalPrice1, { marginLeft: 5 }]}>
                     ₹{item.curonnPrice ? String(item.curonnPrice) : ""}
                   </Text>
-                </Text>
+                {/* </Text> */}
               </View>
-
             </View>
 
             <View style={styles.testActioncard}>
@@ -915,31 +900,30 @@ export default function LabTestsScreen() {
                     },
                   })
                 }
-              > <Text style={styles.viewdetailstext}>View Details</Text>
+              >
+                <Text style={styles.viewdetailstext}>View Details</Text>
               </TouchableOpacity>
 
-
-              {selectedCategory !== 'scans' ? (
+              {selectedCategory !== "scans" ? (
                 <TouchableOpacity
                   style={styles.bookButton}
                   onPress={() => handleBookTest(item.id)}
-                > <Text style={styles.bookButtontext}>Book Now</Text>
+                >
+                  <Text style={styles.bookButtontext}>Book Now</Text>
                 </TouchableOpacity>
-              ) :
-                (
-                  <TouchableOpacity
-                    style={styles.bookButton}
-                    onPress={() => handleBookScan(item.id)}
-                  > <Text style={styles.bookButtontext}>Book Now</Text>
-                  </TouchableOpacity>
-                )
-              }
+              ) : (
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={() => handleBookScan(item.id)}
+                >
+                  <Text style={styles.bookButtontext}>Book Now</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-        </>)
-      }
-
-    </LinearGradient >
+        </>
+      )}
+    </LinearGradient>
   );
 
   // Handler for address change from CommonHeader
@@ -947,47 +931,21 @@ export default function LabTestsScreen() {
     await fetchDiagCenters();
     console.log("Location updated from header new:", locationData);
 
-
     setCurrentLocation(locationData.address || "");
   };
   // Removed useEffect that incorrectly depended on handleHeaderLocationChange
 
   return (
-    <>
-      <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#ffffff"
-        />
+    <View style={styles.container}>
+      <View style={styles.contentContainer}>
         {/* Header */}
-        <View style={styles.defaultHeader}>
+        <View style={[styles.defaultHeader, { paddingTop: insets.top }]}>
           <CommonHeader
-            currentLocation={currentLocation}
-            //onProfilePress={() => console.log("Profile pressed")}
             showCart={false}
             onLocationChange={handleLocationChange}
           />
         </View>
-        {/* </View>
 
-      <View style={styles.containercontent}> */}
-
-
-        {/* Search Bar */}
-
-        {/* <LinearGradient
-          colors={[
-            "rgba(255, 255, 255, 1)",
-            "rgba(247, 84, 10, 0.2)",
-          ]}
-          start={{ x: 0.3, y: 0.6 }}
-          end={{ x: 0.1, y: 0.1 }}
-          style={{
-            paddingHorizontal: 20, // ✅ works
-            paddingVertical: 5,
-          }}
-        > */}
         <View style={styles.boxcolor}>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
@@ -1042,7 +1000,10 @@ export default function LabTestsScreen() {
 
           {/* </LinearGradient> */}
           <View style={styles.containercontent}>
-            <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 0 }}>
+            <ScrollView
+              style={styles.screen}
+              contentContainerStyle={{ paddingBottom: 0 }}
+            >
               <View style={styles.testItemsContainer}>
                 <FlatList
                   data={getDisplayedData()}
@@ -1061,13 +1022,13 @@ export default function LabTestsScreen() {
 
                     if (selectedCategory === "health-checks") {
                       if (hasMoreHealthChecks && !loadingHealthChecks) {
-                        setHealthCheckPageNo(prev => prev + 1);
+                        setHealthCheckPageNo((prev) => prev + 1);
                       }
                     }
 
                     if (selectedCategory === "scans") {
                       if (hasMoreScans && !loadingScans) {
-                        setScanPageNo(prev => prev + 1);
+                        setScanPageNo((prev) => prev + 1);
                       }
                     }
 
@@ -1080,22 +1041,22 @@ export default function LabTestsScreen() {
                   ListEmptyComponent={() => {
                     const isLoading =
                       (selectedCategory === "lab-test" && loadingTests) ||
-                      (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                      (selectedCategory === "health-checks" &&
+                        loadingHealthChecks) ||
                       (selectedCategory === "scans" && loadingScans);
 
                     if (isLoading) return null;
                     return (
                       <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>
-                          No data available
-                        </Text>
+                        <Text style={styles.emptyText}>No data available</Text>
                       </View>
                     );
                   }}
                   ListFooterComponent={() => {
                     const isLoading =
                       (selectedCategory === "lab-test" && loadingTests) ||
-                      (selectedCategory === "health-checks" && loadingHealthChecks) ||
+                      (selectedCategory === "health-checks" &&
+                        loadingHealthChecks) ||
                       (selectedCategory === "scans" && loadingScans);
 
                     if (!isLoading) return null;
@@ -1118,8 +1079,11 @@ export default function LabTestsScreen() {
                   How does sample collection work?
                 </Text>
                 <View style={styles.sampleCollectionImages}>
-                  <SamplecollectionIcon style={styles.sampleIcon} width="100%" height="100%" />
-
+                  <SamplecollectionIcon
+                    style={styles.sampleIcon}
+                    width="100%"
+                    height="100%"
+                  />
                 </View>
               </View>
             </ScrollView>
@@ -1174,33 +1138,44 @@ export default function LabTestsScreen() {
           }}
         >
           <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-
-            <View style={[styles.defaultHeader, { flexDirection: 'row', position: 'relative', alignItems: 'center', justifyContent: 'space-between' }]}>
+            <View
+              style={[
+                styles.defaultHeader,
+                {
+                  flexDirection: "row",
+                  position: "relative",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                },
+              ]}
+            >
               <CommonHeader
-                currentLocation={currentLocation}
                 onProfilePress={() => console.log("Profile pressed")}
                 showCart={false}
                 onLocationChange={handleLocationChange}
               />
-              <TouchableOpacity onPress={() => {
-                setdiagsticVisible(false);
-                setSelectedDate(null);
-                setSelectedTimeSlot("");
-                setErrors("");
-              }} style={styles.closeButton}>
+              <TouchableOpacity
+                onPress={() => {
+                  setdiagsticVisible(false);
+                  setSelectedDate(null);
+                  setSelectedTimeSlot("");
+                  setErrors("");
+                }}
+                style={styles.closeButton}
+              >
                 <Image source={images.icons.close} style={styles.closeIcon} />
               </TouchableOpacity>
             </View>
 
-
-
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 0 }} showsVerticalScrollIndicator={true}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 0 }}
+              showsVerticalScrollIndicator={true}
+            >
               <View style={styles.content}>
                 {/* Sample Pickup Date & Time */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>
-                    Date & Time
-                  </Text>
+                  <Text style={styles.sectionTitle}>Date & Time</Text>
                   <View style={styles.dateTimeCard}>
                     <View style={styles.dateSection}>
                       <Text style={styles.fieldLabel}>Service Start Date</Text>
@@ -1223,14 +1198,19 @@ export default function LabTestsScreen() {
                           style={styles.calendarIcon}
                         />
                       </TouchableOpacity>
-                      {(!selectedDate && errors === "Please select service start date") && (
-                        <Text
-                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                        >
-                          {errors}
-                        </Text>
-                      )}
-
+                      {!selectedDate &&
+                        errors === "Please select service start date" && (
+                          <Text
+                            style={{
+                              color: "#ff0000",
+                              fontSize: 13,
+                              marginTop: 4,
+                              fontFamily: fonts.regular,
+                            }}
+                          >
+                            {errors}
+                          </Text>
+                        )}
                     </View>
 
                     <View style={styles.timeSection}>
@@ -1241,7 +1221,8 @@ export default function LabTestsScreen() {
                             key={index}
                             style={[
                               styles.timeSlot,
-                              selectedTimeSlot === slot && styles.selectedTimeSlot,
+                              selectedTimeSlot === slot &&
+                                styles.selectedTimeSlot,
                             ]}
                             onPress={() => {
                               setSelectedTimeSlot(slot);
@@ -1253,7 +1234,7 @@ export default function LabTestsScreen() {
                               style={[
                                 styles.timeSlotText,
                                 selectedTimeSlot === slot &&
-                                styles.selectedTimeSlotText,
+                                  styles.selectedTimeSlotText,
                               ]}
                             >
                               {slot}
@@ -1263,7 +1244,11 @@ export default function LabTestsScreen() {
                       </View>
                       {errors === "Please select time slot" && (
                         <Text
-                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
                         >
                           {errors}
                         </Text>
@@ -1271,55 +1256,63 @@ export default function LabTestsScreen() {
                     </View>
                   </View>
                 </View>
-                <View style={styles.modalHeader}>
-
-                </View>
+                <View style={styles.modalHeader}></View>
                 {diagLoading ? (
-                  <View style={{ alignItems: 'center', padding: 20 }}>
+                  <View style={{ alignItems: "center", padding: 20 }}>
                     <ActivityIndicator size="large" color="#694664" />
                   </View>
                 ) : (
                   <View style={styles.modalScrollableContent}>
                     {diagCenters.length === 0 ? (
-                      <Text style={{ textAlign: 'center', color: '#888', marginVertical: 20 }}>No diagnostic centers found in this location</Text>
+                      <Text
+                        style={{
+                          textAlign: "center",
+                          color: "#888",
+                          marginVertical: 20,
+                        }}
+                      >
+                        No diagnostic centers found in this location
+                      </Text>
                     ) : (
                       <>
-
                         {diagCenters.map((center: any) => (
                           <LinearGradient
                             key={center.id}
-                            colors={['#fff', '#D5CDDA']}
+                            colors={["#fff", "#FFF"]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.testCard}
                           >
-
                             {/* <View style={styles.radioOuter}>
                               {selectedDiagCenterId === center.id && <View style={styles.radioInner} />}
                             </View> */}
                             <View style={styles.cardContainer}>
                               <View style={styles.testCard1}>
                                 <View style={styles.testInfo}>
-                                  <Text style={styles.testName}>{center.centerName}</Text>
-
-
+                                  <Text style={styles.testName}>
+                                    {center.centerName}
+                                  </Text>
 
                                   <Text style={styles.testReportTime}>
                                     {center.address}
                                   </Text>
-
-
                                 </View>
 
                                 <View style={styles.healthprice}>
-                                  <Text style={styles.priceRow}>
+                                  {/* <Text style={styles.priceRow}> */}
                                     <Text style={styles.originalPrice}>
-                                      ₹{selectedTest?.price ? String(selectedTest.price) : ""}
-                                    </Text>{" "}
-                                    <Text style={styles.finalPrice1}>
-                                      ₹{selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : ""}
+                                      ₹
+                                      {selectedTest?.price
+                                        ? String(selectedTest.price)
+                                        : ""}
                                     </Text>
-                                  </Text>
+                                    <Text style={styles.finalPrice1}>
+                                      ₹
+                                      {selectedTest?.curonnPrice
+                                        ? String(selectedTest.curonnPrice)
+                                        : ""}
+                                    </Text>
+                                  {/* </Text> */}
                                 </View>
                               </View>
 
@@ -1331,36 +1324,56 @@ export default function LabTestsScreen() {
                                       pathname: "/viewdetails",
                                       params: {
                                         id: center.id,
-                                        type: 'diagncenter',
-                                        price: selectedTest?.price ? String(selectedTest.price) : '',
-                                        curonnPrice: selectedTest?.curonnPrice ? String(selectedTest.curonnPrice) : '',
+                                        type: "diagncenter",
+                                        price: selectedTest?.price
+                                          ? String(selectedTest.price)
+                                          : "",
+                                        curonnPrice: selectedTest?.curonnPrice
+                                          ? String(selectedTest.curonnPrice)
+                                          : "",
                                       },
                                     })
                                   }
-                                > <Text style={styles.viewdetailstext}>View Details</Text>
+                                >
+                                  <Text style={styles.viewdetailstext}>
+                                    View Details
+                                  </Text>
                                 </TouchableOpacity>
 
                                 <PrimaryButton
                                   title="Book Now"
                                   onPress={() => {
                                     if (!selectedTest) {
-                                      setErrors("No scan selected. Please select a scan before booking.");
+                                      setErrors(
+                                        "No scan selected. Please select a scan before booking.",
+                                      );
                                       return;
                                     }
-                                    handleBookscanTest(selectedTest.id, center.id);
+                                    handleBookscanTest(
+                                      selectedTest.id,
+                                      center.id,
+                                    );
                                   }}
                                   style={styles.bookButton}
+                                  textStyle={styles.bookButtontext}
                                 />
-                                {!selectedTest && errors === "No scan selected. Please select a scan before booking." && (
-                                  <Text style={{ color: '#ff0000', fontSize: 13, marginTop: 4 }}>{errors}</Text>
-                                )}
-
+                                {!selectedTest &&
+                                  errors ===
+                                    "No scan selected. Please select a scan before booking." && (
+                                    <Text
+                                      style={{
+                                        color: "#ff0000",
+                                        fontSize: 13,
+                                        marginTop: 4,
+                                      }}
+                                    >
+                                      {errors}
+                                    </Text>
+                                  )}
                               </View>
                             </View>
-
                           </LinearGradient>
                         ))}
-
 
                         {/* <PrimaryButton
                       title="Next"
@@ -1382,7 +1395,6 @@ export default function LabTestsScreen() {
                 )}
               </View>
             </ScrollView>
-
           </SafeAreaView>
         </Modal>
         {/* Date Picker */}
@@ -1390,25 +1402,30 @@ export default function LabTestsScreen() {
           <DateTimePicker
             value={selectedDate || new Date()}
             mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
+            display={Platform.OS === "ios" ? "default" : "default"}
             onChange={handleMedDateChange}
-            minimumDate={isTodayAvailable ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)}
+            minimumDate={
+              isTodayAvailable
+                ? new Date()
+                : new Date(Date.now() + 24 * 60 * 60 * 1000)
+            }
           />
         )}
       </View>
-    </>);
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   closeButton: {
     padding: 8,
-    position: 'absolute',
+    position: "absolute",
     right: 20,
-    top: 20,
+    top: 5,
     zIndex: 1,
   },
   closeIcon: {
@@ -1419,18 +1436,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   bottomSheet: {
     // position: 'absolute',
     // left: 0,
     // right: 0,
     // bottom: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -1444,7 +1461,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#000000",
     marginBottom: getResponsiveSpacing(2),
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   dateTimeCard: {
     backgroundColor: "#fff",
@@ -1470,7 +1487,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#333",
     marginBottom: 3,
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   dateInput: {
     flexDirection: "row",
@@ -1486,7 +1503,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 13,
     color: "#333",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   placeholderText: {
     color: "#999",
@@ -1511,17 +1528,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#fff",
-    color: "#333",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   selectedTimeSlot: {
-    backgroundColor: "#C15E9C",
-    borderColor: "#C15E9C",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   timeSlotText: {
     fontSize: 11,
-    color: "#333",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   selectedTimeSlotText: {
     color: "#fff",
@@ -1530,22 +1547,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 16,
-    color: '#000',
-    fontFamily: fonts.semiBold,
+    color: "#000",
+    fontWeight: "700",
   },
   centerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: "#eee",
     gap: 12,
   },
   radioOuter: {
@@ -1553,9 +1570,9 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#694664',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#694664",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 2,
     marginRight: 8,
   },
@@ -1563,62 +1580,71 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#694664',
+    backgroundColor: "#694664",
   },
   centerName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#251729',
-    fontFamily: fonts.semiBold,
+    fontWeight: "600",
+    color: "#251729",
+    fontWeight: "700",
   },
   centerAddress: {
     fontSize: 12,
-    color: '#555',
+    color: "#555",
     marginTop: 2,
     fontFamily: fonts.regular,
   },
   centerDistance: {
     fontSize: 11,
-    color: '#888',
+    color: "#888",
     marginTop: 2,
     fontFamily: fonts.regular,
   },
   nextButton: {
     marginTop: 20,
-    width: '100%',
+    width: "100%",
   },
   container: {
-    ...commonStyles.containercontent_layout,
+    ...commonStyles.container_layout,
     backgroundColor: colors.white, // colors.bg_secondary,
-    // backgroundColor: colors.bg_primary,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 0,
   },
 
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
+    width: "100%",
+
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
   },
   containercontent: {
     //...commonStyles.containercontent_layout,
-    backgroundColor: colors.bg_primary, // colors.bg_secondary,
+    backgroundColor: colors.bg_rest, // colors.bg_secondary,
     // backgroundColor: colors.bg_primary,
     paddingHorizontal: 20, // ✅ works
     paddingTop: 0,
     flex: 1,
   },
   boxcolor: {
-    backgroundColor: colors.bg_primary,
-    flex: 1
+    backgroundColor: colors.bg_rest,
+    flex: 1,
   },
   searchContainer: {
     marginBottom: 10,
     paddingHorizontal: 20,
     marginTop: 5,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   cardContainer: {
-    width: '100%',
+    width: "100%",
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -1630,14 +1656,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     height: 40,
-    marginTop: 5
+    marginTop: 5,
   },
   searchIcon: {
     marginRight: 8,
     tintColor: "#808080",
   },
   sampleIcon: {
-    width: '100%'
+    width: "100%",
   },
   searchInput: {
     flex: 1,
@@ -1670,14 +1696,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 5,
     borderRadius: 20,
-    backgroundColor: "rgba(105, 70, 100, 0.33)",
+    backgroundColor: colors.lab.chips,
     marginBottom: 1,
-    borderWidth: 1,
-    borderColor: '#rgba(105, 70, 100, 0.33)',
+    // borderWidth: 1,
+    // borderColor: '#rgba(105, 70, 100, 0.33)',
   },
   categoryButtonSelected: {
-    backgroundColor: "#694664",
-    borderColor: '#694664',
+    backgroundColor: colors.primary,
+    // borderColor: '#694664',
   },
   categoryButtonText: {
     fontSize: 13,
@@ -1685,17 +1711,14 @@ const styles = StyleSheet.create({
     color: "#251729",
     fontFamily: fonts.regular,
     lineHeight: 20,
-
   },
   categoryButtonTextSelected: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
-
+    fontWeight: "700",
   },
   subTestTypesContainer: {
     marginBottom: 10,
     paddingHorizontal: 20,
-
   },
   subTestTypesList: {
     gap: 3,
@@ -1717,24 +1740,22 @@ const styles = StyleSheet.create({
     borderColor: "#D9D9D9",
   },
   subTestCircleSelected: {
-    // backgroundColor: '#694664',
-    borderWidth: 1,
-    borderColor: "#694664",
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   subTestImage: {
-    width: '100%',
-    height: '100%'
+    width: "100%",
+    height: "100%",
   },
   subTestName: {
     fontSize: 10,
     textAlign: "center",
-    color: "#251729",
+    color: colors.primaryText,
     fontWeight: "500",
-    fontFamily: fonts.regular,
-
   },
   subTestNameSelected: {
-    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    fontWeight: "900",
   },
   screen: {
     flex: 1, // full screen height
@@ -1742,7 +1763,6 @@ const styles = StyleSheet.create({
   testItemsContainer: {
     marginBottom: 20,
     // flex: 1,
-
   },
 
   testCard: {
@@ -1757,7 +1777,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#DBDBDB',
+    borderColor: "#DBDBDB",
   },
   testCard1: {
     flexDirection: "row",
@@ -1768,10 +1788,9 @@ const styles = StyleSheet.create({
   },
   testName: {
     fontSize: 16,
-    color: "#000",
+    color: colors.primaryText,
     marginBottom: 3,
     fontFamily: fonts.bold,
-
   },
   // testPrice: {
   //   fontSize: 11,
@@ -1780,56 +1799,61 @@ const styles = StyleSheet.create({
   //   marginBottom: 4,
   // },
   testReportTime: {
-    fontSize: 10,
-    color: "#4B334E",
+    fontSize: 12,  
+    color: colors.primaryText,
     fontFamily: fonts.regular,
+    paddingTop: 2
   },
   testAction: {
     alignItems: "center",
     justifyContent: "center",
   },
   healthprice: {
+    flexDirection: 'row',
     alignItems: "center",
     justifyContent: "center",
+    gap:3,
   },
   testActioncard: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     borderTopWidth: 1,
-    borderColor: '#c3c0c0',
+    borderColor: "#DBDBDB",
     paddingTop: 12,
     marginTop: 12,
+    gap: 10,
   },
   viewdetailsbutton: {
     borderColor: "#BDBABA",
     borderWidth: 1,
-    backgroundColor: '#fff',
-    width: 130,
+    backgroundColor: "#fff",
+    width: 110,
     height: 30,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   viewdetailstext: {
     color: "#000000",
     fontSize: 11,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     paddingTop: 2,
   },
   bookButton: {
     marginBottom: 4,
-    width: 130,
+    width: 110,
     height: 30,
-    backgroundColor: '#C35E9C',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
     borderRadius: getResponsiveSpacing(23),
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: fonts.semiBold,
+    alignItems: "center",
+    justifyContent: "center",
   },
   bookButtontext: {
-    color: "#fff",
+    color: colors.primary,
     fontSize: 11,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   atHomeText: {
     fontSize: 10,
@@ -1843,29 +1867,29 @@ const styles = StyleSheet.create({
   },
   viewMoreText: {
     fontSize: 14,
-    color: "#C35E9C",
+    color: colors.primary,
     fontWeight: "700",
 
     textDecorationLine: "underline",
   },
   sampleCollectionContainer: {
-    marginBottom: 10,
+    marginBottom: 50,
     justifyContent: "flex-start",
+    gap: 10,
     // alignItems: 'center',
   },
   sampleCollectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#4B334E",
+    color: colors.primaryText,
     marginBottom: 0,
     textAlign: "justify",
-    fontFamily: fonts.semiBold,
   },
   sampleCollectionImages: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "flex-start",
-    width: '100%',
+    width: "100%",
     height: 100,
   },
   sampleImageContainer: {
@@ -1889,39 +1913,42 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   priceRow: {
-    fontSize: 11,
-    color: "#4B334E",
+    fontSize: 12,
+    color: colors.primaryText,
     fontWeight: "500",
     marginBottom: 4,
-    fontFamily: fonts.regular,
+    gap: 4,
+    // fontFamily: fonts.regular,
   },
   originalPrice: {
-    fontSize: 12,
-    color: '#887f8b',          // light gray
-    textDecorationLine: 'line-through',
-    textDecorationStyle: 'solid',
-    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: "#887f8b", // light gray
+    textDecorationLine: "line-through",
+    textDecorationStyle: "solid",
+    fontWeight: "400",
+
+    // fontFamily: fonts.regular,
   },
   finalPrice: {
-    fontSize: 12,
-    color: '#C35E9C',
-    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "400",
   },
   finalPrice1: {
-    fontSize: 16,
-    color: '#000',
-    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: colors.primaryText,
+    fontWeight: "700",
   },
   actionButton: {
     borderColor: "#BDBABA",
     borderWidth: 1,
     color: "#694664",
-    width: 130,
+    width: 110,
     marginBottom: 0,
     paddingBottom: 0,
   },
   actionButtonContent: {
-    justifyContent: 'center',
+    justifyContent: "center",
     marginBottom: 0,
   },
   emptyContainer: {

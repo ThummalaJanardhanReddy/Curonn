@@ -4,7 +4,7 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://api.curonn.com',
+      target: 'https://api.curonnhealth.com',
       changeOrigin: true,
       pathRewrite: { '^/api': '/api' },
       secure: false,

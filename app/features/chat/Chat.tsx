@@ -19,6 +19,7 @@ import {
   StatusBar,
 } from "react-native";
 import {
+  KeyboardAvoidingView,
   KeyboardStickyView,
   useKeyboardState,
 } from "react-native-keyboard-controller";
@@ -47,6 +48,7 @@ import ApiRoutes from "@/src/api/employee/employee";
 import ConnectionBanner from "./ConnectionBanner";
 import type { ChatHistoryItem } from "@/src/constants/constants";
 import Toast from "@/app/shared/components/Toast";
+import { images } from "@/assets";
 
 // Constants
 const S3_BASE_URL = "https://curonndatabucket.s3.ap-south-1.amazonaws.com/";
@@ -177,10 +179,10 @@ const mapChatHistory = (
       text: item.messageText ?? undefined,
       attachment: item.fileUrl
         ? {
-          uri: `${S3_BASE_URL}${item.fileUrl}`,
-          name: item.fileUrl.split("/").pop() || "file",
-          type: item.fileUrl.split(".").pop()?.toLowerCase(),
-        }
+            uri: `${S3_BASE_URL}${item.fileUrl}`,
+            name: item.fileUrl.split("/").pop() || "file",
+            type: item.fileUrl.split(".").pop()?.toLowerCase(),
+          }
         : undefined,
       type: item.fileUrl ? "image" : "text",
       fileUrl: item.fileUrl ?? undefined,
@@ -329,48 +331,50 @@ export default function ChatScreen() {
   /**
    * Exit chat and cancel appointment
    */
-  const handleExitChat = useCallback(async (freeExit: boolean = false) => {
-    try {
-      if (!appointmentId || freeExit) {
-        console.log("[ChatScreen] No appointment ID, skipping cancellation");
+  const handleExitChat = useCallback(
+    async (freeExit: boolean = false) => {
+      try {
+        if (!appointmentId || freeExit) {
+          console.log("[ChatScreen] No appointment ID, skipping cancellation");
+          setShowToast(true);
+          setToastMessage({
+            title: "Error",
+            subtitle: "No appointment ID available",
+            type: "error",
+          });
+
+          // signalRService.disconnect();
+          clearChat();
+          router.back();
+          return;
+        }
+
+        console.log("[ChatScreen] Cancelling appointment:", appointmentId);
+
+        await axiosClient.put(
+          ApiRoutes.Appointments.cancel(
+            appointmentId,
+            ChatCompletedStatusCode,
+            doctorId || 0,
+          ),
+        );
         setShowToast(true);
         setToastMessage({
-          title: "Error",
-          subtitle: "No appointment ID available",
-          type: "error",
+          title: "Success",
+          subtitle: "Appointment cancelled successfully",
+          type: "success",
         });
-
 
         // signalRService.disconnect();
         clearChat();
         router.back();
-        return;
+      } catch (error) {
+        console.error("[ChatScreen] Error cancelling appointment:", error);
+        Alert.alert("Error", "Failed to cancel appointment. Please try again.");
       }
-
-      console.log("[ChatScreen] Cancelling appointment:", appointmentId);
-
-      await axiosClient.put(
-        ApiRoutes.Appointments.cancel(
-          appointmentId,
-          ChatCompletedStatusCode,
-          doctorId || 0,
-        ),
-      );
-      setShowToast(true);
-      setToastMessage({
-        title: "Success",
-        subtitle: "Appointment cancelled successfully",
-        type: "success",
-      });
-
-      // signalRService.disconnect();
-      clearChat();
-      router.back();
-    } catch (error) {
-      console.error("[ChatScreen] Error cancelling appointment:", error);
-      Alert.alert("Error", "Failed to cancel appointment. Please try again.");
-    }
-  }, [appointmentId, clearChat]);
+    },
+    [appointmentId, clearChat],
+  );
 
   /**
    * Confirm before closing chat
@@ -500,19 +504,24 @@ export default function ChatScreen() {
         Alert.alert("Error", "User information not available");
         return;
       }
-      console.log("[ChatScreen] Attempting to cancel appointment with requestId:", requestId, "and userId:", relationPatientId);
-
+      console.log(
+        "[ChatScreen] Attempting to cancel appointment with requestId:",
+        requestId,
+        "and userId:",
+        relationPatientId,
+      );
 
       const res = await axiosClient.post(
-        ApiRoutes.Chat.cancel(
-          requestId,
-          relationPatientId || user.eId
-        )
+        ApiRoutes.Chat.cancel(requestId, relationPatientId || user.eId),
       );
-      console.log("[ChatScreen] Cancelling appointment with requestId:", requestId, "and userId:", relationPatientId);
-     
-      console.log("[ChatScreen] Cancel appointment response:", res);
+      console.log(
+        "[ChatScreen] Cancelling appointment with requestId:",
+        requestId,
+        "and userId:",
+        relationPatientId,
+      );
 
+      console.log("[ChatScreen] Cancel appointment response:", res);
 
       chatStoreReset();
       router.replace("/(main)/my-doctor");
@@ -651,208 +660,225 @@ export default function ChatScreen() {
       style={[
         styles.container,
         {
-          paddingTop: insets.top,
-          backgroundColor: colors.bg_primary,
+          backgroundColor: colors.bg_rest,
         },
       ]}
     >
-      <StatusBar translucent={false} barStyle="dark-content" />
-
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          {doctorName ? (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {doctorName
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((w: string) => w[0])
-                  .join("")
-                  .toUpperCase()}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.white,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        }}
+      >
+        {/* HEADER */}
+        <View style={[styles.header]}>
+          <View style={styles.headerLeft}>
+            {doctorName ? (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {doctorName
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((w: string) => w[0])
+                    .join("")
+                    .toUpperCase()}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: "#C5CAE0" }]}>
+                <Ionicons name="person" size={18} color="#fff" />
+              </View>
+            )}
+            <View>
+              <Text style={styles.headerName}>
+                {doctorName ?? "Connecting to Doctor"}
               </Text>
+              <Text style={styles.headerSub}>Chat Consultation</Text>
             </View>
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: "#C5CAE0" }]}>
-              <Ionicons name="person" size={18} color="#fff" />
-            </View>
-          )}
-          <View>
-            <Text style={styles.headerName}>
-              {doctorName ?? "Connecting to Doctor"}
-            </Text>
-            <Text style={styles.headerSub}>Chat Consultation</Text>
           </View>
+
+          {showExit && !chatEnded && (
+            <PrimaryButton
+              title="Exit Chat"
+              onPress={handleConfirmClose}
+              style={styles.exitButton}
+              textStyle={styles.exitButtonText}
+            />
+          )}
+          {chatEnded && (
+            <PrimaryButton
+              title="Close Chat"
+              onPress={() => handleExitChat(true)}
+              style={styles.closeButton}
+              textStyle={styles.exitButtonText}
+            />
+          )}
         </View>
 
-        {showExit && !chatEnded && (
-          <PrimaryButton
-            title="Exit Chat"
-            onPress={handleConfirmClose}
-            style={styles.exitButton}
-            textStyle={styles.exitButtonText}
-          />
-        )}
-        {chatEnded && (
-          <PrimaryButton
-            title="Close Chat"
-            onPress={() => handleExitChat(true)}
-            style={styles.closeButton}
-            textStyle={styles.exitButtonText}
-          />
-        )}
+        {/* CONNECTION BANNER */}
+        <ConnectionBanner
+          connectionState={connectionState}
+          emitColor={handleBannerColor}
+        />
+
+        {/* MAIN CONTENT */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+          {/* REQUESTED STATE */}
+          {showRequested && (
+            <View style={styles.centerState}>
+              <Text style={styles.stateText}>
+                Please wait. Our doctor will join shortly
+              </Text>
+              <View style={styles.buttonWrapper}>
+                <PrimaryButton
+                  title="Cancel Appointment"
+                  onPress={handleCancelAppointment}
+                  style={{
+                    backgroundColor: "transparent",
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                    paddingHorizontal: 10,
+                    width: 200,
+                  }}
+                  textStyle={{ color: colors.primary, paddingHorizontal: 10 }}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* WAITING STATE */}
+          {showWaiting && (
+            <View style={styles.centerState}>
+              <Text style={styles.stateText}>
+                Sorry, All our doctors are currently busy. You can either wait
+                or cancel the appointment.
+              </Text>
+              <View style={styles.buttonWrapper}>
+                <PrimaryButton
+                  title="Cancel Appointment"
+                  onPress={handleCancelAppointment}
+                  style={{
+                    backgroundColor: "transparent",
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                    paddingHorizontal: 20,
+                    width: 200,
+                  }}
+                  textStyle={{ color: colors.primary, paddingHorizontal: 10 }}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* EXPIRED STATE */}
+          {showExpired && (
+            <View style={styles.centerState}>
+              <Text style={[styles.stateText, { textAlign: "center" }]}>
+                We are really sorry, all our doctors are busy now.{"\n"}
+                Please book an appointment after some time.
+              </Text>
+              <View style={styles.buttonWrapper}>
+                <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
+              </View>
+            </View>
+          )}
+
+          {/* CHAT INTERFACE */}
+          {showChatInterface && (
+            <FlatList
+              ref={flatListRef}
+              data={listItems}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={styles.flatListContent}
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 1,
+                autoscrollToTopThreshold: 10,
+              }}
+              ListEmptyComponent={renderEmptyState}
+            />
+          )}
+
+          {/* TYPING INDICATOR */}
+          {typing && (
+            <View style={styles.typingContainer}>
+              <Text style={styles.typingText}>Doctor typing...</Text>
+            </View>
+          )}
+
+          {/* ATTACHMENT PREVIEW */}
+          {attachment && (
+            <View style={styles.preview}>
+              <Text numberOfLines={1} style={styles.previewText}>
+                {attachment.name || "Attachment"}
+              </Text>
+              <TouchableOpacity onPress={() => setAttachment(null)}>
+                <MaterialIcons name="close" size={18} color="#666" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* INPUT */}
+          {showChatInterface && (
+            <View style={styles.inputContainer}>
+              <View style={styles.inputRow}>
+                <TouchableOpacity
+                  onPress={handleOpenAttachmentMenu}
+                  disabled={!chatEnabled}
+                  style={styles.iconButton}
+                >
+                  <Ionicons
+                    name="attach"
+                    size={26}
+                    color={chatEnabled ? "black" : "#ccc"}
+                  />
+                </TouchableOpacity>
+
+                <TextInput
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder="Type a message"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  multiline
+                  editable={chatEnabled}
+                  maxLength={1000}
+                />
+
+                <TouchableOpacity
+                  onPress={handleSendMessage}
+                  disabled={!chatEnabled || (!input.trim() && !attachment)}
+                  style={styles.iconButton}
+                >
+                  <Ionicons
+                    name="send"
+                    size={26}
+                    color={
+                      chatEnabled && (input.trim() || attachment)
+                        ? colors.primary
+                        : "#ccc"
+                    }
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+        {/* Toast Notification */}
+        <Toast
+          visible={showToast}
+          title={toastMessage.title}
+          subtitle={toastMessage.subtitle}
+          onHide={() => setShowToast(false)}
+          duration={3000}
+        />
       </View>
-
-      {/* CONNECTION BANNER */}
-      <ConnectionBanner
-        connectionState={connectionState}
-        emitColor={handleBannerColor}
-      />
-
-      {/* MAIN CONTENT */}
-      <KeyboardStickyView
-        style={{ flex: 1 }}
-        offset={{ closed: -insets.bottom, opened: 0 }}
-      >
-        {/* REQUESTED STATE */}
-        {showRequested && (
-          <View style={styles.centerState}>
-            <Text style={styles.stateText}>
-              Please wait. Our doctor will join shortly
-            </Text>
-            <View style={styles.buttonWrapper}>
-              <PrimaryButton
-                title="Cancel Appointment"
-                onPress={handleCancelAppointment}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* WAITING STATE */}
-        {showWaiting && (
-          <View style={styles.centerState}>
-            <Text style={styles.stateText}>
-              Sorry, All our doctors are currently busy. You can either wait or
-              cancel the appointment.
-            </Text>
-            <View style={styles.buttonWrapper}>
-              <PrimaryButton
-                title="Cancel Appointment"
-                onPress={handleCancelAppointment}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* EXPIRED STATE */}
-        {showExpired && (
-          <View style={styles.centerState}>
-            <Text style={[styles.stateText, { textAlign: "center" }]}>
-              We are really sorry, all our doctors are busy now.{"\n"}
-              Please book an appointment after some time.
-            </Text>
-            <View style={styles.buttonWrapper}>
-              <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
-            </View>
-          </View>
-        )}
-
-        {/* CHAT INTERFACE */}
-        {showChatInterface && (
-          <FlatList
-            ref={flatListRef}
-            data={listItems}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={styles.flatListContent}
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 1,
-              autoscrollToTopThreshold: 10,
-            }}
-            ListEmptyComponent={renderEmptyState}
-          />
-        )}
-
-        {/* TYPING INDICATOR */}
-        {typing && (
-          <View style={styles.typingContainer}>
-            <Text style={styles.typingText}>Doctor typing...</Text>
-          </View>
-        )}
-
-        {/* ATTACHMENT PREVIEW */}
-        {attachment && (
-          <View style={styles.preview}>
-            <Text numberOfLines={1} style={styles.previewText}>
-              {attachment.name || "Attachment"}
-            </Text>
-            <TouchableOpacity onPress={() => setAttachment(null)}>
-              <MaterialIcons name="close" size={18} color="#666" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* INPUT */}
-        {showChatInterface && (
-          <View style={styles.inputContainer}>
-            <View style={styles.inputRow}>
-              <TouchableOpacity
-                onPress={handleOpenAttachmentMenu}
-                disabled={!chatEnabled}
-                style={styles.iconButton}
-              >
-                <Ionicons
-                  name="attach"
-                  size={26}
-                  color={chatEnabled ? "black" : "#ccc"}
-                />
-              </TouchableOpacity>
-
-              <TextInput
-                value={input}
-                onChangeText={setInput}
-                placeholder="Type a message"
-                placeholderTextColor="#999"
-                style={styles.input}
-                multiline
-                editable={chatEnabled}
-                maxLength={1000}
-              />
-
-              <TouchableOpacity
-                onPress={handleSendMessage}
-                disabled={!chatEnabled || (!input.trim() && !attachment)}
-                style={styles.iconButton}
-              >
-                <Ionicons
-                  name="send"
-                  size={26}
-                  color={
-                    chatEnabled && (input.trim() || attachment)
-                      ? colors.primary
-                      : "#ccc"
-                  }
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-
-      </KeyboardStickyView>
-      {/* Toast Notification */}
-      <Toast
-        visible={showToast}
-        title={toastMessage.title}
-        subtitle={toastMessage.subtitle}
-        onHide={() => setShowToast(false)}
-        duration={3000}
-      />
     </View>
   );
 }
@@ -893,10 +919,11 @@ const MessageItem = React.memo(
             }}
             activeOpacity={0.7}
           >
-            <Text style={styles.pdfIcon}>📄</Text>
+            {/* <Text style={styles.pdfIcon}>📄</Text> */}
+            <Image source={images.prescription} style={styles.prescription} />
             <View>
               <Text style={styles.pdfName} numberOfLines={1}>
-                {item.attachment?.name ?? "Prescription"}
+                {"Prescription"}
               </Text>
               <Text style={styles.pdfSub}>View Prescription →</Text>
             </View>
@@ -961,7 +988,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderColor: "#E4E8F0",
     zIndex: 10,
@@ -986,12 +1013,12 @@ const styles = StyleSheet.create({
   },
   headerName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: colors.black,
+    fontWeight: "700",
+    color: colors.primaryText,
   },
   headerSub: {
     fontSize: 12,
-    color: "#7B8194",
+    color: colors.primaryText,
     marginTop: 1,
   },
   exitButton: {
@@ -1021,8 +1048,9 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     paddingBottom: 14,
-    paddingTop: 50,
+    paddingTop: 20,
     flexGrow: 1,
+    backgroundColor: colors.bg_rest,
   },
 
   emptyState: {
@@ -1033,7 +1061,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: "#999",
+    color: colors.primaryText,
   },
 
   message: {
@@ -1066,11 +1094,11 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 11,
-    color: "#666",
+    color: "#6B6660",
   },
   status: {
     fontSize: 11,
-    color: "#666",
+    color: "#6B6660",
   },
 
   // Pills
@@ -1087,7 +1115,7 @@ const styles = StyleSheet.create({
   },
   datePillText: {
     fontSize: 12,
-    color: "#4B5563",
+    color: colors.primaryText,
     fontWeight: "500",
   },
   subLabelPill: {
@@ -1123,7 +1151,7 @@ const styles = StyleSheet.create({
   },
   typingText: {
     fontSize: 12,
-    color: "#888",
+    color: colors.primaryText,
     fontStyle: "italic",
   },
 
@@ -1162,7 +1190,7 @@ const styles = StyleSheet.create({
   previewText: {
     flex: 1,
     fontSize: 14,
-    color: "#333",
+    color: colors.primaryText,
   },
 
   pdfCard: {
@@ -1182,7 +1210,7 @@ const styles = StyleSheet.create({
   pdfName: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#1A1A2E",
+    color: colors.primaryText,
     maxWidth: 130,
   },
   pdfSub: {
@@ -1190,10 +1218,10 @@ const styles = StyleSheet.create({
     color: "#4361EE",
     marginTop: 2,
   },
-
+  prescription: { width: 26, height: 26, resizeMode: "cover" },
   bubbleText: {
     fontSize: 14,
-    color: "#1A1A2E",
+    color: colors.primaryText,
     lineHeight: 20,
   },
 
@@ -1203,11 +1231,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
     gap: 24,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   stateText: {
     fontSize: 16,
-    color: colors.black,
+    color: colors.primaryText,
     textAlign: "center",
     lineHeight: 24,
   },

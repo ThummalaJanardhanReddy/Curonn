@@ -23,7 +23,8 @@ import BackButton from "./shared/components/BackButton";
 import PrimaryButton from "./shared/components/PrimaryButton";
 import { useUser } from "./shared/context/UserContext";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
-import {fonts} from "./shared/styles/fonts";
+import { fonts } from "./shared/styles/fonts";
+import { StatusBar } from "expo-status-bar";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -39,7 +40,6 @@ interface ValidationResponse {
 }
 
 export default function VerifyDetailsScreen() {
-
   const { userData, setUserData } = useUser();
   const [employeeId, setEmployeeId] = useState(userData.employeeId || "");
   const [email, setEmail] = useState(userData.email || "");
@@ -48,13 +48,15 @@ export default function VerifyDetailsScreen() {
   React.useEffect(() => {
     const clearLoginData = async () => {
       try {
-        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const AsyncStorage = (
+          await import("@react-native-async-storage/async-storage")
+        ).default;
         await AsyncStorage.clear();
         try {
-          const SecureStore = await import('expo-secure-store');
+          const SecureStore = await import("expo-secure-store");
           if (SecureStore.deleteItemAsync) {
-            await SecureStore.deleteItemAsync('userToken');
-            await SecureStore.deleteItemAsync('userData');
+            await SecureStore.deleteItemAsync("userToken");
+            await SecureStore.deleteItemAsync("userData");
           }
         } catch {}
       } catch {}
@@ -125,7 +127,7 @@ export default function VerifyDetailsScreen() {
     }
     if (id.length < VALIDATION_RULES.EMPLOYEE_ID_MIN_LENGTH) {
       setEmployeeIdError(
-        `Employee ID must be at least ${VALIDATION_RULES.EMPLOYEE_ID_MIN_LENGTH} characters`
+        `Employee ID must be at least ${VALIDATION_RULES.EMPLOYEE_ID_MIN_LENGTH} characters`,
       );
       return false;
     }
@@ -154,9 +156,8 @@ export default function VerifyDetailsScreen() {
 
     setIsLoading(true);
     try {
-      const validateUser = (await axiosClient.get(ApiRoutes.Employee.validate, {
-        params: { employeeId: employeeId, emailId: email },
-      })) as ValidationResponse;
+      const url = `${ApiRoutes.Employee.validate}?employeeId=${employeeId}&emailId=${email}`;
+      const validateUser = (await axiosClient.get(url)) as ValidationResponse;
 
       console.log("Validation response: ", validateUser);
 
@@ -172,13 +173,13 @@ export default function VerifyDetailsScreen() {
       } else {
         setCommonError(
           validateUser?.message ||
-            "Validation failed. Please check your details."
+            "Validation failed. Please check your details.",
         );
       }
     } catch (error) {
       console.error("Validation error:", error);
       setCommonError(
-        "Network error. Please check your connection and try again."
+        "Network error. Please check your connection and try again.",
       );
     } finally {
       setIsLoading(false);
@@ -215,7 +216,7 @@ export default function VerifyDetailsScreen() {
     } catch (error) {
       console.error("Validation error:", error);
       setCommonError(
-        "Network error. Please check your connection and try again."
+        "Network error. Please check your connection and try again.",
       );
     } finally {
       setIsLoading(false);
@@ -226,153 +227,159 @@ export default function VerifyDetailsScreen() {
     router.back();
   };
 
-  const isFormValid =
-    employeeId.trim() &&
-    email.trim() &&
-    !employeeIdError &&
-    !emailError &&
-    !commonError;
+  const isFormValid = employeeId.trim() && email.trim();
 
-    return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView
-          style={{ flex: 1, }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={0}
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* <StatusBar style="dark" backgroundColor={colors.bg_primary} /> */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <KeyboardAwareScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={80}
+          showsVerticalScrollIndicator={false}
         >
-          <KeyboardAwareScrollView
-            style={styles.container}
-            contentContainerStyle={styles.contentContainer}
-            keyboardShouldPersistTaps="handled"
-            enableOnAndroid
-            extraScrollHeight={80}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <images.curonnLogo style={styles.image} width={234} height={60} />
-              <Text style={styles.title}>Verify your Details</Text>
-              <Text style={styles.subtitle}>We will verify your access</Text>
-            </View>
-    
-            {/* FORM */}
-            <View style={styles.formContainer}>
-              {/* Employee ID */}
-              <Text style={styles.label}>Employee ID</Text>
-    
-              <TextInput
-                ref={employeeIdInputRef}
-                placeholder="eg: 235262"
-                placeholderTextColor="#9D9D9F"
-                value={employeeId}
-                onChangeText={(text) => {
-                  setEmployeeId(text);
-                  setEmployeeIdError("");
-                  setCommonError("");
-                }}
-                onBlur={() => validateEmployeeId(employeeId)}
-                mode="outlined"
-                style={styles.textInput}
-                contentStyle={styles.textInputContent}
-                theme={{ ...customTheme, roundness: 8, colors: { ...customTheme.colors, outline: '#E45C9C' }, }}
-                error={!!employeeIdError}
-                autoCapitalize="none"
-                autoCorrect={false}
-                outlineColor="#95959B"
-                activeOutlineColor="#E45C9C"
-                outlineStyle={{ borderWidth: 1 }}
-              />
-    
-              {employeeIdError ? (
-                <HelperText type="error" visible style={{ fontFamily: fonts.regular }}>
-                  {employeeIdError}
-                </HelperText>
-              ) : null}
-    
-              {/* EMAIL */}
-              <Text style={styles.label}>Working Email ID</Text>
-    
-              <TextInput
-                placeholder="name@abc.com"
-                placeholderTextColor="#9D9D9F"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setEmailError("");
-                  setCommonError("");
-                }}
-                onBlur={() => validateEmail(email)}
-                mode="outlined"
-                style={styles.textInput}
-                contentStyle={styles.textInputContent}
-                theme={{ ...customTheme, roundness: 8, colors: { ...customTheme.colors, outline: '#9D9D9F' }, }}
-                error={!!emailError}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                outlineColor="#9D9D9F"
-                activeOutlineColor="#E45C9C"
-                outlineStyle={{ borderWidth: 1 }}
-                returnKeyType="go"
-                onSubmitEditing={handleContinue}
-              />
-    
-              {emailError ? (
-                <HelperText type="error" visible style={{ fontFamily: fonts.regular }}>
-                  {emailError}
-                </HelperText>
-              ) : null}
-    
-              {commonError ? (
-                <HelperText type="error" visible style={styles.commonError}>
-                  {commonError}
-                </HelperText>
-              ) : null}
-            </View>
-    
-            {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
-            <View style={styles.bottomContainer}>
-              {/* Terms */}
-              <Text style={styles.termsText}>
-                By signing up, you agree to Curonn{"\n"}
-                <Text
-                  style={styles.linkText}
-                 
-                >
-                  Terms of services
-                </Text>{" "}
-                and{" "}
-                <Text
-                  style={styles.linkText}
-                 
-                >
-                  privacy policy
-                </Text>
-                .
+          {/* Header */}
+          <View style={styles.header}>
+            <images.curonnLogo style={styles.image} width={234} height={60} />
+            <Text style={styles.title}>Verify your details</Text>
+            <Text style={styles.subtitle}>We will verify your access</Text>
+          </View>
+
+          {/* FORM */}
+          <View style={styles.formContainer}>
+            {/* Employee ID */}
+            <Text style={styles.label}>Employee ID</Text>
+
+            <TextInput
+              ref={employeeIdInputRef}
+              placeholder="eg: 235262"
+              placeholderTextColor="#9D9D9F"
+              value={employeeId}
+              onChangeText={(text) => {
+                setEmployeeId(text);
+                setEmployeeIdError("");
+                setCommonError("");
+              }}
+              onBlur={() => validateEmployeeId(employeeId)}
+              mode="outlined"
+              style={styles.textInput}
+              contentStyle={styles.textInputContent}
+              theme={{
+                ...customTheme,
+                roundness: 8,
+                colors: { ...customTheme.colors, outline: colors.primary },
+              }}
+              error={!!employeeIdError}
+              autoCapitalize="none"
+              autoCorrect={false}
+              outlineColor="#95959B"
+              activeOutlineColor={colors.primary}
+              outlineStyle={{ borderWidth: 1 }}
+            />
+
+            {employeeIdError ? (
+              <HelperText
+                type="error"
+                visible
+                style={{ fontFamily: fonts.regular }}
+              >
+                {employeeIdError}
+              </HelperText>
+            ) : null}
+
+            {/* EMAIL */}
+            <Text style={styles.label}>Working Email ID</Text>
+
+            <TextInput
+              placeholder="name@abc.com"
+              placeholderTextColor="#9D9D9F"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setEmailError("");
+                setCommonError("");
+              }}
+              onBlur={() => validateEmail(email)}
+              mode="outlined"
+              style={styles.textInput}
+              contentStyle={styles.textInputContent}
+              theme={{
+                ...customTheme,
+                roundness: 8,
+                colors: { ...customTheme.colors, outline: "#9D9D9F" },
+              }}
+              error={!!emailError}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              outlineColor="#9D9D9F"
+              activeOutlineColor={colors.primary}
+              outlineStyle={{ borderWidth: 1 }}
+              returnKeyType="go"
+              onSubmitEditing={handleContinue}
+            />
+
+            {emailError ? (
+              <HelperText
+                type="error"
+                visible
+                style={{ fontFamily: fonts.regular }}
+              >
+                {emailError}
+              </HelperText>
+            ) : null}
+
+            {commonError ? (
+              <HelperText type="error" visible style={styles.commonError}>
+                {commonError}
+              </HelperText>
+            ) : null}
+          </View>
+
+          {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
+          <View style={styles.bottomContainer}>
+            {/* Terms */}
+            <Text style={styles.termsText}>
+              By signing up, you agree to Curonn{"\n"}
+              <Text style={styles.linkText}>
+                Terms of services and privacy policy.
               </Text>
-    
-              {/* Buttons */}
-              <View style={styles.buttonContainer}>
-                <BackButton
-                  title="Back"
-                  onPress={handleBack}
-                  color="#000000"
-                  style={styles.backButton}
-                />
-    
-                <PrimaryButton
-                  title={isLoading ? "Verifying..." : "Continue"}
-                  onPress={handleContinue}
-                  disabled={!isFormValid || isLoading}
-                  style={styles.continueButton}
-                />
-              </View>
+              {/* <Text
+                  style={styles.linkText}
+                 
+                >
+                  
+                </Text> */}
+            </Text>
+
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <BackButton
+                title="Back"
+                onPress={handleBack}
+                color="#000000"
+                style={styles.backButton}
+              />
+
+              <PrimaryButton
+                title={isLoading ? "Verifying..." : "Continue"}
+                onPress={handleContinue}
+                disabled={!isFormValid || isLoading}
+                style={styles.continueButton}
+              />
             </View>
-          </KeyboardAwareScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-    
+          </View>
+        </KeyboardAwareScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -381,7 +388,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // minHeight: 100,
     // paddingBottom: getResponsivePadding(40),
-    backgroundColor: "#F5F4F9", // '#ffffff',
+    backgroundColor: colors.bg_primary,
   },
   scrollContainer: {
     flex: 1,
@@ -389,7 +396,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
     paddingBottom: 20,
-    
   },
   header: {
     alignItems: "center",
@@ -401,16 +407,17 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   title: {
- fontSize: 22,
-    color: '#000000',
+    fontSize: 24,
+    color: colors.primaryText,
     marginBottom: 0,
-    textAlign: 'left',
+    textAlign: "left",
     marginTop: 5,
-    fontFamily: fonts.semiBold,
+    // fontWeight: "700",
+    fontWeight: "700",
   },
   subtitle: {
     fontSize: 13,
-    color: colors.black,
+    color: colors.primaryText,
     textAlign: "center",
     fontFamily: fonts.regular,
   },
@@ -419,10 +426,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: colors.black,
+    color: colors.primaryText,
     marginBottom: 2,
     marginTop: 16,
-    fontFamily: fonts.semiBold,
+    // fontFamily: fonts.bold,
+    fontWeight: "700",
   },
   textInput: {
     backgroundColor: "#fff",
@@ -451,7 +459,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1A82F7",
     textDecorationLine: "underline",
-     fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
     // fontWeight: '500',
   },
   // buttonContainer: {
@@ -477,7 +485,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#F5F4F9",
+    backgroundColor: colors.bg_primary,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
@@ -488,27 +496,27 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingBottom: 40,
   },
-  
+
   termsText: {
-fontSize: 13,
+    fontSize: 13,
     lineHeight: 22,
-    color: '#000000',
+    color: colors.primaryText,
     marginBottom: 8,
-    textAlign: 'center',
-     fontFamily: fonts.regular,
+    textAlign: "center",
+    fontFamily: fonts.regular,
   },
-  
+
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 10,
     gap: 16,
   },
-  
+
   backButton: {
     flex: 0.3,
   },
-  
+
   continueButton: {
     flex: 0.7,
   },

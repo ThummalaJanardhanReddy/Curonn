@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776163900575",
+    "project_id": "curonn-mobile",
+    "storage_bucket": "curonn-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776163900575:android:66bd9e5caea594b61c76aa",
+        "android_client_info": {
+          "package_name": "com.janardhan.reddy.curonn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACW3QHFi9f2-_fIP7Cvl6C-ep5pTKhAis"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

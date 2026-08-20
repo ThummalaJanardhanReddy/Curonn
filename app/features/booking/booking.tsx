@@ -1,7 +1,8 @@
-
-
 import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
-import { getResponsiveFontSize, getResponsiveSpacing } from "@/app/shared/utils/responsive";
+import {
+  getResponsiveFontSize,
+  getResponsiveSpacing,
+} from "@/app/shared/utils/responsive";
 import CartItemsList from "@/app/shared/components/CartItemsList";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
@@ -37,9 +38,10 @@ import { useCart } from "../../shared/context/CartContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
-import { fonts } from '@/app/shared/styles/fonts';
-import { useUserStore } from '@/src/store/UserStore';
+import { fonts } from "@/app/shared/styles/fonts";
+import { useUserStore } from "@/src/store/UserStore";
 import dayjs from "dayjs";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 // Guarded access to expo-router's useSearchParams hook (for medicine flow).
 let maybeUseSearchParams: any = null;
 try {
@@ -50,7 +52,12 @@ try {
   maybeUseSearchParams = null;
 }
 
-type ServiceType = "lab-test" | "health-checks" | "scans" | "ambulance" | "wellness";
+type ServiceType =
+  | "lab-test"
+  | "health-checks"
+  | "scans"
+  | "ambulance"
+  | "wellness";
 
 interface BookingScreenProps {
   visible: boolean;
@@ -71,11 +78,9 @@ interface BookingScreenProps {
   selectedDiagCenter?: any;
   selectedDate?: Date;
   selectedTimeSlot?: string;
-
 }
 
 export default function BookingScreen({
-
   visible,
   onClose,
   onSuccess,
@@ -91,14 +96,20 @@ export default function BookingScreen({
   selectedDate: propSelectedDate,
   selectedTimeSlot: propSelectedTimeSlot,
 }: BookingScreenProps) {
-  console.log("🚀 BookingScreen Rendered - visible:", visible, "type:", type, "service:", serviceName);
+  console.log(
+    "🚀 BookingScreen Rendered - visible:",
+    visible,
+    "type:",
+    type,
+    "service:",
+    serviceName,
+  );
   if (type === "scans") {
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
   const { userData: userDataFromHook } = useUser();
   const [userData, setUserData] = useState<any>(null);
-
 
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
@@ -118,14 +129,17 @@ export default function BookingScreen({
       .catch(() => setUserData(null));
   }, [patientId]);
 
-
   // ─── Medicine-flow flag (parsed from search params / global) ───────
   const [isFromMedicalFlag, setIsFromMedicalFlag] = useState(false);
   const { cartItems, updateQuantity, removeItem } = useCart();
   // ─── Shared state ──────────────────────────────────────────────────
-  const [selectedDate, setSelectedDate] = useState<Date | null>(propSelectedDate || null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    propSelectedDate || null,
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(propSelectedTimeSlot || "");
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(
+    propSelectedTimeSlot || "",
+  );
   // ...existing code...
   // Edit mode state for relation form
   const [isEditMode, setIsEditMode] = useState(false);
@@ -152,8 +166,6 @@ export default function BookingScreen({
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
 
-
-
   // ─── Lab-test flow state ───────────────────────────────────────────
   // Only use field-specific errors for relation, fullName, age, gender in LAB flow
   // All other errors (address, date, timeSlot) use a string
@@ -162,7 +174,7 @@ export default function BookingScreen({
     relation: "",
     fullName: "",
     age: "",
-    gender: ""
+    gender: "",
   });
   const [isTodayAvailable, setIsTodayAvailable] = useState(true);
   const [discountPercent, setDiscountPercent] = useState(10);
@@ -224,7 +236,6 @@ export default function BookingScreen({
 
   //const userdetails: PatientDetails = orderManager.getPatientDetails();
 
-
   // Lab-test date format: YYYY-MM-DD
   // API format: YYYY-MM-DD
   const formatDateLab = (date: Date) => {
@@ -242,17 +253,20 @@ export default function BookingScreen({
     return `${day}/${month}/${year}`;
   };
 
-
-
-
   // Helper to get end time of slot
   function getSlotEndTime(slot: string): Date {
     const [, end] = slot.split("-");
     const [endTime, endPeriod] = end.trim().split(" ");
     let [hour, minute] = endTime.split(":");
-    hour = String(Number(hour) % 12 + (endPeriod === "PM" ? 12 : 0));
+    hour = String((Number(hour) % 12) + (endPeriod === "PM" ? 12 : 0));
     const now = new Date();
-    const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(minute));
+    const slotDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      Number(hour),
+      Number(minute),
+    );
     return slotDate;
   }
 
@@ -260,10 +274,13 @@ export default function BookingScreen({
   useEffect(() => {
     const now = new Date();
     // Find latest slot end time
-    const latestSlotEnd = labTimeSlots.reduce((latest, slot) => {
-      const end = getSlotEndTime(slot);
-      return end > latest ? end : latest;
-    }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0));
+    const latestSlotEnd = labTimeSlots.reduce(
+      (latest, slot) => {
+        const end = getSlotEndTime(slot);
+        return end > latest ? end : latest;
+      },
+      new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0),
+    );
     setIsTodayAvailable(now < latestSlotEnd);
   }, []);
 
@@ -288,10 +305,9 @@ export default function BookingScreen({
     if (isFromMedicalFlag) return;
     async function fetchDiscount() {
       try {
-
         if (!patientId) return;
         const res: any = await axiosClient.get(
-          ApiRoutes.Employee.getById(patientId)
+          ApiRoutes.Employee.getById(patientId),
         );
         console.log("Fetched employee details for discount:", res);
         if (res && typeof res === "object") {
@@ -299,33 +315,31 @@ export default function BookingScreen({
           if (type === "lab-test") {
             discount =
               typeof res.discountLabOrder === "number" &&
-                res.discountLabOrder != null
+              res.discountLabOrder != null
                 ? res.discountLabOrder
                 : 0;
           } else if (type === "health-checks") {
             discount =
               typeof res.discountLabPackage === "number" &&
-                res.discountLabPackage != null
+              res.discountLabPackage != null
                 ? res.discountLabPackage
                 : 0;
           } else if (type === "scans") {
             discount =
               typeof res.discountScanXray === "number" &&
-                res.discountScanXray != null
+              res.discountScanXray != null
                 ? res.discountScanXray
                 : 0;
-          }
-          else if (type === "ambulance") {
+          } else if (type === "ambulance") {
             discount =
               typeof res.discountAmbulanceService === "number" &&
-                res.discountAmbulanceService != null
+              res.discountAmbulanceService != null
                 ? res.discountAmbulanceService
                 : 0;
-          }
-          else if (type !== "wellness") {
+          } else if (type !== "wellness") {
             discount =
               typeof res.discountMedicineOrder === "number" &&
-                res.discountMedicineOrder != null
+              res.discountMedicineOrder != null
                 ? res.discountMedicineOrder
                 : 0;
           }
@@ -344,17 +358,17 @@ export default function BookingScreen({
     const fetchStatusId = async () => {
       try {
         const response: any = await axiosClient.get(
-          ApiRoutes.Master.getmasterdata(7)
+          ApiRoutes.Master.getmasterdata(7),
         );
         let status = 0;
         if (Array.isArray(response)) {
           const requested = response.find(
-            (item: any) => item.name === "Requested" && item.isActive
+            (item: any) => item.name === "Requested" && item.isActive,
           );
           if (requested) status = requested.masterDataId;
         } else if (response.isSuccess && Array.isArray(response.data)) {
           const requested = response.data.find(
-            (item: any) => item.name === "Requested" && item.isActive
+            (item: any) => item.name === "Requested" && item.isActive,
           );
           if (requested) status = requested.masterDataId;
         }
@@ -371,7 +385,7 @@ export default function BookingScreen({
     const fetchRelationTypes = async () => {
       try {
         const response: any = await axiosClient.get(
-          ApiRoutes.Master.getmasterdata(5)
+          ApiRoutes.Master.getmasterdata(5),
         );
         if (Array.isArray(response)) {
           const filtered = response
@@ -404,19 +418,18 @@ export default function BookingScreen({
     }
   }, [patientId]);
 
-
   useCallback(() => {
     if (patientId) {
       fetchAddresses();
     }
-  }, [patientId])
+  }, [patientId]);
 
   const fetchAddresses = async () => {
     try {
       setLoading(true);
       if (!patientId) throw new Error("Patient ID is not available");
       const responcedata: any = await axiosClient.get(
-        ApiRoutes.Address.getAddressByPatientId(patientId)
+        ApiRoutes.Address.getAddressByPatientId(patientId),
       );
       if (
         responcedata.isSuccess &&
@@ -424,7 +437,7 @@ export default function BookingScreen({
         responcedata.data.length > 0
       ) {
         const defaultAddress = responcedata.data.find(
-          (addr: any) => addr.isDefault === true
+          (addr: any) => addr.isDefault === true,
         );
         if (defaultAddress) {
           setSelectedLocation({
@@ -452,7 +465,7 @@ export default function BookingScreen({
     try {
       setLoading(true);
       const response: any = await axiosClient.get(
-        ApiRoutes.Address.getAddressById(addressId)
+        ApiRoutes.Address.getAddressById(addressId),
       );
       if (response.isSuccess && response.data) {
         const addr = response.data;
@@ -473,11 +486,16 @@ export default function BookingScreen({
 
   const fetchRelationDetails = async (relationId: number) => {
     try {
-      console.log("Fetching relation details for relationId:", relationId, "patientId:", patientId);
+      console.log(
+        "Fetching relation details for relationId:",
+        relationId,
+        "patientId:",
+        patientId,
+      );
       setLoading(true);
       if (!patientId) return;
       const response: any = await axiosClient.get(
-        ApiRoutes.Employee.getRelation(relationId, patientId)
+        ApiRoutes.Employee.getRelation(relationId, patientId),
       );
       console.log("Fetched relation details:", response);
 
@@ -525,15 +543,27 @@ export default function BookingScreen({
 
     // Prefer relationPatientId from selectedRelation if available
     let medPatientId = Number(patientId);
-    if (selectedRelation && typeof selectedRelation === 'object') {
+    if (selectedRelation && typeof selectedRelation === "object") {
       // Find the matching family member by relationId
       const familyMember = Array.isArray(familyMembers)
-        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        ? familyMembers.find(
+            (m) =>
+              m.relationId === selectedRelation.masterDataId &&
+              m.relationName === fullName &&
+              String(m.age) === String(age) &&
+              m.gender.toLowerCase() === gender.toLowerCase(),
+          )
         : null;
-      console.log("Matching family member for selected relation:", familyMember);
+      console.log(
+        "Matching family member for selected relation:",
+        familyMember,
+      );
       if (familyMember && familyMember.relationPatientId) {
         medPatientId = familyMember.relationPatientId;
-        console.log("Using relationPatientId from familyMembers:", medPatientId);
+        console.log(
+          "Using relationPatientId from familyMembers:",
+          medPatientId,
+        );
       } else if (relationPatientId) {
         medPatientId = Number(relationPatientId);
         console.log("Using relationPatientId from state:", medPatientId);
@@ -552,7 +582,7 @@ export default function BookingScreen({
       landMark: selectedLocation?.landmark || "",
       addressNickname: selectedLocation?.nickname
         ? selectedLocation.nickname.charAt(0).toUpperCase() +
-        selectedLocation.nickname.slice(1)
+          selectedLocation.nickname.slice(1)
         : "",
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
@@ -607,13 +637,19 @@ export default function BookingScreen({
     const payload = buildLabOrderPayload(paymentData);
     payload.createdBy = patientId;
     payload.req = "web";
-    console.log("📤 Lab Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    console.log(
+      "📤 Lab Save Order Request Payload:",
+      JSON.stringify(payload, null, 2),
+    );
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.LabOrders.saveUpdate,
-        payload
+        payload,
       );
-      console.log("📥 Lab Save Order Response:", JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Lab Save Order Response:",
+        JSON.stringify(response, null, 2),
+      );
       if (response && (response.success || response.isSuccess)) {
         setToastMessageLab({
           title: "Order Success",
@@ -656,7 +692,6 @@ export default function BookingScreen({
     }
   };
 
-
   const saveAmbulanceOrder = async (paymentData: {
     razorpayOrderId: string;
     razorpayPaymentId: string;
@@ -672,7 +707,8 @@ export default function BookingScreen({
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
       addressNickname: selectedLocation?.nickname
-        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+        ? selectedLocation.nickname.charAt(0).toUpperCase() +
+          selectedLocation.nickname.slice(1)
         : "",
       serviceDate: selectedDate ? formatDateLab(selectedDate) : "",
       timeSlot: selectedTimeSlot,
@@ -697,13 +733,17 @@ export default function BookingScreen({
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.Ambulance.saveUpdate,
-        payload
+        payload,
       );
-      console.log("📥 Ambulance Save Order Response:", JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Ambulance Save Order Response:",
+        JSON.stringify(response, null, 2),
+      );
       if (response && (response.success || response.isSuccess)) {
         setToastMessageLab({
           title: "Your ambulance booking has been completed successfully",
-          subtitle: response.message || "Your ambulance order was placed successfully!",
+          subtitle:
+            response.message || "Your ambulance order was placed successfully!",
           type: "success",
         });
         setShowToastLab(true);
@@ -741,7 +781,6 @@ export default function BookingScreen({
     }
   };
 
-
   const saveWellnessOrder = async (paymentData: {
     razorpayOrderId: string;
     razorpayPaymentId: string;
@@ -777,17 +816,27 @@ export default function BookingScreen({
     }
 
     // Add relation info if for others
-    console.log("📤 Wellness Save Order Payload:", JSON.stringify(payload, null, 2));
+    console.log(
+      "📤 Wellness Save Order Payload:",
+      JSON.stringify(payload, null, 2),
+    );
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.WellnessData.saveUpdate,
-        payload
+        payload,
       );
-      console.log("📥 Wellness Save Order Response:", JSON.stringify(response, null, 2));
-      if ((typeof response === "number" && response > 0) || (response && (response.success || response.isSuccess))) {
+      console.log(
+        "📥 Wellness Save Order Response:",
+        JSON.stringify(response, null, 2),
+      );
+      if (
+        (typeof response === "number" && response > 0) ||
+        (response && (response.success || response.isSuccess))
+      ) {
         setToastMessageLab({
           title: "Your wellness booking has been completed successfully",
-          subtitle: response.message || "Your wellness order was placed successfully!",
+          subtitle:
+            response.message || "Your wellness order was placed successfully!",
           type: "success",
         });
         setShowToastLab(true);
@@ -815,8 +864,6 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
-
-
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
@@ -864,7 +911,9 @@ export default function BookingScreen({
       setErrors("");
     }
 
-    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationObj = labRelationTypes.find(
+      (r) => r.name === (selectedRelation?.name || ""),
+    );
     const relationId = relationObj ? relationObj.masterDataId : 0;
     let newRelationPatientId = null;
 
@@ -872,7 +921,7 @@ export default function BookingScreen({
     let shouldSaveOrUpdate = false;
     let oldMember = null;
     if (relationId !== 0 && Array.isArray(familyMembers)) {
-      oldMember = familyMembers.find(m => m.relationId === relationId);
+      oldMember = familyMembers.find((m) => m.relationId === relationId);
       if (oldMember) {
         // Compare old and new data
         if (
@@ -893,7 +942,12 @@ export default function BookingScreen({
 
     if (shouldSaveOrUpdate) {
       const payload = {
-        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        empRelationId:
+          isEditMode && editingMember
+            ? editingMember.id
+            : oldMember
+              ? oldMember.empRelationId || oldMember.id || 0
+              : 0,
         relationId,
         relationName: fullName,
         patientId: patientId,
@@ -901,12 +955,17 @@ export default function BookingScreen({
         age: age ? Number(age) : 0,
         createdOn: new Date().toISOString(),
       };
-      console.log('Payload for save/update:', payload);
+      console.log("Payload for save/update handleBookNowLab: ", payload);
       try {
-        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        const saveResponse = await axiosClient.post(
+          ApiRoutes.Employee.saveandupdaterelative,
+          payload,
+        );
         // Fetch updated family members
         console.log("Saved Responsive data:", saveResponse);
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -915,10 +974,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -926,24 +986,36 @@ export default function BookingScreen({
         }
         setFamilyMembers(familyList);
         setToastMessageMed({
-          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
-          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
-          type: "success"
+          title:
+            isEditMode && editingMember
+              ? "Family Member Updated"
+              : "Family Member Added",
+          subtitle:
+            saveResponse?.data?.message ||
+            (isEditMode && editingMember
+              ? "Updated successfully!"
+              : "Added successfully!"),
+          type: "success",
         });
         setShowToastMed(true);
       } catch (error) {
-        let errorMsg = 'Something went wrong';
-        if (error && typeof error === 'object') {
-          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+        let errorMsg = "Something went wrong";
+        if (error && typeof error === "object") {
+          if (
+            "response" in error &&
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+          ) {
             errorMsg = error.response.data.message;
-          } else if ('message' in error) {
+          } else if ("message" in error) {
             errorMsg = error.message;
           }
         }
         setToastMessageMed({
           title: "Save Failed",
           subtitle: errorMsg,
-          type: "error"
+          type: "error",
         });
         setShowToastMed(true);
         return;
@@ -951,7 +1023,9 @@ export default function BookingScreen({
     } else {
       // No changes, just use existing data
       if (relationId !== 0) {
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -960,10 +1034,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -983,11 +1058,17 @@ export default function BookingScreen({
 
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
-      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
-      const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
+      console.log(
+        "📤 Lab Razorpay Order Request:",
+        ApiRoutes.LabOrders.RazopayOrder + query,
       );
-      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query,
+      );
+      console.log(
+        "📥 Lab Razorpay Order Response:",
+        JSON.stringify(orderRes, null, 2),
+      );
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
@@ -1008,7 +1089,6 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
-
 
   // Lab-test: handleBookNow
   const handleBookWellness = async () => {
@@ -1082,7 +1162,9 @@ export default function BookingScreen({
       setErrors("");
     }
 
-    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationObj = labRelationTypes.find(
+      (r) => r.name === (selectedRelation?.name || ""),
+    );
     const relationId = relationObj ? relationObj.masterDataId : 0;
     let newRelationPatientId = null;
 
@@ -1090,7 +1172,7 @@ export default function BookingScreen({
     let shouldSaveOrUpdate = false;
     let oldMember = null;
     if (relationId !== 0 && Array.isArray(familyMembers)) {
-      oldMember = familyMembers.find(m => m.relationId === relationId);
+      oldMember = familyMembers.find((m) => m.relationId === relationId);
       if (oldMember) {
         // Compare old and new data
         if (
@@ -1111,7 +1193,12 @@ export default function BookingScreen({
 
     if (shouldSaveOrUpdate) {
       const payload = {
-        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        empRelationId:
+          isEditMode && editingMember
+            ? editingMember.id
+            : oldMember
+              ? oldMember.empRelationId || oldMember.id || 0
+              : 0,
         relationId,
         relationName: fullName,
         patientId: patientId,
@@ -1119,12 +1206,17 @@ export default function BookingScreen({
         age: age ? Number(age) : 0,
         createdOn: new Date().toISOString(),
       };
-      console.log('Payload for save/update:', payload);
+      console.log("Payload for save/update handleBookNowScan: ", payload);
       try {
-        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        const saveResponse = await axiosClient.post(
+          ApiRoutes.Employee.saveandupdaterelative,
+          payload,
+        );
         // Fetch updated family members
         console.log("Saved Responsive data:", saveResponse);
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -1133,10 +1225,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -1144,24 +1237,36 @@ export default function BookingScreen({
         }
         setFamilyMembers(familyList);
         setToastMessageMed({
-          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
-          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
-          type: "success"
+          title:
+            isEditMode && editingMember
+              ? "Family Member Updated"
+              : "Family Member Added",
+          subtitle:
+            saveResponse?.data?.message ||
+            (isEditMode && editingMember
+              ? "Updated successfully!"
+              : "Added successfully!"),
+          type: "success",
         });
         setShowToastMed(true);
       } catch (error) {
-        let errorMsg = 'Something went wrong';
-        if (error && typeof error === 'object') {
-          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+        let errorMsg = "Something went wrong";
+        if (error && typeof error === "object") {
+          if (
+            "response" in error &&
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+          ) {
             errorMsg = error.response.data.message;
-          } else if ('message' in error) {
+          } else if ("message" in error) {
             errorMsg = error.message;
           }
         }
         setToastMessageMed({
           title: "Save Failed",
           subtitle: errorMsg,
-          type: "error"
+          type: "error",
         });
         setShowToastMed(true);
         return;
@@ -1169,7 +1274,9 @@ export default function BookingScreen({
     } else {
       // No changes, just use existing data
       if (relationId !== 0) {
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -1178,10 +1285,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -1201,11 +1309,17 @@ export default function BookingScreen({
 
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
-      console.log("📤 Lab Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
-      const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
+      console.log(
+        "📤 Lab Razorpay Order Request:",
+        ApiRoutes.LabOrders.RazopayOrder + query,
       );
-      console.log("📥 Lab Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query,
+      );
+      console.log(
+        "📥 Lab Razorpay Order Response:",
+        JSON.stringify(orderRes, null, 2),
+      );
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
@@ -1225,8 +1339,7 @@ export default function BookingScreen({
       });
       setShowToastLab(true);
     }
-  }
-
+  };
 
   const saveBookNowScan = async (paymentData: {
     razorpayOrderId: string;
@@ -1241,15 +1354,27 @@ export default function BookingScreen({
 
     // Prefer relationPatientId from selectedRelation if available
     let medPatientId = Number(patientId);
-    if (selectedRelation && typeof selectedRelation === 'object') {
+    if (selectedRelation && typeof selectedRelation === "object") {
       // Find the matching family member by relationId
       const familyMember = Array.isArray(familyMembers)
-        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        ? familyMembers.find(
+            (m) =>
+              m.relationId === selectedRelation.masterDataId &&
+              m.relationName === fullName &&
+              String(m.age) === String(age) &&
+              m.gender.toLowerCase() === gender.toLowerCase(),
+          )
         : null;
-      console.log("Matching family member for selected relation:", familyMember);
+      console.log(
+        "Matching family member for selected relation:",
+        familyMember,
+      );
       if (familyMember && familyMember.relationPatientId) {
         medPatientId = familyMember.relationPatientId;
-        console.log("Using relationPatientId from familyMembers:", medPatientId);
+        console.log(
+          "Using relationPatientId from familyMembers:",
+          medPatientId,
+        );
       } else if (relationPatientId) {
         medPatientId = Number(relationPatientId);
         console.log("Using relationPatientId from state:", medPatientId);
@@ -1287,17 +1412,24 @@ export default function BookingScreen({
       payload.relationAge = age ? Number(age) : 0;
       payload.relationGender = gender;
     }
-    console.log("📤 Xray Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    console.log(
+      "📤 Xray Save Order Request Payload:",
+      JSON.stringify(payload, null, 2),
+    );
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.DiagCenter.saveUpdate,
-        payload
+        payload,
       );
-      console.log("📥 Xray Save Order Response:", JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Xray Save Order Response:",
+        JSON.stringify(response, null, 2),
+      );
       if (response && (response.success || response.isSuccess)) {
         setToastMessageLab({
           title: "Your scan booking has been completed successfully",
-          subtitle: response.message || "Your scan order was placed successfully!",
+          subtitle:
+            response.message || "Your scan order was placed successfully!",
           type: "success",
         });
         setShowToastLab(true);
@@ -1335,7 +1467,6 @@ export default function BookingScreen({
       setShowToastLab(true);
     }
   };
-
 
   const handleViewAddress = () => {
     setAddressVisible(true);
@@ -1378,12 +1509,12 @@ export default function BookingScreen({
       const sp = searchParams;
       console.log("🔍 Search Params received:", JSON.stringify(sp));
       const flag =
-        sp.isFromMedical === "true" ||
-        sp.isFromMedical === true ||
-        sp.isFromMedical === "1";
+        sp?.isFromMedical === "true" ||
+        sp?.isFromMedical === true ||
+        sp?.isFromMedical === "1";
       console.log("🚩 Setting isFromMedicalFlag to:", !!flag);
       setIsFromMedicalFlag(!!flag);
-      if (sp.cartItems) {
+      if (sp?.cartItems) {
         try {
           const decoded = decodeURIComponent(sp.cartItems as string);
           const parsed = JSON.parse(decoded);
@@ -1413,14 +1544,12 @@ export default function BookingScreen({
         setIsFromMedicalFlag(true);
         try {
           (global as any).__BOOKING_CART = null;
-        } catch (e) { }
+        } catch (e) {}
       }
     } catch (e) {
       // ignore
     }
   }, []);
-
-
 
   // Called after patient is selected in modal
   const handlePatientSelected = async (member: any) => {
@@ -1444,7 +1573,10 @@ export default function BookingScreen({
     setrelationPatientId(normalized.relationPatientId);
 
     if (normalized.relationId && normalized.relationName) {
-      setSelectedRelation({ masterDataId: normalized.relationId, name: normalized.relationName });
+      setSelectedRelation({
+        masterDataId: normalized.relationId,
+        name: normalized.relationName,
+      });
       setPatientType("others");
     } else {
       setSelectedRelation(null);
@@ -1455,8 +1587,12 @@ export default function BookingScreen({
     let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
     let hasError = false;
     // Accept relationId === 0 if relationName is 'Self' or matches user's name
-    const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
-    const userName = (userData?.fullName || userDataFromHook?.fullName || "").trim().toLowerCase();
+    const normalizedRelationName = (normalized.relationName || "")
+      .trim()
+      .toLowerCase();
+    const userName = (userData?.fullName || userDataFromHook?.fullName || "")
+      .trim()
+      .toLowerCase();
     if (
       normalized.relationId === 0 &&
       normalizedRelationName !== "self" &&
@@ -1485,7 +1621,7 @@ export default function BookingScreen({
     try {
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${normalized.patientId || patientId || 0}`;
       const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
+        ApiRoutes.LabOrders.RazopayOrder + query,
       );
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
@@ -1508,8 +1644,6 @@ export default function BookingScreen({
     }
   };
 
-
-
   // Medicine cart totals
   const itemsTotal = useMemo(() => {
     return cartItems.reduce((sum: number, it: any) => {
@@ -1524,16 +1658,28 @@ export default function BookingScreen({
     return itemsTotal < 500 ? 50 : 0;
   }, [itemsTotal]);
 
-
-  const safeItemsTotal = typeof itemsTotal === 'number' && !isNaN(itemsTotal) ? itemsTotal : 0;
-  const safeDiscountPercent = typeof discountPercent === 'number' && !isNaN(discountPercent) ? discountPercent : 0;
-  const medicineDiscountAmount = Math.round((safeItemsTotal * safeDiscountPercent) / 100);
-  console.log("Items Total:", safeItemsTotal, "Discount Percent:", safeDiscountPercent, "Discount Amount:", medicineDiscountAmount);
+  const safeItemsTotal =
+    typeof itemsTotal === "number" && !isNaN(itemsTotal) ? itemsTotal : 0;
+  const safeDiscountPercent =
+    typeof discountPercent === "number" && !isNaN(discountPercent)
+      ? discountPercent
+      : 0;
+  const medicineDiscountAmount = Math.round(
+    (safeItemsTotal * safeDiscountPercent) / 100,
+  );
+  console.log(
+    "Items Total:",
+    safeItemsTotal,
+    "Discount Percent:",
+    safeDiscountPercent,
+    "Discount Amount:",
+    medicineDiscountAmount,
+  );
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
   const displayedTotal = useMemo(
     () => medicineTotalAmount + deliveryCharges,
-    [medicineTotalAmount, deliveryCharges]
+    [medicineTotalAmount, deliveryCharges],
   );
   // Quantity handlers for medical cart items
   const handleIncreaseQuantity = async (index: number) => {
@@ -1574,7 +1720,6 @@ export default function BookingScreen({
     return `${day}/${month}/${year}`;
   };
 
-
   // Medicine: build order payload for /api/medicine-orders/save-order
   const buildMedOrderPayload = (paymentData?: {
     razorpayOrderId: string;
@@ -1586,19 +1731,31 @@ export default function BookingScreen({
 
     // Get current date in yyyy-mm-dd format
     const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
+    const formattedDate = today.toISOString().split("T")[0];
 
     // Prefer relationPatientId from selectedRelation if available
     let medPatientId = Number(patientId);
-    if (selectedRelation && typeof selectedRelation === 'object') {
+    if (selectedRelation && typeof selectedRelation === "object") {
       // Find the matching family member by relationId
       const familyMember = Array.isArray(familyMembers)
-        ? familyMembers.find(m => m.relationId === selectedRelation.masterDataId && m.relationName === fullName && String(m.age) === String(age) && m.gender.toLowerCase() === gender.toLowerCase())
+        ? familyMembers.find(
+            (m) =>
+              m.relationId === selectedRelation.masterDataId &&
+              m.relationName === fullName &&
+              String(m.age) === String(age) &&
+              m.gender.toLowerCase() === gender.toLowerCase(),
+          )
         : null;
-      console.log("Matching family member for selected relation:", familyMember);
+      console.log(
+        "Matching family member for selected relation:",
+        familyMember,
+      );
       if (familyMember && familyMember.relationPatientId) {
         medPatientId = familyMember.relationPatientId;
-        console.log("Using relationPatientId from familyMembers:", medPatientId);
+        console.log(
+          "Using relationPatientId from familyMembers:",
+          medPatientId,
+        );
       } else if (relationPatientId) {
         medPatientId = Number(relationPatientId);
         console.log("Using relationPatientId from state:", medPatientId);
@@ -1608,7 +1765,6 @@ export default function BookingScreen({
       console.log("Using relationPatientId from state:", medPatientId);
     }
 
-
     const payload: any = {
       medicineOrderId: 0,
       orderType: "Medicine",
@@ -1617,7 +1773,8 @@ export default function BookingScreen({
       hNo: selectedLocation?.houseNumber || "",
       landMark: selectedLocation?.landmark || "",
       addressNickname: selectedLocation?.nickname
-        ? selectedLocation.nickname.charAt(0).toUpperCase() + selectedLocation.nickname.slice(1)
+        ? selectedLocation.nickname.charAt(0).toUpperCase() +
+          selectedLocation.nickname.slice(1)
         : "",
       deliveryDate: formattedDate,
       timeSlot: selectedTimeSlot || "",
@@ -1669,18 +1826,27 @@ export default function BookingScreen({
     razorpaySignature: string;
   }) => {
     const payload = buildMedOrderPayload(paymentData);
-    console.log(" Medicine Save Order Request Payload:", JSON.stringify(payload, null, 2));
+    console.log(
+      " Medicine Save Order Request Payload:",
+      JSON.stringify(payload, null, 2),
+    );
     try {
       const response: any = await axiosClient.post(
         ApiRoutes.MedicalOrders.saveOrder,
-        payload
+        payload,
       );
-      console.log("Medicine Save Order Response:", JSON.stringify(response, null, 2));
+      console.log(
+        "Medicine Save Order Response:",
+        JSON.stringify(response, null, 2),
+      );
       if (response && (response.isSuccess || response.success)) {
-        console.log("✅ Medicine Order Success. Showing toast and starting timeout...");
+        console.log(
+          "✅ Medicine Order Success. Showing toast and starting timeout...",
+        );
         setToastMessageMed({
           title: "Order Success",
-          subtitle: response.message || "Your medicine order was placed successfully!",
+          subtitle:
+            response.message || "Your medicine order was placed successfully!",
           type: "success",
         });
         setShowToastMed(true);
@@ -1726,7 +1892,6 @@ export default function BookingScreen({
 
   // Medicine: handleBookNow (now like lab flow)
   const handleBookNowMed = async () => {
-
     // Validate only relation, fullName, age, gender as field errors
     if (patientType === "others") {
       let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
@@ -1755,7 +1920,9 @@ export default function BookingScreen({
       setErrors("");
     }
 
-    const relationObj = labRelationTypes.find(r => r.name === (selectedRelation?.name || ""));
+    const relationObj = labRelationTypes.find(
+      (r) => r.name === (selectedRelation?.name || ""),
+    );
     const relationId = relationObj ? relationObj.masterDataId : 0;
     let newRelationPatientId = null;
 
@@ -1763,7 +1930,7 @@ export default function BookingScreen({
     let shouldSaveOrUpdate = false;
     let oldMember = null;
     if (relationId !== 0 && Array.isArray(familyMembers)) {
-      oldMember = familyMembers.find(m => m.relationId === relationId);
+      oldMember = familyMembers.find((m) => m.relationId === relationId);
       if (oldMember) {
         // Compare old and new data
         if (
@@ -1784,7 +1951,12 @@ export default function BookingScreen({
 
     if (shouldSaveOrUpdate) {
       const payload = {
-        empRelationId: isEditMode && editingMember ? editingMember.id : (oldMember ? oldMember.empRelationId || oldMember.id || 0 : 0),
+        empRelationId:
+          isEditMode && editingMember
+            ? editingMember.id
+            : oldMember
+              ? oldMember.empRelationId || oldMember.id || 0
+              : 0,
         relationId,
         relationName: fullName,
         patientId: patientId,
@@ -1792,12 +1964,17 @@ export default function BookingScreen({
         age: age ? Number(age) : 0,
         createdOn: new Date().toISOString(),
       };
-      console.log('Payload for save/update:', payload);
+      console.log("Payload for save/update handleBookNowMed :", payload);
       try {
-        const saveResponse = await axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload);
+        const saveResponse = await axiosClient.post(
+          ApiRoutes.Employee.saveandupdaterelative,
+          payload,
+        );
         // Fetch updated family members
         console.log("Saved Responsive data:", saveResponse);
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -1806,10 +1983,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -1817,24 +1995,36 @@ export default function BookingScreen({
         }
         setFamilyMembers(familyList);
         setToastMessageMed({
-          title: isEditMode && editingMember ? "Family Member Updated" : "Family Member Added",
-          subtitle: saveResponse?.data?.message || (isEditMode && editingMember ? "Updated successfully!" : "Added successfully!"),
-          type: "success"
+          title:
+            isEditMode && editingMember
+              ? "Family Member Updated"
+              : "Family Member Added",
+          subtitle:
+            saveResponse?.data?.message ||
+            (isEditMode && editingMember
+              ? "Updated successfully!"
+              : "Added successfully!"),
+          type: "success",
         });
-        setShowToastMed(true);
+        // setShowToastMed(true);
       } catch (error) {
-        let errorMsg = 'Something went wrong';
-        if (error && typeof error === 'object') {
-          if ('response' in error && error.response && error.response.data && error.response.data.message) {
+        let errorMsg = "Something went wrong";
+        if (error && typeof error === "object") {
+          if (
+            "response" in error &&
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+          ) {
             errorMsg = error.response.data.message;
-          } else if ('message' in error) {
+          } else if ("message" in error) {
             errorMsg = error.message;
           }
         }
         setToastMessageMed({
           title: "Save Failed",
           subtitle: errorMsg,
-          type: "error"
+          type: "error",
         });
         setShowToastMed(true);
         return;
@@ -1842,7 +2032,9 @@ export default function BookingScreen({
     } else {
       // No changes, just use existing data
       if (relationId !== 0) {
-        const response = await axiosClient.get(ApiRoutes.Employee.GetPatientRelations(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.GetPatientRelations(patientId),
+        );
         console.log("Updated family members response:", response);
         let familyList = [];
         if (Array.isArray(response)) {
@@ -1851,10 +2043,11 @@ export default function BookingScreen({
           familyList = response.data;
         }
         // Try to find the just-saved/updated member by name, age, gender
-        const match = familyList.find(m =>
-          m.fullName === fullName &&
-          String(m.age) === String(age) &&
-          m.gender === gender
+        const match = familyList.find(
+          (m) =>
+            m.fullName === fullName &&
+            String(m.age) === String(age) &&
+            m.gender === gender,
         );
         if (match && match.patientId) {
           setrelationPatientId(match.patientId);
@@ -1874,11 +2067,17 @@ export default function BookingScreen({
 
     try {
       const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${newRelationPatientId || patientId}`;
-      console.log("\uD83D\uDCE4 Razorpay Order Request:", ApiRoutes.LabOrders.RazopayOrder + query);
-      const orderRes: any = await axiosClient.get(
-        ApiRoutes.LabOrders.RazopayOrder + query
+      console.log(
+        "\uD83D\uDCE4 Razorpay Order Request:",
+        ApiRoutes.LabOrders.RazopayOrder + query,
       );
-      console.log("\uD83D\uDCE5 Razorpay Order Response:", JSON.stringify(orderRes, null, 2));
+      const orderRes: any = await axiosClient.get(
+        ApiRoutes.LabOrders.RazopayOrder + query,
+      );
+      console.log(
+        "\uD83D\uDCE5 Razorpay Order Response:",
+        JSON.stringify(orderRes, null, 2),
+      );
       if (orderRes && orderRes.isSuccess && orderRes.order_id) {
         setRazorpayOrderId(orderRes.order_id);
         setShowPayment(true);
@@ -1899,8 +2098,6 @@ export default function BookingScreen({
       setShowToastMed(true);
     }
   };
-
-
 
   const handleMedDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");
@@ -1946,7 +2143,7 @@ export default function BookingScreen({
   if (isFromMedicalFlag) {
     // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
     const content = (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -1956,33 +2153,67 @@ export default function BookingScreen({
             </TouchableOpacity>
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
             style={styles.content}
             showsVerticalScrollIndicator={false}
+            bottomOffset={10}
           >
-
             {/* Patient Details */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Patient Details</Text>
               <View style={styles.patientCard}>
                 <View style={styles.radioGroup}>
                   <TouchableOpacity
-                    style={[styles.radioOption, patientType === "self" && styles.selectedRadioOption]}
+                    style={[
+                      styles.radioOption,
+                      patientType === "self" && styles.selectedRadioOption,
+                    ]}
                     onPress={() => setPatientType("self")}
                   >
-                    <View style={[styles.customRadio, patientType === "self" && styles.customRadioSelected]}>
-                      {patientType === "self" && <View style={styles.customRadioInner} />}
+                    <View
+                      style={[
+                        styles.customRadio,
+                        patientType === "self" && styles.customRadioSelected,
+                      ]}
+                    >
+                      {patientType === "self" && (
+                        <View style={styles.customRadioInner} />
+                      )}
                     </View>
-                    <Text style={[styles.radioLabel, patientType === "self" && styles.selectedRadioLabel]}>Self Service</Text>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        patientType === "self" && styles.selectedRadioLabel,
+                      ]}
+                    >
+                      Self Service
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.radioOption, patientType === "others" && styles.selectedRadioOption]}
+                    style={[
+                      styles.radioOption,
+                      patientType === "others" && styles.selectedRadioOption,
+                    ]}
                     onPress={() => setPatientType("others")}
                   >
-                    <View style={[styles.customRadio, patientType === "others" && styles.customRadioSelected]}>
-                      {patientType === "others" && <View style={styles.customRadioInner} />}
+                    <View
+                      style={[
+                        styles.customRadio,
+                        patientType === "others" && styles.customRadioSelected,
+                      ]}
+                    >
+                      {patientType === "others" && (
+                        <View style={styles.customRadioInner} />
+                      )}
                     </View>
-                    <Text style={[styles.radioLabel, patientType === "others" && styles.selectedRadioLabel]}>For Others</Text>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        patientType === "others" && styles.selectedRadioLabel,
+                      ]}
+                    >
+                      For Others
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -2005,7 +2236,15 @@ export default function BookingScreen({
                         />
                       </TouchableOpacity>
                       {fieldErrors.relation ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {fieldErrors.relation}
+                        </Text>
                       ) : null}
                     </View>
                     <View style={styles.formField}>
@@ -2016,14 +2255,25 @@ export default function BookingScreen({
                         onChangeText={(text) => {
                           setFullName(text);
                           if (fieldErrors.fullName) {
-                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              fullName: "",
+                            }));
                           }
                         }}
                         placeholder="Enter"
                         placeholderTextColor="#999"
                       />
                       {fieldErrors.fullName ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {fieldErrors.fullName}
+                        </Text>
                       ) : null}
                     </View>
                     <View style={styles.formField}>
@@ -2042,7 +2292,15 @@ export default function BookingScreen({
                         keyboardType="numeric"
                       />
                       {fieldErrors.age ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {fieldErrors.age}
+                        </Text>
                       ) : null}
                     </View>
                     <View style={styles.formField}>
@@ -2060,7 +2318,15 @@ export default function BookingScreen({
                         />
                       </TouchableOpacity>
                       {fieldErrors.gender ? (
-                        <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {fieldErrors.gender}
+                        </Text>
                       ) : null}
                     </View>
                   </View>
@@ -2068,34 +2334,73 @@ export default function BookingScreen({
               </View>
             </View>
 
-
             {/* Service Address */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Service Address</Text>
 
               {selectedLocation ? (
-                <View style={styles.addressCard}>
-                  <View style={styles.addressInfoNew}>
-                    <Text style={styles.addressNameBold}>
-                      {userData?.fullName || "Patient Name"}
-                    </Text>
-                    <Text style={styles.addressTextNew}>
-                      {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
-                      {selectedLocation.address}
-                      {selectedLocation.landmark && `, Near ${selectedLocation.landmark}`}
-                    </Text>
+                // <View style={styles.addressCard}>
+                //   <View style={styles.addressInfoNew}>
+                //     <Text style={styles.addressNameBold}>
+                //       {userData?.fullName || "Patient Name"}
+                //     </Text>
+                //     <Text style={styles.addressTextNew}>
+                //       {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
+                //       {selectedLocation.address}
+                //       {selectedLocation.landmark && `, Near ${selectedLocation.landmark}`}
+                //     </Text>
 
+                //     <TouchableOpacity
+                //       style={styles.editAddressButtonNew}
+                //       onPress={handleViewAddress}
+                //     >
+                //       <Text style={styles.editAddressTextNew}>Edit Address</Text>
+                //     </TouchableOpacity>
+                //   </View>
+                // </View>
+
+                <View style={styles.addressCard}>
+                  <View style={styles.addressHeader}>
+                    <View style={styles.addressInfo}>
+                      <Text style={styles.addressNickname}>
+                        {selectedLocation.nickname.charAt(0).toUpperCase() +
+                          selectedLocation.nickname.slice(1)}
+                      </Text>
+                      <Text style={styles.addressText}>
+                        {selectedLocation.houseNumber &&
+                          `${selectedLocation.houseNumber}, `}
+                        {selectedLocation.address}
+                      </Text>
+                      {selectedLocation.landmark && (
+                        <Text style={styles.landmarkText}>
+                          Near {selectedLocation.landmark}
+                        </Text>
+                      )}
+                    </View>
                     <TouchableOpacity
-                      style={styles.editAddressButtonNew}
-                      onPress={handleViewAddress}
+                      style={styles.editAddressButton}
+                      onPress={handleEditAddress}
                     >
-                      <Text style={styles.editAddressTextNew}>Edit Address</Text>
+                      <Text style={styles.editAddressText}>Edit</Text>
                     </TouchableOpacity>
                   </View>
+                  <TouchableOpacity
+                    style={styles.addnewaddressButton}
+                    onPress={handleViewAddress}
+                  >
+                    <Text style={styles.AddressText}> + Add New Address</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.addressCard}>
-                  <Text style={{ color: '#999', fontSize: 12, marginBottom: 10, fontFamily: fonts.regular }}>
+                  <Text
+                    style={{
+                      color: "#999",
+                      fontSize: 12,
+                      marginBottom: 10,
+                      fontFamily: fonts.regular,
+                    }}
+                  >
                     No address found. Please add a new address.
                   </Text>
                   <TouchableOpacity
@@ -2113,9 +2418,6 @@ export default function BookingScreen({
               )}
             </View>
 
-
-
-
             {/* Medicine List */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Medicine List</Text>
@@ -2131,14 +2433,20 @@ export default function BookingScreen({
                     quantity: Number(it.quantity || 1),
                     subtitle: it.pack || it.subtitle || "",
                     description: it.description || "",
-                    cartId: it.cartId
+                    cartId: it.cartId,
                   }))}
                   onIncreaseQuantity={(id) => {
-                    const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                    const idx = cartItems.findIndex(
+                      (it: any, i: number) =>
+                        (it.medicineId ?? it.id ?? i).toString() === id,
+                    );
                     if (idx !== -1) handleIncreaseQuantity(idx);
                   }}
                   onDecreaseQuantity={(id) => {
-                    const idx = cartItems.findIndex((it: any, i: number) => (it.medicineId ?? it.id ?? i).toString() === id);
+                    const idx = cartItems.findIndex(
+                      (it: any, i: number) =>
+                        (it.medicineId ?? it.id ?? i).toString() === id,
+                    );
                     if (idx !== -1) handleDecreaseQuantity(idx);
                   }}
                   itemsTotal={itemsTotal}
@@ -2153,7 +2461,15 @@ export default function BookingScreen({
               <Text style={styles.sectionTitle}>Pricing Info</Text>
               <View style={styles.deliveryCardNew}>
                 <View style={styles.chargeRow}>
-                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>Delivery Charges</Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "#333",
+                      fontFamily: fonts.regular,
+                    }}
+                  >
+                    Delivery Charges
+                  </Text>
                   <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
                 </View>
                 {/* Local discount calculation for Pricing Info only */}
@@ -2167,10 +2483,22 @@ export default function BookingScreen({
                         marginTop: 5,
                       }}
                     >
-                      <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#333",
+                          fontFamily: fonts.regular,
+                        }}
+                      >
                         Offer Discount ({safeDiscountPercent}%)
                       </Text>
-                      <Text style={{ fontSize: 14, color: "#C15E9C", fontFamily: fonts.medium }}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: colors.primary,
+                          fontFamily: fonts.medium,
+                        }}
+                      >
                         -{"\u20B9"}
                         {medicineDiscountAmount}
                       </Text>
@@ -2184,7 +2512,9 @@ export default function BookingScreen({
                 <View style={styles.dividerSolid} />
                 <View style={[styles.chargeRow, { marginTop: 5 }]}>
                   <Text style={styles.totalLabelNew}>TO PAY</Text>
-                  <Text style={styles.totalValueNew}>₹{displayedTotal.toFixed(0)}</Text>
+                  <Text style={styles.totalValueNew}>
+                    ₹{displayedTotal.toFixed(0)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -2196,15 +2526,15 @@ export default function BookingScreen({
               <View style={styles.policyCard}>
                 <Text style={styles.policyText}>
                   Free cancellation is done more than 2 hrs before the service
-                  or if a professional isn&apos;t assigned. A fee will be charged
-                  otherwise.
+                  or if a professional isn&apos;t assigned. A fee will be
+                  charged otherwise.
                 </Text>
                 <TouchableOpacity style={styles.learnMoreButton}>
                   <Text style={styles.learnMoreText}>Learn more</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           {/* Book Now Button */}
           <View style={styles.footer}>
@@ -2308,14 +2638,16 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setSelectedRelation(relation);
-                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                      if (fieldErrors && typeof setFieldErrors === "function") {
                         setFieldErrors((prev) => ({ ...prev, relation: "" }));
                       }
                       fetchRelationDetails(relation.masterDataId);
                       setShowRelationDropdown(false);
                     }}
                   >
-                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                    <Text style={styles.dropdownOptionText}>
+                      {relation.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -2340,7 +2672,7 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setGender(genderOption);
-                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                      if (fieldErrors && typeof setFieldErrors === "function") {
                         setFieldErrors((prev) => ({ ...prev, gender: "" }));
                       }
                       setShowGenderDropdown(false);
@@ -2367,7 +2699,7 @@ export default function BookingScreen({
           )}
 
           {/* All Address View Modal */}
-          {(patientId) && (
+          {patientId && (
             <AddressSelection
               visible={addressVisible}
               patientId={patientId || 0}
@@ -2415,6 +2747,7 @@ export default function BookingScreen({
             visible={showToastMed}
             title={toastMessageMed.title}
             subtitle={toastMessageMed.subtitle}
+            type={toastMessageMed.type}
             onHide={() => setShowToastMed(false)}
             duration={3000}
           />
@@ -2456,9 +2789,10 @@ export default function BookingScreen({
             </TouchableOpacity>
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
             style={styles.content}
             showsVerticalScrollIndicator={false}
+            bottomOffset={10}
           >
             {/* Service Information */}
             <View style={styles.section}>
@@ -2466,53 +2800,70 @@ export default function BookingScreen({
               <View style={styles.serviceCard}>
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
-                  {(type !== "ambulance" && type !== "wellness") && (
-                    <Text style={styles.serviceLocation}>
-                      {isAtHome ? "AT-HOME" : "AT Lab"}
-                    </Text>
+                  {type !== "ambulance" && type !== "wellness" && (
+                    <View style={{flexDirection: 'column', gap:2}}>
+                      <Text style={styles.serviceLocation}>
+                        {isAtHome ? "AT-HOME" : "AT-LAB"}
+                      </Text>
+                      {/* <TouchableOpacity
+                        style={styles.editAddressButton1}
+                        onPress={handleEdit}
+                      >
+                        <Text style={styles.editAddressText}>Edit</Text>
+                      </TouchableOpacity> */}
+                    </View>
                   )}
                 </View>
-                {(type !== "ambulance" && type !== "wellness" && type !== "scans") && (
-                  <Text style={{ fontSize: 10, color: "#000000", fontFamily: fonts.regular }}>
-                    Report within {reportTime}
-                  </Text>
-                )}
+                {type !== "ambulance" &&
+                  type !== "wellness" &&
+                  type !== "scans" && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: "#000000",
+                        fontFamily: fonts.regular,
+                      }}
+                    >
+                      Report within {reportTime}
+                    </Text>
+                  )}
 
                 <View style={styles.serviceDivider} />
 
                 <View style={styles.serviceFooter}>
-                  {(type === "scans") && selectedDiagCenter && (<>
-                    <View style={{ alignItems: 'flex-start', marginBottom: 8 }}>
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={styles.serviceCenter}>{selectedDiagCenter.centerName}</Text>
-                        <Text style={styles.centerAddress}>{selectedDiagCenter.address}</Text>
-                        <Text style={styles.centerDistance}>{selectedDiagCenter.distanceKm?.toFixed(2)} km away</Text>
+                  {type === "scans" && selectedDiagCenter && (
+                    <>
+                      <View
+                        style={{ alignItems: "flex-start", marginBottom: 8 }}
+                      >
+                        <View style={{ marginBottom: 8 }}>
+                          <Text style={styles.serviceCenter}>
+                            {selectedDiagCenter.centerName}
+                          </Text>
+                          <Text style={styles.centerAddress}>
+                            {selectedDiagCenter.address}
+                          </Text>
+                          <Text style={styles.centerDistance}>
+                            {selectedDiagCenter.distanceKm?.toFixed(2)} km away
+                          </Text>
+                        </View>
                       </View>
-
-
-                    </View>
-
-                  </>)}
-                  {(type !== "scans") && (<>
-                    <Text style={styles.servicePrice}>
-                      {"\u20B9"}
-                      {servicePrice}
-                    </Text>
-
-                    <TouchableOpacity
-                      style={styles.editAddressButton1}
-                      onPress={handleEdit}
-                    >
-                      <Text style={styles.editAddressText}>Edit</Text>
-                    </TouchableOpacity>
-                  </>)}
-
+                    </>
+                  )}
+                  {type !== "scans" && (
+                    <>
+                      <Text style={styles.servicePrice}>
+                        {"\u20B9"}
+                        {servicePrice}
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
 
             {/* Service Address */}
-            {(type !== "scans" && type !== "wellness") && (
+            {type !== "scans" && type !== "wellness" && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Service Address</Text>
                 {selectedLocation ? (
@@ -2540,18 +2891,24 @@ export default function BookingScreen({
                       >
                         <Text style={styles.editAddressText}>Edit</Text>
                       </TouchableOpacity>
-
                     </View>
                     <TouchableOpacity
                       style={styles.addnewaddressButton}
                       onPress={handleViewAddress}
                     >
-                      <Text style={styles.AddressText}> +  Add New Address</Text>
+                      <Text style={styles.AddressText}> + Add New Address</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <View style={styles.addressCard}>
-                    <Text style={{ color: '#999', fontSize: 12, marginBottom: 0, fontFamily: fonts.regular }}>
+                    <Text
+                      style={{
+                        color: "#999",
+                        fontSize: 12,
+                        marginBottom: 0,
+                        fontFamily: fonts.regular,
+                      }}
+                    >
                       No address found. Please add a new address.
                     </Text>
                     <TouchableOpacity
@@ -2572,197 +2929,288 @@ export default function BookingScreen({
               </View>
             )}
 
-
-            {(type !== "wellness") && (<>
-              {/* Sample Pickup Date & Time */}
-              <View style={styles.section}>
-                {type === "scans" ? (
-                  <Text style={styles.sectionTitle}>
-                    Schedule Date & Time
-                  </Text>
-                ) : (
-                  <Text style={styles.sectionTitle}>
-                    Sample Pickup Date & Time
-                  </Text>
-                )}
-
-                <View style={styles.dateTimeCard}>
-                  <View style={styles.dateSection}>
-                    <Text style={styles.fieldLabel}>Service Start Date</Text>
-                    <TouchableOpacity
-                      style={styles.dateInput}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text
-                        style={[styles.dateText, !selectedDate && styles.placeholderText]}
-                      >
-                        {selectedDate ? displayDateLab(selectedDate) : "dd/mm/yyyy"}
-                      </Text>
-                      <Image
-                        source={images.icons.calendar}
-                        style={styles.calendarIcon}
-                      />
-                    </TouchableOpacity>
-                    {errors === "Please select service start date" && (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4, fontFamily: fonts.regular }}
-                      >
-                        {errors}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.timeSection}>
-                    <Text style={styles.fieldLabel}>Select Time Slot</Text>
-                    <View style={styles.timeSlotsContainer}>
-                      {labTimeSlots.map((slot, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={[
-                            styles.timeSlot,
-                            selectedTimeSlot === slot && styles.selectedTimeSlot,
-                            isSlotCompleted(slot) && { opacity: 0.5 },
-                          ]}
-                          onPress={() => {
-                            if (!isSlotCompleted(slot)) {
-                              setSelectedTimeSlot(slot);
-                              if (errors === "Please select time slot") setErrors("");
-                            }
-                          }}
-                          disabled={isSlotCompleted(slot)}
-                        >
-                          <Text
-                            style={[
-                              styles.timeSlotText,
-                              selectedTimeSlot === slot && styles.selectedTimeSlotText,
-                            ]}
-                          >
-                            {selectedTimeSlot === slot ? `${slot}` : slot}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    {errors === "Please select time slot" && (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                      >
-                        {errors}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-
-
-
-
-              {/* Patient Details */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Patient Details</Text>
-                <View style={styles.patientCard}>
-                  <View style={styles.radioGroup}>
-                    <TouchableOpacity
-                      style={[styles.radioOption, patientType === "self" && styles.selectedRadioOption]}
-                      onPress={() => setPatientType("self")}
-                    >
-                      <View style={[styles.customRadio, patientType === "self" && styles.customRadioSelected]}>
-                        {patientType === "self" && <View style={styles.customRadioInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, patientType === "self" && styles.selectedRadioLabel]}>Self Service</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.radioOption, patientType === "others" && styles.selectedRadioOption]}
-                      onPress={() => setPatientType("others")}
-                    >
-                      <View style={[styles.customRadio, patientType === "others" && styles.customRadioSelected]}>
-                        {patientType === "others" && <View style={styles.customRadioInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, patientType === "others" && styles.selectedRadioLabel]}>For Others</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {patientType === "others" && (
-                    <View style={styles.othersForm}>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Relation Type</Text>
-                        <TouchableOpacity
-                          style={styles.dropdown}
-                          onPress={() => setShowRelationDropdown(true)}
-                        >
-                          <Text style={styles.dropdownText}>
-                            {selectedRelation
-                              ? selectedRelation.name
-                              : "Select Relation"}
-                          </Text>
-                          <Image
-                            source={images.icons.edit as any}
-                            style={styles.dropdownIcon}
-                          />
-                        </TouchableOpacity>
-                        {fieldErrors.relation ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.relation}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Full Name</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={fullName}
-                          onChangeText={(text) => {
-                            setFullName(text);
-                            if (fieldErrors.fullName) {
-                              setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                            }
-                          }}
-                          placeholder="Enter"
-                          placeholderTextColor="#999"
-                        />
-                        {fieldErrors.fullName ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.fullName}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Age</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={age}
-                          onChangeText={(text) => {
-                            setAge(text);
-                            if (fieldErrors.age) {
-                              setFieldErrors((prev) => ({ ...prev, age: "" }));
-                            }
-                          }}
-                          placeholder="Enter"
-                          placeholderTextColor="#999"
-                          keyboardType="numeric"
-                        />
-                        {fieldErrors.age ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.age}</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.formField}>
-                        <Text style={styles.fieldLabel}>Gender</Text>
-                        <TouchableOpacity
-                          style={styles.dropdown}
-                          onPress={() => setShowGenderDropdown(true)}
-                        >
-                          <Text style={styles.dropdownText}>
-                            {gender || "Select"}
-                          </Text>
-                          <Image
-                            source={images.icons.edit as any}
-                            style={styles.dropdownIcon}
-                          />
-                        </TouchableOpacity>
-                        {fieldErrors.gender ? (
-                          <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>{fieldErrors.gender}</Text>
-                        ) : null}
-                      </View>
-                    </View>
+            {type !== "wellness" && (
+              <>
+                {/* Sample Pickup Date & Time */}
+                <View style={styles.section}>
+                  {type === "scans" ? (
+                    <Text style={styles.sectionTitle}>
+                      Schedule Date & Time
+                    </Text>
+                  ) : (
+                    <Text style={styles.sectionTitle}>
+                      Sample Pickup Date & Time
+                    </Text>
                   )}
+
+                  <View style={styles.dateTimeCard}>
+                    <View style={styles.dateSection}>
+                      <Text style={styles.fieldLabel}>Service Start Date</Text>
+                      <TouchableOpacity
+                        style={styles.dateInput}
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <Text
+                          style={[
+                            styles.dateText,
+                            !selectedDate && styles.placeholderText,
+                          ]}
+                        >
+                          {selectedDate
+                            ? displayDateLab(selectedDate)
+                            : "dd/mm/yyyy"}
+                        </Text>
+                        <Image
+                          source={images.icons.calendar}
+                          style={styles.calendarIcon}
+                        />
+                      </TouchableOpacity>
+                      {errors === "Please select service start date" && (
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                            fontFamily: fonts.regular,
+                          }}
+                        >
+                          {errors}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.timeSection}>
+                      <Text style={styles.fieldLabel}>Select Time Slot</Text>
+                      <View style={styles.timeSlotsContainer}>
+                        {labTimeSlots.map((slot, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.timeSlot,
+                              selectedTimeSlot === slot &&
+                                styles.selectedTimeSlot,
+                              isSlotCompleted(slot) && { opacity: 0.5 },
+                            ]}
+                            onPress={() => {
+                              if (!isSlotCompleted(slot)) {
+                                setSelectedTimeSlot(slot);
+                                if (errors === "Please select time slot")
+                                  setErrors("");
+                              }
+                            }}
+                            disabled={isSlotCompleted(slot)}
+                          >
+                            <Text
+                              style={[
+                                styles.timeSlotText,
+                                selectedTimeSlot === slot &&
+                                  styles.selectedTimeSlotText,
+                              ]}
+                            >
+                              {selectedTimeSlot === slot ? `${slot}` : slot}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {errors === "Please select time slot" && (
+                        <Text
+                          style={{
+                            color: "#ff0000",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
+                        >
+                          {errors}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </>)}
+
+                {/* Patient Details */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Patient Details</Text>
+                  <View style={styles.patientCard}>
+                    <View style={styles.radioGroup}>
+                      <TouchableOpacity
+                        style={[
+                          styles.radioOption,
+                          patientType === "self" && styles.selectedRadioOption,
+                        ]}
+                        onPress={() => setPatientType("self")}
+                      >
+                        <View
+                          style={[
+                            styles.customRadio,
+                            patientType === "self" &&
+                              styles.customRadioSelected,
+                          ]}
+                        >
+                          {patientType === "self" && (
+                            <View style={styles.customRadioInner} />
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.radioLabel,
+                            patientType === "self" && styles.selectedRadioLabel,
+                          ]}
+                        >
+                          Self Service
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.radioOption,
+                          patientType === "others" &&
+                            styles.selectedRadioOption,
+                        ]}
+                        onPress={() => setPatientType("others")}
+                      >
+                        <View
+                          style={[
+                            styles.customRadio,
+                            patientType === "others" &&
+                              styles.customRadioSelected,
+                          ]}
+                        >
+                          {patientType === "others" && (
+                            <View style={styles.customRadioInner} />
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.radioLabel,
+                            patientType === "others" &&
+                              styles.selectedRadioLabel,
+                          ]}
+                        >
+                          For Others
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {patientType === "others" && (
+                      <View style={styles.othersForm}>
+                        <View style={styles.formField}>
+                          <Text style={styles.fieldLabel}>Relation Type</Text>
+                          <TouchableOpacity
+                            style={styles.dropdown}
+                            onPress={() => setShowRelationDropdown(true)}
+                          >
+                            <Text style={styles.dropdownText}>
+                              {selectedRelation
+                                ? selectedRelation.name
+                                : "Select Relation"}
+                            </Text>
+                            <Image
+                              source={images.icons.edit as any}
+                              style={styles.dropdownIcon}
+                            />
+                          </TouchableOpacity>
+                          {fieldErrors.relation ? (
+                            <Text
+                              style={{
+                                color: "#ff0000",
+                                fontSize: 13,
+                                marginTop: 4,
+                              }}
+                            >
+                              {fieldErrors.relation}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.formField}>
+                          <Text style={styles.fieldLabel}>Full Name</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={fullName}
+                            onChangeText={(text) => {
+                              setFullName(text);
+                              if (fieldErrors.fullName) {
+                                setFieldErrors((prev) => ({
+                                  ...prev,
+                                  fullName: "",
+                                }));
+                              }
+                            }}
+                            placeholder="Enter"
+                            placeholderTextColor="#999"
+                          />
+                          {fieldErrors.fullName ? (
+                            <Text
+                              style={{
+                                color: "#ff0000",
+                                fontSize: 13,
+                                marginTop: 4,
+                              }}
+                            >
+                              {fieldErrors.fullName}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.formField}>
+                          <Text style={styles.fieldLabel}>Age</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={age}
+                            onChangeText={(text) => {
+                              setAge(text);
+                              if (fieldErrors.age) {
+                                setFieldErrors((prev) => ({
+                                  ...prev,
+                                  age: "",
+                                }));
+                              }
+                            }}
+                            placeholder="Enter"
+                            placeholderTextColor="#999"
+                            keyboardType="numeric"
+                          />
+                          {fieldErrors.age ? (
+                            <Text
+                              style={{
+                                color: "#ff0000",
+                                fontSize: 13,
+                                marginTop: 4,
+                              }}
+                            >
+                              {fieldErrors.age}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.formField}>
+                          <Text style={styles.fieldLabel}>Gender</Text>
+                          <TouchableOpacity
+                            style={styles.dropdown}
+                            onPress={() => setShowGenderDropdown(true)}
+                          >
+                            <Text style={styles.dropdownText}>
+                              {gender || "Select"}
+                            </Text>
+                            <Image
+                              source={images.icons.edit as any}
+                              style={styles.dropdownIcon}
+                            />
+                          </TouchableOpacity>
+                          {fieldErrors.gender ? (
+                            <Text
+                              style={{
+                                color: "#ff0000",
+                                fontSize: 13,
+                                marginTop: 4,
+                              }}
+                            >
+                              {fieldErrors.gender}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </>
+            )}
             {/* Order Summary */}
 
             <View style={styles.section}>
@@ -2775,10 +3223,22 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "#333",
+                      fontFamily: fonts.regular,
+                    }}
+                  >
                     Item Price
                   </Text>
-                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.medium }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "#333",
+                      fontFamily: fonts.medium,
+                    }}
+                  >
                     {"\u20B9"}
                     {servicePrice}
                   </Text>
@@ -2790,10 +3250,22 @@ export default function BookingScreen({
                     marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 14, color: "#333", fontFamily: fonts.regular }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: colors.primaryText,
+                      fontFamily: fonts.regular,
+                    }}
+                  >
                     Offer Discount ({discountPercent}%)
                   </Text>
-                  <Text style={{ fontSize: 14, color: "#C15E9C", fontFamily: fonts.medium }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: colors.primary,
+                      fontFamily: fonts.medium,
+                    }}
+                  >
                     -{"\u20B9"}
                     {discountAmount}
                   </Text>
@@ -2812,7 +3284,11 @@ export default function BookingScreen({
                   }}
                 >
                   <Text
-                    style={{ fontSize: 14, color: "#333", fontFamily: fonts.bold }}
+                    style={{
+                      fontSize: 14,
+                      color: "#333",
+                      fontFamily: fonts.bold,
+                    }}
                   >
                     To Pay
                   </Text>
@@ -2835,23 +3311,20 @@ export default function BookingScreen({
               )} */}
             </View>
 
-
-
             <View style={styles.cancellsection}>
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.policyCard}>
                 <Text style={styles.policyText}>
                   Free cancellation is done more than 2 hrs before the service
-                  or if a professional isn&apos;t assigned. A fee will be charged
-                  otherwise.
+                  or if a professional isn&apos;t assigned. A fee will be
+                  charged otherwise.
                 </Text>
                 <TouchableOpacity style={styles.learnMoreButton}>
                   <Text style={styles.learnMoreText}>Learn more</Text>
                 </TouchableOpacity>
               </View>
             </View>
-
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           {/* Book Now Button */}
           {type === "scans" ? (
@@ -2887,8 +3360,6 @@ export default function BookingScreen({
             </View>
           )}
 
-
-
           {/* Relation Type Dropdown Modal */}
           <Modal
             visible={showRelationDropdown}
@@ -2907,14 +3378,16 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setSelectedRelation(relation);
-                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                      if (fieldErrors && typeof setFieldErrors === "function") {
                         setFieldErrors((prev) => ({ ...prev, relation: "" }));
                       }
                       fetchRelationDetails(relation.masterDataId);
                       setShowRelationDropdown(false);
                     }}
                   >
-                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                    <Text style={styles.dropdownOptionText}>
+                      {relation.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -2939,7 +3412,7 @@ export default function BookingScreen({
                     style={styles.dropdownOption}
                     onPress={() => {
                       setGender(genderOption);
-                      if (fieldErrors && typeof setFieldErrors === 'function') {
+                      if (fieldErrors && typeof setFieldErrors === "function") {
                         setFieldErrors((prev) => ({ ...prev, gender: "" }));
                       }
                       setShowGenderDropdown(false);
@@ -2981,7 +3454,11 @@ export default function BookingScreen({
             <SafeAreaView style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
-                amount={isFromMedicalFlag ? Math.round(displayedTotal * 100) : totalAmount * 100}
+                amount={
+                  isFromMedicalFlag
+                    ? Math.round(displayedTotal * 100)
+                    : totalAmount * 100
+                }
                 name={userData?.fullName || ""}
                 email={userData?.emailAddress || ""}
                 contact={userData?.mobileNo || ""}
@@ -3002,16 +3479,14 @@ export default function BookingScreen({
                       razorpayPaymentId: data.razorpay_payment_id || "",
                       razorpaySignature: data.razorpay_signature || "",
                     });
-                  }
-                  else if (type === "scans") {
+                  } else if (type === "scans") {
                     saveBookNowScan({
                       razorpayOrderId:
                         data.razorpay_order_id || razorpayOrderId || "",
                       razorpayPaymentId: data.razorpay_payment_id || "",
                       razorpaySignature: data.razorpay_signature || "",
                     });
-                  }
-                  else if (type === "wellness") {
+                  } else if (type === "wellness") {
                     saveWellnessOrder({
                       razorpayOrderId:
                         data.razorpay_order_id || razorpayOrderId || "",
@@ -3077,7 +3552,15 @@ export default function BookingScreen({
               mode="date"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={handleLabDateChange}
-              minimumDate={isTodayAvailable ? new Date() : (() => { let d = new Date(); d.setDate(d.getDate() + 1); return d; })()}
+              minimumDate={
+                isTodayAvailable
+                  ? new Date()
+                  : (() => {
+                      let d = new Date();
+                      d.setDate(d.getDate() + 1);
+                      return d;
+                    })()
+              }
             />
           )}
 
@@ -3143,21 +3626,21 @@ export default function BookingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(10),
+    // paddingTop: getResponsiveSpacing(5),
     paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -3177,14 +3660,15 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: getResponsiveSpacing(0),
+    // backgroundColor: '#fff',
   },
   paydiacontainer: {
     marginTop: getResponsiveSpacing(2),
   },
   paytext: {
     fontSize: 11,
-    color: '#C15E9C',
-    fontFamily: fonts.medium
+    color: colors.primary,
+    fontFamily: fonts.medium,
   },
 
   cancellsection: {
@@ -3193,10 +3677,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    color: "#000000",
+    color: colors.primaryText,
     marginBottom: getResponsiveSpacing(5),
     marginTop: getResponsiveSpacing(10),
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   serviceCard: {
     backgroundColor: "#fff",
@@ -3223,13 +3707,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000000",
     flex: 1,
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   serviceLocation: {
     fontSize: 11,
     fontWeight: "400",
-    color: "#000",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   serviceDivider: {
     height: 1,
@@ -3243,23 +3727,23 @@ const styles = StyleSheet.create({
   },
   servicePrice: {
     fontSize: 16,
-    color: '#000',
-    fontFamily: fonts.semiBold
+    color: colors.primaryText,
+    fontWeight: "700",
   },
   serviceCenter: {
     fontSize: 15,
     color: colors.primary,
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   centerAddress: {
     fontSize: 12,
-    color: '#555',
+    color: colors.primaryText,
     marginTop: 2,
     fontFamily: fonts.regular,
   },
   centerDistance: {
     fontSize: 11,
-    color: '#888',
+    color: colors.primaryText,
     marginTop: 2,
     fontFamily: fonts.regular,
   },
@@ -3287,7 +3771,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#333",
     marginBottom: 0,
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   dateInput: {
     flexDirection: "row",
@@ -3298,12 +3782,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    marginTop: 6,
     backgroundColor: "#fff",
   },
   dateText: {
     fontSize: 13,
     color: "#333",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   placeholderText: {
     color: "#999",
@@ -3320,6 +3805,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginTop: 6,
   },
   timeSlot: {
     paddingHorizontal: 12,
@@ -3328,17 +3814,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#fff",
-    color: "#333",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   selectedTimeSlot: {
-    backgroundColor: "#C15E9C",
-    borderColor: "#C15E9C",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   timeSlotText: {
     fontSize: 11,
-    color: "#333",
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   selectedTimeSlotText: {
     color: "#fff",
@@ -3386,24 +3872,24 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#D9DEE6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#D9DEE6",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 10,
   },
   customRadioSelected: {
-    borderColor: '#C15E9C',
+    borderColor: colors.primary,
   },
   customRadioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#C15E9C',
+    backgroundColor: colors.primary,
   },
   radioLabel: {
     fontSize: 13,
     color: "#2B2B2B",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   othersForm: {
     //marginTop: 16,
@@ -3412,17 +3898,17 @@ const styles = StyleSheet.create({
     // borderTopColor: "#f0f0f0",
   },
   selectedRadioOption: {
-    borderColor: '#C15E9C',
+    borderColor: colors.primary,
   },
   selectedRadioLabel: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   medicineListCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#dbdbdb",
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   deliveryCardNew: {
     backgroundColor: "#fff",
@@ -3433,34 +3919,34 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(5),
   },
   chargeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   chargeLabel: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(14),
-    color: '#3B2032',
+    color: "#3B2032",
   },
   chargeValue: {
     fontFamily: fonts.bold,
     fontSize: getResponsiveFontSize(14),
-    color: '#000',
+    color: "#000",
   },
   dividerSolid: {
     height: 1,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
     marginVertical: 12,
   },
   totalLabelNew: {
     fontFamily: fonts.bold,
     fontSize: getResponsiveFontSize(14),
-    color: '#000',
+    color: "#000",
   },
   totalValueNew: {
     fontFamily: fonts.bold,
     fontSize: getResponsiveFontSize(18),
-    color: '#C15E9C',
+    color: colors.primary,
   },
   addressInfoNew: {
     flex: 1,
@@ -3468,27 +3954,27 @@ const styles = StyleSheet.create({
   addressNameBold: {
     fontSize: 16,
     fontFamily: fonts.bold,
-    color: '#3B2032',
+    color: colors.primaryText,
     marginBottom: 6,
   },
   addressTextNew: {
     fontSize: 13,
-    color: '#000',
+    color: colors.primaryText,
     lineHeight: 18,
     fontFamily: fonts.regular,
     marginBottom: 12,
   },
   editAddressButtonNew: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 15,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#C15E9C',
+    borderColor: colors.primary,
   },
   editAddressTextNew: {
     fontSize: 13,
-    color: '#C15E9C',
+    color: colors.primary,
     fontFamily: fonts.medium,
   },
   formField: {
@@ -3504,7 +3990,7 @@ const styles = StyleSheet.create({
     color: "#333",
     backgroundColor: "#fff",
     fontSize: 13,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   dropdown: {
     flexDirection: "row",
@@ -3521,7 +4007,7 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 13,
     color: "#333",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   dropdownIcon: {
     width: 16,
@@ -3534,7 +4020,7 @@ const styles = StyleSheet.create({
     color: "#666",
     lineHeight: 20,
     marginBottom: 8,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   learnMoreButton: {
     alignSelf: "flex-start",
@@ -3544,7 +4030,7 @@ const styles = StyleSheet.create({
     color: "#0881FC",
     fontWeight: "500",
     textDecorationLine: "underline",
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   addressCard: {
     backgroundColor: "#fff",
@@ -3565,56 +4051,59 @@ const styles = StyleSheet.create({
   },
   addressNickname: {
     fontSize: 14,
-    color: "#C15E9C",
+    color: colors.primary,
     marginBottom: 4,
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   addressText: {
     fontSize: 12,
     color: "#000",
     lineHeight: 18,
     marginBottom: 4,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   landmarkText: {
     fontSize: 12,
     color: "#666",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   editAddressButton: {
     paddingHorizontal: 12,
     paddingVertical: 2,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#C15E9C",
+    borderColor: colors.primary,
   },
   addnewaddressButton: {
     borderRadius: 8,
-    width: "55%",
+    width: "45%",
     borderColor: "#0580FA",
-    borderStyle: "solid",
     borderWidth: 1,
     paddingVertical: 4,
     paddingHorizontal: 12,
     textAlign: "center",
     marginTop: 12,
     height: 30,
+    justifyContent: "center",
   },
   AddressText: {
-    color: "#0580FA", fontSize: 13, fontFamily: fonts.medium
+    color: "#0580FA",
+    fontSize: 13,
+    fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   editAddressButton1: {
     paddingHorizontal: 12,
     paddingVertical: 2,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#C15E9C",
+    borderColor: colors.primary,
   },
   editAddressText: {
     fontSize: 12,
-    color: "#C15E9C",
+    color: colors.primary,
     fontWeight: "500",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   footer: {
     padding: 20,
@@ -3645,7 +4134,7 @@ const styles = StyleSheet.create({
   dropdownOptionText: {
     fontSize: 14,
     color: "#333",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   razorpaycloseButton: {
     position: "relative",

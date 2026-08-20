@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+// import { StatusBar } from "expo-status-bar";
 import React, {
   useCallback,
   useEffect,
@@ -10,9 +10,9 @@ import React, {
 } from "react";
 import { useUser } from "../shared/context/UserContext";
 import * as SecureStore from "expo-secure-store";
-import { Dimensions } from "react-native";
+import { ActivityIndicator, Dimensions, StatusBar } from "react-native";
 import * as signalR from "@microsoft/signalr";
-import { AppState } from 'react-native';
+import { AppState } from "react-native";
 // Carousel slider for orders
 
 import {
@@ -29,12 +29,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RenderHtml, { RenderHTML } from "react-native-render-html";
 import OrderDetails from "../features/myorders/OrderDetails";
 import { Button } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
-import commonStyles, { colors } from "../shared/styles/commonStyles";
+import commonStyles, {
+  colors,
+  customTagsStyles,
+  statusColors,
+  statusTextColors,
+} from "../shared/styles/commonStyles";
 import axiosClient from "../../src/api/axiosClient";
 import { ArticlesApi } from "../../src/api/employee/employee";
 import ApiRoutes from "../../src/api/employee/employee";
@@ -45,15 +54,16 @@ import {
 } from "../shared/utils/responsive";
 import { fontStyles, fonts } from "../shared/styles/fonts";
 const SCREEN_WIDTH = Dimensions.get("window").width;
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserStore } from "@/src/store/UserStore";
+import WebView from "react-native-webview";
+import { domVisitors } from "@/src/constants/constants";
 
 const { width } = Dimensions.get("window");
 const guidelineBaseWidth = 375;
 const scale = (size: number) => (width / guidelineBaseWidth) * size;
 
 export default function HomeScreen() {
-
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
@@ -65,11 +75,10 @@ export default function HomeScreen() {
   // console.log("Home Screen patientId:", patientId);
   // Render wellness program cards
 
-
-
-
   //console.log("Home Screen patientId:", patientId);
   const [wellnessall, setWellnessall] = useState<any[]>([]);
+  const [enrolledWellness, setEnrolledWellness] = useState();
+
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -80,7 +89,9 @@ export default function HomeScreen() {
   // Lock the visible set of 3 orders per session
   const [lockedOrderIds, setLockedOrderIds] = useState<string[]>([]);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(
+    null,
+  );
   const [feedbackForm, setFeedbackForm] = useState({
     name: "",
     email: "",
@@ -88,12 +99,14 @@ export default function HomeScreen() {
   });
   const bottomSlideAnim = useRef(new Animated.Value(400)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const insets = useSafeAreaInsets();
 
   const fetchNotifications = async () => {
     if (!patientId) return;
     try {
-      const response: any = await axiosClient.get(ApiRoutes.Notification.GetList(patientId, "patient"));
-      console.log("Notifications API response:", response);
+      const response: any = await axiosClient.get(
+        ApiRoutes.Notification.GetList(patientId, "patient"),
+      );
       setNotifications(response); // Set notifications in the state
     } catch (error) {
       console.log("Error fetching notifications:", error);
@@ -111,8 +124,6 @@ export default function HomeScreen() {
     };
   }, []);
 
-
-
   useEffect(() => {
     const setupSignalR = async () => {
       const token = await AsyncStorage.getItem("authToken");
@@ -120,7 +131,7 @@ export default function HomeScreen() {
 
       // Create the SignalR connection
       connectionRef.current = new signalR.HubConnectionBuilder()
-        .withUrl("https://api.curonn.com/hubs/video", {
+        .withUrl("https://api.curonnhealth.com/hubs/video", {
           accessTokenFactory: () => token || "",
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000])
@@ -147,7 +158,7 @@ export default function HomeScreen() {
         if (error) {
           console.log("⚠️ SignalR Disconnected due to error:", error);
           try {
-            await connectionRef.current!.start();  // The '!' tells TypeScript that `current` is not null
+            await connectionRef.current!.start(); // The '!' tells TypeScript that `current` is not null
             console.log("✅ Reconnected to SignalR");
           } catch (err) {
             console.log("❌ SignalR reconnect failed:", err);
@@ -176,8 +187,6 @@ export default function HomeScreen() {
     }, [patientId]),
   );
 
-
-
   useFocusEffect(
     useCallback(() => {
       if (patientId) {
@@ -188,17 +197,30 @@ export default function HomeScreen() {
 
   // Handle app state changes (background/foreground) for reconnection
   useEffect(() => {
-    const appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
-      if (nextAppState === "active" && connectionRef.current?.state === signalR.HubConnectionState.Disconnected) {
-        if (connectionRef.current) {
-          connectionRef.current.start().then(() => {
-            console.log("✅ SignalR Reconnected after app resumed");
-          }).catch((err) => {
-            console.log("❌ SignalR reconnect failed after app resumed:", err);
-          });
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextAppState) => {
+        if (
+          nextAppState === "active" &&
+          connectionRef.current?.state ===
+            signalR.HubConnectionState.Disconnected
+        ) {
+          if (connectionRef.current) {
+            connectionRef.current
+              .start()
+              .then(() => {
+                console.log("✅ SignalR Reconnected after app resumed");
+              })
+              .catch((err) => {
+                console.log(
+                  "❌ SignalR reconnect failed after app resumed:",
+                  err,
+                );
+              });
+          }
         }
-      }
-    });
+      },
+    );
 
     return () => {
       appStateSubscription.remove(); // Cleanup app state listener
@@ -224,10 +246,16 @@ export default function HomeScreen() {
 
   const renderWellnessCard = useCallback(
     ({ item, index }: { item: any; index: number }) => {
-      const bgImage = index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
+      const bgImage =
+        index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
       const isLast = index === wellnessall.length - 1;
       return (
-        <View style={[styles.featureCard, { marginRight: isLast ? 0 : 16 }]}> {/* 16px gap */}
+        <View
+          style={[
+            styles.featureCard,
+            { marginRight: isLast ? 0 : 16, borderWidth: 0 },
+          ]}
+        >
           <Image
             source={bgImage}
             style={styles.featureBackground}
@@ -240,22 +268,37 @@ export default function HomeScreen() {
             <Text style={[styles.featureTitle, { color: "#fff" }]}>
               {item.programName}
             </Text>
-            <Text style={[styles.featureSubtitle, { color: "#fff" }]}>Duration: {item.duration}</Text>
-            <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
+
+            <Text
+              style={[
+                styles.featureSubtitle,
+                { color: "#fff", opacity: item.enrolled ? 0 : 1 },
+              ]}
+            >
+              Duration: {item.duration}
+            </Text>
+            <Text
+              style={{
+                color: "#fff",
+                fontSize: 14,
+                marginBottom: 8,
+                opacity: item.enrolled ? 0 : 1,
+              }}
+            >
               ₹{item.price}
             </Text>
+
             <Button
               mode="contained"
               style={[
                 styles.featureButton,
                 {
-                  backgroundColor: "#EFBC73",
+                  backgroundColor: item.enrolled ? "#FFFFFF" : "#EFBC73",
                   height: 36,
-                  justifyContent: "center",
                 },
               ]}
               labelStyle={{
-                color: "#000",
+                color: colors.primaryText,
                 fontSize: 14,
                 fontFamily: fonts.medium,
                 lineHeight: 18,
@@ -268,11 +311,16 @@ export default function HomeScreen() {
               onPress={() => {
                 router.push({
                   pathname: "/wellnessdetails",
-                  params: { wellnessMasterId: item.wellnessMasterId || item.id }
+                  params: {
+                    wellnessMasterId: item.wellnessMasterId || item.id,
+                    enrolled: String(item.enrolled),
+                    startDate: item.startDate ?? "",
+                    endDate: item.endDate ?? "",
+                  },
                 });
               }}
             >
-              Get Now
+              {item.enrolled ? "View Details" : "Get Now"}
             </Button>
           </View>
         </View>
@@ -281,9 +329,6 @@ export default function HomeScreen() {
     [wellnessall],
   );
 
-
-
-
   // On mount/focus, lock the latest 3 Requested/Completed order IDs
   useFocusEffect(
     useCallback(() => {
@@ -291,7 +336,6 @@ export default function HomeScreen() {
       const fetchOrders = async () => {
         if (patientId) {
           const data = await fetchAllOrders(patientId, 0);
-          console.log("Fetched orders for locking:", data);
           if (isActive) {
             const sorted = (Array.isArray(data) ? data.slice() : []).sort(
               (a, b) => {
@@ -305,7 +349,10 @@ export default function HomeScreen() {
             const locked = sorted
               .filter(
                 (o) =>
-                  o.statusName === "Requested" || o.statusName === "Ongoing" || o.statusName === "Inprogress" || o.statusName === "Pending"
+                  o.statusName === "Requested" ||
+                  o.statusName === "Ongoing" ||
+                  o.statusName === "Inprogress" ||
+                  o.statusName === "Pending",
               )
               .slice(0, 3)
               .map((o) => o.orderNo?.toString?.() || o.id?.toString?.() || "");
@@ -333,6 +380,7 @@ export default function HomeScreen() {
           o.orderNo?.toString?.() || o.id?.toString?.() || "",
         ),
     );
+    // console.log('filtered orders : ', filtered);
     return filtered;
   }, [orders, lockedOrderIds, closedOrderIds]);
 
@@ -342,7 +390,8 @@ export default function HomeScreen() {
       .slice()
       .sort(
         (a, b) =>
-          new Date(b.scheduleDate).getTime() - new Date(a.scheduleDate).getTime(),
+          new Date(b.scheduleDate).getTime() -
+          new Date(a.scheduleDate).getTime(),
       )
       .slice(3);
   }, [orders]);
@@ -358,7 +407,6 @@ export default function HomeScreen() {
     useCallback(() => {
       let isActive = true;
       const fetchOrders = async () => {
-
         if (patientId) {
           const data = await fetchAllOrders(patientId);
           if (isActive) {
@@ -457,32 +505,12 @@ export default function HomeScreen() {
 
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
     const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
-     const duration = item.duration ? `${item.duration}` : "";
+    const duration = item.duration ? `${item.duration}` : "";
     const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
     // Status display
     const status =
-      item.statusName === "Requested"
-        ? "Pending"
-        : item.statusName || "N/A";
-    // Status color mapping
-    const statusColors: { [key: string]: string } = {
-      Requested: "#d0eaff",
-      Completed: "#ccface",
-      Cancelled: "#ffd8d5",
-      Inprogress: "#f8d7a7",
-      Ongoing: "#f7cdff",
-      Pending: "#ffeeba",
-      Rescheduled: "#bbecf3",
-    };
-    const statusTextColors: { [key: string]: string } = {
-      Requested: "#006cc5",
-      Completed: "#4CAF50",
-      Cancelled: "#F44336",
-      Inprogress: "#FF9800",
-      Ongoing: "#9C27B0",
-      Pending: "#9e7600",
-      Rescheduled: "#00BCD4",
-    };
+      item.statusName === "Requested" ? "Pending" : item.statusName || "N/A";
+
     // Normalize status key for color mapping
     const statusKey =
       item.statusName === "Requested" ? "Requested" : item.statusName || "";
@@ -547,8 +575,8 @@ export default function HomeScreen() {
             setSelectedOrderDetails({
               ...item,
               masterId: item.masterId || item.id,
-              orderType: item.orderType || '',
-              statusName: item.statusName || item.title || ''
+              orderType: item.orderType || "",
+              statusName: item.statusName || item.title || "",
             });
             setOrderDetailsModalVisible(true);
           }}
@@ -559,9 +587,7 @@ export default function HomeScreen() {
               alignItems: "center",
               marginBottom: 3,
             }}
-          >
-
-          </View>
+          ></View>
           <View
             style={{
               flexDirection: "row",
@@ -573,7 +599,7 @@ export default function HomeScreen() {
               style={{
                 fontSize: 14,
                 lineHeight: 19,
-                color: "#C15E9D",
+                color: colors.primaryText,
                 fontFamily: fonts.bold,
               }}
             >
@@ -581,13 +607,19 @@ export default function HomeScreen() {
               {category}
             </Text>
           </View>
-          {duration ? ( <View style={styles.categoryrow}><Text style={styles.categorytitle1}>Duration: {duration}</Text></View>
-                         ):(
-                           <View style={styles.categoryrow}>
-                          <Text style={styles.categorytitle}>{createdOn}{timeSlot} </Text>
-                        </View>
-                         )}
-         
+          {duration ? (
+            <View style={styles.categoryrow}>
+              <Text style={styles.categorytitle1}>Duration: {duration}</Text>
+            </View>
+          ) : (
+            <View style={styles.categoryrow}>
+              <Text style={styles.categorytitle}>
+                {createdOn}
+                {timeSlot}{" "}
+              </Text>
+            </View>
+          )}
+
           <View
             style={{
               flexDirection: "row",
@@ -609,7 +641,7 @@ export default function HomeScreen() {
             >
               <Text
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   color: statusTxtColor,
                   fontFamily: fonts.regular,
                 }}
@@ -638,7 +670,7 @@ export default function HomeScreen() {
                         borderRadius: 4,
                         marginHorizontal: 3,
                         backgroundColor:
-                          idx === activeOrderIndex ? "#C15E9D" : "#ccc",
+                          idx === activeOrderIndex ? "#707070" : "#ccc",
                       }}
                     />
                   ),
@@ -661,15 +693,18 @@ export default function HomeScreen() {
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-            n.notificationId === notificationId ? { ...n, isRead: true } : n
-          )
-          : prev
+              n.notificationId === notificationId ? { ...n, isRead: true } : n,
+            )
+          : prev,
       );
 
       // Call the backend API to mark the notification as read
-      const readnotific = await axiosClient.post(ApiRoutes.Notification.readmark(notificationId), {
-        notificationId,
-      });
+      const readnotific = await axiosClient.post(
+        ApiRoutes.Notification.readmark(notificationId),
+        {
+          notificationId,
+        },
+      );
       console.log(`Notification ${notificationId} marked as read on backend`);
       console.log(`After read Notificaiton`, readnotific);
 
@@ -679,28 +714,27 @@ export default function HomeScreen() {
       }
 
       // Add a short delay before re-fetching notifications to allow backend to update
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await fetchNotifications();  // Fetch notifications after successful API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await fetchNotifications(); // Fetch notifications after successful API call
     } catch (error) {
       console.error("Failed to mark notification as read", error);
       // Optionally, revert the state change if there's an error
       setNotifications((prev: any) =>
         Array.isArray(prev)
           ? prev.map((n) =>
-            n.notificationId === notificationId ? { ...n, isRead: false } : n
-          )
-          : prev
+              n.notificationId === notificationId ? { ...n, isRead: false } : n,
+            )
+          : prev,
       );
     }
   };
 
   useEffect(() => {
-
     const fetchArticles = async () => {
       try {
-        console.log("Request URL:", ApiRoutes.ArticlesData.Allarticles);
         const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
-        console.log("Articles API response:", res);
+
+        console.log("Articles: ", res);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res)) {
           setArticles(res);
@@ -708,50 +742,75 @@ export default function HomeScreen() {
       } catch (e) {
         console.error("Failed to fetch articles", e);
       }
-    }
+    };
     fetchArticles();
-
-    const fetchWelness = async () => {
-      try {
-        console.log("Request URL:", ApiRoutes.WellnessData.GetAllwellness);
-        const res = await axiosClient.get(
-          ApiRoutes.WellnessData.GetAllwellness,
-        );
-        console.log("Wellness API response:", res.data);
-        // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
-        if (Array.isArray(res.data.items)) {
-          setWellnessall(res.data.items);
-        }
-      } catch (e) {
-        console.error("Failed to fetch articles", e);
-      }
-    }
-    fetchWelness();
+    fetchWellness();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === "android") {
-        const timeout = setTimeout(() => {
-          // Use React Native StatusBar API to set background color on Android
-          RNStatusBar.setBackgroundColor("#7E6781", true);
-        }, 400); // Adjust timeout as needed
-        return () => clearTimeout(timeout);
-      }
-    }, []),
-  );
+  const fetchWellness = async () => {
+    try {
+      if (!user?.eId) return;
+
+      const [wellnessResponse, enrolledResponse] = await Promise.all([
+        axiosClient.get(ApiRoutes.WellnessData.GetAllwellness),
+
+        axiosClient.get(ApiRoutes.WellnessData.getEnrolledPrograms(user.eId)),
+      ]);
+
+      const wellnessList = Array.isArray(wellnessResponse.data?.items)
+        ? wellnessResponse.data.items
+        : [];
+
+      const enrolledList = Array.isArray(enrolledResponse)
+        ? enrolledResponse
+        : enrolledResponse
+          ? [enrolledResponse]
+          : [];
+
+      const enrichedWellness = wellnessList
+        .map((wellness: any) => {
+          const wellnessId = wellness.wellnessMasterId ?? wellness.id;
+
+          const enrollment = enrolledList.find(
+            (item: any) =>
+              String(item.programId ?? item.wellnessId ?? item.id) ===
+              String(wellnessId),
+          );
+
+          return {
+            ...wellness,
+
+            enrolled: !!enrollment,
+
+            startDate: enrollment?.createdOn ?? null,
+
+            endDate: enrollment?.expiryDate ?? null,
+          };
+        })
+        .sort((a: any, b: any) => {
+          // Enrolled first
+          return Number(b.enrolled) - Number(a.enrolled);
+        });
+
+      setWellnessall(enrichedWellness);
+    } catch (error) {
+      console.error("Failed to fetch wellness programs", error);
+
+      setWellnessall([]);
+    }
+  };
 
   // Handle status bar when notification modal opens/closes
-  useEffect(() => {
-    console.log("Home Page data Started");
-    // if (notificationVisible) {
-    //   StatusBar.setBarStyle('dark-content', true);
-    //   StatusBar.setBackgroundColor('#fff', true);
-    // } else {
-    //   StatusBar.setBarStyle('light-content', true);
-    //   StatusBar.setBackgroundColor('transparent', true);
-    // }
-  }, [notificationVisible]);
+  // useEffect(() => {
+  // console.log("Home Page data Started");
+  // if (notificationVisible) {
+  //   StatusBar.setBarStyle('dark-content', true);
+  //   StatusBar.setBackgroundColor('#fff', true);
+  // } else {
+  //   StatusBar.setBarStyle('light-content', true);
+  //   StatusBar.setBackgroundColor('transparent', true);
+  // }
+  // }, [notificationVisible]);
 
   // Dummy services data (would come from API)
   const services = useMemo(
@@ -863,6 +922,7 @@ export default function HomeScreen() {
             style={styles.serviceImage}
             accessibilityLabel={`${item.title} icon`}
           />
+          {/* <item.image width={60} height={60} style={styles.serviceImage} /> */}
           {/* {typeof item.image === "string" ? (
             <Image
               source={item.image }
@@ -873,19 +933,12 @@ export default function HomeScreen() {
             <item.image width={60} height={60} style={styles.serviceImage} />
           )} */}
 
-          <View style={styles.arrowContainer}>
-            {/* <IconButton
-              icon="arrow-right"
-              size={20}
-              iconColor="#6200ee"
-              style={styles.rotatedArrow}
-              accessibilityLabel="Navigate to service"
-            /> */}
+          {/* <View style={styles.arrowContainer}>
             <images.home.arrow_card
               width={getResponsiveSpacing(40)}
               height={getResponsiveSpacing(40)}
             />
-          </View>
+          </View> */}
         </View>
       </TouchableOpacity>
     ),
@@ -895,7 +948,7 @@ export default function HomeScreen() {
   const renderArticleCard = useCallback(
     ({ item }: { item: any }) => (
       <TouchableOpacity
-        style={styles.articleCard}
+        style={[styles.articleCard]}
         activeOpacity={1}
         accessibilityLabel={`${item.titleName} article`}
         accessibilityRole="button"
@@ -912,10 +965,23 @@ export default function HomeScreen() {
           accessibilityLabel={`${item.titleName}`}
         />
         <View style={styles.articleContent}>
-          <Text style={styles.articleTitle}>{item.titleName}</Text>
-          <Text style={styles.articleExcerpt} numberOfLines={2}>
-            {item.descriptionName}
+          <Text style={styles.articleTitle} numberOfLines={2}>
+            {item.titleName}
           </Text>
+          {/* <Text style={styles.articleExcerpt} numberOfLines={2}>{htmlToText(item.descriptionName)}</Text> */}
+          {/* <View style={{backgroundColor: "yellow", paddingBottom: 3, overflow: 'hidden'}}>
+            <RenderHtml
+              source={{ html: item.descriptionName }}
+              
+              defaultTextProps={{
+                numberOfLines: 1,
+                ellipsizeMode: "tail",
+                style: styles.articleExcerpt,
+                textBreakStrategy: "balanced"
+              }}
+            />
+          </View>  */}
+
           {/* <Text style={styles.articleReadTime}>{item.readTime || ''}</Text> */}
         </View>
       </TouchableOpacity>
@@ -934,7 +1000,7 @@ export default function HomeScreen() {
   );
 
   const renderNotification = useCallback(({ item }: { item: any }) => {
-    const bgColor = item.isRead ? "#F6F6F6" : "#F4E6EE";
+    const bgColor = item.isRead ? colors.bg_rest : "#FFF6F4";
     return (
       <TouchableOpacity
         style={[styles.notificationItem, { backgroundColor: bgColor }]}
@@ -958,7 +1024,7 @@ export default function HomeScreen() {
                       : item.source === "Consulation"
                         ? "Consultation"
                         : item.source,
-            statusName: item.statusName || ""
+            statusName: item.statusName || "",
           });
           setOrderDetailsModalVisible(true);
         }}
@@ -979,31 +1045,23 @@ export default function HomeScreen() {
     );
   }, []);
 
+
   return (
     <View style={styles.container}>
-      <StatusBar style="light" animated />
-      {/* <SafeAreaView style={styles.container}> */}
-
-      {/* Background Image */}
-      <Image
-        source={images.panels.landingPage}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
-
       {/* Header */}
-      <CommonHeader
-        isHomePage={true}
-        currentLocation="Getting location..."
-        onNotificationPress={showNotificationModal}
-        onLocationChange={(location) => {
-          console.log("Location changed to:", location);
-          // You can add logic here to update the location state
-        }}
-        onRefreshNotificationCount={(cb) => {
-          notificationCountRefreshRef.current = cb;
-        }}
-      />
+      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+        <CommonHeader
+          isHomePage={true}
+          onNotificationPress={showNotificationModal}
+          onLocationChange={(location) => {
+            console.log("Location changed to:", location);
+            // You can add logic here to update the location state
+          }}
+          onRefreshNotificationCount={(cb) => {
+            notificationCountRefreshRef.current = cb;
+          }}
+        />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -1011,19 +1069,9 @@ export default function HomeScreen() {
       >
         {/* Yoga Image Section */}
         <View style={styles.yogaImageSection}>
-          {/* <Image source={images.transformLife} resizeMode="contain" /> */}
-          {/* <View style={{ alignItems: "center", paddingHorizontal: 30 }}>
-            <Text style={styles.transhead}>Transform</Text>
-            <Text style={styles.transinner}>Your Life</Text>
-            <Text style={styles.curonhealth}>with Curonn.health</Text>
-          </View> */}
           <View style={styles.textContainer}>
-            <Text style={styles.transText}>
-              {"Transform\nYour Life"}
-            </Text>
-            <Text style={styles.curonhealth}>
-              with Curonn.health
-            </Text>
+            <Text style={styles.transText}>{"Transform\nYour Life"}</Text>
+            <Text style={styles.curonhealth}>with Curonn.health</Text>
           </View>
 
           <Image
@@ -1031,8 +1079,6 @@ export default function HomeScreen() {
             style={styles.yogaImage}
             resizeMode="contain"
           />
-          {/* <images.yogaLady style={styles.yogaImage}/> */}
-          {/* <images.happyLife style={styles.yogaImage}/> */}
         </View>
 
         {/* Services Section */}
@@ -1050,15 +1096,13 @@ export default function HomeScreen() {
         {/* Lab Test Booking Section */}
         <View style={styles.section}>
           <View style={styles.featureCard}>
-            <Image
-              source={images.panels.labTest}
-              style={styles.featureBackground}
+            {/* <Image
+              source={images.home.book_labtest}
+              style={{ position: "absolute", right: 20, bottom: 0 }}
               resizeMode="cover"
-            />
+            /> */}
             <images.home.book_labtest
               style={{ position: "absolute", right: 20, bottom: 0 }}
-            // width={'60%'}
-            // height={'60%'}
             />
             <View style={styles.featureContent}>
               <Text style={[styles.featureTitle]}>Book your lab test</Text>
@@ -1068,7 +1112,7 @@ export default function HomeScreen() {
                 style={[
                   styles.featureButton,
                   {
-                    backgroundColor: "#5479F7",
+                    backgroundColor: colors.primary,
                     height: 36,
                     justifyContent: "center",
                   },
@@ -1092,16 +1136,37 @@ export default function HomeScreen() {
           </View>
         </View>
 
-
+        {/* Wellness Program Section */}
+        <View style={styles.section}>
+          {wellnessall.length === 0 ? (
+            <View style={{ padding: 24, alignItems: "center" }}>
+              {/* <Text style={{ color: "#ff0000", fontSize: 16 }}>
+                Data is not available
+              </Text> */}
+              <ActivityIndicator size={24} color={colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={wellnessall}
+              renderItem={renderWellnessCard}
+              keyExtractor={(item, idx) =>
+                item.wellnessMasterId?.toString?.() || idx.toString()
+              }
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 0 }}
+            />
+          )}
+        </View>
 
         {/* Ambulance Booking Section */}
         <View style={styles.section}>
           <View style={styles.ambulanceCard}>
-            <Image
+            {/* <Image
               source={images.panels.ambulance}
               style={styles.ambulanceBackground}
               resizeMode="cover"
-            />
+            /> */}
             <View style={styles.ambulanceContent}>
               {/* <Image
                 source={images.ambulance}
@@ -1146,35 +1211,13 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Wellness Program Section */}
-        <View style={styles.section}>
-          {wellnessall.length === 0 ? (
-            <View style={{ padding: 24, alignItems: "center" }}>
-              <Text style={{ color: "#ff0000", fontSize: 16 }}>
-                Data is not available
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={wellnessall}
-              renderItem={renderWellnessCard}
-              keyExtractor={(item, idx) =>
-                item.wellnessMasterId?.toString?.() || idx.toString()
-              }
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingVertical: 0 }}
-            />
-          )}
-        </View>
-
         {/* Health Articles Section */}
         <View style={styles.section}>
           <View style={styles.divider}>
             <Text
               style={[
                 styles.dividerText,
-                { color: colors.white, fontWeight: "600" },
+                { color: colors.primaryText, fontWeight: "700" },
               ]}
             >
               Health Articles
@@ -1193,48 +1236,42 @@ export default function HomeScreen() {
         </View>
 
         {/* FAQ & Feedback Section */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text
             style={[
               styles.sectionTitle,
-              { color: "#ffffff", fontWeight: "600" },
+              { color: colors.primaryText, fontWeight: "700" },
             ]}
           >
             You can also
           </Text>
           <View style={styles.actionButtons}>
-            {/* <Button
+           
+            <Button
               mode="outlined"
-              style={[styles.actionButton, { backgroundColor: "white" }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: "white", borderWidth: 0 },
+              ]}
               labelStyle={{
                 color: "black",
                 justifyContent: "flex-start",
                 fontSize: 14,
                 fontWeight: "700",
               }}
-              onPress={() => showBottomModal("faq")}
-            >
-              FAQs
-            </Button> */}
-            <Button
-              mode="outlined"
-              style={[styles.actionButton, { backgroundColor: "white" }]}
-              labelStyle={{
-                color: "black",
-                justifyContent: "flex-start",
-                fontSize: 14,
-                fontFamily: fonts.semiBold,
-              }}
               onPress={() => showBottomModal("feedback")}
             >
               Send us Feedback
             </Button>
           </View>
-        </View>
+        </View> */}
 
         {/* Final Quote Section */}
         <View style={styles.quoteSection}>
-          <Image source={images.panels.happyLife} />
+          <Text style={styles.quoteText}>happy life</Text>
+          <Text style={styles.quoteSubtitle}>
+            Prevention ❤️ Is better than Cure
+          </Text>
         </View>
       </ScrollView>
 
@@ -1275,7 +1312,7 @@ export default function HomeScreen() {
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
                 e.nativeEvent.contentOffset.x /
-                (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
+                  (SCREEN_WIDTH * 0.85 + SCREEN_WIDTH * 0.075 * 2),
               );
               setActiveOrderIndex(idx);
             }}
@@ -1303,7 +1340,7 @@ export default function HomeScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "#fff",
+            backgroundColor: colors.bg_rest,
             borderRadius: 0,
             justifyContent: "flex-start",
           }}
@@ -1312,7 +1349,7 @@ export default function HomeScreen() {
             <View
               style={{
                 flexDirection: "row",
-                alignItems: "center",
+                alignItems: "flex-start",
                 justifyContent: "space-between",
                 padding: 16,
                 borderBottomWidth: 1,
@@ -1321,7 +1358,7 @@ export default function HomeScreen() {
             >
               <Text
                 style={styles.articletitle}
-                numberOfLines={2}
+                // numberOfLines={2}
                 ellipsizeMode="tail"
               >
                 {selectedArticle?.titleName}
@@ -1355,9 +1392,19 @@ export default function HomeScreen() {
                   />
                   {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
                   <View style={styles.articalcontentdata}>
-                    <Text style={styles.descriptiondata}>
+                    {/* <Text style={styles.descriptiondata}>
                       {selectedArticle.descriptionName}
-                    </Text>
+                    </Text> */}
+                    <RenderHTML
+                      contentWidth={width}
+                      source={{ html: selectedArticle.descriptionName }}
+                      enableCSSInlineProcessing={true}
+                      enableUserAgentStyles={true}
+                      ignoredStyles={["backgroundColor"]}
+                      ignoredDomTags={["br"]}
+                      domVisitors={domVisitors}
+                      tagsStyles={customTagsStyles}
+                    />
                   </View>
                   {/* If you have more fields, render them here */}
                 </>
@@ -1483,10 +1530,10 @@ export default function HomeScreen() {
       <Modal
         visible={notificationVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        // presentationStyle="pageSheet"
         onRequestClose={hideNotificationModal}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg_rest }}>
           <TouchableOpacity
             style={styles.notificationModalBackdrop}
             onPress={hideNotificationModal}
@@ -1548,10 +1595,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     ...commonStyles.container_layout,
-    // flex: 1,
-    // paddingTop: 0,
+    paddingTop: 0,
     paddingBottom: 0,
-    backgroundColor: "#7E6781",
+    backgroundColor: colors.bg_primary,
+  },
+  headerContainer: {
+    // zIndex: 1,
+    width: "100%",
+    // paddingTop: getResponsiveSpacing(10),
   },
   backgroundImage: {
     position: "absolute",
@@ -1572,25 +1623,23 @@ const styles = StyleSheet.create({
 
   transText: {
     fontSize: scale(50), // responsive font
-    color: "#fff",
+    color: "#D94A2C",
     fontFamily: fonts.bold,
     textAlign: "center",
     lineHeight: scale(58), // responsive line height
     maxWidth: "95%", // prevents overflow on small screens
   },
-    categoryrow: {
+  categoryrow: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-   categorytitle: {
+  categorytitle: {
     fontSize: 12,
     color: "#333",
     fontFamily: fonts.regular,
     marginBottom: 6,
-
-    
   },
-    categorytitle1: {
+  categorytitle1: {
     fontSize: 12,
     color: "#666",
     fontFamily: fonts.regular,
@@ -1600,7 +1649,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#000",
     marginBottom: 4,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
+    width: "85%",
   },
   articalcontentdata: {
     paddingBottom: 20,
@@ -1637,13 +1687,14 @@ const styles = StyleSheet.create({
   },
   curonhealth: {
     fontSize: scale(14),
-    color: "#fff",
+    color: "#1a1a1a",
     fontFamily: fonts.regular,
     marginTop: scale(6),
     textAlign: "center",
   },
   yogaImage: {
     width: "100%",
+    padding: 0,
   },
   section: {
     width: "100%",
@@ -1655,7 +1706,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     color: "#333",
     marginBottom: getResponsiveSpacing(5),
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     marginTop: getResponsiveSpacing(10),
   },
   servicesGrid: {
@@ -1685,7 +1736,7 @@ const styles = StyleSheet.create({
     paddingTop: getResponsiveSpacing(12),
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: colors.cardsBorder,
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1697,8 +1748,8 @@ const styles = StyleSheet.create({
     //justifyContent: "space-between",
   },
   serviceCardTitle: {
-    fontSize: getResponsiveFontSize(16),
-    color: "#4B334E",
+    fontSize: getResponsiveFontSize(18),
+    color: colors.primaryText,
     flex: 1,
     fontFamily: fonts.bold,
     lineHeight: getResponsiveFontSize(20),
@@ -1730,6 +1781,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     height: 172,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.cardsBorder,
   },
   featureBackground: {
     position: "absolute",
@@ -1751,14 +1805,14 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 20,
-    color: "#4B334E",
+    color: colors.primaryText,
     lineHeight: 24,
     marginBottom: 4,
     fontFamily: fonts.bold,
   },
   featureSubtitle: {
     fontSize: 12,
-    color: "#000000",
+    color: colors.primaryText,
     marginBottom: 12,
     fontFamily: fonts.regular,
   },
@@ -1774,7 +1828,9 @@ const styles = StyleSheet.create({
     position: "relative",
     height: 140,
     // height: 172,
-    backgroundColor: "#F6EFFF",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.cardsBorder,
   },
   ambulanceBackground: {
     position: "absolute",
@@ -1804,20 +1860,20 @@ const styles = StyleSheet.create({
   },
   ambulanceTitle: {
     fontSize: 20,
-    color: "#000000",
+    color: colors.primaryText,
     lineHeight: 24,
     marginBottom: 4,
     fontFamily: fonts.bold,
   },
   ambulanceSubtitle: {
     fontSize: 12,
-    color: "black",
+    color: colors.primaryText,
     marginBottom: 12,
     fontFamily: fonts.regular,
   },
   ambulanceButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#694664",
+    backgroundColor: colors.primary,
     height: 29,
     alignItems: "center",
     justifyContent: "center",
@@ -1825,7 +1881,7 @@ const styles = StyleSheet.create({
   divider: {
     alignItems: "center",
     paddingVertical: 10,
-    paddingBottom:5
+    paddingBottom: 5,
   },
   dividerText: {
     fontSize: 16,
@@ -1833,14 +1889,25 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "flex-start",
     alignSelf: "flex-start",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   quoteSection: {
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 20,
     paddingBottom: 60,
     // backgroundColor: '#f5f5f5',
+  },
+  quoteText: {
+    fontSize: 50,
+    color: "#DDA797",
+    fontWeight: "700",
+    marginBottom: 10,
+    // lineHeight: 22,
+  },
+  quoteSubtitle: {
+    fontSize: 14,
+    color: colors.primaryText,
   },
   modalOverlay: {
     flex: 1,
@@ -1949,7 +2016,7 @@ const styles = StyleSheet.create({
   notificationModalTitle: {
     fontSize: 16,
     color: "#202427",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   notificationCloseButton: {
     padding: 4,
@@ -1996,7 +2063,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000000",
     flex: 1,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     marginBottom: 4,
   },
   notificationMessage: {
@@ -2014,35 +2081,40 @@ const styles = StyleSheet.create({
   },
   articlesContainer: {
     paddingRight: 10,
+    maxHeight: 250,
   },
   articleCard: {
     width: 280,
     backgroundColor: "#fff",
     borderRadius: 23,
+    padding: 10,
     // marginHorizontal: 10,
+    height: 220,
     marginRight: 15,
     overflow: "hidden",
   },
   articleImage: {
     width: "100%",
-    height: 150,
+    height: 130,
+    borderRadius: 23,
     resizeMode: "cover",
   },
   articleContent: {
-    padding: 16,
-    paddingTop: 12,
+    // padding: 16,
+    paddingVertical: 12,
+    // backgroundColor: 'red'
   },
   articleTitle: {
     fontSize: 16,
     color: colors.text,
     marginBottom: 5,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     lineHeight: 22,
   },
   articleExcerpt: {
     fontSize: 13,
-    color: "#000000",
-    lineHeight: 20,
+    color: colors.primaryText,
+    // lineHeight: 20,
     fontFamily: fonts.regular,
   },
   articleReadTime: {
@@ -2063,5 +2135,3 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
 });
-
-

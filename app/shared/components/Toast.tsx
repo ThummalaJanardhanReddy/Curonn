@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
+  Easing,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface ToastProps {
   visible: boolean;
@@ -13,10 +16,27 @@ interface ToastProps {
   subtitle: string;
   onHide: () => void;
   duration?: number;
-  type?: 'success' | 'error';
+  type?: "success" | "error" | "warning" | "info";
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const toastConfig = {
+  success: {
+    color: "#4BB543",
+    icon: "✓",
+  },
+  error: {
+    color: "#ff4d4f",
+    icon: "✕",
+  },
+  warning: {
+    color: "#faad14",
+    icon: "⚠",
+  },
+  info: {
+    color: "#1890ff",
+    icon: "ℹ",
+  },
+};
 
 export default function Toast(props: ToastProps) {
   const {
@@ -25,10 +45,12 @@ export default function Toast(props: ToastProps) {
     subtitle,
     onHide,
     duration = 3000,
-    type = 'success',
+    type = "success",
   } = props;
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const isHidng = useRef(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -55,21 +77,26 @@ export default function Toast(props: ToastProps) {
     } else {
       hideToast();
     }
-  }, [visible]);
+  }, [visible, duration, onHide]);
 
   const hideToast = () => {
+    if (isHidng.current) return;
+    isHidng.current = true;
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: -100,
         duration: 300,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 0,
         duration: 300,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start(() => {
+      isHidng.current = false;
       onHide();
     });
   };
@@ -77,27 +104,34 @@ export default function Toast(props: ToastProps) {
   if (!visible) return null;
 
   // Choose color and icon based on type
-  const backgroundColor = type === 'error' ? '#ff4d4f' : '#4BB543';
-  const icon = type === 'error' ? '✗' : '✓';
+  const config = toastConfig[type] || toastConfig.success;
+  const backgroundColor = config.color;
+  const icon = config.icon;
 
   return (
     <Animated.View
+      pointerEvents="box-none"
       style={[
         styles.toastContainer,
         {
           transform: [{ translateY: slideAnim }],
           opacity: opacityAnim,
+          bottom: insets.bottom + 20,
         },
       ]}
     >
       <View style={[styles.toast, { backgroundColor }]}>
         <View style={styles.toastContent}>
-          <Text style={styles.toastTitle}>{typeof title === 'string' ? title : String(title)}</Text>
-          <Text style={styles.toastSubtitle}>{typeof subtitle === 'string' ? subtitle : String(subtitle)}</Text>
+          <Text style={styles.toastTitle}>
+            {typeof title === "string" ? title : String(title)}
+          </Text>
+          <Text style={styles.toastSubtitle}>
+            {typeof subtitle === "string" ? subtitle : String(subtitle)}
+          </Text>
         </View>
-        <View style={styles.successIcon}>
+        <TouchableOpacity style={styles.successIcon} onPress={hideToast}>
           <Text style={styles.checkmark}>{icon}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -105,19 +139,19 @@ export default function Toast(props: ToastProps) {
 
 const styles = StyleSheet.create({
   toastContainer: {
-    position: 'absolute',
-    bottom: 100,
+    position: "absolute",
+    // bottom: 100,
     left: 20,
     right: 20,
     zIndex: 1000,
   },
   toast: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     borderRadius: 12,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -131,27 +165,27 @@ const styles = StyleSheet.create({
   },
   toastTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 2,
   },
   toastSubtitle: {
     fontSize: 14,
-    color: '#fff',
+    color: "#fff",
     opacity: 0.9,
   },
   successIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 12,
   },
   checkmark: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
 });

@@ -65,7 +65,7 @@ export default function TermsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.statusbar_black} />
+      {/* <StatusBar barStyle="dark-content"  backgroundColor={colors.bg_primary} /> */}
       <SafeAreaView style={commonStyles.container_layout}>
         <View style={styles.header}>
           <BackButton title='Back' onPress={handleBack} />
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   container: {
     // ...commonStyles.container_layout,
     flex: 1,
-    backgroundColor: '#F5F4F9', // colors.bg_primary,
+    backgroundColor: colors.bg_primary,
   },
   header: {
     alignItems: 'flex-start',
@@ -184,15 +184,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    color: '#000000',
+    color: colors.primaryText,
     marginBottom: 0,
     textAlign: 'left',
     marginTop: 5,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   subtitle: {
     fontSize: 13,
-    color: '#000000',
+    color: colors.primaryText,
     textAlign: 'left',
     fontFamily: fonts.regular,
   },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#000000',
+    color: colors.primaryText,
     marginTop: 12,
     marginBottom: 6,
     textAlign: 'left',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 13,
     lineHeight: 22,
-    color: '#000000',
+    color: colors.primaryText,
     marginBottom: 8,
     textAlign: 'left',
      fontFamily: fonts.regular,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 20,
     padding: 16,
-    backgroundColor: '#F5F4F9',
+    backgroundColor: colors.bg_primary,
     borderRadius: 8,
   },
   scrollText: {

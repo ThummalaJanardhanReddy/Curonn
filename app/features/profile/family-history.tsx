@@ -516,7 +516,7 @@ export default function FamilyHistoryScreen({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -635,7 +635,7 @@ export default function FamilyHistoryScreen({
                               setNewMember({
                                 ...newMember,
                                 relationship: option.name,
-                                relationshipId: option.id,
+                                relationshipId: option.id ?? option.masterDataId,
                               });
                               setShowRelationshipDropdown(false);
                             }}
@@ -811,14 +811,14 @@ export default function FamilyHistoryScreen({
         onHide={() => setShowToast(false)}
         duration={3000}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   header: {
     flexDirection: "row",
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: "600",
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   divider: {
     height: 1,
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(15),
     fontWeight: '600',
     color: colors.text,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -1080,8 +1080,8 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
+    // borderRadius: getResponsiveSpacing(6),
+    // height: getResponsiveSpacing(45),
     width: "100%",
   },
   conditionInputContainer: {

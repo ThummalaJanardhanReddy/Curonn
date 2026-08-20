@@ -15,7 +15,7 @@ import { useVideoStore } from "@/src/store/VideoStore";
 import { signalRVideoService } from "@/src/api/SignalRVideoService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import dayjs from "dayjs";
-import { colors } from "../../styles/commonStyles";
+import { colors, statusColors, statusTextColors } from "../../styles/commonStyles";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import { IPatientReport, S3Link } from "@/src/constants/constants";
@@ -108,29 +108,29 @@ export default function VideoOrderDetails({
     if (filePath) Linking.openURL(filePath);
   };
 
-  const statusColors: { [key: string]: string } = {
-    Requested: "#d0eaff",
-    Completed: "#ccface",
-    Cancelled: "#ffd8d5",
-    Inprogress: "#f8d7a7",
-    Ongoing: "#f7cdff",
-      Assigned: "#f7cdff",
-    Pending: "#ffeeba",
-    Rescheduled: "#bbecf3",
-    "Admin Doctor": "#f7cdff",
-  };
+  // const statusColors: { [key: string]: string } = {
+  //   Requested: "#d0eaff",
+  //   Completed: "#ccface",
+  //   Cancelled: "#ffd8d5",
+  //   Inprogress: "#f8d7a7",
+  //   Ongoing: "#f7cdff",
+  //     Assigned: "#f7cdff",
+  //   Pending: "#ffeeba",
+  //   Rescheduled: "#bbecf3",
+  //   "Admin Doctor": "#f7cdff",
+  // };
 
-  const statusTextColors: { [key: string]: string } = {
-    Requested: "#006cc5",
-    Completed: "#4CAF50",
-    Cancelled: "#F44336",
-    Inprogress: "#FF9800",
-     Assigned: "#9C27B0",
-    Ongoing: "#9C27B0",
-    Pending: "#9e7600",
-    Rescheduled: "#00BCD4",
-    "Admin Doctor": "#9C27B0",
-  };
+  // const statusTextColors: { [key: string]: string } = {
+  //   Requested: "#006cc5",
+  //   Completed: "#4CAF50",
+  //   Cancelled: "#F44336",
+  //   Inprogress: "#FF9800",
+  //    Assigned: "#9C27B0",
+  //   Ongoing: "#9C27B0",
+  //   Pending: "#9e7600",
+  //   Rescheduled: "#00BCD4",
+  //   "Admin Doctor": "#9C27B0",
+  // };
 
   const statusKey = data.statusName || "";
   const statusColor = statusColors[statusKey] || "#666";
@@ -249,8 +249,8 @@ export default function VideoOrderDetails({
                   .filter(Boolean)
                   .join(", ") || "N/A"}
               </Text>
-              <Text style={styles.appointmentprepredText}>Appointment preffered data & Time</Text>
-              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text>
+              {/* <Text style={styles.appointmentprepredText}>Appointment preffered data & Time</Text>
+              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text> */}
             </View>
             {data?.symptoms && (
               <View style={styles.symtomsSection}>
@@ -345,14 +345,13 @@ export default function VideoOrderDetails({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgba(245, 244, 249, 1)",
+    backgroundColor: colors.bg_rest,
   },
 
   sectionTitle: {
     fontSize: 14,
-    color: "#000",
-    fontFamily: fonts.semiBold,
-    fontWeight: '600',
+    color: colors.primaryText,
+    fontWeight: "700",
     marginBottom: 2,
     marginTop: 10,
   },
@@ -377,7 +376,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
-    fontFamily: fonts.semiBold,
   },
 
   appointmentprepredText: {
@@ -396,15 +394,15 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 18,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     color: "#888",
     marginBottom: 6,
   },
 
   datelabel: {
     fontSize: 13,
-    fontFamily: fonts.semiBold,
-    color: "#000",
+    fontWeight: "700",
+    color: colors.primaryText,
     marginBottom: 0,
   },
   symtomsSection: {
@@ -412,18 +410,18 @@ const styles = StyleSheet.create({
   },
   symtomsheader: {
     fontSize: 14,
-    fontFamily: fonts.semiBold,
-    color: "#000",
+    fontWeight: "700",
+    color: colors.primaryText,
   },
   symtomText: {
     fontSize: 12,
     fontFamily: fonts.regular,
-    color: "#000",
+    color: colors.primaryText,
   },
   value: {
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: "#333",
+    color: colors.primaryText,
   },
   individualcard: {
     backgroundColor: "#807A7A",
@@ -452,7 +450,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    backgroundColor: "#C15E9D",
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     borderRadius: 20,
     alignItems: "center",
@@ -461,12 +459,13 @@ const styles = StyleSheet.create({
 
   primaryButtonText: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: 14,
   },
 
   disabledButton: {
-    backgroundColor: "#D8AFC8",
+    backgroundColor: colors.primary,
+    opacity: 0.6,
   },
 
   rowButtons: {
@@ -478,7 +477,7 @@ const styles = StyleSheet.create({
   outlineButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#C15E9D",
+    borderColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
@@ -486,7 +485,7 @@ const styles = StyleSheet.create({
   },
 
   outlineButtonText: {
-    color: "#C15E9D",
+    color: colors.primary,
     fontFamily: fonts.medium,
   },
 
@@ -504,7 +503,7 @@ const styles = StyleSheet.create({
 
   secondaryButtonText: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   statusContainer: {
     backgroundColor: "#FFF4E5",
@@ -522,7 +521,7 @@ const styles = StyleSheet.create({
 
   primaryTextPending: {
     fontSize: 15,
-    fontFamily: fonts.semiBold,
+    fontWeight: "900",
     // color: "#B91C1C",
   },
   infoRow: {
@@ -532,7 +531,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 0,
-    backgroundColor: "rgba(245, 244, 249, 1)",
+    backgroundColor: colors.bg_rest,
     marginBottom: 20,
   },
   scrollContent: {
@@ -562,8 +561,9 @@ const styles = StyleSheet.create({
 
   infoTitle: {
     fontSize: 14,
-    fontFamily: fonts.semiBold,
-    color: "#222",
+    fontWeight: "700",
+    color: colors.primary,
+    marginTop: 4,
   },
 
   departmentDescription: {
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   consultTypeText: {
     fontSize: 15,
     fontFamily: fonts.bold,
-    color: "#C35E9C",
+    color: colors.primary,
   },
 
   bookingIdText: {

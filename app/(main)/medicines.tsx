@@ -1,5 +1,5 @@
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Image,
@@ -12,35 +12,36 @@ import {
   View,
   Alert,
   Platform,
-} from 'react-native';
+} from "react-native";
 // import { SafeAreaView } from 'react-native-safe-area-context';
-import { images } from '../../assets';
-import CommonHeader from '../shared/components/CommonHeader';
-import PrescriptionUploadModal from '../shared/components/PrescriptionUploadModal';
-import commonStyles, { colors } from '../shared/styles/commonStyles';
+import { images } from "../../assets";
+import CommonHeader from "../shared/components/CommonHeader";
+import PrescriptionUploadModal from "../shared/components/PrescriptionUploadModal";
+import commonStyles, { colors } from "../shared/styles/commonStyles";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
-} from '../shared/utils/responsive';
-import axiosClient from '../../src/api/axiosClient';
-import ApiRoutes from '../../src/api/employee/employee';
+} from "../shared/utils/responsive";
+import axiosClient from "../../src/api/axiosClient";
+import ApiRoutes from "../../src/api/employee/employee";
 // Dynamically import expo-image-picker at runtime to avoid crash when the native module
 // isn't available in the running binary (causes "Cannot find native module 'ExponentImagePicker'").
 // We'll lazy-load inside the handlers and guard accordingly.
-import { useUser } from '../shared/context/UserContext';
+import { useUser } from "../shared/context/UserContext";
 import { fontStyles, fonts } from "../shared/styles/fonts";
-import { prescriptionStore } from '../shared/utils/prescriptionStore';
-import type { PrescriptionImage } from '../shared/utils/prescriptionStore';
-import SeacrchIcon from '../../assets/AppIcons/Curonn_icons/search.svg';
-import GalleryIcon from '../../assets/AppIcons/Curonn_icons/gallery.svg';
-import CameraIcon from '../../assets/AppIcons/Curonn_icons/camera.svg';
-import * as SecureStore from 'expo-secure-store';
-import { useUserStore } from '@/src/store/UserStore';
+import { prescriptionStore } from "../shared/utils/prescriptionStore";
+import type { PrescriptionImage } from "../shared/utils/prescriptionStore";
+import SeacrchIcon from "../../assets/AppIcons/Curonn_icons/search.svg";
+import GalleryIcon from "../../assets/AppIcons/Curonn_icons/gallery.svg";
+import CameraIcon from "../../assets/AppIcons/Curonn_icons/camera.svg";
+import * as SecureStore from "expo-secure-store";
+import { useUserStore } from "@/src/store/UserStore";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function MedicinesScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentLocation] = useState('New York, NY');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentLocation] = useState("New York, NY");
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const { userData } = useUser();
 
@@ -51,9 +52,12 @@ export default function MedicinesScreen() {
   const [selectedImages, setSelectedImages] = useState<PrescriptionImage[]>([]);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   // State for edit back-flow: pre-fill modal with previously entered data
-  const [initialModalNotes, setInitialModalNotes] = useState('');
-  const [initialModalOption, setInitialModalOption] = useState<'all' | 'specific'>('all');
-   const { restoreUserData, user } = useUserStore();
+  const [initialModalNotes, setInitialModalNotes] = useState("");
+  const [initialModalOption, setInitialModalOption] = useState<
+    "all" | "specific"
+  >("all");
+  const insets = useSafeAreaInsets();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
@@ -62,10 +66,10 @@ export default function MedicinesScreen() {
   useEffect(() => {
     if (searchQuery.trim().length >= 3) {
       router.push({
-        pathname: '/features/medicines/medicine-list',
-        params: { search: searchQuery.trim() }
+        pathname: "/features/medicines/medicine-list",
+        params: { search: searchQuery.trim() },
       } as any);
-      setSearchQuery('');
+      setSearchQuery("");
     }
   }, [searchQuery]);
 
@@ -75,11 +79,11 @@ export default function MedicinesScreen() {
     try {
       // dynamic import keeps the top-level require from throwing during app init
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = await import('expo-image-picker');
+      const mod = await import("expo-image-picker");
       return mod as any;
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('expo-image-picker dynamic import failed', e);
+      console.warn("expo-image-picker dynamic import failed", e);
       return null;
     }
   }, []);
@@ -88,7 +92,10 @@ export default function MedicinesScreen() {
   useEffect(() => {
     (async () => {
       const mod = await getImagePicker();
-      console.log('launchImageLibraryAsync type:', typeof (mod as any)?.launchImageLibraryAsync);
+      console.log(
+        "launchImageLibraryAsync type:",
+        typeof (mod as any)?.launchImageLibraryAsync,
+      );
     })();
   }, [getImagePicker]);
 
@@ -112,20 +119,23 @@ export default function MedicinesScreen() {
     const loadGroups = async () => {
       setGroupsLoading(true);
       try {
-        const res = await axiosClient.get(ApiRoutes.MedicalOrders.getDrugGroups, { params: { patientId } });
+        const res = await axiosClient.get(
+          ApiRoutes.MedicalOrders.getDrugGroups,
+          { params: { patientId } },
+        );
         // axiosClient returns response.data (see axiosClient.ts). The API may return an array
         // or an object with `items` or `data`. Normalize to an array here.
         const groups = Array.isArray(res)
           ? res
-          : (res as any)?.items ?? (res as any)?.data ?? [];
+          : ((res as any)?.items ?? (res as any)?.data ?? []);
         // Debug: log groups received
         // eslint-disable-next-line no-console
-        console.log('Loaded drugGroups:', groups);
+        console.log("Loaded drugGroups:", groups);
         setDrugGroups(groups ?? []);
         setGroupsError(null);
       } catch (err: any) {
-        console.warn('Failed to load drug groups', err?.message || err);
-        setGroupsError('Failed to load groups');
+        console.warn("Failed to load drug groups", err?.message || err);
+        setGroupsError("Failed to load groups");
       } finally {
         setGroupsLoading(false);
       }
@@ -134,7 +144,16 @@ export default function MedicinesScreen() {
   }, [patientId]);
 
   // List of background colors for categories
-  const categoryColors = ['#F1C8BE', '#D7D9ED', '#C5D5EC', '#B4BB9A', '#E4D9A8', '#E2E7FC', '#C9E0DD', '#F0E4DC'];
+  const categoryColors = [
+    "#F1C8BE",
+    "#D7D9ED",
+    "#C5D5EC",
+    "#B4BB9A",
+    "#E4D9A8",
+    "#E2E7FC",
+    "#C9E0DD",
+    "#F0E4DC",
+  ];
   // Helper to convert Google Drive share links to direct image links
   const getDirectImageUrl = (url: string) => {
     if (!url) return url;
@@ -151,16 +170,21 @@ export default function MedicinesScreen() {
   const categories = useMemo(() => {
     if (drugGroups && drugGroups.length > 0) {
       return drugGroups.map((g: any, idx: number) => {
-        let imgUrl = g.imageUrl ?? g.image ?? '';
-        if (imgUrl.includes('drive.google.com')) {
+        let imgUrl = g.imageUrl ?? g.image ?? "";
+        if (imgUrl.includes("drive.google.com")) {
           const match = imgUrl.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
           if (match && match[1]) {
             imgUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
           }
         }
         const category = {
-          id: (g.drugGroup ?? g.name ?? '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-          title: g.drugGroup ?? g.name ?? 'Untitled',
+          id: (g.drugGroup ?? g.name ?? "")
+            .toString()
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, ""),
+          title: g.drugGroup ?? g.name ?? "Untitled",
           image: imgUrl,
           backgroundColor: categoryColors[idx % categoryColors.length],
         };
@@ -168,97 +192,138 @@ export default function MedicinesScreen() {
         return category;
       });
     }
-    console.warn('No drug groups available to create categories');
+    console.warn("No drug groups available to create categories");
     return [];
   }, [drugGroups]);
 
   // Use imported SVG icons for prescription options
   const prescriptionOptions = [
-    { id: 'gallery', title: 'Gallery', icon: GalleryIcon },
-    { id: 'camera', title: 'Take a Photo', icon: CameraIcon },
+    { id: "gallery", title: "Gallery", icon: GalleryIcon },
+    { id: "camera", title: "Take a Photo", icon: CameraIcon },
     // { id: 'curonn', title: 'Curonn Rx', icon: icons.pill ?? icons.calendar },
   ];
 
-  const pickFromGallery = useCallback(async (clearFirst?: boolean | any) => {
-    const shouldClear = clearFirst === true;
-    if (shouldClear) {
-      setSelectedImages([]);
-      setInitialModalNotes('');
-      setInitialModalOption('all');
-      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
-    }
+  const pickFromGallery = useCallback(
+    async (clearFirst?: boolean | any) => {
+      const shouldClear = clearFirst === true;
+      if (shouldClear) {
+        setSelectedImages([]);
+        setInitialModalNotes("");
+        setInitialModalOption("all");
+        prescriptionStore.set({
+          images: [],
+          notes: "",
+          option: "all",
+          isEditMode: false,
+        });
+      }
 
-    try {
-      const ImagePicker = await getImagePicker();
-      if (!ImagePicker || typeof ImagePicker.launchImageLibraryAsync !== 'function') {
-        Alert.alert('Image picker not available', 'The image picker native module is not available in this runtime. Run the app in Expo Go (npx expo start) or build a dev client.');
-        return;
+      try {
+        const ImagePicker = await getImagePicker();
+        if (
+          !ImagePicker ||
+          typeof ImagePicker.launchImageLibraryAsync !== "function"
+        ) {
+          Alert.alert(
+            "Image picker not available",
+            "The image picker native module is not available in this runtime. Run the app in Expo Go (npx expo start) or build a dev client.",
+          );
+          return;
+        }
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permissions required",
+            "Please grant gallery permissions to select images.",
+          );
+          return;
+        }
+        const currentImages = shouldClear ? [] : selectedImages;
+        const res: any = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
+          allowsMultipleSelection: true,
+        } as any);
+        if (res.canceled === true || res.cancelled === true) return;
+        const assets: any[] = res.assets ?? [];
+        if (!assets.length && res.uri) assets.push({ uri: res.uri });
+        if (!assets.length) return;
+        const picked = assets.map((a) => ({
+          uri: a.uri,
+          fileName: a.fileName ?? a.uri?.split("/").pop(),
+        }));
+        const combined = [...currentImages, ...picked];
+        setSelectedImages(combined);
+        setConfirmModalVisible(true);
+      } catch (e) {
+        console.error("Gallery pick failed", e);
+        Alert.alert("Error", "Failed to pick images from gallery");
       }
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissions required', 'Please grant gallery permissions to select images.');
-        return;
-      }
-      const currentImages = shouldClear ? [] : selectedImages;
-      const res: any = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-      } as any);
-      if (res.canceled === true || res.cancelled === true) return;
-      const assets: any[] = res.assets ?? [];
-      if (!assets.length && res.uri) assets.push({ uri: res.uri });
-      if (!assets.length) return;
-      const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...currentImages, ...picked];
-      setSelectedImages(combined);
-      setConfirmModalVisible(true);
-    } catch (e) {
-      console.error('Gallery pick failed', e);
-      Alert.alert('Error', 'Failed to pick images from gallery');
-    }
-  }, [selectedImages, getImagePicker]);
+    },
+    [selectedImages, getImagePicker],
+  );
 
-  const takePhoto = useCallback(async (clearFirst?: boolean | any) => {
-    const shouldClear = clearFirst === true;
-    if (shouldClear) {
-      setSelectedImages([]);
-      setInitialModalNotes('');
-      setInitialModalOption('all');
-      prescriptionStore.set({ images: [], notes: '', option: 'all', isEditMode: false });
-    }
+  const takePhoto = useCallback(
+    async (clearFirst?: boolean | any) => {
+      const shouldClear = clearFirst === true;
+      if (shouldClear) {
+        setSelectedImages([]);
+        setInitialModalNotes("");
+        setInitialModalOption("all");
+        prescriptionStore.set({
+          images: [],
+          notes: "",
+          option: "all",
+          isEditMode: false,
+        });
+      }
 
-    try {
-      const ImagePicker = await getImagePicker();
-      if (!ImagePicker || typeof ImagePicker.launchCameraAsync !== 'function') {
-        Alert.alert('Camera not available', 'The camera module is not available in this runtime. Run the app in Expo Go (npx expo start) or build a dev client.');
-        return;
+      try {
+        const ImagePicker = await getImagePicker();
+        if (
+          !ImagePicker ||
+          typeof ImagePicker.launchCameraAsync !== "function"
+        ) {
+          Alert.alert(
+            "Camera not available",
+            "The camera module is not available in this runtime. Run the app in Expo Go (npx expo start) or build a dev client.",
+          );
+          return;
+        }
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permissions required",
+            "Please grant camera permissions to take photos.",
+          );
+          return;
+        }
+        const currentImages = shouldClear ? [] : selectedImages;
+        const res: any = await ImagePicker.launchCameraAsync({
+          mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
+          quality: 0.8,
+        } as any);
+        if (res.canceled === true || res.cancelled === true) return;
+        const assets: any[] = res.assets ?? [];
+        if (!assets.length && res.uri) assets.push({ uri: res.uri });
+        if (!assets.length) return;
+        const picked = assets.map((a) => ({
+          uri: a.uri,
+          fileName: a.fileName ?? a.uri?.split("/").pop(),
+        }));
+        const combined = [...currentImages, ...picked];
+        setSelectedImages(combined);
+        setConfirmModalVisible(true);
+      } catch (e) {
+        console.error("Camera failed", e);
+        Alert.alert("Error", "Failed to open camera");
       }
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissions required', 'Please grant camera permissions to take photos.');
-        return;
-      }
-      const currentImages = shouldClear ? [] : selectedImages;
-      const res: any = await ImagePicker.launchCameraAsync({
-        mediaTypes: (ImagePicker as any).MediaTypeOptions.Images,
-        quality: 0.8,
-      } as any);
-      if (res.canceled === true || res.cancelled === true) return;
-      const assets: any[] = res.assets ?? [];
-      if (!assets.length && res.uri) assets.push({ uri: res.uri });
-      if (!assets.length) return;
-      const picked = assets.map(a => ({ uri: a.uri, fileName: a.fileName ?? a.uri?.split('/').pop() }));
-      const combined = [...currentImages, ...picked];
-      setSelectedImages(combined);
-      setConfirmModalVisible(true);
-    } catch (e) {
-      console.error('Camera failed', e);
-      Alert.alert('Error', 'Failed to open camera');
-    }
-  }, [selectedImages, getImagePicker]);
+    },
+    [selectedImages, getImagePicker],
+  );
 
   const removeSelectedImage = useCallback((index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const clearSelectedImages = useCallback(() => {
@@ -266,23 +331,36 @@ export default function MedicinesScreen() {
     setConfirmModalVisible(false);
   }, []);
 
-  const handleConfirmNext = useCallback(async (notes: string, option: 'all' | 'specific') => {
-    // Data is already in prescriptionStore (written by PrescriptionUploadModal);
-    // just close the modal — navigation happens inside the modal.
-    console.log('handleConfirmNext', { notes, option, imagesCount: selectedImages.length });
-    setConfirmModalVisible(false);
-  }, [selectedImages]);
+  const handleConfirmNext = useCallback(
+    async (notes: string, option: "all" | "specific") => {
+      // Data is already in prescriptionStore (written by PrescriptionUploadModal);
+      // just close the modal — navigation happens inside the modal.
+      console.log("handleConfirmNext", {
+        notes,
+        option,
+        imagesCount: selectedImages.length,
+      });
+      setConfirmModalVisible(false);
+    },
+    [selectedImages],
+  );
 
   const renderPrescriptionCard = useCallback(
-    ({ item, index }: { item: { id: string; title: string; icon: any }, index: number }) => (
+    ({
+      item,
+      index,
+    }: {
+      item: { id: string; title: string; icon: any };
+      index: number;
+    }) => (
       <TouchableOpacity
         style={[
           styles.prescriptionCard,
-          index === 0 && { borderRightWidth: 1, borderColor: '#BABCBA' },
+          index === 0 && { borderRightWidth: 1, borderColor: "#BABCBA" },
         ]}
         onPress={() => {
-          if (item.id === 'gallery') pickFromGallery(true);
-          else if (item.id === 'camera') takePhoto(true);
+          if (item.id === "gallery") pickFromGallery(true);
+          else if (item.id === "camera") takePhoto(true);
           else setUploadModalVisible(true);
         }}
       >
@@ -290,40 +368,66 @@ export default function MedicinesScreen() {
         <Text style={styles.prescriptionText}>{item.title}</Text>
       </TouchableOpacity>
     ),
-    [pickFromGallery, takePhoto]
+    [pickFromGallery, takePhoto],
   );
 
-  const renderCategoryCard = useCallback(({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.categoryCard, { backgroundColor: item.backgroundColor || '000' }]}
-      onPress={() => {
-        // Navigate to MedicineListScreen and pass the selected drug group as groupName
-        const encoded = encodeURIComponent(item.title || '');
-        router.push(`/features/medicines/medicine-list?groupName=${encoded}` as any);
-      }}
-    >
-      <View style={styles.categoryContent}>
-        <Text style={styles.categoryTitle}>{item.title}</Text>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.categoryImage} />
-        ) : (
-          <View style={[styles.categoryImage, { backgroundColor: 'rgba(0,0,0,0.05)' }]} />
-        )}
-      </View>
-    </TouchableOpacity>
-  ), []);
+  const renderCategoryCard = useCallback(
+    ({ item }: { item: any }) => (
+      <TouchableOpacity
+        style={[
+          styles.categoryCard,
+          { backgroundColor: item.backgroundColor || "000" },
+        ]}
+        onPress={() => {
+          // Navigate to MedicineListScreen and pass the selected drug group as groupName
+          const encoded = encodeURIComponent(item.title || "");
+          router.push(
+            `/features/medicines/medicine-list?groupName=${encoded}` as any,
+          );
+        }}
+      >
+        <View style={styles.categoryContent}>
+          <Text style={styles.categoryTitle}>{item.title}</Text>
+          {item.image ? (
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.categoryImage}
+                resizeMode="contain"
+              />
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.categoryImage,
+                { backgroundColor: "rgba(0,0,0,0.05)" },
+              ]}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+    ),
+    [],
+  );
+
+  const handleSearchPress = () => {
+    console.log("search pressed");
+    router.push({
+      pathname: "/features/medicines/medicine-list",
+      params: { search: searchQuery.trim() },
+    } as any);
+  };
 
   return (
-    <View style={styles.container} >
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* <StatusBar barStyle="dark-content" backgroundColor="#fff" /> */}
       <View style={styles.defaultHeader}>
         <CommonHeader
           currentLocation={currentLocation}
-          onProfilePress={() => console.log('Profile pressed')}
-          onCartPress={() => router.push('/cart' as any)}
+          onProfilePress={() => console.log("Profile pressed")}
+          onCartPress={() => router.push("/cart" as any)}
         />
       </View>
-
 
       <View style={styles.boxcolor}>
         <View style={styles.searchContainer}>
@@ -335,26 +439,28 @@ export default function MedicinesScreen() {
               placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onPress={handleSearchPress}
             />
             {searchQuery.length > 0 && (
-
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => setSearchQuery("")}
               >
                 <Image source={images.icons.close} style={styles.clearIcon} />
               </TouchableOpacity>
-
-
             )}
           </View>
         </View>
 
         <View style={styles.containercontent}>
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.prescriptionSection}>
-              <Text style={styles.prescriptionTitle}>Upload a prescription and get a medicine</Text>
+              <Text style={styles.prescriptionTitle}>
+                Upload a prescription and get a medicine
+              </Text>
               <View style={styles.prescriptionCardsContainer}>
                 {prescriptionOptions.map((option, idx) => (
                   <View key={option.id} style={styles.prescriptionCardWrapper}>
@@ -368,15 +474,35 @@ export default function MedicinesScreen() {
               <Text style={styles.categoriesTitle}>Popular Categories</Text>
               <View style={styles.categoriesGrid}>
                 {groupsLoading ? (
-                  <View style={{ width: '100%', alignItems: 'center', padding: 24 }}>
-                    <Text style={{ color: '#888', fontSize: 16, fontFamily: fonts.regular }}>Loading...</Text>
+                  <View
+                    style={{ width: "100%", alignItems: "center", padding: 24 }}
+                  >
+                    <Text
+                      style={{
+                        color: "#888",
+                        fontSize: 16,
+                        fontFamily: fonts.regular,
+                      }}
+                    >
+                      Loading...
+                    </Text>
                   </View>
                 ) : categories.length === 0 ? (
-                  <View style={{ width: '100%', alignItems: 'center', padding: 24 }}>
-                    <Text style={{ color: '#888', fontSize: 16, fontFamily: fonts.regular }}>No popular Categories</Text>
+                  <View
+                    style={{ width: "100%", alignItems: "center", padding: 24 }}
+                  >
+                    <Text
+                      style={{
+                        color: "#888",
+                        fontSize: 16,
+                        fontFamily: fonts.regular,
+                      }}
+                    >
+                      No popular Categories
+                    </Text>
                   </View>
                 ) : (
-                  categories.map(category => (
+                  categories.map((category) => (
                     <View key={category.id} style={styles.categoryCardWrapper}>
                       {renderCategoryCard({ item: category })}
                     </View>
@@ -392,8 +518,8 @@ export default function MedicinesScreen() {
           onClose={() => {
             setConfirmModalVisible(false);
             // If user closes without proceeding, clear pre-fill state
-            setInitialModalNotes('');
-            setInitialModalOption('all');
+            setInitialModalNotes("");
+            setInitialModalOption("all");
           }}
           selectedImages={selectedImages}
           onRemove={removeSelectedImage}
@@ -412,12 +538,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
-    paddingTop: Platform.OS === 'android' ? getResponsiveSpacing(20) : 27,
   },
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
-    // Remove extra top padding as SafeAreaView handles it
-    marginTop: Platform.OS === 'android' ? getResponsiveSpacing(0) : 0,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
   },
   containercontent: {
     flex: 1,
@@ -425,12 +550,12 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   boxcolor: {
-    backgroundColor: colors.bg_primary,
-    flex: 1
+    backgroundColor: colors.bg_rest,
+    flex: 1,
   },
   content: {
     paddingHorizontal: getResponsiveSpacing(20),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
     flex: 1,
   },
   searchContainer: {
@@ -448,12 +573,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(4),
     height: getResponsiveSpacing(40),
-    marginTop: getResponsiveSpacing(5)
+    marginTop: getResponsiveSpacing(5),
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
     marginRight: getResponsiveSpacing(8),
-    tintColor: '#999',
+    tintColor: "#999",
   },
   searchInput: {
     flex: 1,
@@ -469,26 +594,26 @@ const styles = StyleSheet.create({
   },
   clearIcon: {
     ...getResponsiveImageSize(16, 16),
-    tintColor: '#999',
+    tintColor: "#999",
   },
   prescriptionSection: {
     paddingBottom: getResponsiveSpacing(20),
   },
   prescriptionTitle: {
     fontSize: getResponsiveFontSize(13),
-    color: colors.primary,
+    color: colors.primaryText,
     marginBottom: getResponsiveSpacing(5),
-    textAlign: 'center',
-    fontFamily: fonts.semiBold,
+    textAlign: "center",
+    fontWeight: "900",
   },
   prescriptionCardsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F6F1F1',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#F6F1F1",
     padding: getResponsiveSpacing(0),
     borderRadius: getResponsiveSpacing(12),
     borderWidth: 1,
-    borderColor: '#BABCBA',
+    borderColor: "#BABCBA",
   },
   prescriptionCardWrapper: {
     flex: 1,
@@ -498,45 +623,46 @@ const styles = StyleSheet.create({
     padding: getResponsiveSpacing(16),
     paddingBottom: getResponsiveSpacing(8),
     paddingTop: getResponsiveSpacing(10),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     // minHeight: getResponsiveSpacing(100),
     // borderRightWidth and borderColor applied conditionally in render
   },
   prescriptionIcon: {
     ...getResponsiveImageSize(32, 32),
     marginBottom: getResponsiveSpacing(8),
-    tintColor: '#000',
+    tintColor: "#000",
   },
   prescriptionText: {
-    fontSize: getResponsiveFontSize(10),
-    color: '#000',
-    fontWeight: '500',
-    textAlign: 'center',
-    fontFamily: fonts.medium,
+    fontSize: getResponsiveFontSize(12),
+    color: colors.primaryText,
+    fontWeight: "700",
+    textAlign: "center",
+    // fontFamily: fonts.medium,
   },
   categoriesSection: {
     paddingBottom: getResponsiveSpacing(20),
   },
   categoriesTitle: {
     fontSize: getResponsiveFontSize(15),
-    color: '#000',
+    color: "#000",
     marginBottom: getResponsiveSpacing(6),
     fontFamily: fonts.medium,
   },
   categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   categoryCardWrapper: {
-    width: '48%',
+    width: "48%",
     marginBottom: getResponsiveSpacing(12),
   },
   categoryCard: {
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(8),
     minHeight: getResponsiveSpacing(60),
+    height: getResponsiveSpacing(80),
     // elevation: 2,
     // shadowColor: '#000',
     // shadowOffset: {
@@ -548,18 +674,16 @@ const styles = StyleSheet.create({
   },
   categoryContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: getResponsiveSpacing(8),
   },
   categoryTitle: {
-    fontSize: getResponsiveFontSize(12),
-    fontWeight: '600',
-    color: "#000000",
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: "700",
+    color: colors.primaryText,
     flex: 1,
-    fontFamily: fonts.bold,
-
     marginRight: getResponsiveSpacing(8),
   },
   categoryImage: {
@@ -573,13 +697,13 @@ const styles = StyleSheet.create({
   },
   groupsTitle: {
     fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.primary,
     marginBottom: getResponsiveSpacing(12),
   },
   groupList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
 });

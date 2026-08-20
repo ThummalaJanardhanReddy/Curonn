@@ -327,7 +327,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(11),
     color: colors.primary,
     fontWeight: "500",
-    fontFamily: fonts.semiBold,
     marginRight: getResponsiveSpacing(6),
   },
   chipCloseButton: {
@@ -344,13 +343,12 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(15),
+    paddingBottom: getResponsiveSpacing(8),
     marginTop: getResponsiveSpacing(10),
   },
   titleText: {
-    fontSize: getResponsiveFontSize(16),
-    fontWeight: "600",
-    fontFamily: fonts.semiBold,
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: "700",
     color: colors.text,
   },
   symptomsContainer: {

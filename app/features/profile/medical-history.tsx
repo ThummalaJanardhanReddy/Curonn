@@ -658,9 +658,8 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   divider: {
     height: 1,
@@ -673,7 +672,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#F5F4F9"
+    backgroundColor: colors.bg_rest,
   },
   conditionsContainer: {
     padding: getResponsiveSpacing(20),
@@ -765,9 +764,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
-    fontWeight: '600',
     color: colors.text,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -868,8 +866,7 @@ const styles = StyleSheet.create({
   dropdownOptionText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontWeight: '500',
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   // Radio button styles
   radioContainer: {
@@ -909,8 +906,8 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
+    // borderRadius: getResponsiveSpacing(6),
+    // height: getResponsiveSpacing(45),
     width: '100%',
   },
   // Loading/empty states

@@ -176,7 +176,7 @@ export default function AmbulanceScreen() {
   // Render function for FlatList
   const renderAmbulanceItem = ({ item }: { item: TestItem }) => (
     <LinearGradient
-      colors={['#fff', '#D5CDDA']}
+      colors={['#fff', '#fff']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.testCard}
@@ -220,6 +220,7 @@ export default function AmbulanceScreen() {
             title="Book Now"
             onPress={() => handleBookTest(item.id)}
             style={styles.bookButton}
+            textStyle={styles.bookButtonText}
           />
         </View>
       </View>
@@ -228,11 +229,11 @@ export default function AmbulanceScreen() {
 
 
   return (<>
-    <StatusBar
+    {/* <StatusBar
       barStyle="dark-content"
       translucent={false}
       backgroundColor="#ffffff"
-    />
+    /> */}
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
 
@@ -321,16 +322,16 @@ const styles = StyleSheet.create({
     borderColor: "#BDBABA",
     borderWidth: 1,
     backgroundColor: '#fff',
-    width: 130,
+    width: 110,
     height: 30,
     justifyContent: 'center',
     borderRadius: 20,
     alignItems: 'center',
   },
   viewdetailstext: {
-    color: "#000000",
-    fontSize: 11,
-    fontFamily: fonts.semiBold,
+    color: colors.primaryText,
+    fontSize: 12,
+    fontWeight: "700",
     paddingTop: 2,
   },
   defaultHeader: {
@@ -449,7 +450,7 @@ const styles = StyleSheet.create({
   },
   categoryButtonTextSelected: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
 
   },
   // Removed subTest* styles as they are not needed for ambulance services
@@ -484,9 +485,10 @@ const styles = StyleSheet.create({
   },
   testName: {
     fontSize: 15,
-    color: "#000",
+    color: colors.primaryText,
     marginBottom: 3,
-    fontFamily: fonts.bold,
+    // fontFamily: fonts.bold,
+    fontWeight: "700",
 
   },
   // testPrice: {
@@ -510,16 +512,21 @@ const styles = StyleSheet.create({
   },
   testActioncard: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     borderTopWidth: 1,
-    borderColor: '#c3c0c0',
+    borderColor: colors.border,
     paddingTop: 12,
     marginTop: 12,
+    gap: 6,
   },
   bookButton: {
     marginBottom: 4,
-    width: 130,
+    width: 110,
     height: 30,
+  },
+  bookButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   atHomeText: {
     fontSize: 10,
@@ -533,7 +540,7 @@ const styles = StyleSheet.create({
   },
   viewMoreText: {
     fontSize: 14,
-    color: "#C35E9C",
+    color: colors.primary,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
@@ -548,7 +555,6 @@ const styles = StyleSheet.create({
     color: "#4B334E",
     marginBottom: 16,
     textAlign: "justify",
-    fontFamily: fonts.semiBold,
   },
   sampleCollectionImages: {
     flexDirection: "row",
@@ -590,13 +596,15 @@ const styles = StyleSheet.create({
   },
   finalPrice: {
     fontSize: 16,
-    color: '#000',
-    fontFamily: fonts.bold,
+    color: colors.primaryText,
+    // fontFamily: fonts.bold,
+    fontWeight: "900",
   },
   finalPrice1: {
     fontSize: 16,
-    color: '#000',
-    fontFamily: fonts.bold,
+    color: colors.primaryText,
+    // fontFamily: fonts.bold,
+    fontWeight: "900",
   },
   actionButton: {
     borderColor: "#BDBABA",

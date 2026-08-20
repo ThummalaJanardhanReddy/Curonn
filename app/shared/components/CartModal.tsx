@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 14,
-    color: '#C15E9C',
+    color: colors.primary,
     fontWeight: '600',
   },
   quantityContainer: {
@@ -257,10 +257,10 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#C15E9C',
+    color: colors.primary,
   },
   checkoutButton: {
-    backgroundColor: '#C15E9C',
+    backgroundColor: colors.primary,
     paddingVertical: 15,
     borderRadius: 25,
     alignItems: 'center',

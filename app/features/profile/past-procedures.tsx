@@ -1,6 +1,6 @@
 // import { router } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useCallback, useState,useEffect } from 'react';
+import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Image,
   Modal,
@@ -13,11 +13,11 @@ import {
   View,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { images } from '../../../assets';
-import BackButton from '../../shared/components/BackButton';
-import PrimaryButton from '../../shared/components/PrimaryButton';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { images } from "../../../assets";
+import BackButton from "../../shared/components/BackButton";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
@@ -29,7 +29,11 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import Toast from "@/app/shared/components/Toast";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
-import { useUserStore } from '@/src/store/UserStore';
+import { useUserStore } from "@/src/store/UserStore";
+import {
+  KeyboardAvoidingView,
+  KeyboardAwareScrollView,
+} from "react-native-keyboard-controller";
 
 interface Procedure {
   surgicalHistoryId: number;
@@ -44,7 +48,7 @@ interface PastProceduresScreenProps {
 
 export default function PastProceduresScreen({
   onClose,
-  onDataStatusChange
+  onDataStatusChange,
 }: PastProceduresScreenProps) {
   const { userData } = useUser();
   const [procedures, setProcedures] = useState<Procedure[]>([]);
@@ -82,11 +86,11 @@ export default function PastProceduresScreen({
   const handleAddProcedure = () => {
     setModalVisible(true);
   };
-   const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
-const patientId = Number(userData?.e_id || user?.eId);
+  const patientId = Number(userData?.e_id || user?.eId);
   const fetchSurgicalHistory = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -102,12 +106,18 @@ const patientId = Number(userData?.e_id || user?.eId);
         groupName: "",
       };
 
-      console.log('📤 Surgical History Request Payload:', JSON.stringify(payload, null, 2));
+      console.log(
+        "📤 Surgical History Request Payload:",
+        JSON.stringify(payload, null, 2),
+      );
       const response: any = await axiosClient.post(
         ApiRoutes.SurgicalHistory.getAll,
-        payload
+        payload,
       );
-      console.log('📥 Surgical History Response:', JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Surgical History Response:",
+        JSON.stringify(response, null, 2),
+      );
       let list: Procedure[] = [];
 
       if (response?.items && Array.isArray(response.items)) {
@@ -139,11 +149,14 @@ const patientId = Number(userData?.e_id || user?.eId);
     try {
       setDropdownLoading(true);
       const url = `${ApiRoutes.Master.getmasterdata(
-        14
+        14,
       )}&search=${encodeURIComponent(q || "")}`;
-      console.log('📤 Fetch Master Options URL:', url);
+      console.log("📤 Fetch Master Options URL:", url);
       const response: any = await axiosClient.get(url);
-      console.log('📥 Fetch Master Options Response:', JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Fetch Master Options Response:",
+        JSON.stringify(response, null, 2),
+      );
       let items: any[] = [];
       if (Array.isArray(response)) items = response;
       else if (Array.isArray(response?.data)) items = response.data;
@@ -178,7 +191,7 @@ const patientId = Number(userData?.e_id || user?.eId);
     if (cleanText.length > 6) {
       formattedDate = `${cleanText.substring(0, 4)}-${cleanText.substring(
         4,
-        6
+        6,
       )}-${cleanText.substring(6, 8)}`;
     }
 
@@ -186,18 +199,22 @@ const patientId = Number(userData?.e_id || user?.eId);
   };
 
   const handleSelectProcedure = (item: { id: number; name: string }) => {
-    setNewProcedure({ ...newProcedure, procedureName: item.name, procedureId: item.id });
+    setNewProcedure({
+      ...newProcedure,
+      procedureName: item.name,
+      procedureId: item.id,
+    });
     setDropdownVisible(false);
     setDropdownSearch("");
   };
 
   const handleNativeDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       setShowNativeDatePicker(false);
       if (date) {
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         const dateString = `${year}-${month}-${day}`;
         setNewProcedure({ ...newProcedure, date: dateString });
         setSelectedDate(date);
@@ -212,8 +229,8 @@ const patientId = Number(userData?.e_id || user?.eId);
 
   const handleDoneDatePicker = () => {
     const year = tempDate.getFullYear();
-    const month = String(tempDate.getMonth() + 1).padStart(2, '0');
-    const day = String(tempDate.getDate()).padStart(2, '0');
+    const month = String(tempDate.getMonth() + 1).padStart(2, "0");
+    const day = String(tempDate.getDate()).padStart(2, "0");
     const dateString = `${year}-${month}-${day}`;
     setNewProcedure({ ...newProcedure, date: dateString });
     setSelectedDate(tempDate);
@@ -227,9 +244,13 @@ const patientId = Number(userData?.e_id || user?.eId);
   const handleOpenNativeDatePicker = () => {
     let initialDate = new Date();
     if (newProcedure.date) {
-      const parts = newProcedure.date.split('-');
+      const parts = newProcedure.date.split("-");
       if (parts.length === 3) {
-        initialDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        initialDate = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2]),
+        );
       }
     }
     setSelectedDate(initialDate);
@@ -238,13 +259,18 @@ const patientId = Number(userData?.e_id || user?.eId);
   };
 
   const handleCloseModal = () => {
+    if (showNativeDatePicker) {
+      setShowNativeDatePicker(false);
+      return;
+    }
+
     setModalVisible(false);
     setDropdownVisible(false);
     setDropdownSearch("");
     setNewProcedure({
-      procedureName: '',
+      procedureName: "",
       procedureId: 0,
-      date: '',
+      date: "",
     });
   };
 
@@ -255,13 +281,13 @@ const patientId = Number(userData?.e_id || user?.eId);
     const isDuplicate = procedures.some(
       (p) =>
         (p.historyName || "").toLowerCase().trim() ===
-        newProcedure.procedureName.toLowerCase().trim()
+        newProcedure.procedureName.toLowerCase().trim(),
     );
 
     if (isDuplicate) {
       Alert.alert(
         "Record already exists",
-        "This procedure is already in your history."
+        "This procedure is already in your history.",
       );
       return;
     }
@@ -270,13 +296,17 @@ const patientId = Number(userData?.e_id || user?.eId);
     try {
       const today = new Date();
       const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
       const formattedToday = `${yyyy}-${mm}-${dd}`;
 
       // Normalize date format if user typed it without hyphens (YYYYMMDD -> YYYY-MM-DD)
       let finalSurgeryDate = newProcedure.date || formattedToday;
-      if (finalSurgeryDate && finalSurgeryDate.length === 8 && !finalSurgeryDate.includes('-')) {
+      if (
+        finalSurgeryDate &&
+        finalSurgeryDate.length === 8 &&
+        !finalSurgeryDate.includes("-")
+      ) {
         finalSurgeryDate = `${finalSurgeryDate.substring(0, 4)}-${finalSurgeryDate.substring(4, 6)}-${finalSurgeryDate.substring(6, 8)}`;
       }
 
@@ -299,12 +329,18 @@ const patientId = Number(userData?.e_id || user?.eId);
         totalCount: 0,
       };
 
-      console.log('📤 Save Surgical History Request Payload:', JSON.stringify(payload, null, 2));
+      console.log(
+        "📤 Save Surgical History Request Payload:",
+        JSON.stringify(payload, null, 2),
+      );
       const response: any = await axiosClient.post(
         ApiRoutes.SurgicalHistory.save,
-        payload
+        payload,
       );
-      console.log('📥 Save Surgical History Response:', JSON.stringify(response, null, 2));
+      console.log(
+        "📥 Save Surgical History Response:",
+        JSON.stringify(response, null, 2),
+      );
       setToastMessage({
         title: "Success",
         subtitle: response?.message || "Record saved successfully!",
@@ -325,48 +361,57 @@ const patientId = Number(userData?.e_id || user?.eId);
     }
   };
 
-  const handleDeleteProcedure = useCallback((id: number) => {
-    console.log(`🗑️ Attempting to delete procedure with ID: ${id}`);
-    if (!patientId) {
-      console.warn("⚠️ Cannot delete record: patientId is missing");
-      return;
-    }
+  const handleDeleteProcedure = useCallback(
+    (id: number) => {
+      console.log(`🗑️ Attempting to delete procedure with ID: ${id}`);
+      if (!patientId) {
+        console.warn("⚠️ Cannot delete record: patientId is missing");
+        return;
+      }
 
-    Alert.alert(
-      "Delete Record",
-      "Are you sure you want to delete this record?",
-      [
-        { text: "No", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: async () => {
-            console.log(`🔥 User confirmed deletion of ID: ${id}`);
-            try {
-              const url = ApiRoutes.SurgicalHistory.delete(id, patientId || 0);
-              console.log('📤 Delete Surgical History Request URL:', url);
-              const response: any = await axiosClient.delete(url);
-              console.log('📥 Delete Surgical History Response:', JSON.stringify(response, null, 2));
-              setToastMessage({
-                title: "Deleted",
-                subtitle: response?.message || "Record removed successfully",
-                type: "success",
-              });
-              setShowToast(true);
-              fetchSurgicalHistory();
-            } catch (error) {
-              console.error("❌ Delete failed:", error);
-              setToastMessage({
-                title: "Error",
-                subtitle: "Failed to delete record",
-                type: "error",
-              });
-              setShowToast(true);
-            }
+      Alert.alert(
+        "Delete Record",
+        "Are you sure you want to delete this record?",
+        [
+          { text: "No", style: "cancel" },
+          {
+            text: "Yes",
+            onPress: async () => {
+              console.log(`🔥 User confirmed deletion of ID: ${id}`);
+              try {
+                const url = ApiRoutes.SurgicalHistory.delete(
+                  id,
+                  patientId || 0,
+                );
+                console.log("📤 Delete Surgical History Request URL:", url);
+                const response: any = await axiosClient.delete(url);
+                console.log(
+                  "📥 Delete Surgical History Response:",
+                  JSON.stringify(response, null, 2),
+                );
+                setToastMessage({
+                  title: "Deleted",
+                  subtitle: response?.message || "Record removed successfully",
+                  type: "success",
+                });
+                setShowToast(true);
+                fetchSurgicalHistory();
+              } catch (error) {
+                console.error("❌ Delete failed:", error);
+                setToastMessage({
+                  title: "Error",
+                  subtitle: "Failed to delete record",
+                  type: "error",
+                });
+                setShowToast(true);
+              }
+            },
           },
-        },
-      ]
-    );
-  }, [patientId, fetchSurgicalHistory]);
+        ],
+      );
+    },
+    [patientId, fetchSurgicalHistory],
+  );
 
   const renderProcedureCard = useCallback(
     ({ item }: { item: Procedure }) => (
@@ -374,7 +419,7 @@ const patientId = Number(userData?.e_id || user?.eId);
         <View style={styles.procedureContent}>
           <Text style={styles.procedureNameText}>{item.historyName}</Text>
           <Text style={styles.dateText}>
-            Date: {item.surgeryDate ? item.surgeryDate.split('T')[0] : ''}
+            Date: {item.surgeryDate ? item.surgeryDate.split("T")[0] : ""}
           </Text>
         </View>
         <TouchableOpacity
@@ -386,7 +431,7 @@ const patientId = Number(userData?.e_id || user?.eId);
         </TouchableOpacity>
       </View>
     ),
-    [handleDeleteProcedure]
+    [handleDeleteProcedure],
   );
 
   return (
@@ -452,7 +497,7 @@ const patientId = Number(userData?.e_id || user?.eId);
             style={styles.modalBackdrop}
             onPress={handleCloseModal}
           />
-          <SafeAreaView style={styles.modalContent}>
+          <KeyboardAwareScrollView style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Surgical History</Text>
               <TouchableOpacity
@@ -476,7 +521,8 @@ const patientId = Number(userData?.e_id || user?.eId);
                     }}
                   >
                     <Text style={styles.dropdownText}>
-                      {newProcedure.procedureName || 'e.g., Appendectomy, Knee Surgery'}
+                      {newProcedure.procedureName ||
+                        "Select"}
                     </Text>
                     <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>
@@ -489,7 +535,6 @@ const patientId = Number(userData?.e_id || user?.eId);
                     onRequestClose={() => setProcedureModalVisible(false)}
                   >
                     <View style={styles.centerModalOverlay}>
-
                       <TouchableOpacity
                         style={styles.centerModalBackdrop}
                         activeOpacity={1}
@@ -511,7 +556,10 @@ const patientId = Number(userData?.e_id || user?.eId);
                           showsVerticalScrollIndicator
                         >
                           {dropdownLoading ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
+                            <ActivityIndicator
+                              size="small"
+                              color={colors.primary}
+                            />
                           ) : masterOptions.length > 0 ? (
                             masterOptions.map((item) => (
                               <TouchableOpacity
@@ -522,17 +570,20 @@ const patientId = Number(userData?.e_id || user?.eId);
                                   setProcedureModalVisible(false);
                                 }}
                               >
-                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                                <Text style={styles.dropdownOptionText}>
+                                  {item.name}
+                                </Text>
                               </TouchableOpacity>
                             ))
                           ) : (
                             <View style={styles.noResultsContainer}>
-                              <Text style={styles.noResultsText}>No options</Text>
+                              <Text style={styles.noResultsText}>
+                                No options
+                              </Text>
                             </View>
                           )}
                         </ScrollView>
                       </View>
-
                     </View>
                   </Modal>
                 </View>
@@ -557,7 +608,10 @@ const patientId = Number(userData?.e_id || user?.eId);
                     style={styles.calendarIconContainer}
                     onPress={handleOpenNativeDatePicker}
                   >
-                    <Image source={images.icons.calendar} style={styles.calendarImage} />
+                    <Image
+                      source={images.icons.calendar}
+                      style={styles.calendarImage}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -572,12 +626,12 @@ const patientId = Number(userData?.e_id || user?.eId);
                 disabled={!newProcedure.procedureName.trim() || saveLoading}
               />
             </View>
-          </SafeAreaView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 
-      {showNativeDatePicker && (
-        Platform.OS === 'ios' ? (
+      {showNativeDatePicker &&
+        (Platform.OS === "ios" ? (
           <Modal
             transparent={true}
             animationType="slide"
@@ -595,13 +649,20 @@ const patientId = Number(userData?.e_id || user?.eId);
                     <Text style={styles.pickerHeaderButtonText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={handleDoneDatePicker}>
-                    <Text style={[styles.pickerHeaderButtonText, { color: colors.primary }]}>Done</Text>
+                    <Text
+                      style={[
+                        styles.pickerHeaderButtonText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      Done
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker
                   value={tempDate}
                   mode="date"
-                  display="spinner"
+                  display="default"
                   onChange={handleNativeDateChange}
                   maximumDate={new Date()}
                   textColor="black"
@@ -617,8 +678,7 @@ const patientId = Number(userData?.e_id || user?.eId);
             onChange={handleNativeDateChange}
             maximumDate={new Date()}
           />
-        )
-      )}
+        ))}
 
       <Toast
         visible={showToast}
@@ -637,46 +697,46 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg_primary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-        borderColor: '#DADADA',
+    borderColor: "#DADADA",
   },
   headerLeft: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   centerModalOverlay: {
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0,0,0,0.4)",
-},
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
 
-centerModalBackdrop: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-},
+  centerModalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
 
-centerModalContainer: {
-  width: "85%",
-  backgroundColor: "#fff",
-  borderRadius: 12,
-  padding: 10,
-  maxHeight: "70%",
-  elevation: 6,
-},
+  centerModalContainer: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    maxHeight: "70%",
+    elevation: 6,
+  },
   headerTitle: {
     ...fontStyles.headercontent,
     color: colors.black,
@@ -690,12 +750,12 @@ centerModalContainer: {
     fontSize: getResponsiveFontSize(16),
     fontWeight: "600",
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
-    shadowColor: '#000',
+    backgroundColor: "#eee",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -714,11 +774,11 @@ centerModalContainer: {
     marginBottom: getResponsiveSpacing(12),
   },
   procedureCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     borderWidth: 1,
-    borderColor: '#DADADA',
+    borderColor: "#DADADA",
     padding: getResponsiveSpacing(16),
     // shadowColor: '#000',
     // shadowOffset: {
@@ -728,7 +788,7 @@ centerModalContainer: {
     // shadowOpacity: 0.1,
     // shadowRadius: 3.84,
     // elevation: 5,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   procedureContent: {
     flex: 1,
@@ -759,8 +819,8 @@ centerModalContainer: {
   deleteButton: {
     padding: getResponsiveSpacing(12),
     minWidth: getResponsiveSpacing(60),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteIcon: {
     ...getResponsiveImageSize(18, 18),
@@ -768,36 +828,36 @@ centerModalContainer: {
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
-    maxHeight: '80%',
-    overflow: 'hidden',
+    // height: '80%',
+    maxHeight: "80%",
+    overflow: "hidden",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: getResponsiveSpacing(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
-    fontWeight: '600',
     color: colors.text,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -814,7 +874,7 @@ centerModalContainer: {
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
     fontFamily: fonts.medium,
@@ -824,13 +884,13 @@ centerModalContainer: {
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
-    width: '100%',
+    // borderRadius: getResponsiveSpacing(6),
+    // height: getResponsiveSpacing(45),
+    width: "100%",
   },
   noResultsContainer: {
     padding: getResponsiveSpacing(20),
-    alignItems: 'center',
+    alignItems: "center",
   },
   noResultsText: {
     fontSize: getResponsiveFontSize(14),
@@ -838,19 +898,19 @@ centerModalContainer: {
     fontFamily: fonts.regular,
   },
   dropdownContainer: {
-    position: 'relative',
+    position: "relative",
     zIndex: 10000,
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     minHeight: getResponsiveSpacing(48),
   },
   dropdownText: {
@@ -864,27 +924,27 @@ centerModalContainer: {
     color: colors.textSecondary,
   },
   dropdownBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 9999,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   dropdownOptions: {
-    position: 'absolute',
-    top: '100%',
+    position: "absolute",
+    top: "100%",
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     maxHeight: getResponsiveSpacing(200),
     zIndex: 10001,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -896,7 +956,7 @@ centerModalContainer: {
   dropdownSearchInput: {
     padding: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontFamily: fonts.regular,
@@ -905,7 +965,7 @@ centerModalContainer: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   dropdownOptionText: {
     fontSize: getResponsiveFontSize(14),
@@ -914,16 +974,16 @@ centerModalContainer: {
   },
   loadingContainer: {
     padding: getResponsiveSpacing(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   dateInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     minHeight: getResponsiveSpacing(48),
   },
   dateTextInput: {
@@ -937,41 +997,41 @@ centerModalContainer: {
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(10),
     borderLeftWidth: 1,
-    borderLeftColor: '#ddd',
+    borderLeftColor: "#ddd",
   },
   calendarImage: {
     ...getResponsiveImageSize(20, 20),
   },
   pickerModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   pickerModalBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   pickerContainer: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: getResponsiveSpacing(15),
     borderTopRightRadius: getResponsiveSpacing(15),
     paddingBottom: getResponsiveSpacing(30),
   },
   pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     padding: getResponsiveSpacing(15),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   pickerHeaderButtonText: {
     fontSize: getResponsiveFontSize(16),
-    color: '#666',
-    fontWeight: '600',
-    fontFamily: fonts.semiBold,
+    color: "#666",
+    fontWeight: "600",
+    fontWeight: "700",
   },
   deleteButtonText: {
     fontFamily: fonts.regular,

@@ -1,8 +1,4 @@
-
-
-
-
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -14,22 +10,24 @@ import {
   TouchableOpacity,
   View,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { images } from '../../../assets';
-import BackButton from '../../shared/components/BackButton';
-import { colors } from '../../shared/styles/commonStyles';
-import { fonts, fontStyles } from '@/app/shared/styles/fonts';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { images } from "../../../assets";
+import BackButton from "../../shared/components/BackButton";
+import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
-  getResponsiveSpacing
-} from '../../shared/utils/responsive';
-import { useUser } from '../../shared/context/UserContext';
-import axiosClient from '@/src/api/axiosClient';
-import ApiRoutes from '@/src/api/employee/employee';
-import Toast from '@/app/shared/components/Toast';
-import { useUserStore } from '@/src/store/UserStore';
+  getResponsiveSpacing,
+} from "../../shared/utils/responsive";
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from "@/app/shared/components/Toast";
+import { useUserStore } from "@/src/store/UserStore";
+import PrimaryButton from "@/app/shared/components/PrimaryButton";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -62,41 +60,44 @@ interface SocialHabitsScreenProps {
 
 // smokingStatus / alcoholStatus:  1 = Current, 2 = Past, 3 = Non
 const SMOKING_STATUS_LABELS: Record<number, string> = {
-  1: 'Current Smoker',
-  2: 'Past Smoker',
-  3: 'Non Smoker',
+  1: "Current Smoker",
+  2: "Past Smoker",
+  3: "Non Smoker",
 };
 const ALCOHOL_STATUS_LABELS: Record<number, string> = {
-  1: 'Current Drinker',
-  2: 'Past Drinker',
-  3: 'Non Drinker',
+  1: "Current Drinker",
+  2: "Past Drinker",
+  3: "Non Drinker",
 };
 // frequencyId: 1 = Habitual, 2 = Occasional
 const FREQUENCY_LABELS: Record<number, string> = {
-  1: 'Habitual',
-  2: 'Occasional',
+  1: "Habitual",
+  2: "Occasional",
 };
 
 const smokingStatusOptions = [
-  { value: 1, label: 'Current Smoker' },
-  { value: 2, label: 'Past Smoker' },
-  { value: 3, label: 'Non Smoker' },
+  { value: 1, label: "Current Smoker" },
+  { value: 2, label: "Past Smoker" },
+  { value: 3, label: "Non Smoker" },
 ];
 
 const alcoholStatusOptions = [
-  { value: 1, label: 'Current Drinker' },
-  { value: 2, label: 'Past Drinker' },
-  { value: 3, label: 'Non Drinker' },
+  { value: 1, label: "Current Drinker" },
+  { value: 2, label: "Past Drinker" },
+  { value: 3, label: "Non Drinker" },
 ];
 
 const frequencyOptions = [
-  { value: 1, label: 'Habitual' },
-  { value: 2, label: 'Occasional' },
+  { value: 1, label: "Habitual" },
+  { value: 2, label: "Occasional" },
 ];
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function SocialHabitsScreen({ onClose, onDataStatusChange }: SocialHabitsScreenProps) {
+export default function SocialHabitsScreen({
+  onClose,
+  onDataStatusChange,
+}: SocialHabitsScreenProps) {
   const { userData } = useUser();
 
   // List state
@@ -105,23 +106,29 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'smoking' | 'alcohol'>('smoking');
+  const [selectedTab, setSelectedTab] = useState<"smoking" | "alcohol">(
+    "smoking",
+  );
   const [saveLoading, setSaveLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState({ title: '', subtitle: '', type: 'success' as 'success' | 'error' });
+  const [toastMessage, setToastMessage] = useState({
+    title: "",
+    subtitle: "",
+    type: "success" as "success" | "error",
+  });
 
   // Form state – mirrors SaveSocial payload fields
-  const [smokingStatus, setSmokingStatus] = useState<number>(3);
-  const [smokingQuantity, setSmokingQuantity] = useState('');
+  const [smokingStatus, setSmokingStatus] = useState<number>(0);
+  const [smokingQuantity, setSmokingQuantity] = useState("");
   const [smokingFrequencyId, setSmokingFrequencyId] = useState<number>(1);
-  const [alcoholStatus, setAlcoholStatus] = useState<number>(3);
-  const [alcoholQuantity, setAlcoholQuantity] = useState('');
+  const [alcoholStatus, setAlcoholStatus] = useState<number>(0);
+  const [alcoholQuantity, setAlcoholQuantity] = useState("");
   const [alcoholFrequencyId, setAlcoholFrequencyId] = useState<number>(1);
 
   // Dropdown visibility
   const [showSmokingFreqDropdown, setShowSmokingFreqDropdown] = useState(false);
   const [showAlcoholFreqDropdown, setShowAlcoholFreqDropdown] = useState(false);
-   const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
@@ -139,22 +146,23 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
     setLoading(true);
     try {
       const today = new Date();
-      const formattedDate = today.toISOString().split('T')[0];
+      const formattedDate = today.toISOString().split("T")[0];
 
       const payload = {
         pageNo: 1,
         pageSize: 100,
-        search: '',
+        search: "",
         createdBy: patientId,
         patientId: patientId,
-        fromDate: '1900-01-01',
+        fromDate: "1900-01-01",
         toDate: formattedDate,
-        groupName: '',
+        groupName: "",
       };
 
-      console.log('📤 GetAllSocial Request:', JSON.stringify(payload, null, 2));
-      const response: any = await axiosClient.post(ApiRoutes.SocialHistory.getAll, payload);
-      console.log('📥 GetAllSocial Response:', JSON.stringify(response, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.SocialHistory.getAll,
+        payload,
+      );
 
       let list: SocialHabit[] = [];
       if (Array.isArray(response)) {
@@ -173,7 +181,13 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
         onDataStatusChange(list.length > 0);
       }
     } catch (error) {
-      console.error('GetAllSocial error:', error);
+      console.error("GetAllSocial error:", error);
+      setToastMessage({
+        title: "Error",
+        subtitle: error || error?.data?.message || "Get Social habits failed.",
+        type: "error",
+      });
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
@@ -190,13 +204,13 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
   };
 
   const resetForm = () => {
-    setSmokingStatus(3);
-    setSmokingQuantity('');
+    setSmokingStatus(0);
+    setSmokingQuantity("");
     setSmokingFrequencyId(1);
-    setAlcoholStatus(3);
-    setAlcoholQuantity('');
+    setAlcoholStatus(0);
+    setAlcoholQuantity("");
     setAlcoholFrequencyId(1);
-    setSelectedTab('smoking');
+    setSelectedTab("smoking");
     setShowSmokingFreqDropdown(false);
     setShowAlcoholFreqDropdown(false);
   };
@@ -215,27 +229,33 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
     if (!patientId) return;
 
     // Duplicate check
-    if (selectedTab === 'smoking' && smokingStatus !== 3) {
-      if (habits.some(h => h.smokingStatus !== 3 && h.smokingHistory)) {
-        Alert.alert('Record already exists', 'Smoking history is already recorded.');
+    if (selectedTab === "smoking" && smokingStatus !== 0) {
+      if (habits.some((h) => h.smokingStatus !== 0 && h.smokingHistory)) {
+        Alert.alert(
+          "Record already exists",
+          "Smoking history is already recorded.",
+        );
         return;
       }
     }
 
-    if (selectedTab === 'alcohol' && alcoholStatus !== 3) {
-      if (habits.some(h => h.alcoholStatus !== 3 && h.alcoholHistory)) {
-        Alert.alert('Record already exists', 'Alcohol history is already recorded.');
+    if (selectedTab === "alcohol" && alcoholStatus !== 0) {
+      if (habits.some((h) => h.alcoholStatus !== 0 && h.alcoholHistory)) {
+        Alert.alert(
+          "Record already exists",
+          "Alcohol history is already recorded.",
+        );
         return;
       }
     }
 
     // Validation: ensure something is selected on the current tab
-    if (selectedTab === 'smoking' && smokingStatus === 3) {
-      Alert.alert('Selection Required', 'Please select a smoking status.');
+    if (selectedTab === "smoking" && smokingStatus === 0) {
+      Alert.alert("Selection Required", "Please select a smoking status.");
       return;
     }
-    if (selectedTab === 'alcohol' && alcoholStatus === 3) {
-      Alert.alert('Selection Required', 'Please select an alcohol status.');
+    if (selectedTab === "alcohol" && alcoholStatus === 0) {
+      Alert.alert("Selection Required", "Please select an alcohol status.");
       return;
     }
 
@@ -245,15 +265,15 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
       const payload = {
         socialHistoryId: 0,
         patientId: patientId,
-        smokingHistory: smokingStatus !== 3,
-        alcoholHistory: alcoholStatus !== 3,
+        smokingHistory: smokingStatus !== 0,
+        alcoholHistory: alcoholStatus !== 0,
         dietHistory: false,
         sleepingHistory: false,
         exerciseHistory: false,
-        smokingQuantity: smokingStatus === 1 ? smokingQuantity : '',
+        smokingQuantity: smokingStatus === 1 ? smokingQuantity : "",
         smokingFrquencyId: smokingStatus === 1 ? smokingFrequencyId : 0,
         smokingStatus: smokingStatus,
-        alcoholQuantity: alcoholStatus === 1 ? alcoholQuantity : '',
+        alcoholQuantity: alcoholStatus === 1 ? alcoholQuantity : "",
         alcoholFrquencyId: alcoholStatus === 1 ? alcoholFrequencyId : 0,
         alcoholStatus: alcoholStatus,
         appointmentId: 0,
@@ -262,26 +282,32 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
         totalCount: 0,
       };
 
-      console.log('📤 SaveSocial Request:', JSON.stringify(payload, null, 2));
-      const response: any = await axiosClient.post(ApiRoutes.SocialHistory.save, payload);
-      console.log('📥 SaveSocial Response:', JSON.stringify(response, null, 2));
+      console.log("📤 SaveSocial Request:", JSON.stringify(payload, null, 2));
+      const response: any = await axiosClient.post(
+        ApiRoutes.SocialHistory.save,
+        payload,
+      );
+      console.log("📥 SaveSocial Response:", JSON.stringify(response, null, 2));
 
       if (response !== undefined && response !== null) {
         setToastMessage({
           title: "Habit Saved Successfully",
           subtitle: response?.data?.message || "Saved successfully!",
-          type: "success"
+          type: "success",
         });
         setShowToast(true);
         handleCloseModal();
         await fetchHabits();
       }
     } catch (error: any) {
-      console.error('SaveSocial error:', error);
+      console.error("SaveSocial error:", error);
       setToastMessage({
         title: "Save Failed",
-        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-        type: "error"
+        subtitle:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong",
+        type: "error",
       });
       setShowToast(true);
     } finally {
@@ -302,28 +328,34 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
             try {
               console.log(`📤 DeleteSocial id=${id}, deletedBy=${patientId}`);
               const response: any = await axiosClient.delete(
-                ApiRoutes.SocialHistory.delete(id, patientId || 0)
+                ApiRoutes.SocialHistory.delete(id, patientId || 0),
               );
-              console.log('📥 DeleteSocial Response:', JSON.stringify(response, null, 2));
+              console.log(
+                "📥 DeleteSocial Response:",
+                JSON.stringify(response, null, 2),
+              );
               setToastMessage({
                 title: "Habit Deleted Successfully",
                 subtitle: "Deleted successfully!",
-                type: "success"
+                type: "success",
               });
               setShowToast(true);
               await fetchHabits();
             } catch (error: any) {
-              console.error('DeleteSocial error:', error);
+              console.error("DeleteSocial error:", error);
               setToastMessage({
                 title: "Delete Failed",
-                subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-                type: "error"
+                subtitle:
+                  error?.response?.data?.message ||
+                  error?.message ||
+                  "Something went wrong",
+                type: "error",
               });
               setShowToast(true);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -345,7 +377,8 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
                 <Text style={styles.habitTitle}>Smoking</Text>
               </View>
               <Text style={styles.habitDetail}>
-                Status: {SMOKING_STATUS_LABELS[item.smokingStatus] ?? 'Non Smoker'}
+                Status:{" "}
+                {SMOKING_STATUS_LABELS[item.smokingStatus] ?? "Non Smoker"}
               </Text>
               {item.smokingStatus === 1 && item.smokingQuantity ? (
                 <Text style={styles.habitDetail}>
@@ -354,14 +387,19 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
               ) : null}
               {item.smokingStatus === 1 && item.smokingFrquencyId ? (
                 <Text style={styles.habitDetail}>
-                  Frequency: {FREQUENCY_LABELS[item.smokingFrquencyId] ?? '—'}
+                  Frequency: {FREQUENCY_LABELS[item.smokingFrquencyId] ?? "—"}
                 </Text>
               ) : null}
             </View>
           )}
 
           {hasAlcohol && (
-            <View style={[styles.habitSection, hasSmoking && styles.habitSectionBorder]}>
+            <View
+              style={[
+                styles.habitSection,
+                hasSmoking && styles.habitSectionBorder,
+              ]}
+            >
               <View style={styles.habitHeader}>
                 <View style={styles.placeholderIcon}>
                   <Text style={styles.placeholderText}>🍷</Text>
@@ -369,7 +407,8 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
                 <Text style={styles.habitTitle}>Alcohol</Text>
               </View>
               <Text style={styles.habitDetail}>
-                Status: {ALCOHOL_STATUS_LABELS[item.alcoholStatus] ?? 'Non Drinker'}
+                Status:{" "}
+                {ALCOHOL_STATUS_LABELS[item.alcoholStatus] ?? "Non Drinker"}
               </Text>
               {item.alcoholStatus === 1 && item.alcoholQuantity ? (
                 <Text style={styles.habitDetail}>
@@ -378,7 +417,7 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
               ) : null}
               {item.alcoholStatus === 1 && item.alcoholFrquencyId ? (
                 <Text style={styles.habitDetail}>
-                  Frequency: {FREQUENCY_LABELS[item.alcoholFrquencyId] ?? '—'}
+                  Frequency: {FREQUENCY_LABELS[item.alcoholFrquencyId] ?? "—"}
                 </Text>
               ) : null}
             </View>
@@ -403,9 +442,6 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
   const renderSmokingForm = () => (
     <View style={styles.formCard}>
       <View style={styles.cardHeader}>
-        {/* <View style={styles.placeholderIcon}>
-          <Text style={styles.placeholderText}>🚬</Text>
-        </View> */}
         <Text style={styles.habitTitle}>Smoking</Text>
       </View>
 
@@ -446,10 +482,12 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
             <View style={styles.dropdownContainer}>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => setShowSmokingFreqDropdown(!showSmokingFreqDropdown)}
+                onPress={() =>
+                  setShowSmokingFreqDropdown(!showSmokingFreqDropdown)
+                }
               >
                 <Text style={styles.dropdownText}>
-                  {FREQUENCY_LABELS[smokingFrequencyId] ?? 'Select'}
+                  {FREQUENCY_LABELS[smokingFrequencyId] ?? "Select"}
                 </Text>
                 <Text style={styles.dropdownIcon}>▼</Text>
               </TouchableOpacity>
@@ -470,7 +508,9 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
                           setShowSmokingFreqDropdown(false);
                         }}
                       >
-                        <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                        <Text style={styles.dropdownOptionText}>
+                          {option.label}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -486,9 +526,6 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
   const renderAlcoholForm = () => (
     <View style={styles.formCard}>
       <View style={styles.cardHeader}>
-        {/* <View style={styles.placeholderIcon}>
-          <Text style={styles.placeholderText}>🍷</Text>
-        </View> */}
         <Text style={styles.habitTitle}>Alcohol</Text>
       </View>
 
@@ -529,10 +566,12 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
             <View style={styles.dropdownContainer}>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => setShowAlcoholFreqDropdown(!showAlcoholFreqDropdown)}
+                onPress={() =>
+                  setShowAlcoholFreqDropdown(!showAlcoholFreqDropdown)
+                }
               >
                 <Text style={styles.dropdownText}>
-                  {FREQUENCY_LABELS[alcoholFrequencyId] ?? 'Select'}
+                  {FREQUENCY_LABELS[alcoholFrequencyId] ?? "Select"}
                 </Text>
                 <Text style={styles.dropdownIcon}>▼</Text>
               </TouchableOpacity>
@@ -544,7 +583,11 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
                     activeOpacity={1}
                   />
                   <View style={styles.dropdownOptions}>
-                    <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                      style={{ flexShrink: 1 }}
+                      keyboardShouldPersistTaps="handled"
+                      showsVerticalScrollIndicator={false}
+                    >
                       {frequencyOptions.map((option) => (
                         <TouchableOpacity
                           key={option.value}
@@ -554,10 +597,11 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
                             setShowAlcoholFreqDropdown(false);
                           }}
                         >
-                          <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                          <Text style={styles.dropdownOptionText}>
+                            {option.label}
+                          </Text>
                         </TouchableOpacity>
                       ))}
-
                     </ScrollView>
                   </View>
                 </>
@@ -605,7 +649,10 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
           <View style={styles.habitsContainer}>
             {habits.length > 0 ? (
               habits.map((item) => (
-                <View key={item.socialHistoryId} style={styles.habitCardWrapper}>
+                <View
+                  key={item.socialHistoryId}
+                  style={styles.habitCardWrapper}
+                >
                   {renderHabitCard(item)}
                 </View>
               ))
@@ -634,54 +681,71 @@ export default function SocialHabitsScreen({ onClose, onDataStatusChange }: Soci
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Social Habit</Text>
-              <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
+              <TouchableOpacity
+                onPress={handleCloseModal}
+                style={styles.closeButton}
+              >
                 <Image source={images.icons.close} style={styles.closeIcon} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView
+              style={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Tab selector */}
               <View style={styles.tabContainer}>
                 <TouchableOpacity
-                  style={[styles.tabCard, selectedTab === 'smoking' && styles.tabCardSelected]}
-                  onPress={() => setSelectedTab('smoking')}
+                  style={[
+                    styles.tabCard,
+                    selectedTab === "smoking" && styles.tabCardSelected,
+                  ]}
+                  onPress={() => setSelectedTab("smoking")}
                 >
                   <Text style={styles.tabImage}>🚬</Text>
-                  <Text style={[styles.tabText, selectedTab === 'smoking' && styles.tabTextSelected]}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTab === "smoking" && styles.tabTextSelected,
+                    ]}
+                  >
                     Smoking
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.tabCard, selectedTab === 'alcohol' && styles.tabCardSelected]}
-                  onPress={() => setSelectedTab('alcohol')}
+                  style={[
+                    styles.tabCard,
+                    selectedTab === "alcohol" && styles.tabCardSelected,
+                  ]}
+                  onPress={() => setSelectedTab("alcohol")}
                 >
                   <Text style={styles.tabImage}>🍷</Text>
-                  <Text style={[styles.tabText, selectedTab === 'alcohol' && styles.tabTextSelected]}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTab === "alcohol" && styles.tabTextSelected,
+                    ]}
+                  >
                     Alcohol
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.habitsContainer1}>
-                {selectedTab === 'smoking' && renderSmokingForm()}
-                {selectedTab === 'alcohol' && renderAlcoholForm()}
+                {selectedTab === "smoking" && renderSmokingForm()}
+                {selectedTab === "alcohol" && renderAlcoholForm()}
               </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {/* Save Button */}
             <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.saveButton, saveLoading && styles.saveButtonDisabled]}
+              <PrimaryButton
+                style={[styles.saveButton, { opacity: saveLoading ? 0.7 : 1 }]}
                 onPress={handleSave}
                 disabled={saveLoading}
-              >
-                {saveLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
-                )}
-              </TouchableOpacity>
+                title={saveLoading ? "Saving" : "Save"}
+              />
             </View>
           </SafeAreaView>
         </View>
@@ -706,22 +770,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg_primary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
-    backgroundColor: '#fff',
-     borderBottomWidth: 1,
-        borderColor: '#DADADA',
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderColor: "#DADADA",
   },
   headerLeft: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   headerTitle: {
     ...fontStyles.headercontent,
@@ -737,23 +801,23 @@ const styles = StyleSheet.create({
   //   fontSize: getResponsiveFontSize(14),
   //   fontWeight: '600',
   //   color: '#fff',
-  //   fontFamily: fonts.semiBold
+  //   fontWeight: "700"
   // },
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
-    shadowColor: '#000',
+    backgroundColor: "#eee",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -764,8 +828,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingTop: getResponsiveSpacing(60),
   },
   habitsContainer: {
@@ -779,28 +843,28 @@ const styles = StyleSheet.create({
   },
   noDataContainer: {
     padding: getResponsiveSpacing(20),
-    alignItems: 'center',
+    alignItems: "center",
   },
   noDataText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
-    fontStyle: 'italic',
-    fontFamily: fonts.regular
+    fontStyle: "italic",
+    fontFamily: fonts.regular,
   },
   // Habit card (list view)
   habitCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     borderWidth: 1,
-    borderColor: '#DADADA',
+    borderColor: "#DADADA",
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 2 },
     // shadowOpacity: 0.1,
     // shadowRadius: 3.84,
     // elevation: 5,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   habitContent: {
     flex: 1,
@@ -811,34 +875,34 @@ const styles = StyleSheet.create({
   },
   habitSectionBorder: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: "#f0f0f0",
     paddingTop: getResponsiveSpacing(8),
   },
   habitHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: getResponsiveSpacing(4),
   },
   habitTitle: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
-    fontFamily: fonts.bold
+    fontFamily: fonts.bold,
   },
   habitDetail: {
     fontSize: getResponsiveFontSize(13),
     color: colors.textSecondary,
     marginBottom: getResponsiveSpacing(2),
     marginLeft: getResponsiveSpacing(4),
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   placeholderIcon: {
     width: getResponsiveSpacing(30),
     height: getResponsiveSpacing(30),
     borderRadius: getResponsiveSpacing(15),
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: getResponsiveSpacing(10),
   },
   placeholderText: {
@@ -854,38 +918,38 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
-    height: '85%',
-    width: '100%',
-    overflow: 'hidden',
+    height: "85%",
+    width: "100%",
+    overflow: "hidden",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -899,27 +963,29 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(30),
+    // paddingBottom: getResponsiveSpacing(30),
     paddingTop: getResponsiveSpacing(12),
+    justifyContent: "center",
+    alignItems: "center",
   },
   // Tab selector
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(16),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     gap: getResponsiveSpacing(12),
   },
   tabCard: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: getResponsiveSpacing(14),
     paddingHorizontal: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(8),
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   tabCardSelected: {
     backgroundColor: colors.primary,
@@ -931,21 +997,21 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: getResponsiveFontSize(12),
-    fontWeight: '600',
+    fontWeight: "600",
     color: "#000",
-    textAlign: 'center',
-    fontFamily: fonts.medium
+    textAlign: "center",
+    fontFamily: fonts.medium,
   },
   tabTextSelected: {
-    color: '#fff',
+    color: "#fff",
   },
   // Form card (inside modal)
   formCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(20),
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 2 },
     // shadowOpacity: 0.08,
@@ -953,8 +1019,8 @@ const styles = StyleSheet.create({
     // elevation: 3,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: getResponsiveSpacing(16),
   },
   radioContainer: {
@@ -962,14 +1028,14 @@ const styles = StyleSheet.create({
   },
   radioGroupLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(12),
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: getResponsiveSpacing(12),
   },
   radioButton: {
@@ -979,8 +1045,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
     marginRight: getResponsiveSpacing(12),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioButtonSelected: {
     width: getResponsiveSpacing(10),
@@ -991,85 +1057,85 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontWeight: '500',
-    fontFamily: fonts.regular
+    fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   conditionalFields: {
     marginTop: getResponsiveSpacing(16),
     paddingTop: getResponsiveSpacing(16),
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: "#f0f0f0",
   },
   inputGroup: {
     marginBottom: getResponsiveSpacing(16),
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(10),
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    backgroundColor: '#fff',
-    fontFamily: fonts.regular
+    backgroundColor: "#fff",
+    fontFamily: fonts.regular,
   },
   dropdownContainer: {
-    position: 'relative',
+    position: "relative",
     zIndex: 10000,
-    overflow: 'visible',
+    overflow: "visible",
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     minHeight: getResponsiveSpacing(48),
   },
   dropdownText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     flex: 1,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   dropdownIcon: {
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
   },
   dropdownBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 9999,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   dropdownOptions: {
-    position: 'absolute',
-    bottom: '100%',
+    position: "absolute",
+    bottom: "100%",
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     maxHeight: getResponsiveSpacing(200),
     zIndex: 10001,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -2,
@@ -1082,28 +1148,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   dropdownOptionText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   saveButton: {
     backgroundColor: colors.primary,
-    borderRadius: getResponsiveSpacing(8),
-    paddingVertical: getResponsiveSpacing(14),
-    alignItems: 'center',
-    justifyContent: 'center',
+    // borderRadius: getResponsiveSpacing(8),
+    // paddingVertical: getResponsiveSpacing(14),
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveButtonDisabled: {
     opacity: 0.7,
   },
   saveButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
-    color: '#fff',
-    fontFamily: fonts.regular
+    fontWeight: "700",
+    color: "#fff",
+    fontFamily: fonts.regular,
   },
   deleteButtonText: {
     fontFamily: fonts.regular,

@@ -1,6 +1,9 @@
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import {
   FlatList,
@@ -18,7 +21,11 @@ import {
 import { ActivityIndicator } from "react-native";
 import { Button, Card, Chip } from "react-native-paper";
 import CommonHeader from "../../shared/components/CommonHeader";
-import commonStyles, { colors } from "../../shared/styles/commonStyles";
+import commonStyles, {
+  colors,
+  statusColors,
+  statusTextColors,
+} from "../../shared/styles/commonStyles";
 import { Order, orderManager } from "../../shared/utils/orderManager";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import ApiRoutes from "@/src/api/employee/employee";
@@ -37,168 +44,105 @@ dayjs.extend(advancedFormat);
 
 export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [statusIdMap, setStatusIdMap] = useState<{ [key: string]: number }>({});
   const [currentLocation] = useState("New York, NY");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { userData } = useUser();
   const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  // Load orders from order manager
-  // Helper to map order status names to masterDataId for categoryId=7
   const [searchQuery, setSearchQuery] = useState("");
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
-  // Debug: Log userData as soon as it changes
-  // useEffect(() => {
-  //   console.log('[OrdersScreen] userData changed:', userData);
-  // }, [userData]);
   const patientId = Number(userData?.e_id || user?.eId);
-  const getOrderStatusIdMap = async (): Promise<{ [key: string]: number }> => {
-    try {
-      const response: any = await axiosClient.get(
-        ApiRoutes.Master.getmasterdata(7),
-      );
-      let data = [];
-      if (Array.isArray(response)) {
-        data = response;
-      } else if (response.isSuccess && Array.isArray(response.data)) {
-        data = response.data;
-      }
-      const map: { [key: string]: number } = {};
-      data.forEach((item: any) => {
-        if (item.isActive && item.name && item.masterDataId) {
-          map[item.name] = item.masterDataId;
-        }
-      });
-      return map;
-    } catch (error) {
-      console.error("Failed to fetch order status master data", error);
-      return {};
-    }
-  };
-  // Fetch statusId map and orders on mount
-  useEffect(() => {
-    async function fetchStatusMapAndOrders() {
-      setLoading(true);
-      const map = await getOrderStatusIdMap();
-      setStatusIdMap(map);
-      // Fetch all orders initially
-      if (patientId) {
-        const ordersData = await fetchAllOrders(patientId, 0);
-        setOrders(ordersData);
-      }
-      setLoading(false);
-    }
-    fetchStatusMapAndOrders();
-  }, [patientId]);
+  const insets = useSafeAreaInsets();
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === "android") {
-        const timeout = setTimeout(() => {
-          // Use React Native StatusBar API to set background color on Android
-          RNStatusBar.setBackgroundColor("#00e93aff", true);
-        }, 400); // Adjust timeout as needed
-        return () => clearTimeout(timeout);
-      }
-    }, []),
-  );
-
-  // Refresh orders from API when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (patientId) {
-        setLoading(true);
-        fetchAllOrders(patientId, 0).then((ordersData) => {
-          setOrders(ordersData);
-          setLoading(false);
-        });
-      }
-    }, [patientId]),
-  );
-
-  // Add some sample orders if none exist (for demo purposes)
-  // Remove sample order logic (not needed for real API)
-
-  // Use exact status names from master data for filter keys and titles
+  // Use exact status names returned by the API for filter keys and titles.
+  // Client-side filtering means we only ever fetch the full order list once,
+  // then slice it locally when the user switches tabs or searches.
   const filters = useMemo(
     () => [
-      { key: "all", title: "All Orders" },
-      { key: "Requested", title: "Pending" },
-      { key: "Completed", title: "Completed" },
-      { key: "Cancelled", title: "Cancelled" },
+      { key: "all", title: "All Orders", status: "all" },
+      {
+        key: "Requested",
+        title: "Pending",
+        status: ["Requested", "Pending", "Inprogress", "Ongoing", "Assigned"],
+      },
+      { key: "Completed", title: "Completed", status: "Completed" },
+      { key: "Cancelled", title: "Cancelled", status: "Cancelled" },
     ],
     [],
   );
 
-  // Fetch orders when filter changes or search is performed
-  useEffect(() => {
-    let statusId = 0;
-    console.log(
-      "[OrdersScreen] useEffect patientId (on filter/search):",
-      patientId,
-      userData,
-    );
-
-    if (!patientId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    // If searching by order number
-    if (searchQuery.trim().length > 0) {
-      fetchAllOrders(patientId, 0, searchQuery.trim()).then((ordersData) => {
-        setOrders(ordersData);
-        setLoading(false);
-      });
-      return;
-    }
-    // Use exact key for statusId lookup
-    if (selectedFilter !== "all" && statusIdMap[selectedFilter]) {
-      statusId = statusIdMap[selectedFilter];
-    }
-    fetchAllOrders(patientId, statusId).then((ordersData) => {
-      setOrders(ordersData);
-      setLoading(false);
-    });
-  }, [selectedFilter, statusIdMap, patientId, searchQuery]);
-
-  const filteredOrders = [...orders].sort((a, b) => {
-    const dateA = a.scheduleDate ? new Date(a.scheduleDate).getTime() : 0;
-    const dateB = b.scheduleDate ? new Date(b.scheduleDate).getTime() : 0;
-    return dateB - dateA;
-  });
-
-  const fetchAllOrders = async (
-    patientId: number,
-    statusId: number = 0,
-    searchorderno?: string,
-  ) => {
+  const fetchAllOrders = useCallback(async (): Promise<Order[]> => {
+    if (!patientId) return [];
     try {
-      let query = `?patientId=${patientId}&statusId=${statusId}`;
-      if (searchorderno && searchorderno.length > 0) {
-        query += `&searchorderno=${encodeURIComponent(searchorderno)}`;
-      }
       const response: any = await axiosClient.get(
-        ApiRoutes.MyOrders.Allorders + query,
+        `${ApiRoutes.MyOrders.Allorders}?patientId=${patientId}&statusId=0`,
       );
       if (response.isSuccess && Array.isArray(response.data)) {
-        console.log("Orders of :", response.data);
         return response.data;
-      } else {
-        console.log("No orders found or error:", response.message);
-        return [];
       }
+      console.log("No orders found or error:", response.message);
+      return [];
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       return [];
     }
-  };
+  }, [patientId]);
+
+  const refreshOrders = useCallback(async () => {
+    if (!patientId) return;
+    setLoading(true);
+    const ordersData = await fetchAllOrders();
+    setAllOrders(ordersData);
+    setLoading(false);
+  }, [patientId, fetchAllOrders]);
+
+  // Fetch the full order list once on mount / whenever the patient changes.
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders]);
+
+  // Refresh the underlying order list on focus (e.g. after placing/cancelling
+  // an order elsewhere) without touching selectedFilter/searchQuery, so the
+  // currently selected tab keeps showing the right slice of data.
+  useFocusEffect(
+    useCallback(() => {
+      refreshOrders();
+    }, [refreshOrders]),
+  );
+
+  // Derive the visible list entirely client-side from allOrders — no extra
+  // API calls when switching filter tabs or typing a search query.
+  const filteredOrders = useMemo(() => {
+    let result = allOrders;
+
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length > 0) {
+      result = result.filter((order: any) =>
+        order.orderNo?.toLowerCase().includes(query),
+      );
+    } else if (selectedFilter !== "all") {
+      const filterDef = filters.find((f) => f.key === selectedFilter);
+      const statusList = filterDef
+        ? Array.isArray(filterDef.status)
+          ? filterDef.status
+          : [filterDef.status]
+        : [];
+      result = result.filter((order: any) =>
+        statusList.includes(order.statusName),
+      );
+    }
+
+    return [...result].sort((a, b) => {
+      const dateA = a.scheduleDate ? new Date(a.scheduleDate).getTime() : 0;
+      const dateB = b.scheduleDate ? new Date(b.scheduleDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [allOrders, selectedFilter, searchQuery, filters]);
 
   // const formatDate = (isoDate: string, extraMinutes: number = 0, extraHours: number = 0) => {
   //   const date = new Date(isoDate);
@@ -311,78 +255,105 @@ export default function OrdersScreen() {
         iconSource = null;
     }
 
-      // Format createdOn date
-      const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
-      const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
-      const duration = item.duration ? `${item.duration}` : "";
-      // Status color mapping
-      const statusColors: { [key: string]: string } = {
-        Requested: "#d0eaff",
-        Completed: "#ccface",
-        Cancelled: "#ffd8d5",
-        
-        Inprogress: "#f8d7a7",
-          Assigned: "#f7cdff",
-        Ongoing: "#f7cdff",
-        Pending: "#d0eaff",
-        Rescheduled: "#bbecf3",
-         "Admin Doctor": "#f7cdff",
-      };
-      const statusColor = statusColors[item.statusName] || "#666";
+    // Format createdOn date
+    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+    const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
+    const duration = item.duration ? `${item.duration}` : "";
+    // Status color mapping
+    // const statusColors: { [key: string]: string } = {
+    //   Requested: "#d0eaff",
+    //   Completed: "#ccface",
+    //   Cancelled: "#ffd8d5",
 
+    //   Inprogress: "#f8d7a7",
+    //   Assigned: "#f7cdff",
+    //   Ongoing: "#f7cdff",
+    //   Pending: "#d0eaff",
+    //   Rescheduled: "#bbecf3",
+    //   "Admin Doctor": "#f7cdff",
+    // };
+    const statusColor = statusColors[item.statusName] || "#666";
 
-      const statusTextColors: { [key: string]: string } = {
-        Requested: "#006cc5",
-        Completed: "#4CAF50",
-        Cancelled: "#F44336",
-        Inprogress: "#FF9800",
-         Assigned: "#9C27B0",
-        Ongoing: "#9C27B0",
-        Pending: "#006cc5",
-        Rescheduled: "#00BCD4",
-         "Admin Doctor": "#9C27B0",
-      };
-      const statusTextColor = statusTextColors[item.statusName] || "#000";
-      // Display 'Inprogress' instead of 'Requested'
-      const displayStatusName = item.statusName === "Requested" ? "Pending" : item.statusName;
-      return (
-        <TouchableOpacity onPress={() => handleOrderPress(item)}>
-          <View style={styles.orderCard}>
-            <View style={styles.orderLeft}>
-              {iconSource && (
-                <Image source={iconSource} style={{ width: 55, resizeMode: 'contain', borderRadius: 10 }} />
-              )}
-              <Text style={styles.orderno}>{item.orderNo}</Text>
-            </View>
-            <View style={styles.orderRight}>
-              {/* Title */}
-              <Text style={styles.title}>{item.title}</Text>
-               {duration ? ( <View style={styles.categoryrow}><Text style={styles.categorytitle1}>Duration: {duration}</Text></View>
-               ):(
-                 <View style={styles.categoryrow}>
-                <Text style={styles.categorytitle}>{createdOn}{timeSlot} </Text>
-              </View>
-               )}
-             
+    // const statusTextColors: { [key: string]: string } = {
+    //   Requested: "#006cc5",
+    //   Completed: "#4CAF50",
+    //   Cancelled: "#F44336",
+    //   Inprogress: "#FF9800",
+    //   Assigned: "#9C27B0",
+    //   Ongoing: "#9C27B0",
+    //   Pending: "#006cc5",
+    //   Rescheduled: "#00BCD4",
+    //   "Admin Doctor": "#9C27B0",
+    // };
+    const statusTextColor =
+      statusTextColors[item.statusName] || colors.primaryText;
+    // Display 'Inprogress' instead of 'Requested'
+    const displayStatusName =
+      item.statusName === "Requested" ? "Pending" : item.statusName;
+    return (
+      <TouchableOpacity onPress={() => handleOrderPress(item)}>
+        <View style={styles.orderCard}>
+          <View style={styles.orderLeft}>
+            {iconSource && (
+              <Image
+                source={iconSource}
+                style={{ width: 55, resizeMode: "contain", borderRadius: 10 }}
+              />
+            )}
+            <Text style={styles.orderno}>{item.orderNo}</Text>
+          </View>
+          <View style={styles.orderRight}>
+            {/* Title */}
+            <Text style={styles.title}>{item.title}</Text>
+            {duration ? (
               <View style={styles.categoryrow}>
-                {/* StatusName with background color */}
-                <View key={item.orderNo + "-status"} style={{ alignSelf: "flex-start", backgroundColor: statusColor, borderRadius: 30, paddingHorizontal: 12, paddingVertical: 2, paddingTop: 4, marginTop: 0 }}>
-                  <Text style={{ color: statusTextColor, fontSize: 10, fontFamily: fonts.regular }}>{displayStatusName}</Text>
-                </View>
-                {item.orderType !== "Consultation" && (
-                  <View style={styles.paymentrow}>
-                    {/* <Text style={styles.paymentheader}>Payment:</Text> */}
-                    {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
-                  </View>
-                )}
+                <Text style={styles.categorytitle1}>Duration: {duration}</Text>
               </View>
+            ) : (
+              <View style={styles.categoryrow}>
+                <Text style={styles.categorytitle}>
+                  {createdOn}
+                  {timeSlot}{" "}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.categoryrow}>
+              {/* StatusName with background color */}
+              <View
+                key={item.orderNo + "-status"}
+                style={{
+                  alignSelf: "flex-start",
+                  alignItems: 'center',
+                  backgroundColor: statusColor,
+                  borderRadius: 30,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  marginTop: 0,
+                }}
+              >
+                <Text
+                  style={{
+                    color: statusTextColor,
+                    fontSize: 10,
+                    fontFamily: fonts.regular,
+                  }}
+                >
+                  {displayStatusName}
+                </Text>
+              </View>
+              {item.orderType !== "Consultation" && (
+                <View style={styles.paymentrow}>
+                  {/* <Text style={styles.paymentheader}>Payment:</Text> */}
+                  {/* <Text style={styles.paymentamount}><Text style={styles.span}>₹</Text>{item.paymentAmount ? `${item.paymentAmount}` : "N/A"}</Text> */}
+                </View>
+              )}
             </View>
           </View>
-        </TouchableOpacity>
-      );
-    },
-    []
-  );
+        </View>
+      </TouchableOpacity>
+    );
+  }, []);
 
   const renderFilterChip = useCallback(
     ({ item }: { item: any }) => (
@@ -407,14 +378,9 @@ export default function OrdersScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
-      <View style={[styles.container]}>
-        <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#ffffff"
-        />
-
+    // <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
+    <View style={[styles.container]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Orders</Text>
@@ -462,10 +428,7 @@ export default function OrdersScreen() {
                 keyExtractor={(item) => item.key}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[
-                  styles.filtersList,
-                  { paddingBottom: 0, paddingLeft: 20, paddingRight: 20 },
-                ]}
+                contentContainerStyle={[styles.filtersList]}
               />
             </View>
           )}
@@ -474,7 +437,11 @@ export default function OrdersScreen() {
         <View
           style={[
             styles.ordersdataContainer,
-            { backgroundColor: "#F5F4F9", marginHorizontal: 0, marginTop: 0 },
+            {
+              backgroundColor: colors.bg_rest,
+              marginHorizontal: 0,
+              marginTop: 0,
+            },
           ]}
         >
           {loading ? (
@@ -486,7 +453,7 @@ export default function OrdersScreen() {
                 padding: 40,
               }}
             >
-              <ActivityIndicator size="large" color="#694664" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : filteredOrders.length === 0 ? (
             <View
@@ -497,7 +464,7 @@ export default function OrdersScreen() {
                 padding: 40,
               }}
             >
-              <Text style={{ fontSize: 16, color: "#888" }}>
+              <Text style={{ fontSize: 16, color: colors.primaryText }}>
                 No orders found
               </Text>
             </View>
@@ -511,12 +478,9 @@ export default function OrdersScreen() {
                     ? `${item.orderNo}-${item.scheduleDate}`
                     : `order-${index}`
                 }
-                contentContainerStyle={[
-                  styles.ordersList,
-                  { paddingHorizontal: 20, paddingTop: 15 },
-                ]}
+                contentContainerStyle={[styles.ordersList]}
                 showsVerticalScrollIndicator={true}
-                style={{ flex: 1, backgroundColor: "#F5F4F9" }}
+                style={{ flex: 1, backgroundColor: colors.bg_rest }}
               />
             </View>
           )}
@@ -527,14 +491,10 @@ export default function OrdersScreen() {
         order={selectedOrder}
         statusName={selectedOrder?.statusName || ""}
         onClose={() => setOrderDetailsVisible(false)}
-        refreshOrders={async () => {
-          if (patientId) {
-            const ordersData = await fetchAllOrders(patientId, 0);
-            setOrders(ordersData);
-          }
-        }}
+        refreshOrders={refreshOrders}
       />
-    </SafeAreaView>
+    </View>
+    // </SafeAreaView>
   );
 }
 
@@ -557,7 +517,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     color: colors.black,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   backButton: {
     padding: 0,
@@ -572,19 +532,21 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   filtersList: {
-    // paddingHorizontal: 20,
+    paddingBottom: 0,
+    paddingLeft: 20,
+    paddingRight: 20,
   },
   filterChip: {
     paddingHorizontal: 20,
     paddingVertical: 5,
     borderRadius: 20,
-    backgroundColor: "rgba(105, 70, 100, 0.4)",
+    backgroundColor: colors.lab.chips,
     color: "rgba(0, 0, 0, 1)",
     marginRight: 10,
     fontFamily: fonts.regular,
   },
   selectedFilterChip: {
-    backgroundColor: "#694664",
+    backgroundColor: colors.primary,
   },
   orderRight: {
     flex: 1,
@@ -598,14 +560,15 @@ const styles = StyleSheet.create({
   },
   selectedFilterChipText: {
     color: "#fff",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   ordersList: {
-    // padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 15,
   },
   title: {
     fontSize: 16,
-    color: "#000",
+    color: colors.primaryText,
     fontWeight: "600",
     fontFamily: fonts.bold,
   },
@@ -621,7 +584,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     marginBottom: 4,
   },
-    categorytitle1: {
+  categorytitle1: {
     fontSize: 12,
     color: "#666",
     fontFamily: fonts.regular,
@@ -630,14 +593,14 @@ const styles = StyleSheet.create({
   paymentheader: {
     fontSize: 12,
     color: "#303030",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   paymentamount: {
     fontSize: 13,
     color: "#000000",
     marginBottom: 4,
     marginTop: 2,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   span: {
     fontSize: 12,
@@ -673,7 +636,7 @@ const styles = StyleSheet.create({
   },
   orderno: {
     fontSize: 11,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   orderHeader: {
     flexDirection: "row",

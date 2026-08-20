@@ -29,6 +29,7 @@ import ApiRoutes from "@/src/api/employee/employee";
 import Toast from '@/app/shared/components/Toast';
 import * as SecureStore from 'expo-secure-store';
 import { useUserStore } from "@/src/store/UserStore";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 interface MenstrualRecord {
   id: string;
@@ -297,7 +298,7 @@ export default function MenstrualHistoryScreen({
             style={styles.modalBackdrop}
             onPress={handleCloseModal}
           />
-          <SafeAreaView style={styles.modalContent}>
+          <KeyboardAwareScrollView style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Menstrual Record</Text>
               <TouchableOpacity
@@ -402,7 +403,7 @@ export default function MenstrualHistoryScreen({
                 disabled={saveLoading}
               />
             </View>
-          </SafeAreaView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
       <Toast
@@ -452,9 +453,8 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   divider: {
     height: 1,
@@ -571,9 +571,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
-    fontWeight: "600",
     color: colors.text,
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -680,15 +679,14 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
     fontWeight: "500",
-    fontFamily: fonts.semiBold
   },
   modalFooter: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(6),
-    height: getResponsiveSpacing(45),
+    // borderRadius: getResponsiveSpacing(6),
+    // height: getResponsiveSpacing(45),
     width: "100%",
   },
   recordTitle: {
@@ -696,7 +694,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
-    fontFamily: fonts.semiBold
   },
   recordDetails: {
     fontSize: getResponsiveFontSize(14),

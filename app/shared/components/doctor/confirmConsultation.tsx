@@ -33,8 +33,10 @@ import {
 } from "@/src/constants/constants";
 import { fonts } from "@/app/shared/styles/fonts";
 import { images } from "@/assets";
-import { getResponsiveFontSize, getResponsiveSpacing } from "../../utils/responsive";
-import { navigate } from "expo-router/build/global-state/routing";
+import {
+  getResponsiveFontSize,
+  getResponsiveSpacing,
+} from "../../utils/responsive";
 import { useVideoStore } from "@/src/store/VideoStore";
 
 const SLOT_GROUPS = {
@@ -49,8 +51,6 @@ const labTimeSlots = [
 ];
 
 // Helper to check if a slot is completed
-
-
 
 const familyRelationTypeId = 5;
 
@@ -119,6 +119,11 @@ export default function ConfirmConsultationScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<IFamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState({
+    title: "",
+    subtitle: "",
+    type: "success" as "success" | "error",
+  });
 
   const self: IFamilyMember = {
     name: user?.fullName || "",
@@ -237,7 +242,6 @@ export default function ConfirmConsultationScreen() {
     if (patientType === "others") {
       let newFieldErrors = { relation: "", fullName: "", age: "", gender: "" };
 
-
       if (!selectedDate) {
         setErrors("Please select a date");
         hasError = true;
@@ -277,6 +281,7 @@ export default function ConfirmConsultationScreen() {
     if (!user) return;
     if (validateFields()) return;
     try {
+      setLoading(true);
       let payload: ICreateAppointmentRequest = {
         patientId: user.eId,
         specialityId: departmentId || 0,
@@ -306,16 +311,32 @@ export default function ConfirmConsultationScreen() {
         ApiRoutes.Appointments.save,
         payload,
       );
-      useVideoStore.getState().setAppointment(res);
+      useVideoStore.getState().setAppointment(res?.appointmentId || 0);
 
       console.log("Video consultation appointment confirm: ", res);
+
+      setToastMessage({
+        title: "Booking Confirmed",
+        subtitle: "Your doctor consultation was successfully created.",
+        type: "success",
+      });
+      setTimeout(() => {
+        router.push("/(main)/orders");
+      }, 1500);
     } catch (error) {
       console.log("error: ", error);
+      setToastMessage({
+        title: "Booking Failed",
+        subtitle:
+          "There was an error creating your consultation. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setShowConfirm(true);
+      setLoading(false);
+      useVideoStore.getState().reset();
+      useDoctorConsultationStore.getState().reset();
     }
-    setShowConfirm(true);
-    setTimeout(() => {
-      router.push("/(main)/orders");
-    }, 1000);
   };
 
   const formatDateLab = (date: Date) => {
@@ -364,37 +385,37 @@ export default function ConfirmConsultationScreen() {
   };
 
   function convertTo24HourFormat(time12hr: string): string {
-  const [time, modifier] = time12hr.split(" "); 
-  let [hours, minutes] = time.split(":").map(Number); 
-  if (modifier === "PM" && hours !== 12) {
-    hours += 12;
+    const [time, modifier] = time12hr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    if (modifier === "PM" && hours !== 12) {
+      hours += 12;
+    }
+    if (modifier === "AM" && hours === 12) {
+      hours = 0;
+    }
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   }
-  if (modifier === "AM" && hours === 12) {
-    hours = 0;
-  }
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-}
 
-function isSlotCompleted(slot: string) {
-  const [, end] = slot.split(" - "); 
-  //console.log("End Time to Parse:", end);
-  const convertedEndTime = convertTo24HourFormat(end);
-  //console.log("Converted End Time (24-hour):", convertedEndTime);
-  const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
-  const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
-  //console.log("Parsed End Time:", endTime.toString());
-  const now = dayjs();
-  //console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
-  //console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
-  return endTime.isBefore(now);
-}
+  function isSlotCompleted(slot: string) {
+    const [, end] = slot.split(" - ");
+    //console.log("End Time to Parse:", end);
+    const convertedEndTime = convertTo24HourFormat(end);
+    //console.log("Converted End Time (24-hour):", convertedEndTime);
+    const fullEndTime = `${dayjs(selectedDate).format("YYYY-MM-DD")} ${convertedEndTime}`;
+    const endTime = dayjs(fullEndTime, "YYYY-MM-DD HH:mm");
+    //console.log("Parsed End Time:", endTime.toString());
+    const now = dayjs();
+    //console.log("End Time:", endTime.format("YYYY-MM-DD HH:mm"));
+    //console.log("Now Time:", now.format("YYYY-MM-DD HH:mm"));
+    return endTime.isBefore(now);
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Confirm Order1</Text>
+          <Text style={styles.headerTitle}>Confirm Order</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} />
           </TouchableOpacity>
@@ -447,13 +468,19 @@ function isSlotCompleted(slot: string) {
                     paddingTop: 3,
                     borderRadius: 15,
                     borderWidth: 1,
-                    borderColor: "#C15E9C",
+                    borderColor: colors.primary,
                     alignContent: "flex-start",
                     justifyContent: "flex-start",
                   }}
                   onPress={handleServiceEdit}
                 >
-                  <Text style={{ fontSize: 12, color: colors.primary, fontFamily: fonts.medium }}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: colors.primary,
+                      fontFamily: fonts.medium,
+                    }}
+                  >
                     Edit
                   </Text>
                 </TouchableOpacity>
@@ -527,7 +554,8 @@ function isSlotCompleted(slot: string) {
                       onPress={() => {
                         if (!isSlotCompleted(slot)) {
                           setSelectedSlot(slot);
-                          if (errors === "Please select time slot") setErrors("");
+                          if (errors === "Please select time slot")
+                            setErrors("");
                         }
                       }}
                       disabled={isSlotCompleted(slot)}
@@ -545,7 +573,9 @@ function isSlotCompleted(slot: string) {
                   {/* </View> */}
                 </View>
                 {errors === "Please select time slot" && (
-                  <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
+                  <Text
+                    style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                  >
                     {errors}
                   </Text>
                 )}
@@ -625,10 +655,10 @@ function isSlotCompleted(slot: string) {
                           ? selectedRelation.name
                           : "Select Relation"}
                       </Text>
-                     <Image
-                                                 source={images.arrowdown}
-                                                 style={styles.dropdownIcon}
-                                               />
+                      <Image
+                        source={images.arrowdown}
+                        style={styles.dropdownIcon}
+                      />
                     </TouchableOpacity>
                     {fieldErrors.relation ? (
                       <Text
@@ -765,7 +795,9 @@ function isSlotCompleted(slot: string) {
                       setShowRelationDropdown(false);
                     }}
                   >
-                    <Text style={styles.dropdownOptionText}>{relation.name}</Text>
+                    <Text style={styles.dropdownOptionText}>
+                      {relation.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -870,9 +902,9 @@ function isSlotCompleted(slot: string) {
         </Modal>
         <Toast
           visible={showConfirm}
-          title={"Booking Confirmed"}
-          subtitle={"Your doctor consultation was successfully created."}
-          type={"success"}
+          title={toastMessage.title}
+          subtitle={toastMessage.subtitle}
+          type={toastMessage.type}
           onHide={() => setShowConfirm(false)}
         />
       </View>
@@ -883,7 +915,7 @@ function isSlotCompleted(slot: string) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', // colors.bg_primary,
+    backgroundColor: "#fff", // colors.bg_primary,
   },
 
   /* HEADER */
@@ -898,16 +930,16 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EAEAEA",
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
     fontSize: getResponsiveFontSize(16),
-    color: colors.black,
+    fontWeight: "700",
+    color: colors.primaryText,
   },
 
   /* SCROLL */
   scrollContainer: {
     paddingHorizontal: 16,
     paddingBottom: 80,
-    backgroundColor: colors.bg_primary
+    backgroundColor: colors.bg_primary,
   },
 
   /* SECTION */
@@ -917,10 +949,10 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     fontSize: 14,
-    color: "#000000",
+    color: colors.primaryText,
     marginBottom: getResponsiveSpacing(2),
     marginTop: getResponsiveSpacing(10),
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
 
   /* CARD BASE */
@@ -1067,7 +1099,6 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 14,
     fontWeight: "600",
-    fontFamily: fonts.semiBold,
   },
 
   // infoSubtitle: {
@@ -1114,7 +1145,7 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#E6DCF5",
+    backgroundColor: "#FBEDEA",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
@@ -1122,7 +1153,7 @@ const styles = StyleSheet.create({
 
   chipText: {
     fontSize: 12,
-    color: colors.primary,
+    color: colors.primaryText,
     fontFamily: fonts.medium,
   },
   departmentDescription: {
@@ -1198,7 +1229,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#333",
     marginBottom: 1,
-    fontFamily: fonts.medium
+    fontFamily: fonts.medium,
   },
   dateInput: {
     flexDirection: "row",
@@ -1210,6 +1241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: "#fff",
+    height: 40,
   },
   dateText: {
     fontSize: 13,
@@ -1287,18 +1319,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   customRadioSelected: {
-    borderColor: "#C15E9C",
+    borderColor: colors.primary,
   },
   customRadioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#C15E9C",
+    backgroundColor: colors.primary,
   },
   radioLabel: {
     fontSize: 13,
     color: "#2B2B2B",
-    fontFamily: fonts.regular
+    fontFamily: fonts.regular,
   },
   othersForm: {
     marginTop: 16,
@@ -1307,10 +1339,10 @@ const styles = StyleSheet.create({
     borderTopColor: "#f0f0f0",
   },
   selectedRadioOption: {
-    borderColor: "#C15E9C",
+    borderColor: colors.primary,
   },
   selectedRadioLabel: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   formField: {
     marginBottom: 10,
@@ -1326,6 +1358,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     fontSize: 13,
     fontFamily: fonts.regular,
+    height: 40,
   },
   dropdown: {
     flexDirection: "row",
@@ -1338,6 +1371,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     paddingTop: 10,
     backgroundColor: "#fff",
+    height: 40,
   },
   dropdownText: {
     fontSize: 13,
@@ -1385,7 +1419,7 @@ const styles = StyleSheet.create({
   },
   proceedButton: {
     borderRadius: getResponsiveSpacing(23),
-    height: getResponsiveSpacing(35),
+    height: getResponsiveSpacing(40),
     width: "100%",
   },
 
@@ -1400,12 +1434,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   selectedTimeSlot: {
-    backgroundColor: "#C15E9C",
-    borderColor: "#C15E9C",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   timeSlotText: {
     fontSize: 11,
-    color: "#333",
+    color: colors.primaryText,
     fontFamily: fonts.regular,
   },
   selectedTimeSlotText: {

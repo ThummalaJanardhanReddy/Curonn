@@ -5,7 +5,7 @@ import axiosClient from "./axiosClient";
 import type { Message, ChatAcceptDetails, MessageType } from "../store/ChatStore";
 
 // Constants
-const SIGNALR_HUB_URL = "https://api.curonn.com/hubs/chat";
+const SIGNALR_HUB_URL = "https://api.curonnhealth.com/hubs/chat";
 const S3_BASE_URL = "https://curonndatabucket.s3.ap-south-1.amazonaws.com/";
 const MAX_RECONNECT_DELAY_MS = 5000;
 const INITIAL_RECONNECT_DELAY_MS = 1000;

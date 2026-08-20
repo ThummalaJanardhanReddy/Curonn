@@ -14,23 +14,21 @@
         "aps-environment": "production"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service."
       }
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/curonn_appicon.png",
-        "backgroundColor": "#C35E9C"
+        "backgroundColor": "#D94A2C"
       },
       "package": "com.curonn.health",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.RECORD_AUDIO",
         "android.permission.INTERNET"
       ],
@@ -40,15 +38,14 @@
         }
       }
     },
-    "splash": {
-      "image": "./assets/Splash_Screen.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#C35E9C"
-    },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/app-icon.png"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#D94A2C",
+      "barStyle": "dark-content"
     },
     "plugins": [
       "expo-router",
@@ -59,7 +56,29 @@
       "expo-document-picker",
       "expo-file-system",
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#D94A2C",
+          "image": "./assets/Splash_Screen.png",
+          "resizeMode": "contain",
+          "statusBarTranslucent": true,
+          "statusBarHidden": true,
+          "statusBarStyle": "light",
+          "statusBarBackgroundColor": "#D94A2C",
+          "statusBarVisible": false,
+          "width": 375,
+          "height": 375
+        }
+      ]
     ],
     "assetBundlePatterns": [
       "**/*"
