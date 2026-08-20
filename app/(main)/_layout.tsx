@@ -8,19 +8,20 @@ import { images } from "../../assets";
 import RegistrationGuard from "../shared/components/RegistrationGuard";
 import HomeIcon from "../../assets/AppIcons/Curonn_icons/menu/new/home.svg";
 import HomeIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/home_select.svg";
-import LabIcon from "../../assets/AppIcons/Curonn_icons/menu/new/lab.svg";
-import LabIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/lab_select.svg";
-import DoctorIcon from "../../assets/AppIcons/Curonn_icons/menu/new/doctor.svg";
-import DoctorIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/doctor_select.svg";
+import LabIcon from "../../assets/AppIcons/Curonn_icons/menu/new/labtest.svg";
+import LabIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/labtest_select.svg";
+import DoctorIcon from "../../assets/AppIcons/Curonn_icons/menu/new/mydoctor.svg";
+import DoctorIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/mydoctor_select.svg";
 import MedicineIcon from "../../assets/AppIcons/Curonn_icons/menu/new/medicine.svg";
 import MedicineIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/medicine_select.svg";
 import OrderIcon from "../../assets/AppIcons/Curonn_icons/menu/new/orders.svg";
-import OrderIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/orders_slect.svg";
+import OrderIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/orders_select.svg";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
 } from "../shared/utils/responsive";
+import { colors } from "../shared/styles/commonStyles";
 
 export default function MainLayout() {
   const [activeTab, setActiveTab] = useState(0);
@@ -82,11 +83,16 @@ export default function MainLayout() {
 
   useEffect(() => {
     Font.loadAsync({
-      "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-      "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
-      "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
-      "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
-      // ...add all other font files
+      // "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
+      // "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
+      // "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
+      // "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
+      "Lato-Black": require("../../assets/fonts/Lato/Lato-Black.ttf"),
+      "Lato-Bold": require("../../assets/fonts/Lato/Lato-Bold.ttf"),
+      "Lato-Regular": require("../../assets/fonts/Lato/Lato-Regular.ttf"),
+      "Lato-Light": require("../../assets/fonts/Lato/Lato-Light.ttf"),
+      "Lato-Thin": require("../../assets/fonts/Lato/Lato-Thin.ttf"),
+      // ...add all other font files as needed
     }).then(() => setFontsLoaded(true));
   }, []);
 
@@ -117,7 +123,7 @@ export default function MainLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: "#ED67B8",
+          tabBarActiveTintColor: colors.white,
           tabBarInactiveTintColor: "#FFFFFF70",
           // 🔥 Forced centering at the ICON CONTAINER level
           tabBarIconStyle: {
@@ -141,11 +147,11 @@ export default function MainLayout() {
 
           // 🔥 Entire tab bar styling with dynamic bottom inset
           tabBarStyle: {
-            backgroundColor: "#5F4660",
+            backgroundColor: "#B83A1E",
             borderTopWidth: 0,
             height: 70 + insets.bottom,
             paddingBottom: insets.bottom,
-            paddingTop: 7
+            paddingTop: 7,
           },
         }}
       >
@@ -189,7 +195,7 @@ const styles = StyleSheet.create({
   },
   bottomTabContainer: {
     flexDirection: "row",
-    backgroundColor: "#5F4660",
+    backgroundColor: "#B83A1E",
   },
   tabItem: {
     flex: 1,

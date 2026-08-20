@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -933,7 +933,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: getResponsiveSpacing(5),
     marginTop: getResponsiveSpacing(0),
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
   },
   prescriptionCard: {
     backgroundColor: "#fff",
@@ -1009,12 +1009,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 30,
 
-    borderColor: '#C35E9C',
+    borderColor: colors.primary,
   },
   editPillText: {
     fontSize: getResponsiveFontSize(13),
-    color: '#C35E9C',
-    fontFamily: fonts.semiBold,
+    color: colors.primary,
+    fontWeight: "700",
   },
   addressCard: {
     backgroundColor: '#fff',
@@ -1047,11 +1047,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#C15E9C',
+    borderColor: colors.primary,
   },
   editAddressTextNew: {
     fontSize: 13,
-    color: '#C15E9C',
+    color: colors.primary,
     fontFamily: fonts.medium,
   },
   addnewaddressButton: {
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   AddressText: {
-    color: '#C15E9C',
+    color: colors.primary,
     fontFamily: fonts.medium,
   },
   patientCard: {
@@ -1085,7 +1085,7 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   selectedRadioOption: {
-    borderColor: '#C35E9C',
+    borderColor: colors.primary,
   },
   customRadio: {
     width: 20,
@@ -1098,13 +1098,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   customRadioSelected: {
-    borderColor: '#C35E9C',
+    borderColor: colors.primary,
   },
   customRadioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#C35E9C',
+    backgroundColor: colors.primary,
   },
   radioLabel: {
     fontSize: 14,
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   selectedRadioLabel: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   othersForm: {
     marginTop: 16,
@@ -1177,7 +1177,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: getResponsiveSpacing(5),
     marginTop: getResponsiveSpacing(10),
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
   },
   policyCard: {
     marginTop: 0,
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     width: '100%',
-    backgroundColor: '#C35E9C',
+    backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(30),
     paddingVertical: getResponsiveSpacing(12),
     alignItems: 'center',
@@ -1218,7 +1218,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: getResponsiveFontSize(15),
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,

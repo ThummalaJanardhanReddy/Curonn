@@ -1,9 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { Alert } from 'react-native';
-import axiosClient from '../../../src/api/axiosClient';
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { Alert } from "react-native";
+import axiosClient from "../../../src/api/axiosClient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ApiRoutes from '../../../src/api/employee/employee';
+import ApiRoutes from "../../../src/api/employee/employee";
 import {
   FlatList,
   Image,
@@ -14,23 +14,23 @@ import {
   View,
   StatusBar as RNStatusBar,
   StatusBar,
-  Platform
-} from 'react-native';
-import { images } from '../../../assets';
-import BackButton from '../../shared/components/BackButton';
-import commonStyles, { colors } from '../../shared/styles/commonStyles';
+  Platform,
+} from "react-native";
+import { images } from "../../../assets";
+import BackButton from "../../shared/components/BackButton";
+import commonStyles, { colors } from "../../shared/styles/commonStyles";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
-} from '../../shared/utils/responsive';
-import { useUser } from '../../shared/context/UserContext';
-import { useCart } from '../../shared/context/CartContext';
-import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
-import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
-import { fonts } from '@/app/shared/styles/fonts';
+} from "../../shared/utils/responsive";
+import { useUser } from "../../shared/context/UserContext";
+import { useCart } from "../../shared/context/CartContext";
+import CartIcon from "../../../assets/AppIcons/Curonn_icons/carticon.svg";
+import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
+import { fonts } from "@/app/shared/styles/fonts";
 import { LinearGradient } from "expo-linear-gradient";
-import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
+import { Item } from "react-native-paper/lib/typescript/components/Drawer/Drawer";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 type ServiceType = "medcines";
@@ -62,15 +62,27 @@ export default function MedicineListScreen() {
   const groupNameInParams = params.groupName as string | undefined;
 
   // Categorization of the current mode: Browse (by category/group) vs Search Entry
-  const isBrowseMode = (!!groupNameInParams || !!params.categoryId || !!category) && !search;
+  const isBrowseMode =
+    (!!groupNameInParams || !!params.categoryId || !!category) && !search;
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   // Get drugGroup ONLY when we are in browse mode (not in global search mode)
-  const drugGroup = (isBrowseMode && (medicines?.length ?? 0) > 0) ? medicines[0]?.drugGroup ?? '' : '';
-  const [searchQuery, setSearchQuery] = useState((search as string) || (groupNameInParams as string) || '');
+  const drugGroup =
+    isBrowseMode && (medicines?.length ?? 0) > 0
+      ? (medicines[0]?.drugGroup ?? "")
+      : "";
+  const [searchQuery, setSearchQuery] = useState(
+    (search as string) || (groupNameInParams as string) || "",
+  );
   const { userData } = useUser();
-  const { refreshCart, cartCount, cartItems, addItem, updateQuantity, removeItem } = useCart();
-
+  const {
+    refreshCart,
+    cartCount,
+    cartItems,
+    addItem,
+    updateQuantity,
+    removeItem,
+  } = useCart();
 
   // Sync searchQuery state when search param changes
   useEffect(() => {
@@ -84,17 +96,19 @@ export default function MedicineListScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshCart();
-      if (Platform.OS === 'android') {
-        const timeout = setTimeout(() => {
-          RNStatusBar.setBackgroundColor("#ffffff", true);
-        }, 400);
-        return () => clearTimeout(timeout);
-      }
-    }, [refreshCart])
+      // if (Platform.OS === "android") {
+      //   const timeout = setTimeout(() => {
+      //     RNStatusBar.setBackgroundColor("#ffffff", true);
+      //   }, 400);
+      //   return () => clearTimeout(timeout);
+      // }
+    }, [refreshCart]),
   );
 
   // Per-item loading state to prevent duplicate rapid clicks
-  const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>({});
+  const [cartLoading, setCartLoading] = useState<{ [key: string]: boolean }>(
+    {},
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,22 +123,32 @@ export default function MedicineListScreen() {
     // Sanitize prices by removing currency symbols and non-numeric characters
     const sanitizePrice = (val: any) => {
       if (val === null || val === undefined) return 0;
-      const str = val.toString().replace(/[^0-9.]/g, '');
+      const str = val.toString().replace(/[^0-9.]/g, "");
       const num = parseFloat(str);
       return isNaN(num) ? 0 : num;
     };
 
-    const curPrice = sanitizePrice(item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0);
-    const original = sanitizePrice(item.streepBoxPrice ?? item.originalPrice ?? 0);
-    const medId = (item.id ?? item.medicineMasterId ?? item.medicineId ?? Math.random().toString()).toString();
-    const medName = item.medicineName ?? item.name ?? item.drugName ?? 'Unknown';
-    const desc = item.streepBoxQty ?? item.shortDescription ?? '';
-    const groupName = item.drugGroup ?? item.groupName ?? '';
-    const imgProp = item.imageUrl ?? item.image ?? '';
+    const curPrice = sanitizePrice(
+      item.curonnPrice ?? item.offerPrice ?? item.totalPrice ?? 0,
+    );
+    const original = sanitizePrice(
+      item.streepBoxPrice ?? item.originalPrice ?? 0,
+    );
+    const medId = (
+      item.id ??
+      item.medicineMasterId ??
+      item.medicineId ??
+      Math.random().toString()
+    ).toString();
+    const medName =
+      item.medicineName ?? item.name ?? item.drugName ?? "Unknown";
+    const desc = item.streepBoxQty ?? item.shortDescription ?? "";
+    const groupName = item.drugGroup ?? item.groupName ?? "";
+    const imgProp = item.imageUrl ?? item.image ?? "";
 
     // Handle Google Drive links to make them direct image URLs
     let imgUrl = imgProp;
-    if (imgUrl.includes('drive.google.com')) {
+    if (imgUrl.includes("drive.google.com")) {
       const match = imgUrl.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
         imgUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
@@ -134,10 +158,10 @@ export default function MedicineListScreen() {
     return {
       id: medId,
       name: medName,
-      manufacturer: item.manufacturer ?? item.brand ?? '',
+      manufacturer: item.manufacturer ?? item.brand ?? "",
       price: `₹${curPrice}`,
-      originalPrice: original ? `₹${original}` : '',
-      discount: item.discount ?? item.discountText ?? '',
+      originalPrice: original ? `₹${original}` : "",
+      discount: item.discount ?? item.discountText ?? "",
       image: imgUrl,
       inStock: item.instock ?? item.inStock ?? item.available ?? true,
       description: desc,
@@ -152,32 +176,50 @@ export default function MedicineListScreen() {
   };
 
   const loadMedicines = async (opts?: { reset?: boolean }) => {
-    const groupName = group || (category ? category.toString().replace(/-/g, ' ') : '');
+    const groupName =
+      group || (category ? category.toString().replace(/-/g, " ") : "");
     const currentPage = opts?.reset ? 1 : page;
 
     try {
       setLoading(true);
       setError(null);
 
-      let url = '';
+      let url = "";
       // Only treat searchQuery as a user-level filter if it's NOT just the breadcrumb group name
       const isCustomSearch = !!searchQuery && searchQuery !== groupNameInParams;
 
       if (isCustomSearch) {
         if (groupName) {
           // Filter within group
-          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize, searchQuery);
+          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(
+            groupName,
+            currentPage,
+            pageSize,
+            searchQuery,
+          );
         } else {
           // Global search
-          url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize, searchQuery);
+          url = ApiRoutes.MedicalOrders.getAllMedicines(
+            currentPage,
+            pageSize,
+            searchQuery,
+          );
         }
       } else {
         if (groupName) {
           // Regular group fetch (includes case where searchQuery === groupNameInParams)
-          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(groupName, currentPage, pageSize);
+          url = ApiRoutes.MedicalOrders.getMedicinesByGroup(
+            groupName,
+            currentPage,
+            pageSize,
+          );
         } else if (searchQuery) {
           // Global list fetch with searchQuery (if no group)
-          url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize, searchQuery);
+          url = ApiRoutes.MedicalOrders.getAllMedicines(
+            currentPage,
+            pageSize,
+            searchQuery,
+          );
         } else {
           // Basic list fetch
           url = ApiRoutes.MedicalOrders.getAllMedicines(currentPage, pageSize);
@@ -200,11 +242,13 @@ export default function MedicineListScreen() {
 
       const mapped = list.map(mapApiToMedicine);
 
-      setMedicines(prev => (currentPage === 1 ? mapped : [...prev, ...mapped]));
+      setMedicines((prev) =>
+        currentPage === 1 ? mapped : [...prev, ...mapped],
+      );
       setHasMore(mapped.length >= pageSize);
       if (opts?.reset) setPage(1);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load medicines');
+      setError(err?.message || "Failed to load medicines");
     } finally {
       setLoading(false);
     }
@@ -225,10 +269,13 @@ export default function MedicineListScreen() {
     const isCustomSearch = !!searchQuery && searchQuery !== groupNameInParams;
     if (!isCustomSearch) return medicines;
 
-    return medicines.filter(medicine =>
-      medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      medicine.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      medicine.description.toLowerCase().includes(searchQuery.toLowerCase())
+    return medicines.filter(
+      (medicine) =>
+        medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        medicine.manufacturer
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        medicine.description.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [medicines, searchQuery, groupNameInParams]);
 
@@ -236,71 +283,85 @@ export default function MedicineListScreen() {
     router.back();
   }, []);
 
-  const handleIncrement = useCallback(async (medicine: Medicine) => {
-    const medicineId = medicine.id;
-    if (cartLoading[medicineId]) return;
+  const handleIncrement = useCallback(
+    async (medicine: Medicine) => {
+      const medicineId = medicine.id;
+      if (cartLoading[medicineId]) return;
 
-    setCartLoading(prev => ({ ...prev, [medicineId]: true }));
-    try {
-      const itemInCart = cartItems.find(i => i.id === medicineId);
-      if (itemInCart) {
-        if (itemInCart.cartId) {
-          await updateQuantity(itemInCart.cartId, itemInCart.quantity + 1, medicineId);
+      setCartLoading((prev) => ({ ...prev, [medicineId]: true }));
+      try {
+        const itemInCart = cartItems.find((i) => i.id === medicineId);
+        if (itemInCart) {
+          if (itemInCart.cartId) {
+            await updateQuantity(
+              itemInCart.cartId,
+              itemInCart.quantity + 1,
+              medicineId,
+            );
+          } else {
+            await addItem(medicine, 1);
+          }
         } else {
           await addItem(medicine, 1);
         }
-      } else {
-        await addItem(medicine, 1);
+      } finally {
+        setCartLoading((prev) => ({ ...prev, [medicineId]: false }));
       }
-    } finally {
-      setCartLoading(prev => ({ ...prev, [medicineId]: false }));
-    }
-  }, [cartItems, cartLoading, addItem, updateQuantity]);
+    },
+    [cartItems, cartLoading, addItem, updateQuantity],
+  );
 
-  const handleDecrement = useCallback(async (medicineId: string) => {
-    if (cartLoading[medicineId]) return;
-    setCartLoading(prev => ({ ...prev, [medicineId]: true }));
-    try {
-      const itemInCart = cartItems.find(i => i.id === medicineId);
-      if (!itemInCart) return;
+  const handleDecrement = useCallback(
+    async (medicineId: string) => {
+      if (cartLoading[medicineId]) return;
+      setCartLoading((prev) => ({ ...prev, [medicineId]: true }));
+      try {
+        const itemInCart = cartItems.find((i) => i.id === medicineId);
+        if (!itemInCart) return;
 
-      if (itemInCart.quantity > 1) {
-        if (itemInCart.cartId) {
-          await updateQuantity(itemInCart.cartId, itemInCart.quantity - 1, medicineId);
+        if (itemInCart.quantity > 1) {
+          if (itemInCart.cartId) {
+            await updateQuantity(
+              itemInCart.cartId,
+              itemInCart.quantity - 1,
+              medicineId,
+            );
+          }
+        } else {
+          if (itemInCart.cartId) {
+            await removeItem(itemInCart.cartId, medicineId);
+          }
         }
-      } else {
-        if (itemInCart.cartId) {
-          await removeItem(itemInCart.cartId, medicineId);
-        }
+      } finally {
+        setCartLoading((prev) => ({ ...prev, [medicineId]: false }));
       }
-    } finally {
-      setCartLoading(prev => ({ ...prev, [medicineId]: false }));
-    }
-  }, [cartItems, cartLoading, updateQuantity, removeItem]);
+    },
+    [cartItems, cartLoading, updateQuantity, removeItem],
+  );
 
   const getCategoryTitle = useCallback(() => {
     switch (category) {
-      case 'vitamins-supplements':
-        return 'Vitamins & Supplements';
-      case 'pain-relief':
-        return 'Pain Relief';
-      case 'skin-hair-care':
-        return 'Skin & Hair Care';
-      case 'sexual-wellness':
-        return 'Sexual Wellness';
-      case 'digestive-health':
-        return 'Digestive Health';
-      case 'diabetes-care':
-        return 'Diabetes Care';
+      case "vitamins-supplements":
+        return "Vitamins & Supplements";
+      case "pain-relief":
+        return "Pain Relief";
+      case "skin-hair-care":
+        return "Skin & Hair Care";
+      case "sexual-wellness":
+        return "Sexual Wellness";
+      case "digestive-health":
+        return "Digestive Health";
+      case "diabetes-care":
+        return "Diabetes Care";
       default:
-        return 'Medicines';
+        return "Medicines";
     }
   }, [category]);
 
   const renderMedicineCard = useCallback(
     ({ item }: { item: Medicine }) => {
-     // console.log('Rendering medicine:', item.id);
-      const itemInCart = cartItems.find(i => i.id === item.id);
+      // console.log('Rendering medicine:', item.id);
+      const itemInCart = cartItems.find((i) => i.id === item.id);
       const quantity = itemInCart?.quantity || 0;
       const isInCart = quantity > 0;
 
@@ -311,33 +372,45 @@ export default function MedicineListScreen() {
         <View style={styles.medicineCardLarge}>
           <View style={styles.cardRow}>
             <View style={styles.imageColumn}>
-               <TouchableOpacity
-                            onPress={() =>
-                              router.push({
-                                pathname: "/viewdetails",
-                                params: {
-                                  id: item.id,
-                                  type: 'medicine',
-                                },
-                              })
-                            }>
-              {item.image ? (
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-              ) : (
-                <View style={[styles.cardImage, { backgroundColor: '#f5f5f5' }]} />
-              )}
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/viewdetails",
+                    params: {
+                      id: item.id,
+                      type: "medicine",
+                    },
+                  })
+                }
+              >
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.cardImage}
+                  />
+                ) : (
+                  <View
+                    style={[styles.cardImage, { backgroundColor: "#f5f5f5" }]}
+                  />
+                )}
               </TouchableOpacity>
               <View style={styles.imagePriceContainer}>
                 {displayOriginal && displayOriginal > displayPrice ? (
-                  <Text style={styles.imageOriginalPrice}>₹{displayOriginal}</Text>
+                  <Text style={styles.imageOriginalPrice}>
+                    ₹{displayOriginal}
+                  </Text>
                 ) : null}
                 <Text style={styles.imagePrice}>₹{displayPrice}</Text>
               </View>
             </View>
 
             <View style={styles.cardBody}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{item.name}</Text>
-              <Text style={styles.cardSubtitle} numberOfLines={1}>{item.streepBoxQty}</Text>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={styles.cardSubtitle} numberOfLines={1}>
+                {item.streepBoxQty}
+              </Text>
 
               <View style={styles.actionUnderSubtitle}>
                 {isInCart ? (
@@ -351,7 +424,10 @@ export default function MedicineListScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.addPill} onPress={() => handleIncrement(item)}>
+                  <TouchableOpacity
+                    style={styles.addPill}
+                    onPress={() => handleIncrement(item)}
+                  >
                     <Text style={styles.addPillText}>Add to Cart</Text>
                   </TouchableOpacity>
                 )}
@@ -361,7 +437,7 @@ export default function MedicineListScreen() {
         </View>
       );
     },
-    [cartItems, handleIncrement, handleDecrement]
+    [cartItems, handleIncrement, handleDecrement],
   );
 
   // Removed redundant getTotalCartItems as we use cartCount from useCart()
@@ -369,21 +445,14 @@ export default function MedicineListScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#ffffffff"
-        />
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
+            </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>
-            {getCategoryTitle()}
-          </Text>
+            <Text style={styles.headerTitle}>{getCategoryTitle()}</Text>
           </View>
 
           {/* <View style={styles.headerLeft}>
@@ -396,7 +465,10 @@ export default function MedicineListScreen() {
             />
           </View> */}
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/cart' as unknown as any)}>
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() => router.push("/cart" as unknown as any)}
+            >
               {/* <Image source={images.icons.cart} style={styles.cartIcon} /> */}
               <CartIcon style={styles.cartIcon} width={15} height={15} />
               {cartCount > 0 && (
@@ -433,7 +505,7 @@ export default function MedicineListScreen() {
                     if (groupNameInParams) {
                       handleBack();
                     } else {
-                      setSearchQuery('');
+                      setSearchQuery("");
                     }
                   }}
                 >
@@ -454,18 +526,20 @@ export default function MedicineListScreen() {
         </View>
         {/* Medicines List */}
         <FlatList
-          style={{ flex: 1, backgroundColor: '#F5F4F9' }}
+          style={{ flex: 1, backgroundColor: colors.bg_rest }}
           data={filteredMedicines}
           renderItem={renderMedicineCard}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.medicinesList}
           showsVerticalScrollIndicator={false}
-
         />
 
         {/* Continue button fixed at bottom */}
         <View style={styles.continueContainer}>
-          <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/cart' as unknown as any)}>
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={() => router.push("/cart" as unknown as any)}
+          >
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
@@ -476,68 +550,67 @@ export default function MedicineListScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
     // ...commonStyles.containercontent_layout,
     flex: 1,
     //backgroundColor: colors.white,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-        paddingVertical: getResponsiveSpacing(5),
-        borderBottomWidth: 1,
+    paddingVertical: getResponsiveSpacing(5),
+    borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-    backgroundColor: '#fff',
-    height:56
+    backgroundColor: "#fff",
+    height: 56,
   },
 
-   
   headerLeft: {
-    flexDirection: 'row',
+    flexDirection: "row",
     color: colors.black,
   },
   headerRight: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     color: colors.black,
   },
   headerTitle: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
     marginLeft: 8,
   },
   cartButton: {
     padding: getResponsiveSpacing(3),
-    backgroundColor: '#FED8EC',
+    backgroundColor: "#FED8EC",
     width: getResponsiveSpacing(30),
     height: getResponsiveSpacing(30),
     borderRadius: getResponsiveSpacing(15),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   cartIcon: {
     ...getResponsiveImageSize(28, 28),
   },
   cartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: getResponsiveSpacing(-8),
     right: getResponsiveSpacing(-2),
-    backgroundColor: '#FF4444',
+    backgroundColor: "#FF4444",
     borderRadius: getResponsiveSpacing(10),
     minWidth: getResponsiveSpacing(20),
     height: getResponsiveSpacing(20),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: getResponsiveSpacing(4),
   },
   cartBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: getResponsiveFontSize(9),
     fontFamily: fonts.bold,
   },
@@ -554,12 +627,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     height: 40,
-    marginTop: 5
+    marginTop: 5,
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
     marginRight: getResponsiveSpacing(8),
-    tintColor: '#999',
+    tintColor: "#999",
   },
   searchInput: {
     flex: 1,
@@ -573,9 +646,9 @@ const styles = StyleSheet.create({
     marginHorizontal: getResponsiveSpacing(20),
   },
   dragtitle: {
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
-    color: '#3B2032',
+    color: "#3B2032",
     marginTop: getResponsiveSpacing(15),
     marginBottom: getResponsiveSpacing(5),
   },
@@ -594,12 +667,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   medicineCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(12),
     marginBottom: getResponsiveSpacing(12),
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -609,13 +682,13 @@ const styles = StyleSheet.create({
   },
   /* Large card to match design */
   medicineCardLarge: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
     padding: getResponsiveSpacing(16),
     paddingBottom: getResponsiveSpacing(8),
     marginBottom: getResponsiveSpacing(10),
     borderWidth: 1,
-    borderColor: '#DBDBDB',
+    borderColor: "#DBDBDB",
     paddingTop: 5,
     // elevation: 2,
     // shadowColor: '#000',
@@ -624,50 +697,51 @@ const styles = StyleSheet.create({
     // shadowRadius: 10,
   },
   cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   cardImage: {
     //...getResponsiveImageSize(54, 54),
     borderRadius: getResponsiveSpacing(8),
     marginRight: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     height: getResponsiveSpacing(54),
     minWidth: getResponsiveSpacing(54),
   },
   cardBody: {
     flex: 1,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     // borderWidth: 1,
     // borderColor: '#DBDBDB',
     paddingTop: 5,
+    gap: 4
   },
   cardTitle: {
     fontSize: getResponsiveFontSize(13),
-    color: '#3B2032',
+    color: colors.primaryText,
     marginBottom: getResponsiveSpacing(0),
-    fontFamily: fonts.semiBold
+    fontWeight: "700",
   },
   cardSubtitle: {
     fontSize: getResponsiveFontSize(12),
-    color: '#000',
-    fontFamily: fonts.regular
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   cardBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: getResponsiveSpacing(12),
   },
   cardOriginalPrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#999',
-    textDecorationLine: 'line-through',
+    color: "#999",
+    textDecorationLine: "line-through",
   },
   cardPrice: {
     fontSize: getResponsiveFontSize(16),
-    color: '#E04F85',
-    fontWeight: '700',
+    color: "#E04F85",
+    fontWeight: "700",
     marginTop: getResponsiveSpacing(4),
   },
   cardAction: {
@@ -675,68 +749,74 @@ const styles = StyleSheet.create({
   },
   actionUnderSubtitle: {
     marginTop: getResponsiveSpacing(12),
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   imageColumn: {
     width: getResponsiveSpacing(80),
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: getResponsiveSpacing(12),
   },
   imagePriceContainer: {
     marginTop: getResponsiveSpacing(8),
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 3
   },
   imageOriginalPrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#887f8b',
-    textDecorationLine: 'line-through',
-    textDecorationStyle: 'solid',
-    marginRight: getResponsiveSpacing(6),
-    fontFamily: fonts.regular
+    color: "#887f8b",
+    textDecorationLine: "line-through",
+    textDecorationStyle: "solid",
+    // marginRight: getResponsiveSpacing(4),
+    fontFamily: fonts.regular,
   },
   imagePrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#C35E9C',
+    color: colors.primary,
     fontFamily: fonts.bold,
-    marginLeft: 4,
+    // marginLeft: 2,
   },
   quantityPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: getResponsiveSpacing(20),
     borderWidth: 1,
-    borderColor: '#C35E9C',
+    borderColor: colors.primary,
     paddingHorizontal: getResponsiveSpacing(10),
     paddingVertical: getResponsiveSpacing(3),
     paddingBottom: getResponsiveSpacing(2),
   },
   quantitySign: {
-    color: '#C35E9C',
+    color: colors.primary,
     fontSize: getResponsiveFontSize(15),
     paddingHorizontal: getResponsiveSpacing(8),
   },
   quantityNumber: {
-    color: '#C35E9C',
+    color: colors.primary,
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '500',
-    fontFamily: fonts.regular
+    fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   addPill: {
-    backgroundColor: colors.primary,
+    // backgroundColor: colors.primary,
+    alignItems: 'center',
+    borderColor: colors.primary,
+    borderWidth:1,
     borderRadius: getResponsiveSpacing(20),
     paddingHorizontal: getResponsiveSpacing(14),
     paddingVertical: getResponsiveSpacing(6),
-    paddingBottom: getResponsiveSpacing(5),
+    // paddingBottom: getResponsiveSpacing(5),
   },
   addPillText: {
-    color: '#fff',
+    color: colors.primary,
     fontSize: getResponsiveFontSize(12),
-    fontWeight: '500',
-    fontFamily: fonts.regular
+    fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   medicineInfo: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: getResponsiveSpacing(8),
   },
   medicineImage: {
@@ -746,8 +826,8 @@ const styles = StyleSheet.create({
   },
   // compact row layout for list items
   medicineInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   medicineImageSmall: {
     ...getResponsiveImageSize(72, 72),
@@ -756,16 +836,16 @@ const styles = StyleSheet.create({
   },
   medicineDetailsSmall: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   medicineNameSmall: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '700',
-    color: '#3B2032',
+    fontWeight: "700",
+    color: "#3B2032",
   },
   descriptionSmall: {
     fontSize: getResponsiveFontSize(12),
-    color: '#7A6B78',
+    color: "#7A6B78",
     marginTop: getResponsiveSpacing(4),
   },
   priceRow: {
@@ -773,23 +853,23 @@ const styles = StyleSheet.create({
   },
   priceLarge: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: '700',
-    color: '#E04F85',
+    fontWeight: "700",
+    color: "#E04F85",
   },
   originalPriceSmall: {
     fontSize: getResponsiveFontSize(12),
-    color: '#999',
-    textDecorationLine: 'line-through',
+    color: "#999",
+    textDecorationLine: "line-through",
   },
   actionRight: {
     marginLeft: getResponsiveSpacing(8),
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   quantityContainerSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(20),
     paddingHorizontal: getResponsiveSpacing(6),
     paddingVertical: getResponsiveSpacing(4),
@@ -800,15 +880,15 @@ const styles = StyleSheet.create({
     width: getResponsiveSpacing(28),
     height: getResponsiveSpacing(28),
     borderRadius: getResponsiveSpacing(14),
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   quantityTextSmall: {
     color: colors.primary,
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     marginHorizontal: getResponsiveSpacing(8),
   },
   addToCartButtonSmall: {
@@ -818,17 +898,17 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(8),
   },
   addToCartButtonTextSmall: {
-    color: '#fff',
+    color: "#fff",
     fontSize: getResponsiveFontSize(12),
-    fontWeight: '600',
+    fontWeight: "600",
   },
   medicineDetails: {
     flex: 1,
   },
   medicineName: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: getResponsiveSpacing(2),
   },
   manufacturer: {
@@ -838,38 +918,38 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: getResponsiveFontSize(10),
-    color: '#666',
+    color: "#666",
     marginBottom: getResponsiveSpacing(4),
   },
   priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   price: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginRight: getResponsiveSpacing(6),
   },
   originalPrice: {
     fontSize: getResponsiveFontSize(12),
-    color: '#999',
-    textDecorationLine: 'line-through',
+    color: "#999",
+    textDecorationLine: "line-through",
     marginRight: getResponsiveSpacing(6),
   },
   discountBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: getResponsiveSpacing(4),
     paddingVertical: getResponsiveSpacing(1),
     borderRadius: getResponsiveSpacing(3),
   },
   discountText: {
     fontSize: getResponsiveFontSize(8),
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   actionContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   addToCartButton: {
     backgroundColor: colors.primary,
@@ -878,14 +958,14 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(8),
   },
   addToCartButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: getResponsiveFontSize(12),
-    fontWeight: '600',
+    fontWeight: "600",
   },
   quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(20),
     paddingHorizontal: getResponsiveSpacing(8),
     paddingVertical: getResponsiveSpacing(4),
@@ -896,51 +976,51 @@ const styles = StyleSheet.create({
     width: getResponsiveSpacing(28),
     height: getResponsiveSpacing(28),
     borderRadius: getResponsiveSpacing(14),
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   quantityButtonText: {
     color: colors.primary,
     fontSize: getResponsiveFontSize(16),
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   quantityText: {
     color: colors.primary,
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     marginHorizontal: getResponsiveSpacing(12),
     minWidth: getResponsiveSpacing(20),
-    textAlign: 'center',
+    textAlign: "center",
   },
   continueContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: "#E0E0E0",
     paddingTop: getResponsiveSpacing(15),
-    paddingBottom: Platform.OS === 'ios' ? 25 : 15,
-    alignItems: 'center',
+    paddingBottom: Platform.OS === "ios" ? 25 : 15,
+    alignItems: "center",
   },
   continueButton: {
-    width: '90%',
+    width: "90%",
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(30),
     paddingVertical: getResponsiveSpacing(10),
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: fonts.semiBold,
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(15),
     // elevation: 4,
   },
   continueButtonText: {
-    color: '#fff',
-    fontFamily: fonts.semiBold,
+    color: "#fff",
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(15),
   },
 });

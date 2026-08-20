@@ -355,10 +355,10 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
   );
 
   return (<>
-    <StatusBar
+    {/* <StatusBar
       style="light"
       animated
-    />
+    /> */}
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
         {/* Header */}
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   dropdownModalOverlay: {
     flex: 1,
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(15),
     fontWeight: "600",
     color: colors.text,
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -935,8 +935,8 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(30),
-    height: getResponsiveSpacing(40),
+    // borderRadius: getResponsiveSpacing(30),
+    // height: getResponsiveSpacing(40),
     width: "80%",
     marginLeft: "10%",
     marginRight: "10%",

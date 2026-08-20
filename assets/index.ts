@@ -11,9 +11,9 @@ import noIssues from './AppIcons/Curonn_icons/medicalConditions/noIssues.svg';
 import thyroid from './AppIcons/Curonn_icons/medicalConditions/thyroid.svg';
 import HomeIcon from './AppIcons/Curonn_icons/menu/new/home.svg';
 // import LabTestsIcon from './AppIcons/Curonn_icons/menu/labtest_ic.svg';
-import MyDoctorIcon from './AppIcons/Curonn_icons/menu/mydoctor_ic.svg';
+import MyDoctorIcon from './AppIcons/Curonn_icons/menu/new/mydoctor.svg';
 import LabTestsIcon from './AppIcons/Curonn_icons/menu/new/lab_tests.svg';
-import MedicinesIcon from './AppIcons/Curonn_icons/menu/new/medicines.svg';
+// import MedicinesIcon from './AppIcons/Curonn_icons/menu/new/medicines.svg';
 import OrdersIcon from './AppIcons/Curonn_icons/menu/new/orders.svg';
 import notificationIcon from './AppIcons/Curonn_icons/notification_ic.svg';
 import ProfileIcon from './AppIcons/Curonn_icons/profile_ic.svg';
@@ -82,9 +82,9 @@ export const images = {
   ambulanceicon: require('./AppIcons/Curonn_icons/ambulance_order.png'),
    wellnessicon: require('./AppIcons/Curonn_icons/wellness_orders.png'),
   reportsimage: require('./images/medicalreport.jpg'),
-  appIcon: require('./AppIcons/appIcon.png'),
+  appIcon: require('./curonn_appicon.png'),
   // Splash Screen
-  splashScreen: require('./images/Splash_Screen.png'),
+  splashScreen: require('./Splash_Screen.png'),
   splashScreenImg: require('./images/welcome.png'),
 
   // Welcome Screen
@@ -107,6 +107,7 @@ export const images = {
   xray : require('./images/xray.png'),
   labtextviewdetails: require('./images/labtestviewdetails.png'),
   ambulanceviewdetails: require('./images/ambulanceviewdetails.png'),
+  prescription: require("./images/prescription_image.png"),
   // Logo
   curonnLogo: CuronnLogo,
 
@@ -114,7 +115,6 @@ export const images = {
 
   // Icons
   profile: ProfileIcon,
-  profile1: require('./images/profile1.png'),
   profilemale: require('./images/maleicon.jpg'),
   profilefemale: require('./images/femaleicon.jpg'),
   notification: require('./AppIcons/Curonn_icons/notification_list_ic.png'), // notification,
@@ -203,21 +203,21 @@ export const images = {
   tabs: {
     home: HomeIcon,
     labTests: LabTestsIcon,
-    medicines: MedicinesIcon,
+    // medicines: MedicinesIcon,
     myDoctor: MyDoctorIcon,
     orders: OrdersIcon,
   },
   menu: {
     home: require('./AppIcons/Curonn_icons/menu/new/home.svg'),
-    home_selected: require('./AppIcons/Curonn_icons/menu/png/home_select.png'),
-    labTests: require('./AppIcons/Curonn_icons/menu/png/lab.png'),
-    labTests_selected: require('./AppIcons/Curonn_icons/menu/png/lab_select.png'),
-    medicines: require('./AppIcons/Curonn_icons/menu/png/medicine.png'),
-    medicines_selected: require('./AppIcons/Curonn_icons/menu/png/medicine_select.png'),
-    myDoctor: require('./AppIcons/Curonn_icons/menu/png/doctor.png'),
-    myDoctor_selected: require('./AppIcons/Curonn_icons/menu/png/doctor_select.png'),
-    orders: require('./AppIcons/Curonn_icons/menu/png/orders.png'),
-    orders_selected: require('./AppIcons/Curonn_icons/menu/png/orders_select.png'),
+    home_selected: require('./AppIcons/Curonn_icons/menu/new/home_select.svg'),
+    labTests: require('./AppIcons/Curonn_icons/menu/new/labtest.svg'),
+    labTests_selected: require('./AppIcons/Curonn_icons/menu/new/labtest_select.svg'),
+    medicines: require('./AppIcons/Curonn_icons/menu/new/medicine.svg'),
+    medicines_selected: require('./AppIcons/Curonn_icons/menu/new/medicine_select.svg'),
+    myDoctor: require('./AppIcons/Curonn_icons/menu/new/mydoctor.svg'),
+    myDoctor_selected: require('./AppIcons/Curonn_icons/menu/new/mydoctor_select.svg'),
+    orders: require('./AppIcons/Curonn_icons/menu/new/orders.svg'),
+    orders_selected: require('./AppIcons/Curonn_icons/menu/new/orders_select.svg'),
   },
 
   // Other icons

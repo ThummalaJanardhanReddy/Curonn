@@ -29,6 +29,7 @@ const { height: screenHeight } = Dimensions.get("window");
 import Toast from './Toast';
 import * as SecureStore from 'expo-secure-store';
 import { useUserStore } from '@/src/store/UserStore';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 interface FamilyMembersModalProps {
   visible: boolean;
@@ -105,7 +106,6 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
         console.log('Fetched family members response:', response);
         if (Array.isArray(response)) {
           setFamilyMembers(response);
-          console.log('Fetched family members (array response):', response);
         } else if (response && response.data && Array.isArray(response.data)) {
           setFamilyMembers(response.data);
         }
@@ -312,8 +312,8 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     }
   };
 
-  const renderFamilyMemberCard = (member: any) => (
-    <View key={member.relationId} style={styles.familyMemberCard}>
+  const renderFamilyMemberCard = (member: any, index: any) => (
+    <View key={index} style={styles.familyMemberCard}>
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.relationName}</Text>
         <Text style={styles.memberRelation}>{relationTypes.find(r => r.masterDataId === member.relationId)?.name || member.relation || ''} | {member.gender} | {member.age} yrs</Text>
@@ -368,7 +368,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   }, []);
 
   const renderForm = () => (
-    <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+    <KeyboardAwareScrollView style={{ flex: 1, height: screenHeight, backgroundColor: colors.bg_rest }}>
       <View style={styles.formContainer}>
         {/* Relation Type Dropdown */}
         <View style={styles.dropdownContainer}>
@@ -471,7 +471,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
                 value="male"
                 status={formData.gender === 'male' ? 'checked' : 'unchecked'}
                 onPress={() => handleInputChange('gender', 'male')}
-                color="#C15E9C"
+                color={colors.primary}
               />
               <Text style={styles.radioText}>Male</Text>
             </TouchableOpacity>
@@ -483,7 +483,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
                 value="Female"
                 status={formData.gender === 'Female' ? 'checked' : 'unchecked'}
                 onPress={() => handleInputChange('gender', 'Female')}
-                color="#C15E9C"
+                color={colors.primary}
               />
               <Text style={styles.radioText}>Female</Text>
             </TouchableOpacity>
@@ -538,7 +538,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           }
         />
       </View>
-    </SafeAreaView>
+    </KeyboardAwareScrollView>
 
   );
 
@@ -550,7 +550,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, height: screenHeight }}>
-        <SafeAreaView style={styles.modalContent}>
+        <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Family Members</Text>
@@ -600,7 +600,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
             </ScrollView>
           )}
           {/* Toast Message (removed duplicate PrimaryButton) */}
-        </SafeAreaView>
+        </View>
       </SafeAreaView>
       <Toast
         visible={showToast}
@@ -649,7 +649,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#202427',
-    fontFamily: fonts.semiBold
   },
   closeButton: {
     padding: 4,
@@ -692,7 +691,7 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: 'rgba(228, 92, 156, 1)',
+    borderColor: colors.primary,
     borderRadius: 16,
   },
   addButtonIcon: {
@@ -736,7 +735,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
-    fontFamily: fonts.semiBold,
   },
   memberRelation: {
     fontSize: 13,
@@ -758,7 +756,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: getResponsivePadding(25),
     paddingTop: 16,
-    backgroundColor: '#f5f4f9',
+    backgroundColor: colors.bg_rest,
   },
   formTitle: {
     fontSize: 20,
@@ -773,10 +771,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   label: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 14,
     marginBottom: 3,
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
 
   },
   dropdownButton: {
@@ -789,7 +787,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 3,
     backgroundColor: '#fff',
-    height: 42,
+    height: 40,
   },
   dropdownButtonText: {
     fontSize: 13,
@@ -834,7 +832,7 @@ const styles = StyleSheet.create({
   },
   dropdownOptionText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.primaryText,
     fontFamily: fonts.regular,
   },
   selectedOptionText: {
@@ -849,12 +847,12 @@ const styles = StyleSheet.create({
     borderColor: "#9D9D9F",
     borderRadius: 8, paddingHorizontal: 12,
     fontSize: 13,
-    color: '#333',
+    color: colors.primaryText,
     fontFamily: fonts.regular,
     includeFontPadding: false, // Android fix
     textAlignVertical: 'center', // Android fix
     backgroundColor: '#fff',
-    height: 42,
+    height: 40,
   },
   radioContainer: {
     flexDirection: 'row',
@@ -866,7 +864,7 @@ const styles = StyleSheet.create({
   },
   radioText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.primaryText,
     marginLeft: 0,
     fontFamily: fonts.regular,
     paddingTop: 2,
@@ -877,6 +875,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     marginHorizontal: 20,
     marginBottom: 20,
+    backgroundColor: colors.white,
   },
   cancelButton: {
     flex: 1,

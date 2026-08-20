@@ -2,12 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { getResponsiveFontSize, getResponsiveSpacing, wp } from '../utils/responsive';
 import { fonts } from '../styles/fonts';
+import { colors } from '../styles/commonStyles';
 
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
   width?: number;
   height?: number;
@@ -20,7 +21,7 @@ export default function PrimaryButton({
   style,
   textStyle,
   width = wp(80), // 80% of screen width
-  height = getResponsiveSpacing(45),
+  height = getResponsiveSpacing(40),
 }: PrimaryButtonProps) {
   return (
     <TouchableOpacity
@@ -46,11 +47,11 @@ export default function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#C35E9C',
+    backgroundColor: colors.primary,
     borderRadius: getResponsiveSpacing(23),
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     // elevation: 2,
     // shadowColor: '#000',
     // shadowOffset: {
@@ -62,9 +63,10 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: getResponsiveFontSize(13),
+    fontSize: getResponsiveFontSize(16),
     textAlign: 'center',
-    fontFamily: fonts.semiBold,
+    // fontWeight: "700",
+    fontWeight: '700',
   },
   buttonDisabled: {
     backgroundColor: '#CCCCCC',

@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
-import { useCart } from './shared/context/CartContext';
+import React, { useCallback, useMemo, useEffect } from "react";
+import { useCart } from "./shared/context/CartContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { fonts } from '@/app/shared/styles/fonts';
+import { fonts } from "@/app/shared/styles/fonts";
 import {
   View,
   Text,
@@ -12,79 +12,87 @@ import {
   ScrollView,
   StatusBar as RNStatusBar,
   StatusBar,
-  Platform
-} from 'react-native';
-import { router } from 'expo-router';
-import BackButton from './shared/components/BackButton';
-import { images } from '../assets';
-import { colors } from './shared/styles/commonStyles';
+  Platform,
+} from "react-native";
+import { router } from "expo-router";
+import BackButton from "./shared/components/BackButton";
+import { images } from "../assets";
+import { colors } from "./shared/styles/commonStyles";
 import {
   getResponsiveFontSize,
   getResponsiveSpacing,
-} from './shared/utils/responsive';
-import CartItemsList from './shared/components/CartItemsList';
+} from "./shared/utils/responsive";
+import CartItemsList from "./shared/components/CartItemsList";
 
 export default function CartScreen() {
-  const { cartItems, loading, updateQuantity, removeItem, refreshCart } = useCart();
+  const { cartItems, loading, updateQuantity, removeItem, refreshCart } =
+    useCart();
 
   useFocusEffect(
     useCallback(() => {
       refreshCart();
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         const timeout = setTimeout(() => {
           RNStatusBar.setBackgroundColor("#F5F4F9", true);
         }, 400);
         return () => clearTimeout(timeout);
       }
-    }, [refreshCart])
+    }, [refreshCart]),
   );
 
-  const totalAmount = useMemo(() =>
-    cartItems.reduce((s, it) => s + (Number(it.price) * it.quantity), 0),
-    [cartItems]
+  const totalAmount = useMemo(
+    () => cartItems.reduce((s, it) => s + Number(it.price) * it.quantity, 0),
+    [cartItems],
   );
 
-  const handleIncreaseQty = useCallback(async (medicineId: string) => {
-    const item = cartItems.find(i => i.id === medicineId);
-    if (item && item.cartId) {
-      await updateQuantity(item.cartId, item.quantity + 1, medicineId);
-    }
-  }, [cartItems, updateQuantity]);
-
-  const handleDecreaseQty = useCallback(async (medicineId: string) => {
-    const item = cartItems.find(i => i.id === medicineId);
-    if (!item) return;
-
-    if (item.quantity > 1) {
-      if (item.cartId) {
-        await updateQuantity(item.cartId, item.quantity - 1, medicineId);
+  const handleIncreaseQty = useCallback(
+    async (medicineId: string) => {
+      const item = cartItems.find((i) => i.id === medicineId);
+      if (item && item.cartId) {
+        await updateQuantity(item.cartId, item.quantity + 1, medicineId);
       }
-    } else {
-      if (item.cartId) {
-        await removeItem(item.cartId, medicineId);
+    },
+    [cartItems, updateQuantity],
+  );
+
+  const handleDecreaseQty = useCallback(
+    async (medicineId: string) => {
+      const item = cartItems.find((i) => i.id === medicineId);
+      if (!item) return;
+
+      if (item.quantity > 1) {
+        if (item.cartId) {
+          await updateQuantity(item.cartId, item.quantity - 1, medicineId);
+        }
       } else {
-        // Fallback for items without cartId
-        await refreshCart();
+        if (item.cartId) {
+          await removeItem(item.cartId, medicineId);
+        } else {
+          // Fallback for items without cartId
+          await refreshCart();
+        }
       }
-    }
-  }, [cartItems, updateQuantity, removeItem, refreshCart]);
+    },
+    [cartItems, updateQuantity, removeItem, refreshCart],
+  );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          translucent={false}
-          backgroundColor="#fff"
-        />
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Items in Cart</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+          >
             <Image source={images.icons.close} style={styles.closeIcon} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: getResponsiveSpacing(100) }}>
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={{ paddingBottom: getResponsiveSpacing(100) }}
+        >
           <CartItemsList
             items={cartItems}
             onIncreaseQuantity={handleIncreaseQty}
@@ -98,19 +106,26 @@ export default function CartScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.continueBtn}
+            style={[
+              styles.continueBtn,
+              { opacity: cartItems?.length === 0 ? 0.4 : 1 },
+            ]}
             onPress={() => {
               try {
                 const qs = `?isFromMedical=true&cartItems=${encodeURIComponent(JSON.stringify(cartItems))}`;
-                console.log('CartScreen - navigating to Booking with items:', cartItems.length);
+                console.log(
+                  "CartScreen - navigating to Booking with items:",
+                  cartItems.length,
+                );
                 // Temporary fallback for legacy code
                 (global as any).__BOOKING_CART = cartItems;
-                router.push((`/features/booking/booking${qs}`) as any);
+                router.push(`/features/booking/booking${qs}` as any);
               } catch (e) {
-                console.error('Failed to navigate to checkout', e);
-                router.push(('/features/booking/booking') as any);
+                console.error("Failed to navigate to checkout", e);
+                router.push("/features/booking/booking" as any);
               }
             }}
+            disabled={cartItems?.length === 0}
           >
             <Text style={styles.continueText}>Continue</Text>
           </TouchableOpacity>
@@ -121,20 +136,20 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F4F9' },
+  container: { flex: 1, backgroundColor: colors.bg_rest },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(10),
     paddingBottom: getResponsiveSpacing(15),
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderBottomColor: "#E0E0E0",
+    backgroundColor: "#fff",
   },
   headerTitle: {
-  fontFamily: fonts.semiBold,
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
@@ -157,26 +172,27 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-    backgroundColor: '#F5F4F9',
+    backgroundColor: colors.bg_rest,
   },
   footer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: "#E0E0E0",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingTop: getResponsiveSpacing(15),
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    paddingBottom: Platform.OS === "ios" ? 30 : 20,
   },
   continueBtn: {
     backgroundColor: colors.primary,
     paddingVertical: getResponsiveSpacing(10),
     borderRadius: getResponsiveSpacing(30),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    height: getResponsiveSpacing(40),
   },
   continueText: {
-    color: '#fff',
-    fontFamily: fonts.semiBold,
+    color: "#fff",
+    fontWeight: "700",
     fontSize: getResponsiveFontSize(16),
   },
 });

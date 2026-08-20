@@ -1,5 +1,10 @@
+import { colors } from "@/app/shared/styles/commonStyles";
 import React, { useEffect } from "react";
-import { View, ActivityIndicator, BackHandler, StatusBar, Platform } from "react-native";
+import {
+  View,
+  BackHandler,
+  StatusBar,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
@@ -24,7 +29,6 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
   onSuccess,
   onFailure,
 }) => {
-
   // ✅ Handle Android hardware back
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -32,7 +36,7 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
       () => {
         onFailure({ cancelled: true });
         return true; // block default
-      }
+      },
     );
 
     return () => {
@@ -74,7 +78,7 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
       email: "${email}",
       contact: "${contact}"
     },
-    theme: { color: "#C15E9C" }
+    theme: { color: "#D94A2C" }
   };
 
   var rzp = new Razorpay(options);
@@ -96,15 +100,14 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#C15E9C" />
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+      {/* <StatusBar barStyle="light-content" backgroundColor={colors.primary} /> */}
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <WebView
-          originWhitelist={['*']}
+          originWhitelist={["*"]}
           source={{ html: htmlContent }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           startInLoadingState={true}
-
           onMessage={(event) => {
             console.log("RAW MESSAGE:", event.nativeEvent.data);
 
@@ -120,7 +123,6 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
               console.log("Message parse error:", error);
             }
           }}
-
           onNavigationStateChange={(navState) => {
             if (!navState.loading && navState.canGoBack) {
               // block internal navigation

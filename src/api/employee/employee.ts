@@ -193,6 +193,11 @@ export const WellnessApi = {
   getwellnessId: (id: string | number) => `/wellnessBooking/${id}`,
   Wellnesscancel: (bookingId: string | number, reason: string | number) =>
     `/wellnessBooking/cancel/?bookingId=${bookingId}&reason=${reason}`,
+  getEnrolledPrograms: (patientId: string | number) => `/wellnessBooking/recent-wellness-program/${patientId}`,
+  getCareTeam: (patientId: string | number) => `/Employee/GetEmployeeCareTeam?eid=${patientId}`,
+  getPatientVitalsMonitoring: (patinetId: string | number) => `/PatientVitalsMonitoring/GetByPatient/${patinetId}`,
+  getPatientActivity: (patientId: string | number) => `/PatientActivity/GetByPatient/${patientId}`,
+  getPatientDiet: (patientId: string | number) => `/PatientDietNutrition/GetByPatient/${patientId}`,
 } as const;
 
 export const PrescriptionOrdersApi = {

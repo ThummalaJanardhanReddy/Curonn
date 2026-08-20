@@ -29,6 +29,7 @@ import commonStyles, { colors } from "./shared/styles/commonStyles";
 import { fonts } from "./shared/styles/fonts";
 import { useUserStore } from "@/src/store/UserStore";
 import { registerForPushNotifications } from "@/src/api/DeviceToken";
+import { StatusBar } from "expo-status-bar";
 
 // API Response interface
 interface OTPResponse {
@@ -120,14 +121,10 @@ export default function OTPVerifyScreen() {
         email: userData.email || "",
       };
 
-      console.log("Sending OTP request:", requestData);
-      console.log("API endpoint:", ApiRoutes.Employee.verifyOTP);
-
       const otpResponse = (await axiosClient.post(
         ApiRoutes.Employee.verifyOTP,
         requestData,
       )) as OTPResponse;
-      console.log("OTP response:", otpResponse);
 
       // If OTP verification is successful, update user data and navigate
       if (otpResponse?.isSuccess && otpResponse.e_id) {
@@ -226,6 +223,7 @@ export default function OTPVerifyScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, height: screenHeight }}>
+      {/* <StatusBar style="dark" backgroundColor={colors.bg_primary} /> */}
       {/* <RegistrationLayout headerBackgroundColor="#f5f5f5"> */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -279,7 +277,7 @@ export default function OTPVerifyScreen() {
                   textColor="#000000"
                   returnKeyType={index === 3 ? "go" : "next"}
                   outlineColor="#9D9D9F"
-                  activeOutlineColor="#E45C9C"
+                  activeOutlineColor={colors.primary}
                   outlineStyle={{ borderWidth: 1 }}
                   blurOnSubmit={index === 3}
                   onSubmitEditing={index === 3 ? handleVerify : undefined}
@@ -366,7 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // minHeight: 100,
     // paddingBottom: getResponsivePadding(40),
-    backgroundColor: "#F5F4F9", // '#ffffff',
+    backgroundColor: colors.bg_primary,
     // height: screenHeight, // moved to SafeAreaView
   },
   scrollContainer: {
@@ -386,16 +384,17 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   title: {
-    fontSize: 22,
-    color: "#000000",
+    fontSize: 24,
+    color: colors.primaryText,
     marginBottom: 0,
     textAlign: "left",
     marginTop: 5,
-    fontFamily: fonts.semiBold,
+    // fontWeight: "700",
+    fontWeight: "700",
   },
   subtitle: {
     fontSize: 13,
-    color: "#000000",
+    color: colors.primaryText,
     textAlign: "left",
     fontFamily: fonts.regular,
   },
@@ -404,7 +403,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: "#000000",
+    color: colors.primaryText,
     lineHeight: 20,
     textAlign: "center",
     marginBottom: 10,
@@ -412,7 +411,7 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 14,
-    color: "#C35E9C",
+    color: colors.primary,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 20,
@@ -432,7 +431,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     fontWeight: "700",
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   resendContainer: {
     alignItems: "center",
@@ -442,7 +441,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: "#000",
+    color: colors.primaryText,
     fontFamily: fonts.regular,
   },
   resendButton: {
@@ -456,7 +455,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#F5F4F9",
+    backgroundColor: colors.bg_primary,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
@@ -466,7 +465,7 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 13,
     lineHeight: 22,
-    color: "#000000",
+    color: colors.primaryText,
     marginBottom: 8,
     textAlign: "center",
     fontFamily: fonts.regular,

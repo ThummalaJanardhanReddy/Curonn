@@ -687,12 +687,12 @@ export default function PersonalizationScreen() {
   return (
     <>
       {showLoading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(195,94,156,0.9)' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg_primary }}>
           <View style={{ marginBottom: 24 }}>
             {/* Replace below with your preferred loading spinner */}
             <ActivityIndicator size="large" color={colors.white} />
           </View>
-          <Text style={{ fontSize: 20,  fontFamily: fonts.semiBold, color: colors.white, marginBottom: 8 }}>
+          <Text style={{ fontSize: 20,  fontWeight: "700", color: colors.white, marginBottom: 8 }}>
             Registration Complete
           </Text>
           <Text style={{ fontSize: 16, fontFamily: fonts.regular,color: '#fff', textAlign: 'center', maxWidth: 300 }}>
@@ -783,21 +783,21 @@ const styles = StyleSheet.create({
   },
   stepsText: {
     fontSize: 14,
-    color: '#80808E',
+    color: colors.primaryText,
     textAlign: 'center',
     marginBottom: 10,
     fontFamily: fonts.regular,
   },
   title: {
     fontSize: 24,
-    color: '#2B2C43',
+    color: colors.primaryText,
     marginBottom: 8,
     textAlign: 'left',
     fontFamily: fonts.regular,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.primaryText,
     textAlign: 'left',
     fontFamily: fonts.regular,
 
@@ -819,12 +819,12 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#E45C9C',
+    backgroundColor: colors.primary,
     borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.primaryText,
     fontWeight: '500',
   },
   contentContainer: {
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 22,
     fontWeight: 'regular',
-    color: colors.black,
+    color: colors.primaryText,
     marginBottom: 10,
     textAlign: 'center',
     fontFamily: fonts.regular,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   },
   stepSubtitle: {
     fontSize: 13,
-    color: colors.black,
+    color: colors.primaryText,
     fontWeight: '400',
     textAlign: 'center',
     justifyContent: 'flex-start',
@@ -953,8 +953,8 @@ const styles = StyleSheet.create({
   },
   genderOptionText: {
     fontSize: 16,
-    color: colors.black,
-    fontFamily: fonts.semiBold,
+    color: colors.primaryText,
+    fontWeight: "700",
   },
 
   // Height/Weight section styles
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   unitButton: {
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: colors.primaryText,
     borderRadius: 43,
     paddingVertical: 8,
     // paddingHorizontal: 30,
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
   unitButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#707070',
+    color: colors.primaryText,
     textAlign: 'center',
   },
   unitButtonTextSelected: {
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
   unitOptionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.primaryText,
   },
   unitRadioButton: {
     width: 20,
@@ -1033,8 +1033,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unitRadioButtonSelected: {
-    borderColor: '#C35E9C',
-    backgroundColor: '#C35E9C',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   unitRadioButtonInner: {
     width: 8,

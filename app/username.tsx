@@ -1,50 +1,59 @@
-import { images } from '@/assets';
-import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
-import {
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View
-} from 'react-native';
-import { Text } from 'react-native-paper';
-import BackButton from './shared/components/BackButton';
-import PrimaryButton from './shared/components/PrimaryButton';
-import RegistrationLayout from './shared/components/ui/registration-layout';
-import { useUser } from './shared/context/UserContext';
-import commonStyles, { colors } from './shared/styles/commonStyles';
-import { fonts } from './shared/styles/fonts';
-import { saveUserData, setRegistrationCompleted } from './shared/utils/storage';
-import * as SecureStore from 'expo-secure-store';
+import { images } from "@/assets";
+import React, { useEffect, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { Image, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
+import BackButton from "./shared/components/BackButton";
+import PrimaryButton from "./shared/components/PrimaryButton";
+import RegistrationLayout from "./shared/components/ui/registration-layout";
+import { useUser } from "./shared/context/UserContext";
+import commonStyles, { colors } from "./shared/styles/commonStyles";
+import { fonts } from "./shared/styles/fonts";
+import { saveUserData, setRegistrationCompleted } from "./shared/utils/storage";
+import * as SecureStore from "expo-secure-store";
 
 export default function UsernameScreen() {
   const { userData, setUserData } = useUser();
   const [mobileDetailsUpdated, setMobileDetailsUpdated] = useState(false);
   // Simulate API response for username
-  const apiUsername = userData?.fullName || 'John Doe'; // This would come from API
-  useEffect(() => {
-  const fetchMobileDetailsUpdated = async () => {
-    if (Platform.OS === "web") return null;
-    const value = await SecureStore.getItemAsync('mobile_details_updated');
-    setMobileDetailsUpdated(value === 'true');
-  };
-  fetchMobileDetailsUpdated();
-}, []);
-  // Get mobile_details_updated from router params
-  const params = useLocalSearchParams();
-  //const mobileDetailsUpdated = params.mobile_details_updated === 'true';
+  const apiUsername = userData?.fullName || "John Doe"; // This would come from API
+  const [loading, setLoading] = useState(false);
 
-  const handleContinue = async() => {
+  useEffect(() => {
+    const fetchMobileDetailsUpdated = async () => {
+      try {
+        if (Platform.OS === "web") {
+          setLoading(false);
+          return;
+        }
+
+        const value = await SecureStore.getItemAsync("mobile_details_updated");
+
+        console.log("Stored value:", value);
+
+        setMobileDetailsUpdated(value === "true");
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMobileDetailsUpdated();
+  }, []);
+  
+
+  const handleContinue = async () => {
+    if (loading) {
+      return;
+    }
+
     if (mobileDetailsUpdated) {
       await setRegistrationCompleted(true);
-      console.log("Mobile details updated, redirecting to home...");
-      //router.push('/personalization');
-     router.push('/home');
+      router.push("/home");
     } else {
-      router.push('/personalization');
+      router.push("/personalization");
     }
-   // router.push('/personalization');
   };
 
   const handleBack = () => {
@@ -53,7 +62,7 @@ export default function UsernameScreen() {
 
   return (
     // <View style={styles.container}>
-    <RegistrationLayout headerBackgroundColor='#F5F4F9'>
+    <RegistrationLayout headerBackgroundColor={colors.bg_rest}>
       {/* <StatusBar hidden={false}  translucent={true} backgroundColor='#1A82F7'/> */}
       <View style={styles.backButtonContainer}>
         <BackButton
@@ -62,7 +71,7 @@ export default function UsernameScreen() {
           style={styles.backButton}
         />
       </View>
-      
+
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
@@ -71,7 +80,8 @@ export default function UsernameScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Hi {apiUsername}.</Text>
           <Text style={styles.subtitle}>
-            Answer a few questions{'\n'}to start personalising your{'\n'}Journey.
+            Answer a few questions{"\n"}to start personalising your{"\n"}
+            Journey.
           </Text>
         </View>
       </ScrollView>
@@ -83,15 +93,18 @@ export default function UsernameScreen() {
           style={styles.continueButton}
         />
       </View>
-      
+
       {/* Background Image */}
       <View style={styles.backgroundImageContainer}>
-        <Image source={images.panels.personalization_bottom} style={styles.backgroundImage} />
+        <Image
+          source={images.panels.personalization_bottom}
+          style={styles.backgroundImage}
+        />
         {/* <images.panels.personalization_bottom
           style={styles.backgroundImage}
         /> */}
       </View>
-      </RegistrationLayout> 
+    </RegistrationLayout>
     // </View>
   );
 }
@@ -100,7 +113,7 @@ const styles = StyleSheet.create({
   container: {
     ...commonStyles.container_layout,
     // flex: 1,
-    backgroundColor: '#F5F4F9', // colors.bg_primary,
+    backgroundColor: colors.bg_rest, // colors.bg_primary,
   },
   backButtonContainer: {
     // paddingTop: 10,
@@ -112,31 +125,33 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
+    backgroundColor: colors.bg_rest, // colors.bg_primary,
     // paddingHorizontal: 32,
   },
   header: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     fontFamily: fonts.regular,
   },
   title: {
     fontSize: 17,
     color: colors.primary,
     marginBottom: 20,
-    textAlign: 'center',
-    fontFamily: fonts.semiBold,
+    textAlign: "center",
+    // fontFamily: fonts.bold,
+    fontWeight: "900",
   },
   subtitle: {
     fontSize: 24,
     fontFamily: fonts.regular,
-    fontStyle: 'normal',
-    fontWeight: '400',
+    fontStyle: "normal",
+    fontWeight: "400",
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 32,
   },
   buttonContainer: {
@@ -147,12 +162,12 @@ const styles = StyleSheet.create({
     // alignItems: 'center',
   },
   continueButton: {
-    width: '100%',
+    width: "100%",
     height: 45,
     // zIndex: 1,
   },
   backgroundImageContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 35,
     left: 0,
     right: 0,
@@ -160,8 +175,8 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   backgroundImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
 });

@@ -22,6 +22,7 @@ import {
   View,
   Linking,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -53,9 +54,14 @@ import {
   S3Link,
 } from "@/src/constants/constants";
 import dayjs from "dayjs";
-import { useChatStore, Message, useChatAcceptance } from "@/src/store/ChatStore";
+import {
+  useChatStore,
+  Message,
+  useChatAcceptance,
+} from "@/src/store/ChatStore";
 import { fonts } from "@/app/shared/styles/fonts";
 import SelectPatientModal from "../shared/components/SelectPatientModal";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 export interface IDepartments {
   charges: number;
@@ -93,6 +99,7 @@ type SystemPill = {
   subLabel?: string;
   /** Doctor name shown in the "Chat Ended" pill */
   doctorName?: string;
+  appointmentId?: number;
 };
 
 type ListItem = Message | DateHeader | SystemPill;
@@ -137,10 +144,10 @@ const MessageItem = React.memo(
               if (url) onOpenFile(url);
             }}
           >
-            <Text style={styles.pdfIcon}>📄</Text>
+             <Image source={images.prescription}  style={styles.prescription}/>
             <View>
               <Text style={styles.pdfName} numberOfLines={1}>
-                {item.attachment?.name ?? "Prescription"}
+                {"Prescription"}
               </Text>
               <Text style={styles.pdfSub}>View Prescription →</Text>
             </View>
@@ -227,7 +234,12 @@ const buildListItems = (
     // A non-empty defaultMessage means a new session just opened.
     // We open the session tracker here so subsequent isChat checks
     // know they are operating inside a valid session.
-    if (msg.defaultMessage && msg.defaultMessage.trim() !== "" && msg.defaultMessage === 'Chat Ended' && sessionOpen) {
+    if (
+      msg.defaultMessage &&
+      msg.defaultMessage.trim() !== "" &&
+      msg.defaultMessage === "Chat Ended" &&
+      sessionOpen
+    ) {
       if (sessionOpen) {
         result.push(msg);
         result.push({
@@ -239,8 +251,7 @@ const buildListItems = (
         });
       }
       sessionOpen = false;
-    }
-    else if (msg.defaultMessage && msg.defaultMessage.trim() !== "") {
+    } else if (msg.defaultMessage && msg.defaultMessage.trim() !== "") {
       // If a previous session was still open (no explicit end seen),
       // close it before opening the new one.
       if (sessionOpen) {
@@ -259,19 +270,21 @@ const buildListItems = (
         id: `started-${msg.id}`,
         variant: "started",
         subLabel: msg.defaultMessage.trim(),
+        appointmentId: msg.appointmentId,
       });
     }
 
     // ── Message bubble (only if real content exists) ─────
     const hasContent =
-      msg.text && msg.text.trim() !== "" && msg.defaultMessage !== "Chat Ended" ||
+      (msg.text &&
+        msg.text.trim() !== "" &&
+        msg.defaultMessage !== "Chat Ended") ||
       msg.attachment?.uri ||
       msg.fileUrl;
 
     if (hasContent) {
       result.push(msg);
     }
-
   });
 
   return result;
@@ -316,18 +329,29 @@ export default function MyDoctorScreen() {
     (state) => state.setConsultationType,
   );
 
+  const { consultationTypeId: consultationTypeIdStore,  } =
+    useDoctorConsultationStore();
+
   // Chat variables
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   const { isVisible } = useKeyboardState();
   const isNearBottom = useRef(true);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const { acceptDetails, doctorName } = useChatAcceptance();
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
   // Pass doctorName into buildListItems so "Chat Ended" can include it
   const listItems = useMemo(
     () => buildListItems(messages, doctorName),
     [messages, doctorName],
   );
+
+  useEffect(() => {
+    if (consultationTypeIdStore) {
+      setConsultationTypeId(consultationTypeIdStore);
+    }
+  }, [consultationTypeIdStore]);
 
   const fetchDepartments = async () => {
     try {
@@ -359,14 +383,15 @@ export default function MyDoctorScreen() {
    * AUTOSCROLL
    */
   useEffect(() => {
-    if (messages.length) {
+    if (messages.length && isNearBottom.current) {
       flatListRef.current?.scrollToEnd({ animated: true });
     }
   }, [messages.length, isHistoryLoading]);
   useEffect(() => {
-    flatListRef.current?.scrollToEnd({ animated: true });
+    if (isNearBottom.current) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
   }, [listItems.length]);
-
 
   // Fetch history on connect
   useFocusEffect(
@@ -416,7 +441,81 @@ export default function MyDoctorScreen() {
         status: item.isRead ? "received" : "sent",
         isChat: typeof item.isChat === "boolean" ? item.isChat : undefined,
         defaultMessage: item.defaultMessage ?? undefined,
+        appointmentId: item.appointmentId,
       }));
+  };
+
+  const groupedChats = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        id: string;
+        appointmentId: number;
+        messages: Message[];
+        firstMessageTime: number;
+      }
+    >();
+
+    messages.forEach((msg) => {
+      // Skip temporary messages if needed
+      if (!msg.appointmentId) return;
+
+      if (!map.has(msg.appointmentId)) {
+        map.set(msg.appointmentId, {
+          id: msg.id,
+          appointmentId: msg.appointmentId,
+          messages: [],
+          firstMessageTime: msg.timestamp,
+        });
+      }
+
+      map.get(msg.appointmentId)!.messages.push(msg);
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => b.firstMessageTime - a.firstMessageTime,
+    );
+  }, [messages]);
+
+  const appointmentIndexMap = useMemo(() => {
+    const map = new Map<number, string>();
+
+    listItems.forEach((item, index) => {
+      if (
+        item.type === "system" &&
+        item.variant === "started" &&
+        item.appointmentId
+      ) {
+        map.set(item.appointmentId, item.id);
+      }
+    });
+
+    return map;
+  }, [listItems]);
+
+  const scrollToAppointment = (appointmentId: number, fallbackId?: string) => {
+    const pillId = appointmentIndexMap.get(appointmentId);
+    let index = pillId ? listItems.findIndex((i) => i.id === pillId) : -1;
+
+    if (index === -1 && fallbackId) {
+      index = listItems.findIndex((i) => i.id === fallbackId);
+    }
+
+    if (index === -1) {
+      setHistoryModalVisible(false);
+      return;
+    }
+
+    setHistoryModalVisible(false);
+    isNearBottom.current = false;
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.1,
+      });
+    }, 250);
   };
 
   const openFile = useCallback((url: string) => {
@@ -501,7 +600,7 @@ export default function MyDoctorScreen() {
       setShowSelectPatientModal(true);
       console.log("Modal opened for patient selection");
     }, 0);
-  }
+  };
 
   const handlePatientSelected = async (member: any) => {
     console.log("Selected member from modal:", member);
@@ -524,7 +623,9 @@ export default function MyDoctorScreen() {
     setrelationPatientId(normalized.relationPatientId);
 
     // Only set as 'self' if relationId is 0 and relationName is 'Self' or matches user name
-    const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
+    const normalizedRelationName = (normalized.relationName || "")
+      .trim()
+      .toLowerCase();
     const userName = (user?.fullName || "").trim().toLowerCase();
     if (
       normalized.relationId === 0 &&
@@ -533,23 +634,24 @@ export default function MyDoctorScreen() {
       setSelectedRelation(null);
       setPatientType("self");
     } else {
-      setSelectedRelation({ masterDataId: normalized.relationId, name: normalized.relationName });
+      setSelectedRelation({
+        masterDataId: normalized.relationId,
+        name: normalized.relationName,
+      });
       setPatientType("others");
     }
-
 
     if (!user) return;
     try {
       // Use normalized values directly to avoid async state issues
-      const normalizedRelationName = (normalized.relationName || "").trim().toLowerCase();
+      const normalizedRelationName = (normalized.relationName || "")
+        .trim()
+        .toLowerCase();
       const userName = (user?.fullName || "").trim().toLowerCase();
 
       const isSelfService =
         normalized.relationId === 0 &&
-        (
-          normalizedRelationName === "" ||
-          normalizedRelationName === userName
-        );
+        (normalizedRelationName === "" || normalizedRelationName === userName);
 
       const payload: any = {
         patientId: Number(normalized.relationPatientId || user?.eId),
@@ -570,7 +672,7 @@ export default function MyDoctorScreen() {
       }
       const res: any = await axiosClient.post(
         ApiRoutes.Chat.SendChatRequestWithRelation,
-        payload
+        payload,
       );
       const relationPatientId = payload.patientId;
       useChatStore.getState().setRequestId(res?.chatRequestId);
@@ -591,8 +693,16 @@ export default function MyDoctorScreen() {
 
   const handleScroll = useCallback((event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    isNearBottom.current =
+    const nearBottom =
       layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+    isNearBottom.current = nearBottom;
+    setShowScrollToBottom(!nearBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    isNearBottom.current = true;
+    setShowScrollToBottom(false);
+    flatListRef.current?.scrollToEnd({ animated: true });
   }, []);
 
   const keyExtractor = useCallback((item: any) => {
@@ -658,7 +768,19 @@ export default function MyDoctorScreen() {
 
   const emptyHistoryComp = useCallback(() => {
     return (
-      <View style={{ flex: 1, flexGrow: 1, alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#fff", padding: 20, borderRadius: 8, height: '100%' }}>
+      <View
+        style={{
+          flex: 1,
+          flexGrow: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          backgroundColor: "#fff",
+          padding: 20,
+          borderRadius: 8,
+          height: "100%",
+        }}
+      >
         <Text style={{ fontSize: 16, color: "#000000" }}>
           No chat history available.
         </Text>
@@ -666,10 +788,30 @@ export default function MyDoctorScreen() {
     );
   }, []);
 
+  const onScrollToIndexFailed = ({
+    index,
+    averageItemLength,
+  }: {
+    index: number;
+    averageItemLength: number;
+  }) => {
+    flatListRef.current?.scrollToOffset({
+      offset: averageItemLength * index,
+      animated: false,
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0,
+      });
+    }, 150);
+  };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* <StatusBar barStyle="dark-content" backgroundColor="#fff" /> */}
       {/* Header */}
       {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor='#ffffffff'/> */}
       <View style={styles.defaultHeader}>
@@ -716,8 +858,6 @@ export default function MyDoctorScreen() {
           <View
             style={{
               flex: 1,
-              // alignItems: "center",
-              // justifyContent: "center",
               gap: 2,
             }}
           >
@@ -732,40 +872,70 @@ export default function MyDoctorScreen() {
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
             ) : (
-              <FlatList
-                ref={flatListRef}
-                data={listItems}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
-                contentContainerStyle={{
-                  gap: 4,
-                  paddingBottom: 30,
-                  paddingTop: 10,
-                  paddingHorizontal: 20,
-                  flexGrow: 1,
-                }}
-                scrollEventThrottle={16}
-                onScroll={handleScroll}
-                keyboardDismissMode="interactive"
-                keyboardShouldPersistTaps="handled"
-                maintainVisibleContentPosition={{
-                  minIndexForVisible: 1,
-                  // autoscrollToTopThreshold: 10,
-                }}
-                ListEmptyComponent={emptyHistoryComp}
-              />
+              <>
+                {listItems?.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.filterContainer}
+                    onPress={() => setHistoryModalVisible(true)}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: colors.primary,
+                        fontWeight: "600",
+                      }}
+                    >
+                      Filter
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="filter-outline"
+                      size={24}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                )}
+
+                <View style={{ flex: 1 }}>
+                  <FlatList
+                    ref={flatListRef}
+                    data={listItems}
+                    renderItem={renderItem}
+                    keyExtractor={keyExtractor}
+                    contentContainerStyle={{
+                      gap: 4,
+                      paddingBottom: 30,
+                      paddingTop: 10,
+                      paddingHorizontal: 20,
+                      flexGrow: 1,
+                    }}
+                    scrollEventThrottle={16}
+                    onScroll={handleScroll}
+                    keyboardDismissMode="interactive"
+                    keyboardShouldPersistTaps="handled"
+                    maintainVisibleContentPosition={{
+                      minIndexForVisible: 1,
+                      // autoscrollToTopThreshold: 10,
+                    }}
+                    ListEmptyComponent={emptyHistoryComp}
+                    onScrollToIndexFailed={onScrollToIndexFailed}
+                  />
+
+                  {showScrollToBottom && (
+                    <TouchableOpacity
+                      style={styles.scrollToBottomButton}
+                      onPress={scrollToBottom}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={24}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
             )}
-            {/* <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "400",
-                  fontFamily: fonts.regular,
-                  color: colors.text,
-                }}
-              >
-                {" "}
-                Our doctors are available now
-              </Text> */}
             <View
               style={{
                 width: "100%",
@@ -773,7 +943,7 @@ export default function MyDoctorScreen() {
                 justifyContent: "center",
                 marginTop: 10,
                 height: 70,
-                backgroundColor: "#EDDCEA",
+                // backgroundColor: "#EDDCEA",
               }}
             >
               <PrimaryButton
@@ -791,7 +961,7 @@ export default function MyDoctorScreen() {
                 textStyle={{
                   color: colors.white,
                   fontSize: 14,
-                  fontFamily: fonts.semiBold,
+                  fontWeight: "700",
                 }}
               />
 
@@ -832,6 +1002,68 @@ export default function MyDoctorScreen() {
           </ScrollView>
         )}
       </View>
+
+      <Modal
+        visible={historyModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setHistoryModalVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.backdrop}
+          onPress={() => setHistoryModalVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.bottomSheet}>
+            <View style={styles.handle} />
+
+            <View style={styles.historyHeader}>
+              <Text style={styles.sheetTitle}>Chat History</Text>
+              <TouchableOpacity
+                onPress={() => setHistoryModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={groupedChats}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.historyItem}
+                  onPress={() =>
+                    scrollToAppointment(item.appointmentId, item.id)
+                  }
+                >
+                  <View>
+                    <Text style={styles.historyTitle}>
+                      Consultation #{item.appointmentId}
+                    </Text>
+
+                    <Text style={styles.historyDate}>
+                      {dayjs(item.firstMessageTime).format(
+                        "DD MMM YYYY • hh:mm A",
+                      )}
+                    </Text>
+
+                    <Text style={styles.historyCount}>
+                      {item.messages.length} messages
+                    </Text>
+                  </View>
+
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={24}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -841,19 +1073,20 @@ const styles = StyleSheet.create({
     //...commonStyles.container_layout,
     flex: 1,
     backgroundColor: colors.white,
-    paddingTop: Platform.OS === "android" ? getResponsiveSpacing(20) : 27,
     // backgroundColor: colors.white,
   },
   defaultHeader: {
     paddingHorizontal: getResponsiveSpacing(20),
-    marginTop: Platform.OS === "android" ? getResponsiveSpacing(0) : 0,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
   },
   content: {
     flex: 1,
   },
   boxcolor: {
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
     flex: 1,
+    paddingTop: 5,
   },
   searchContainer: {
     marginBottom: getResponsiveSpacing(10),
@@ -956,9 +1189,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   specialistName: {
-    fontSize: getResponsiveFontSize(11.5),
-    fontFamily: fonts.semiBold,
-    fontWeight: "600",
+    fontSize: getResponsiveFontSize(12),
+    fontWeight: "900",
     color: "#fff",
     marginBottom: getResponsiveSpacing(1),
     textAlign: "left",
@@ -1026,6 +1258,23 @@ const styles = StyleSheet.create({
   userMessage: { backgroundColor: "#DEF2DB", alignSelf: "flex-end" },
   doctorMessage: { backgroundColor: "#EDE7F7", alignSelf: "flex-start" },
 
+  scrollToBottomButton: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
   image: { width: 200, height: 200, borderRadius: 10, marginBottom: 5 },
 
   metaRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 5 },
@@ -1045,5 +1294,86 @@ const styles = StyleSheet.create({
   pdfIcon: { fontSize: 26 },
   pdfName: { fontSize: 13, fontWeight: "500", color: "#1A1A2E", maxWidth: 130 },
   pdfSub: { fontSize: 12, color: "#4361EE", marginTop: 2 },
+  prescription: {width: 26, height: 26, resizeMode: 'cover'},
   bubbleText: { fontSize: 14, color: "#1A1A2E", lineHeight: 20 },
+  filterContainer: {
+    position: "absolute",
+    top: 0,
+    right: 20,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    zIndex: 1,
+    flexDirection: "row",
+    gap: 5,
+  },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+
+  bottomSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    paddingBottom: 24,
+    marginBottom: 20,
+    height: "70%",
+  },
+
+  handle: {
+    width: 50,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: "#D0D0D0",
+    alignSelf: "center",
+    marginTop: 10,
+  },
+
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    padding: 20,
+  },
+
+  historyItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EFEFEF",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  historyTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  historyDate: {
+    color: "#666",
+    marginTop: 4,
+  },
+
+  historyCount: {
+    color: colors.primary,
+    marginTop: 4,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    // paddingHorizontal: 20,
+    // paddingVertical: 10,
+  },
+  closeButton: {
+    // padding: 10,
+    paddingRight: 25,
+  },
 });

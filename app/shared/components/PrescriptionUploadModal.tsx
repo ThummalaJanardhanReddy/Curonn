@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
     fontWeight: '600',
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
     color: '#000'
   },
   closePill: {
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   closePillText: {
     color: '#ff0000',
     fontWeight: '600',
-     fontFamily: fonts.semiBold,
+     fontWeight: "700",
      fontSize: getResponsiveFontSize(11),
   },
   modalBodyLarge: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(13),
     color: '#000',
     flex: 1,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   notesInput: {
     borderRadius: getResponsiveSpacing(8),
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
 
   },
   nextText: {
-    color: '#fff', fontFamily: fonts.semiBold,
+    color: '#fff', fontWeight: "700",
     fontSize: getResponsiveFontSize(15), fontWeight: '500'
 
   },

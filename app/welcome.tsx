@@ -1,12 +1,12 @@
 import { router } from "expo-router";
 import React from "react";
-import { Image, ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { Image, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../assets";
 import PrimaryButton from "./shared/components/PrimaryButton";
 import commonStyles, { colors } from "./shared/styles/commonStyles";
-import { fonts } from './shared/styles/fonts';
+import { fonts } from "./shared/styles/fonts";
 import {
   getResponsiveFontSize,
   getResponsiveSpacing,
@@ -14,6 +14,7 @@ import {
   useResponsiveDimensions,
   wp,
 } from "./shared/utils/responsive";
+import { StatusBar } from "expo-status-bar";
 
 export default function WelcomeScreen() {
   const { insets } = useResponsiveDimensions();
@@ -28,9 +29,17 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <StatusBar barStyle="dark-content" translucent={false} backgroundColor="#ffffff" animated />
-      <SafeAreaView style={[styles.container, { backgroundColor: "#ffffff" }]}>
+    <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
+      {/* <StatusBar barStyle="dark-content" translucent={false} backgroundColor={colors.bg_primary} animated /> */}
+      {/* <StatusBar
+        style="dark"
+        backgroundColor={colors.bg_primary}
+        translucent={false}
+        animated
+      /> */}
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.bg_primary }]}
+      >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.contentContainer}
@@ -78,7 +87,7 @@ const styles = StyleSheet.create({
     // paddingBottom: getResponsiveSpacing(40),
     // paddingTop:10,
     // minHeight: hp(100) - getResponsiveSpacing(100), // Account for safe area and padding
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.bg_primary,
   },
   header: {
     flex: 1,
@@ -110,9 +119,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: getResponsiveFontSize(22),
     paddingHorizontal: getResponsiveSpacing(20),
-    marginBottom: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(15),
     fontFamily: fonts.regular,
-    color: '#141F2A',
+    color: "#141F2A",
   },
   buttonContainer: {
     alignItems: "center",

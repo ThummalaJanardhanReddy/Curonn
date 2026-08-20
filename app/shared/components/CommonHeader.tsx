@@ -1,7 +1,12 @@
 import { useLocation } from "@/src/hooks/useLocation";
-import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { images } from "../../../assets";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import LocationSelection from "../../features/location/location-selection";
 import {
   getResponsiveFontSize,
@@ -13,450 +18,334 @@ import ProfileModal from "./ProfileModal";
 import { useUser } from "../../shared/context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
-import { fonts } from '../../shared/styles/fonts';
-import { useCart } from '../context/CartContext';
-import MenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/man.svg';
-import WomenIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/woman.svg';
-import MenuIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/hamburger-menu.svg';
-import MenuHomeIcon from '../../../assets/AppIcons/Curonn_icons/menu/new/hamburger-homemenu.svg';
-import CartIcon from '../../../assets/AppIcons/Curonn_icons/carticon.svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { useUserStore } from '@/src/store/UserStore';
+import { fonts } from "../../shared/styles/fonts";
+import { useCart } from "../context/CartContext";
+import MenuHomeIcon from "../../../assets/AppIcons/Curonn_icons/menu/new/hamburger-homemenu.svg";
+import CartIcon from "../../../assets/AppIcons/Curonn_icons/carticon.svg";
+import LocationPinIcon from "../../../assets/AppIcons/Curonn_icons/location.svg"; // TODO: point at the actual location pin asset used by `images.icons.location`
+import BellIcon from "../../../assets/AppIcons/Curonn_icons/bell_ic.svg"; // TODO: point at the actual bell asset used by `images.notification_bell_svg`
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUserStore } from "@/src/store/UserStore";
+import { colors } from "../styles/commonStyles";
 
 interface CommonHeaderProps {
   title?: string;
-  patientId?: number;
   isHomePage?: boolean;
-  currentLocation?: string;
   onProfilePress?: () => void;
   onNotificationPress?: () => void;
   onCartPress?: () => void;
   onLocationChange?: (location: string) => void;
   showCart?: boolean;
   showProfile?: boolean;
-  showLocation?: boolean; // NEW: control location visibility
+  showLocation?: boolean;
   onRefreshNotificationCount?: (cb: () => void) => void;
+}
+
+const ACCENT = {
+  pin: "#D94A2C",
+  cartBg: "#FED8EC",
+  badgeRed: "#FF4444",
+};
+
+/**
+ * Splits "Area, City, State" into a bold primary line and a lighter
+ * secondary line so long addresses don't visually compete with the icon row.
+ */
+function splitLocation(location: string) {
+  if (!location.includes(",")) {
+    return { primary: location, secondary: "" };
+  }
+  const [first, ...remainder] = location.split(",");
+  return { primary: first.trim(), secondary: remainder.join(",").trim() };
+}
+
+function NotificationBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.notificationBadge}>
+      <Text style={styles.notificationBadgeText}>
+        {count > 99 ? "99+" : count}
+      </Text>
+    </View>
+  );
+}
+
+function CartBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.cartBadge}>
+      <Text style={styles.cartBadgeText}>{count > 99 ? "99+" : count}</Text>
+    </View>
+  );
 }
 
 export default function CommonHeader({
   title,
   isHomePage = false,
-  currentLocation = "New York, NY",
   onProfilePress,
   onNotificationPress,
   onCartPress,
   onLocationChange,
   showCart = true,
   showProfile = true,
-  showLocation = true, // NEW: default true
+  showLocation = true,
   onRefreshNotificationCount,
 }: CommonHeaderProps) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [cartVisible, setCartVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
-  const [count, setCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
 
-  // ...existing code...
-
-  const [selectedLocation, setSelectedLocation] = useState(
-    "Fetching location...",
-  );
-  const [profileForm, setProfileForm] = useState({
-    gender: "",
-    image: "",
-  });
-  const { getCurrentAddress, address } = useLocation();
+  const { getCurrentAddress } = useLocation();
   const { userData } = useUser();
   const { cartCount } = useCart();
-
   const { restoreUserData, user } = useUserStore();
-  useEffect(() => {
-    restoreUserData();
-    fetchNotiCounts();
-  }, []);
-  const patientId = Number(userData?.e_id || user?.eId);
-  // console.log("[CommonHeader] patientId:", patientId);
-  // Expose fetchNotiCounts to parent if callback provided
 
-  const fetchNotiCounts = async () => {
+  const patientId = Number(userData?.e_id || user?.eId) || undefined;
+
+  const fetchNotificationCount = useCallback(async () => {
+    if (!patientId) return;
     try {
-      // console.log(
-      //   "[CommonHeader] Fetching notification count for patientId:",
-      //   patientId,
-      // );
       const response = await axiosClient.get(
         ApiRoutes.Notification.GetCount(patientId, "patient"),
       );
-      const data = response?.data ?? response;
-      // console.log("[CommonHeader] Notification count response:", response);
-      setCount(data);
+      setNotificationCount(response?.data ?? response ?? 0);
     } catch (error) {
-      console.error("[ProfileModal] Failed to fetch profile data:", error);
+      console.error(
+        "[CommonHeader] Failed to fetch notification count:",
+        error,
+      );
     }
-  };
-
-  useEffect(() => {
-    if (onRefreshNotificationCount) {
-      onRefreshNotificationCount(fetchNotiCounts);
-    }
-  }, [onRefreshNotificationCount, patientId]);
-
-  React.useEffect(() => {
-    if (!patientId) return;
-    // console.log("[ProfileModal] userData:", userData);
-    // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
-    const fetchProfile = async () => {
-      try {
-        const response = await axiosClient.get(
-          ApiRoutes.Employee.getById(patientId),
-        );
-        const data = response?.data ?? response;
-        setProfileForm({
-          gender: data.gender || "",
-          image: data.image || "",
-        });
-      } catch (error) {
-        console.error("[ProfileModal] Failed to fetch profile data:", error);
-      }
-    };
-    fetchProfile();
-
-    fetchNotiCounts();
   }, [patientId]);
 
-  const fetchAddress = async () => {
-    try {
-      // ⭐ Check saved address first
-      const storedAddress = await AsyncStorage.getItem("userAddress");
-
-      if (storedAddress) {
-        setSelectedLocation(storedAddress);
-        onLocationChange?.(storedAddress);
-        return;
-      }
-
-   //   ⭐ Try getting GPS location
-      const addr = await getCurrentAddress();
-
-      if (addr) {
-        setSelectedLocation(addr);
-        onLocationChange?.(addr);
-      } else {
-        setSelectedLocation("Select your address");
-        setLocationVisible(true);
-      }
-    } catch (error) {
-      console.log("Location load error:", error);
-
-      // ⭐ fallback to manual location selection
-      setSelectedLocation("Select your address");
-      setLocationVisible(true);
-    }
-  };
+  useEffect(() => {
+    restoreUserData();
+  }, [restoreUserData]);
 
   useEffect(() => {
+    fetchNotificationCount();
+  }, [fetchNotificationCount]);
+
+  useEffect(() => {
+    onRefreshNotificationCount?.(fetchNotificationCount);
+  }, [onRefreshNotificationCount, fetchNotificationCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchAddress = async () => {
+      setLocationLoading(true);
+      try {
+        const storedAddress = await AsyncStorage.getItem("userAddress");
+        if (storedAddress) {
+          if (!cancelled) {
+            setSelectedLocation(storedAddress);
+            onLocationChange?.(storedAddress);
+          }
+          return;
+        }
+
+        const addr = await getCurrentAddress();
+        if (!cancelled) {
+          if (addr) {
+            setSelectedLocation(addr);
+            onLocationChange?.(addr);
+          } else {
+            // Don't force the location picker open unprompted — just invite
+            // the user to tap and choose one themselves.
+            setSelectedLocation(null);
+          }
+        }
+      } catch (error) {
+        console.log("[CommonHeader] Location load error:", error);
+        if (!cancelled) setSelectedLocation(null);
+      } finally {
+        if (!cancelled) setLocationLoading(false);
+      }
+    };
+
     fetchAddress();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [latLng, setLatLng] = useState<{
-    latitude: string;
-    longitude: string;
-  } | null>(null);
-
-  // Fetch lat/lng from AsyncStorage
-  // useEffect(() => {
-  //   const getLatLng = async () => {
-  //     const stored = await AsyncStorage.getItem("userLocationLatLng");
-  //     if (stored) {
-  //       const parsed = JSON.parse(stored);
-  //       setLatLng(parsed);
-  //     }
-  //   };
-  //   getLatLng();
-  // }, [selectedLocation]);
-
-  // useEffect(() => {
-  //   setSelectedLocation(address);
-  // }, [address]);
-
-  const handleProfilePress = () => {
-    console.log("Profile button pressed");
-    setProfileVisible(true);
-    if (onProfilePress) {
-      onProfilePress();
-    }
-  };
-
-  const handleNotificationPress = () => {
-    if (onNotificationPress) {
-      onNotificationPress();
-    } else {
-      console.log("Notification pressed");
-    }
-  };
-
-  const handleCartPress = () => {
-    console.log("Cart button pressed");
-    // setCartVisible(true);
-    if (onCartPress) {
-      onCartPress();
-    }
-  };
-
-  const handleLocationPress = () => {
-    console.log("Location pressed");
-    setLocationVisible(true);
-  };
-
-  const handleLocationSelected = async (locationData: any) => {
+  const handleLocationSelected = async (locationData: { address: string }) => {
     setSelectedLocation(locationData.address);
     await AsyncStorage.setItem("userAddress", locationData.address);
-    onLocationChange?.(locationData.address); // Pass the address to parent
-    console.log("Location selected in header:", locationData);
-
-    // Update the selected location immediately in the state to trigger re-render
-    //setSelectedLocation(locationData.address);
-    setLocationVisible(false); // Close modal
-  };
-
-  const handleLocationClose = () => {
+    onLocationChange?.(locationData.address);
     setLocationVisible(false);
   };
-  let mandal = selectedLocation;
-  let rest = "";
-  if (selectedLocation && selectedLocation.includes(",")) {
-    const parts = selectedLocation.split(",");
-    mandal = parts[0].trim();
-    rest = parts.slice(1).join(",").trim();
-  }
-  if (isHomePage) {
-    // Split the address at the first comma
 
-    // Home page style with background and different layout
-    return (
-      <>
-        <View style={styles.homeHeader}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={handleProfilePress}
-            >
-              {/* {profileForm?.image ? (
-                <Image
-                  source={{ uri: profileForm.image }}
-                  style={styles.profileIcon}
-                />
-              ) : profileForm?.gender === "Female" ? (
-                <WomenIcon width={40} height={40} style={styles.profileIcon} />
-              ) : (
-                <MenIcon width={40} height={40} style={styles.profileIcon} />
-              )} */}
-               <MenuHomeIcon width={25} height={25} style={styles.profileIcon} fill="white"  />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.locationInfo}
-              onPress={handleLocationPress}
-            >
-              <View style={styles.locationhead}>
-                <Text style={styles.homeLocationText}>
-                  {mandal} &nbsp;
-                  <images.icons.location style={styles.locationIcon} />
-                </Text>
-                {rest ? (
-                  <Text style={styles.homeLocationSubtext}>{rest} </Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
+  const { primary, secondary } = splitLocation(
+    selectedLocation ?? "Select your location",
+  );
+
+  const renderLocation = (
+    primaryStyle: object,
+    secondaryStyle: object,
+    pinColor?: string,
+  ) => (
+    <TouchableOpacity
+      style={styles.locationInfo}
+      onPress={() => setLocationVisible(true)}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel="Change delivery location"
+    >
+      <View style={styles.locationhead}>
+        {locationLoading ? (
+          <View style={styles.locationLoadingRow}>
+            <ActivityIndicator size="small" color={colors.primaryText} />
+            <Text style={[primaryStyle, styles.locationLoadingText]}>
+              Locating you...
+            </Text>
           </View>
+        ) : (
+          <>
+            <Text style={primaryStyle} numberOfLines={1} ellipsizeMode="tail">
+              {primary}{" "}
+              <LocationPinIcon
+                width={16}
+                height={16}
+                style={styles.locationIcon}
+                fill={pinColor ?? ACCENT.pin}
+              />
+            </Text>
+            {secondary ? (
+              <Text
+                style={secondaryStyle}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {secondary}
+              </Text>
+            ) : null}
+          </>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={handleNotificationPress}
-          >
-            <images.notification_bell_svg style={styles.notificationIcon} />
-            {count > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{count}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile Modal */}
-        <ProfileModal
-          visible={profileVisible}
-          onClose={() => setProfileVisible(false)}
-        />
-
-        {/* Cart Modal */}
-        <CartModal
-          visible={cartVisible}
-          onClose={() => setCartVisible(false)}
-        />
-
-        {/* Location Selection Modal */}
-        <LocationSelection
-          visible={locationVisible}
-          onClose={handleLocationClose}
-          onLocationSelected={handleLocationSelected}
-          isSimpleLocationSelect={true}
-        // Pass this prop to show simplified location selection
-        />
-      </>
-    );
-  }
-
-  // Default style for other pages (like lab-tests)
   return (
     <>
-      <View style={styles.defaultHeader}>
+      <View style={isHomePage ? styles.homeHeader : styles.defaultHeader}>
         <View style={styles.headerLeft}>
-          {showProfile && (
+          {(showProfile || isHomePage) && (
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={handleProfilePress}
+              onPress={() => {
+                setProfileVisible(true);
+                onProfilePress?.();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open menu"
             >
-              {/* {profileForm?.image ? (
-<Image
-source={{ uri: profileForm.image }}
-style={styles.profileIcon}
-/>
-) : profileForm?.gender === "Female" ? (
-<WomenIcon width={40} height={40} style={styles.profileIcon} />
-) : (
-<MenIcon width={40} height={40} style={styles.profileIcon} />
-)} */}
-              {/* Hamburger Icon instead of profile icon */}
-              <MenuIcon width={25} height={25} style={styles.profileIcon} />
+              <MenuHomeIcon
+                width={25}
+                height={25}
+                style={styles.profileIcon}
+                fill={colors.primaryText}
+              />
             </TouchableOpacity>
           )}
-          {showLocation ? (
-            <TouchableOpacity
-              style={styles.locationInfo}
-              onPress={handleLocationPress}
-            >
-              <View style={styles.locationhead}>
-                <Text style={styles.locationText}>
-                  {mandal} &nbsp;
-                  <images.icons.location
-                    style={[styles.locationIcon]}
-                    stroke={"#000000"}
-                  />
+
+          {showLocation
+            ? renderLocation(
+                isHomePage ? styles.homeLocationText : styles.locationText,
+                isHomePage
+                  ? styles.homeLocationSubtext
+                  : styles.sublocationText,
+              )
+            : title && (
+                <Text style={[styles.locationText, styles.titleFallback]}>
+                  {title}
                 </Text>
-                {rest ? (
-                  <Text style={styles.sublocationText}>{rest}</Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          ) : title ? (
-            <Text style={[styles.locationText, { marginLeft: 8 }]}>
-              {title}
-            </Text>
-          ) : null}
+              )}
         </View>
-        {showCart && (
-          <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
-            <CartIcon style={styles.cartIcon} width={15} height={15} />
-            {cartCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cartCount}</Text>
-              </View>
-            )}
+
+        {isHomePage ? (
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => (onNotificationPress ? onNotificationPress() : null)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Notifications${
+              notificationCount > 0 ? `, ${notificationCount} unread` : ""
+            }`}
+          >
+            <BellIcon
+              style={styles.notificationIcon}
+              fill={colors.primaryText}
+            />
+            <NotificationBadge count={notificationCount} />
           </TouchableOpacity>
+        ) : (
+          showCart && (
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() => {
+                onCartPress?.();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Cart${
+                cartCount > 0 ? `, ${cartCount} items` : ""
+              }`}
+            >
+              <CartIcon style={styles.cartIcon} width={15} height={15} />
+              <CartBadge count={cartCount} />
+            </TouchableOpacity>
+          )
         )}
       </View>
 
-      {/* Profile Modal */}
       <ProfileModal
         visible={profileVisible}
         onClose={() => setProfileVisible(false)}
       />
-      {/* Cart Modal */}
       <CartModal visible={cartVisible} onClose={() => setCartVisible(false)} />
-      {/* Location Selection Modal */}
       <LocationSelection
         visible={locationVisible}
-        onClose={handleLocationClose}
+        onClose={() => setLocationVisible(false)}
         onLocationSelected={handleLocationSelected}
-        isSimpleLocationSelect={true} // Pass this prop to show simplified location selection
+        isSimpleLocationSelect
       />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  // Home page styles
   homeHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // paddingLeft: getResponsiveSpacing(16),
-    // paddingRight: getResponsiveSpacing(16),
-    paddingTop: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(5),
-    backgroundColor: "transparent",
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#39193d4d',
+    // paddingBottom: getResponsiveSpacing(5),
+    paddingVertical: getResponsiveSpacing(10),
+    backgroundColor: colors.bg_primary,
     zIndex: 1,
-    // borderWidth: 1,
-    // borderColor:'#ff0000'
   },
-  homeLocationText: {
-    fontSize: getResponsiveFontSize(13),
-    fontWeight: "600",
-    color: "white",
-    marginBottom: getResponsiveSpacing(0),
-    fontFamily: fonts.bold,
-    lineHeight: 18,
-  },
-
-  homeLocationSubtext: {
-    fontSize: getResponsiveFontSize(12),
-    color: "white",
-    fontFamily: fonts.regular,
-  },
-
-  sublocationText: {
-    fontSize: getResponsiveFontSize(12),
-    fontFamily: fonts.regular,
-    color: "#000",
-  },
-  notificationButton: {
-    padding: getResponsiveSpacing(8),
-    paddingBottom: getResponsiveSpacing(0),
-    // borderWidth: 1,
-    // borderColor: '#00ff00'
-  },
-  notificationIcon: {
-    ...getResponsiveImageSize(28, 28),
-    tintColor: "white",
-  },
-
-  // Default page styles (lab-tests style)
   defaultHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    // paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(15),
-    backgroundColor: "#fff",
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#eee',
+    paddingVertical: getResponsiveSpacing(10),
+    backgroundColor: colors.white,
+    zIndex: 1,
   },
   headerLeft: {
     flexDirection: "row",
-    //alignItems: "center",
+    alignItems: "center",
     flex: 1,
     minWidth: 0,
-    // borderWidth: 1,
-    // borderColor: '#00ff00'
   },
   profileButton: {
     marginRight: getResponsiveSpacing(12),
     paddingHorizontal: getResponsiveSpacing(4),
-    marginTop: getResponsiveSpacing(8),
   },
   profileIcon: {
     width: 40,
@@ -465,32 +354,77 @@ const styles = StyleSheet.create({
   },
   locationInfo: {
     flex: 1,
-    lineHeight: 14,
+    minWidth: 0,
   },
   locationhead: {
-    lineHeight: 15,
-    marginTop: getResponsiveSpacing(5),
+    justifyContent: "center",
+  },
+  locationLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: getResponsiveSpacing(6),
+  },
+  locationLoadingText: {
+    opacity: 0.7,
   },
   locationIcon: {
-    ...getResponsiveImageSize(26, 26),
-    marginLeft: getResponsiveSpacing(10),
+    ...getResponsiveImageSize(16, 16),
+    marginLeft: getResponsiveSpacing(4),
+  },
+  homeLocationText: {
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: "600",
+    color: colors.primaryText,
+    fontFamily: fonts.bold,
+    lineHeight: 18,
+  },
+  homeLocationSubtext: {
+    fontSize: getResponsiveFontSize(12),
+    color: colors.primaryText,
+    fontFamily: fonts.regular,
   },
   locationText: {
     fontSize: getResponsiveFontSize(13),
     fontWeight: "600",
     color: "#000",
-    marginBottom: getResponsiveSpacing(0),
     fontFamily: fonts.bold,
     lineHeight: 18,
   },
-  locationSubtext: {
+  sublocationText: {
     fontSize: getResponsiveFontSize(12),
+    fontFamily: fonts.regular,
     color: "#666",
-    opacity: 0.8,
+  },
+  titleFallback: {
+    marginLeft: getResponsiveSpacing(8),
+  },
+  notificationButton: {
+    padding: getResponsiveSpacing(8),
+    paddingBottom: 0,
+  },
+  notificationIcon: {
+    ...getResponsiveImageSize(28, 28),
+  },
+  notificationBadge: {
+    position: "absolute",
+    borderRadius: getResponsiveSpacing(10),
+    top: getResponsiveSpacing(2),
+    right: 0,
+    backgroundColor: colors.primary,
+    minWidth: getResponsiveSpacing(20),
+    height: getResponsiveSpacing(20),
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: getResponsiveSpacing(2),
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: getResponsiveFontSize(10),
+    fontFamily: fonts.bold,
   },
   cartButton: {
     padding: getResponsiveSpacing(3),
-    backgroundColor: "#FED8EC",
+    backgroundColor: ACCENT.cartBg,
     width: getResponsiveSpacing(30),
     height: getResponsiveSpacing(30),
     borderRadius: getResponsiveSpacing(15),
@@ -504,7 +438,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: getResponsiveSpacing(-8),
     right: getResponsiveSpacing(-2),
-    backgroundColor: "#FF4444",
+    backgroundColor: ACCENT.badgeRed,
     borderRadius: getResponsiveSpacing(10),
     minWidth: getResponsiveSpacing(20),
     height: getResponsiveSpacing(20),
@@ -515,23 +449,6 @@ const styles = StyleSheet.create({
   cartBadgeText: {
     color: "#fff",
     fontSize: getResponsiveFontSize(9),
-    fontFamily: fonts.bold,
-  },
-  notificationBadge: {
-    position: "absolute",
-    borderRadius: getResponsiveSpacing(10),
-    top: getResponsiveSpacing(2),
-    right: getResponsiveSpacing(0),
-    backgroundColor: "#C35E9C",
-    minWidth: getResponsiveSpacing(20),
-    height: getResponsiveSpacing(20),
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: getResponsiveSpacing(2),
-  },
-  notificationBadgeText: {
-    color: "#fff",
-    fontSize: getResponsiveFontSize(10),
     fontFamily: fonts.bold,
   },
 });

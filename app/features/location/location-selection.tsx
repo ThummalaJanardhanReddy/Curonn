@@ -24,12 +24,14 @@ import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import { useUser } from "../../shared/context/UserContext"; // adjust path as needed
 import { useLocalSearchParams } from "expo-router";
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 import Toast from "@/app/shared/components/Toast";
 import { KeyboardAvoidingView, ScrollView } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { colors } from "@/app/shared/styles/commonStyles";
+import PrimaryButton from "@/app/shared/components/PrimaryButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -44,20 +46,18 @@ interface LocationSelectionProps {
   onClose: () => void;
   onLocationSelected: (location: LocationData) => void;
   addressId?: number | null;
+  isSimpleLocationSelect?: boolean; // Optional prop to indicate simple location selection
 }
+
+const GOOGLE_PLACES_API_KEY = "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic";
 
 export default function LocationSelection({
   visible,
   onClose,
   onLocationSelected,
   addressId,
+  isSimpleLocationSelect = false, // Default to false if not provided
 }: LocationSelectionProps) {
-  // console.log("LocationSelection page opened", { addressId });
-
-  // useEffect(() => {
-  //   console.log("LocationSelection addressId:", addressId);
-  // }, [addressId]);
-
   const { userData } = useUser();
 
   const isEditMode = !!addressId;
@@ -73,6 +73,7 @@ export default function LocationSelection({
     "home" | "office" | "other"
   >("home");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // submitting the address
   const [overlayVisible, setOverlayVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
@@ -86,20 +87,29 @@ export default function LocationSelection({
   const [toastMessage, setToastMessage] = useState({
     title: "",
     subtitle: "",
-    color: "#4BB543", // default to success green
+    type: "",
   });
+  const { setUserData } = useUser();
+
   useEffect(() => {
     const restoreUserData = async () => {
-      const userData = await SecureStore.getItemAsync('userData');
-      console.log("Restoring userData on Home Screen:", userData);
-      if (userData) {
-        setUserData(JSON.parse(userData));
+      try {
+        const userData = await SecureStore.getItemAsync("userData");
+        if (userData) {
+          setUserData(JSON.parse(userData));
+        }
+      } catch (error) {
+        if (__DEV__)
+          console.warn(
+            "[LocationSelection] Failed to restore userData:",
+            error,
+          );
       }
     };
     restoreUserData();
   }, []);
-  const { setUserData } = useUser();
-  const patientId = Number(userData?.e_id || userData?.eId);
+
+  const patientId = Number(userData?.e_id || userData?.eId) || undefined;
   const showOverlay = useCallback(() => {
     setOverlayVisible(true);
     Animated.timing(slideAnim, {
@@ -120,10 +130,13 @@ export default function LocationSelection({
   }, [slideAnim]);
 
   useEffect(() => {
+    if (!visible) return;
+
     if (isEditMode && addressId) {
       // console.log("Fetching address details for editing, addressId:", addressId);
-      axiosClient.get(ApiRoutes.Address.getAddressById(addressId))
-        .then(response => {
+      axiosClient
+        .get(ApiRoutes.Address.getAddressById(addressId))
+        .then((response) => {
           if (response.isSuccess && response.data) {
             setAddress(response.data.address || "");
             setHouseNumber(response.data.hNo || "");
@@ -132,16 +145,27 @@ export default function LocationSelection({
             setFetchedIsDefault(response.data.isDefault || false); // <-- Add this
           }
         })
-        .catch(err => {
-          // Optionally handle error
+        .catch((err) => {
+          if (__DEV__)
+            console.warn("[LocationSelection] Failed to load address:", err);
+          setToastMessage({
+            title: "Error",
+            subtitle: "Couldn't load this address. Please try again.",
+            type: "error",
+          });
+          setShowToast(true);
         });
     } else if (visible) {
+      setAddress("");
       setHouseNumber("");
       setLandmark("");
       setSelectedNickname("home");
       setFetchedIsDefault(false);
+      setMarkerPosition(null);
+      setErrors("");
+      setMapLoading(true);
     }
-  }, [isEditMode, addressId,]);
+  }, [visible, isEditMode, addressId]);
 
   const getCurrentLocation = async () => {
     try {
@@ -151,7 +175,7 @@ export default function LocationSelection({
       if (status !== "granted") {
         Alert.alert(
           "Permission denied",
-          "Location permission is required to use this feature."
+          "Location permission is required to use this feature.",
         );
         return;
       }
@@ -193,20 +217,20 @@ export default function LocationSelection({
           setAddress(fullAddress || "Address not found");
         } else {
           setAddress(
-            `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
+            `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`,
           );
         }
       } catch (geocodingError) {
         console.warn("Geocoding failed:", geocodingError);
         setAddress(
-          `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`
+          `Lat: ${location.coords.latitude.toFixed(4)}, Lng: ${location.coords.longitude.toFixed(4)}`,
         );
       }
     } catch (error) {
       console.error("Error getting location:", error);
       Alert.alert(
         "Location Error",
-        "Could not get your location. Please ensure GPS is enabled and try again."
+        "Could not get your location. Please ensure GPS is enabled and try again.",
       );
     } finally {
       setIsLoading(false);
@@ -223,6 +247,8 @@ export default function LocationSelection({
   }, [visible, showOverlay, hideOverlay]);
 
   const handleConfirmLocation = async () => {
+    if (isSaving) return; // guard against double-tap firing two saves
+
     if (!address.trim()) {
       Alert.alert("Error", "Please enter your address");
       return;
@@ -232,18 +258,32 @@ export default function LocationSelection({
       return;
     }
 
+    if (!currentLocation && !markerPosition) {
+      Alert.alert(
+        "Location required",
+        "We couldn't determine your location. Please use the locate-me button or search for an address before confirming.",
+      );
+      return;
+    }
+    if (!patientId) {
+      Alert.alert(
+        "Something went wrong",
+        "We couldn't identify your account. Please close and reopen the app, then try again.",
+      );
+      return;
+    }
+
     const locationData: LocationData = {
-      latitude: currentLocation?.coords.latitude || 0,
-      longitude: currentLocation?.coords.longitude || 0,
+      latitude:
+        markerPosition?.latitude ?? currentLocation?.coords.latitude ?? 0,
+      longitude:
+        markerPosition?.longitude ?? currentLocation?.coords.longitude ?? 0,
       address: address,
       houseNumber: houseNumber,
       landmark: landmark,
       nickname: selectedNickname,
     };
 
-    console.log("Selected location data:", locationData);
-    console.log("userData:", userData);
-    console.log("isDefault:", fetchedIsDefault);
     const payload: any = {
       patientId: patientId,
       address: locationData.address,
@@ -257,30 +297,52 @@ export default function LocationSelection({
     if (isEditMode && addressId) {
       payload.addressId = addressId;
     }
+    setIsSaving(true);
 
+    try {
+      const responsedata: any = await axiosClient.post(
+        ApiRoutes.Address.saveAddress,
+        payload,
+      );
+      console.log("saved addresses:", responsedata);
 
-    const responsedata: any = await axiosClient.post(
-      ApiRoutes.Address.saveAddress,
-      payload
-    );
-    console.log("saved addresses:", responsedata);
-
-    if (responsedata && responsedata.responseCode === "200") {
+      if (responsedata && responsedata.responseCode === "200") {
+        setToastMessage({
+          title: "Success",
+          subtitle: responsedata.message,
+          type: "success",
+        });
+        setShowToast(true);
+        // Optionally close modal or call onLocationSelected
+        onLocationSelected(locationData);
+        // await AsyncStorage.removeItem("userLocationLatLng");
+        await AsyncStorage.setItem(
+          "userLocationLatLng",
+          JSON.stringify({
+            latitude: locationData?.latitude,
+            longitude: locationData?.longitude,
+          }),
+        );
+        console.log("Address: ", locationData);
+        console.log(
+          "saved address: ",
+          await AsyncStorage.getItem("userLocationLatLng"),
+        );
+        onClose();
+      }
+    } catch (error) {
+      if (__DEV__)
+        console.error("[LocationSelection] Failed to save address:", error);
       setToastMessage({
-        title: "Success",
-        subtitle: responsedata.message,
-        type: "success"
+        title: "Error",
+        subtitle:
+          "Couldn't save this address. Please check your connection and try again.",
+        type: "error",
       });
       setShowToast(true);
-      // Optionally close modal or call onLocationSelected
-      onLocationSelected(locationData);
-      onClose();
+    } finally {
+      setIsSaving(false);
     }
-    // if (data.isSuccess) {
-    //   setAddresses(data.data ?? []);
-    // }
-    //onLocationSelected(locationData);
-    //onClose();
   };
 
   const handleBack = () => {
@@ -303,7 +365,13 @@ export default function LocationSelection({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{headerTitle}</Text>
             <View style={styles.headerSpacer} />
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <TouchableOpacity
+              onPress={handleBack}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Image source={images.icons.close} style={styles.backIcon} />
             </TouchableOpacity>
           </View>
@@ -316,11 +384,12 @@ export default function LocationSelection({
             enablePoweredByContainer={false}
             onPress={(data, details = null) => {
               if (!details || !details.geometry || !details.geometry.location) {
-                Alert.alert("Could not get location details. Please try again.");
+                Alert.alert(
+                  "Error",
+                  "Could not get location details. Please try again.",
+                );
                 return;
               }
-              console.log('Autocomplete data:', data);
-              console.log('Autocomplete details:', details);
               const loc = details?.geometry.location;
 
               if (!loc) return;
@@ -340,10 +409,10 @@ export default function LocationSelection({
               });
             }}
             query={{
-              key: "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic",
+              key: GOOGLE_PLACES_API_KEY,
               language: "en",
               //location: `${currentLocation?.coords.latitude},${currentLocation?.coords.longitude}`,
-              components: 'country:in',
+              components: "country:in",
             }}
             styles={{
               container: {
@@ -367,8 +436,8 @@ export default function LocationSelection({
                 backgroundColor: "#fff",
                 paddingLeft: 40, // space for search icon
                 fontSize: 14,
-                color: "#333",
-                fontFamily:fonts.regular,
+                color: colors.primaryText,
+                fontFamily: fonts.regular,
                 paddingRight: 40, // space for clear icon
               },
               listView: {
@@ -381,38 +450,20 @@ export default function LocationSelection({
               },
             }}
             renderLeftButton={() => (
-              <View style={{
-                position: "absolute",
-                left: 12,
-                top: 17,
-                zIndex: 1,
-              }}>
+              <View
+                style={{
+                  position: "absolute",
+                  left: 12,
+                  top: 17,
+                  zIndex: 1,
+                }}
+              >
                 <Image
                   source={images.icons.search} // Make sure you have a search icon in your assets
                   style={{ width: 15, height: 15, tintColor: "#000" }}
                 />
               </View>
             )}
-          // renderRightButton={(props) => (
-          //   <TouchableOpacity
-          //     style={{ position: "absolute", right: 12, top: 17, zIndex: 1 }}
-          //     onPress={() => {
-          //       if (props?.clear) {
-          //         props.clear();
-          //       } else {
-          //         // fallback: manually clear text if clear() not available
-          //         if (props?.textInputRef && props.textInputRef.current) {
-          //           props.textInputRef.current.clear();
-          //         }
-          //       }
-          //     }}
-          //   >
-          //     <Image
-          //       source={images.icons.close}
-          //       style={{ width: 18, height: 18, tintColor: "#999" }}
-          //     />
-          //   </TouchableOpacity>
-          // )}
           />
           <View style={styles.mapContainer}>
             <TouchableOpacity
@@ -441,9 +492,17 @@ export default function LocationSelection({
                 padding: 14,
                 borderRadius: 40,
               }}
-
+              accessibilityRole="button"
+              accessibilityLabel="Use my current location"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={{ color: "#fff" }}>📍</Text>
+              {/* <Text style={{ color: "#fff" }}>📍</Text> */}
+
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <images.icons.locationfill width={20} height={20} fill="#fff" />
+              )}
             </TouchableOpacity>
             {/* Only show map loading indicator if map is loading AND not typing in address fields */}
             {mapLoading && !overlayVisible && (
@@ -489,104 +548,118 @@ export default function LocationSelection({
             <Animated.View
               style={[
                 styles.overlay,
-                { transform: [{ translateY: slideAnim }] }
+                { transform: [{ translateY: slideAnim }] },
               ]}
             >
-            
-                <SafeAreaView style={{ flex: 1 }}>
-                   <KeyboardAwareScrollView
-                    enableOnAndroid
-                    extraScrollHeight={120}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 0 }}
-                  > 
-                    <View style={styles.overlayContent}>
-                      {/* Current Location Info */}
-                      <View style={styles.locationInfo}>
-                        <View style={styles.locationHeader}>
+              <SafeAreaView style={{ flex: 1 }}>
+                <KeyboardAwareScrollView
+                  enableOnAndroid
+                  extraScrollHeight={120}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 0 }}
+                >
+                  <View style={styles.overlayContent}>
+                    {/* Current Location Info */}
+                    <View style={styles.locationInfo}>
+                      <View style={styles.locationHeader}>
+                        <images.icons.locationfill
+                          width={20}
+                          height={20}
+                          fill="#6200ee"
+                          style={styles.locationIcon}
+                        />
 
-                          <images.icons.locationfill width={20} height={20} fill="#6200ee" style={styles.locationIcon} />
-
-                          <Text style={styles.locationTitle}>Current Address</Text>
-                        </View>
-                        <Text style={styles.locationAddress}>
-                          {address || "Getting address..."}
+                        <Text style={styles.locationTitle}>
+                          Current Address
                         </Text>
                       </View>
+                      <Text style={styles.locationAddress}>
+                        {address || "Getting address..."}
+                      </Text>
+                    </View>
 
-                      {/* Address Fields */}
-                      <View style={styles.addressFields}>
-                        <TextInput
-                          style={styles.inputhouse}
-                          placeholder="House/Flat Number"
-                          value={houseNumber}
-                          onChangeText={text => {
-                            setHouseNumber(text);
-                            if (errors && text.trim()) setErrors(""); // Clear error on input
-                          }}
-                        />
-                        {errors ? (
-                          <Text style={styles.errortext}>{errors}</Text>
-                        ) : null}
+                    {/* Address Fields */}
+                    <View style={styles.addressFields}>
+                      <TextInput
+                        style={styles.inputhouse}
+                        placeholder="House/Flat Number"
+                        placeholderTextColor={colors.primaryText}
+                        value={houseNumber}
+                        onChangeText={(text) => {
+                          setHouseNumber(text);
+                          if (errors && text.trim()) setErrors(""); // Clear error on input
+                        }}
+                      />
+                      {errors ? (
+                        <Text style={styles.errortext}>{errors}</Text>
+                      ) : null}
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Landmark (Optional)"
+                        placeholderTextColor={colors.primaryText}
+                        value={landmark}
+                        onChangeText={setLandmark}
+                      />
+                      {!address && (
                         <TextInput
                           style={styles.input}
-                          placeholder="Landmark (Optional)"
-                          value={landmark}
-                          onChangeText={setLandmark}
+                          placeholder="Enter your address manually"
+                          placeholderTextColor={colors.primaryText}
+                          value={address}
+                          onChangeText={setAddress}
                         />
-                        {!address && (
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Enter your address manually"
-                            value={address}
-                            onChangeText={setAddress}
-                          />
-                        )}
-                      </View>
+                      )}
+                    </View>
 
-                      {/* Nickname Chips */}
-                      <View style={styles.nicknameSection}>
-                        <Text style={styles.nicknameLabel}>
-                          Choose nickname for this address
-                        </Text>
-                        <View style={styles.chipsContainer}>
-                          {(["home", "office", "other"] as const).map((nickname) => (
+                    {/* Nickname Chips */}
+                    <View style={styles.nicknameSection}>
+                      <Text style={styles.nicknameLabel}>
+                        Choose nickname for this address
+                      </Text>
+                      <View style={styles.chipsContainer}>
+                        {(["home", "office", "other"] as const).map(
+                          (nickname) => (
                             <Chip
                               key={nickname}
                               selected={selectedNickname === nickname}
                               onPress={() => setSelectedNickname(nickname)}
                               style={[
                                 styles.chip,
-                                selectedNickname === nickname && styles.chipSelected,
+                                selectedNickname === nickname &&
+                                  styles.chipSelected,
                               ]}
-                              selectedColor="#C35E9C"
+                              selectedColor={colors.primary}
                               textStyle={[
                                 styles.chipText,
                                 selectedNickname === nickname &&
-                                styles.chipTextSelected,
+                                  styles.chipTextSelected,
                               ]}
                             >
-                              {nickname.charAt(0).toUpperCase() + nickname.slice(1)}
+                              {nickname.charAt(0).toUpperCase() +
+                                nickname.slice(1)}
                             </Chip>
-                          ))}
-                        </View>
+                          ),
+                        )}
                       </View>
-
-                      {/* Confirm Button */}
-                      <Button
-                        mode="contained"
-                        onPress={handleConfirmLocation}
-                        style={styles.confirmButton}
-                        contentStyle={styles.confirmButtonContent}
-                        buttonColor="#C35E9C"
-                        labelStyle={styles.buttonText}
-                      >
-                        {isEditMode ? "Update Address" : "Confirm Address"}
-                      </Button>
                     </View>
-                   </KeyboardAwareScrollView> 
-                </SafeAreaView>
+
+                    <View style={{ width: "100%", alignItems: "center" }}>
+                      <PrimaryButton
+                        onPress={handleConfirmLocation}
+                        title={
+                          isSaving
+                            ? "Saving..."
+                            : isEditMode
+                              ? "Update Address"
+                              : "Confirm Address"
+                        }
+                        disabled={isSaving}
+                      />
+                    </View>
+                  </View>
+                </KeyboardAwareScrollView>
+              </SafeAreaView>
             </Animated.View>
           )}
         </View>
@@ -596,7 +669,6 @@ export default function LocationSelection({
           visible={showToast}
           title={toastMessage.title}
           subtitle={toastMessage.subtitle}
-          color={toastMessage.color} // Pass the color to your Toast component
           onHide={() => setShowToast(false)}
           duration={3000}
         />
@@ -610,7 +682,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
- 
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -633,7 +705,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     color: colors.black,
-    fontFamily: fonts.semiBold,
+    fontWeight: "700",
   },
   headerSpacer: {
     width: 40,
@@ -718,19 +790,18 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily:fonts.semiBold,
-    color: "#333",
+    fontWeight: "700",
+    color: colors.primaryText,
   },
-   buttonText: {
-   fontFamily:fonts.semiBold,
-  fontSize: 14,
-},
+  buttonText: {
+    fontWeight: "700",
+    fontSize: 14,
+  },
   locationAddress: {
     fontSize: 12,
     color: "#666",
     lineHeight: 20,
-    fontFamily:fonts.regular
+    fontFamily: fonts.regular,
   },
   addressFields: {
     marginBottom: 20,
@@ -744,16 +815,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 5,
     backgroundColor: "#fff",
-    fontFamily:fonts.regular
-
+    fontFamily: fonts.regular,
+    color: colors.primaryText,
+    
   },
   errortext: {
     ...fontStyles.errortext,
     color: "red",
     marginBottom: 8,
-    fontFamily:fonts.regular,
+    fontFamily: fonts.regular,
     marginTop: 0,
-
   },
   input: {
     borderWidth: 1,
@@ -764,17 +835,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     backgroundColor: "#fff",
-    fontFamily:fonts.regular,
+    fontFamily: fonts.regular,
+    color: colors.primaryText
   },
   nicknameSection: {
     marginBottom: 20,
   },
   nicknameLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#333",
     marginBottom: 12,
-    fontFamily:fonts.semiBold
   },
   chipsContainer: {
     flexDirection: "row",
@@ -787,22 +858,23 @@ const styles = StyleSheet.create({
   },
   chipSelected: {
     backgroundColor: "#fff",
-    borderColor: "#C35E9C",
+    borderColor: colors.primary,
   },
   chipText: {
     color: "#666",
-     fontFamily:fonts.medium
+    fontFamily: fonts.medium,
   },
   chipTextSelected: {
-    color: "#C35E9C",
+    color: colors.primary,
   },
   confirmButton: {
     borderRadius: 50,
-     fontFamily:fonts.regular
+    fontFamily: fonts.regular,
+    height: 40,
   },
   confirmButtonContent: {
     paddingVertical: 5,
-    fontFamily:fonts.regular
+    fontFamily: fonts.regular,
   },
   mapLoader: {
     position: "absolute",

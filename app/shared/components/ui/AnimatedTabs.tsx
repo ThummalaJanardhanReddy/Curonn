@@ -114,7 +114,7 @@ const usableWidth =
           >
             <Text
               style={{
-                fontFamily:fonts.semiBold, color: isActive ? colors.white : theme.colors.onSurface,
+                fontWeight: "700", color: isActive ? colors.white : theme.colors.onSurface,
 
                 // marginVertical: isActive ? 4 : 0,
                 fontWeight: "600",fontSize: 13,paddingTop: 2

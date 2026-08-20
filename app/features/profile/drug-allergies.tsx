@@ -370,11 +370,11 @@ export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: Dru
   );
 
   return (<>
-    <StatusBar
+    {/* <StatusBar
       barStyle="dark-content"
       translucent={false}
       backgroundColor="#ffffff"
-    />
+    /> */}
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <View style={styles.container}>
 
@@ -765,7 +765,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     fontWeight: '600',
     color: colors.primary,
-    fontFamily: fonts.semiBold,
   },
   divider: {
     color: "#000",
@@ -773,7 +772,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   allergiesContainer: {
     padding: getResponsiveSpacing(20),
@@ -861,7 +860,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(15),
     fontWeight: "600",
     color: colors.text,
-    fontFamily: fonts.semiBold
+    fontWeight: "700"
   },
   closeButton: {
     padding: getResponsiveSpacing(4),
@@ -969,8 +968,8 @@ const styles = StyleSheet.create({
     paddingBottom: getResponsiveSpacing(30),
   },
   saveButton: {
-    borderRadius: getResponsiveSpacing(30),
-    height: getResponsiveSpacing(40),
+    // borderRadius: getResponsiveSpacing(30),
+    // height: getResponsiveSpacing(40),
     width: "80%",
     marginLeft: "10%",
     marginRight: "10%",

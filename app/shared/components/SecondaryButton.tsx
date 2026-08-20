@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { getResponsiveSpacing, getResponsiveFontSize, wp } from '../utils/responsive';
+import { colors } from '../styles/commonStyles';
 
 interface SecondaryButtonProps {
   title: string;
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#C15E9C',
+    borderColor: colors.primary,
     borderRadius: getResponsiveSpacing(22.5), // Half of height for rounded appearance
     alignItems: 'center',
     justifyContent: 'center',
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
     minWidth: getResponsiveSpacing(80),
   },
   buttonText: {
-    color: '#C15E9C',
+    color: colors.primary,
     fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     textAlign: 'center',

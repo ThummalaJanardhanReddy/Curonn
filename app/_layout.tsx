@@ -11,6 +11,7 @@ import {
   configureNotificationHandler,
   initializeNotificationListeners,
 } from "@/src/api/NotificationService";
+import { colors } from "./shared/styles/commonStyles";
 
 LogBox.ignoreLogs([
   "Text strings must be rendered within a <Text> component",
@@ -39,8 +40,8 @@ export default function RootLayout() {
   if (loading) {
     return (
       <AppFontLoader>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#C35E9C' }}>
-          <Text style={{ fontSize: 18, color: '#fff' }}>Loading...</Text>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.splashScreen_bg }}>
+          {/* <Text style={{ fontSize: 18, color: colors.white }}>Loading...</Text> */}
         </View>
       </AppFontLoader>
     );
