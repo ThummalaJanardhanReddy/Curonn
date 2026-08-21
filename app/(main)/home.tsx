@@ -1026,6 +1026,7 @@ export default function HomeScreen() {
                         : item.source,
             statusName: item.statusName || "",
           });
+          hideNotificationModal();
           setOrderDetailsModalVisible(true);
         }}
       >
@@ -1343,74 +1344,74 @@ export default function HomeScreen() {
             backgroundColor: colors.bg_rest,
             borderRadius: 0,
             justifyContent: "flex-start",
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
           }}
         >
-          <SafeAreaView style={{ flex: 1 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                padding: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: "#eee",
-              }}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              padding: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: "#eee",
+            }}
+          >
+            <Text
+              style={styles.articletitle}
+              // numberOfLines={2}
+              ellipsizeMode="tail"
             >
-              <Text
-                style={styles.articletitle}
-                // numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {selectedArticle?.titleName}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setSelectedArticle(null)}
-                style={{ marginLeft: 16, padding: 4 }}
-              >
+              {selectedArticle?.titleName}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedArticle(null)}
+              style={{ marginLeft: 16, padding: 4 }}
+            >
+              <Image
+                source={images.icons.close}
+                style={{ width: 24, height: 24, tintColor: "#333" }}
+              />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={{ padding: 20 }}>
+            {selectedArticle && (
+              <>
                 <Image
-                  source={images.icons.close}
-                  style={{ width: 24, height: 24, tintColor: "#333" }}
+                  source={
+                    selectedArticle.thumbnailImag
+                      ? { uri: selectedArticle.thumbnailImag }
+                      : images.healthArticle
+                  }
+                  style={{
+                    width: "100%",
+                    height: 200,
+                    borderRadius: 12,
+                    marginBottom: 8,
+                  }}
+                  resizeMode="cover"
                 />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: 20 }}>
-              {selectedArticle && (
-                <>
-                  <Image
-                    source={
-                      selectedArticle.thumbnailImag
-                        ? { uri: selectedArticle.thumbnailImag }
-                        : images.healthArticle
-                    }
-                    style={{
-                      width: "100%",
-                      height: 200,
-                      borderRadius: 12,
-                      marginBottom: 8,
-                    }}
-                    resizeMode="cover"
+                {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
+                <View style={styles.articalcontentdata}>
+                  {/* <Text style={styles.descriptiondata}>
+                    {selectedArticle.descriptionName}
+                  </Text> */}
+                  <RenderHTML
+                    contentWidth={width}
+                    source={{ html: selectedArticle.descriptionName }}
+                    enableCSSInlineProcessing={true}
+                    enableUserAgentStyles={true}
+                    ignoredStyles={["backgroundColor"]}
+                    ignoredDomTags={["br"]}
+                    domVisitors={domVisitors}
+                    tagsStyles={customTagsStyles}
                   />
-                  {/* <Text style={{ color: '#888', marginBottom: 8 }}>{selectedArticle.readTime || ''}</Text> */}
-                  <View style={styles.articalcontentdata}>
-                    {/* <Text style={styles.descriptiondata}>
-                      {selectedArticle.descriptionName}
-                    </Text> */}
-                    <RenderHTML
-                      contentWidth={width}
-                      source={{ html: selectedArticle.descriptionName }}
-                      enableCSSInlineProcessing={true}
-                      enableUserAgentStyles={true}
-                      ignoredStyles={["backgroundColor"]}
-                      ignoredDomTags={["br"]}
-                      domVisitors={domVisitors}
-                      tagsStyles={customTagsStyles}
-                    />
-                  </View>
-                  {/* If you have more fields, render them here */}
-                </>
-              )}
-            </ScrollView>
-          </SafeAreaView>
+                </View>
+                {/* If you have more fields, render them here */}
+              </>
+            )}
+          </ScrollView>
         </View>
       </Modal>
       {/* FAQ Modal - Slides from bottom to top */}

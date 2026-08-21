@@ -14,7 +14,7 @@ import {
 import { Button } from "react-native-paper";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "@/app/shared/components/PrimaryButton";
 import Toast from "@/app/shared/components/Toast";
@@ -58,6 +58,7 @@ export default function AddressSelection({
   onClose,
   onAddressChanged,
 }: AddressSelectionProps) {
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [loading, setLoading] = useState(false);
   const [defaultAddressId, setDefaultAddressId] = useState<number | null>(null);
@@ -143,6 +144,10 @@ export default function AddressSelection({
               : { ...addr, isDefault: false }
           )
         );
+        // Match the radio button's behavior — setting an address as default
+        // also selects it for the current flow.
+        setSelectedAddressId(addressId);
+        onSelect(addressId);
         setToastMessage({
           title: "Success",
           subtitle: response.message,
@@ -168,10 +173,10 @@ export default function AddressSelection({
 
   return (
     <Modal visible={visible} animationType="slide" >
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
 
         <View style={styles.container}>
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + getResponsiveSpacing(10) }]}>
             <Text style={styles.headerTitle}>All Address</Text>
             <View style={styles.headerSpacer} />
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -193,7 +198,7 @@ export default function AddressSelection({
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <RadioButton
+                          <RadioButton.Android
                             value={item.addressId.toString()}
                             status={selectedAddressId === item.addressId ? "checked" : "unchecked"}
                             onPress={() => {

@@ -688,9 +688,9 @@ function OrderDetails({
       animationType="slide"
       onRequestClose={() => setShowRescheduleModal(false)}
     >
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
-          <View style={styles.bottomModal}>
+          <View style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}>
             <View style={styles.modalHeaderRow}>
               {orderDetails?.type === "consultation" && (
                 <Text style={styles.modalHeading}>Reschedule Consultation</Text>
@@ -776,14 +776,6 @@ function OrderDetails({
                   style={styles.calendarIcon}
                 />
               </TouchableOpacity>
-              {/* DateTimePicker rendered inside modal */}
-              <NativeDatePickerModal
-                visible={showDatePicker}
-                value={selectedDate || new Date()}
-                onCancel={() => setShowDatePicker(false)}
-                onConfirm={handleConfirmDate}
-                minimumDate={new Date()}
-              />
               {errors === "Please select reschedule date" && (
                 <Text style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}>
                   {errors}
@@ -1000,7 +992,17 @@ function OrderDetails({
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+        {/* Rendered as a full-screen sibling (not nested inside bottomModal)
+            so its overlay truly covers the whole screen instead of being
+            clipped to a small child View's bounds. */}
+        <NativeDatePickerModal
+          visible={showDatePicker}
+          value={selectedDate || new Date()}
+          onCancel={() => setShowDatePicker(false)}
+          onConfirm={handleConfirmDate}
+          minimumDate={new Date()}
+        />
+      </View>
     </Modal>
   );
 
@@ -1012,9 +1014,9 @@ function OrderDetails({
       animationType="slide"
       onRequestClose={() => setShowCancelModal(false)}
     >
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
-          <View style={styles.bottomModal}>
+          <View style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}>
             <View style={styles.modalHeaderRow}>
               {orderDetails?.type === "consultation" ? (
                 <Text style={styles.modalHeading}>Cancel Consultation</Text>
@@ -1160,7 +1162,7 @@ function OrderDetails({
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
   return (
@@ -1170,7 +1172,7 @@ function OrderDetails({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }} edges={['bottom']}>
         <View style={{ flex: 1, backgroundColor: colors.bg_rest }}>
           {/* <StatusBar barStyle="dark-content" /> */}
           {/* Header Section with safe area support for iOS */}

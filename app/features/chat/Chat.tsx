@@ -740,6 +740,7 @@ export default function ChatScreen() {
                     borderWidth: 1,
                     borderColor: colors.primary,
                     paddingHorizontal: 10,
+                    paddingVertical: 8,
                     width: 200,
                   }}
                   textStyle={{ color: colors.primary, paddingHorizontal: 10 }}

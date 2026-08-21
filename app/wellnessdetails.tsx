@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 import PrimaryButton from "./shared/components/PrimaryButton";
@@ -390,6 +390,7 @@ export default function WellnessDetailsScreen() {
 
   const route = useRoute();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [bookingVisible, setBookingVisible] = useState(false);
   const { wellnessMasterId, enrolled, startDate, endDate } =
     route.params as RouteParams;
@@ -866,7 +867,12 @@ export default function WellnessDetailsScreen() {
         onRequestClose={() => setPlanModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.planModalContent}>
+          <View
+            style={[
+              styles.planModalContent,
+              { paddingTop: insets.top + 10, paddingBottom: insets.bottom },
+            ]}
+          >
             <View style={styles.header}>
               <TouchableOpacity
                 onPress={() => setPlanModalVisible(false)}

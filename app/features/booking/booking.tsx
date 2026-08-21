@@ -3446,7 +3446,7 @@ export default function BookingScreen({
               }
             }}
           >
-            <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
                 amount={
@@ -3537,7 +3537,7 @@ export default function BookingScreen({
                   }, 300);
                 }}
               />
-            </SafeAreaView>
+            </View>
           </Modal>
 
           {/* Date Picker */}
@@ -3626,7 +3626,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    // paddingTop: getResponsiveSpacing(5),
+    paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
     borderBottomWidth: 1,

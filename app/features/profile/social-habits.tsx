@@ -11,7 +11,7 @@ import {
   View,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import { colors } from "../../shared/styles/commonStyles";
@@ -98,6 +98,7 @@ export default function SocialHabitsScreen({
   onClose,
   onDataStatusChange,
 }: SocialHabitsScreenProps) {
+  const insets = useSafeAreaInsets();
   const { userData } = useUser();
 
   // List state
@@ -739,7 +740,12 @@ export default function SocialHabitsScreen({
             </KeyboardAwareScrollView>
 
             {/* Save Button */}
-            <View style={styles.modalFooter}>
+            <View
+              style={[
+                styles.modalFooter,
+                { paddingBottom: insets.bottom + getResponsiveSpacing(12) },
+              ]}
+            >
               <PrimaryButton
                 style={[styles.saveButton, { opacity: saveLoading ? 0.7 : 1 }]}
                 onPress={handleSave}

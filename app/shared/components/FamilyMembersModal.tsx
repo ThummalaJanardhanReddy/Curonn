@@ -541,13 +541,10 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
 
   );
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible && !showRelationDropdown}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <View style={styles.screenOverlay}>
       <SafeAreaView style={{ flex: 1, height: screenHeight }} edges={['bottom']}>
         <View style={styles.modalContent}>
           {/* Header */}
@@ -609,11 +606,16 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
         onHide={() => setShowToast(false)}
         duration={3000}
       />
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
+  },
   actionButton: {
     borderWidth: 1,
     borderRadius: 15,

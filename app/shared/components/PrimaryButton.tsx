@@ -65,6 +65,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: getResponsiveFontSize(16),
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     // fontWeight: "700",
     fontWeight: '700',
   },

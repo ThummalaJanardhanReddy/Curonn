@@ -108,10 +108,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     age: "",
     gender: "",
   });
-  const { userData } = useUser();
+  const { userData, clearUserData } = useUser();
   const insets = useSafeAreaInsets();
 
-  const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user, clearUser } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
@@ -413,31 +413,35 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     setLogoutConfirmVisible(true);
   };
 
-  const hideLogoutConfirmation = async () => {
+  const hideLogoutConfirmation = () => {
     setLogoutConfirmVisible(false);
-    if (Platform.OS === "web") return null;
-    try {
-      await AsyncStorage.clear();
-      if (typeof SecureStore !== "undefined" && SecureStore.deleteItemAsync) {
-        await SecureStore.deleteItemAsync("userToken");
-        await SecureStore.deleteItemAsync("userData"); // Clear userData
-        await SecureStore.deleteItemAsync("isLoggedIn");
-        await SecureStore.deleteItemAsync("mobile_details_updated");
-      }
-    } catch (e) {
-      console.error("Error clearing user data:", e);
-    }
-    if (typeof window !== "undefined" && window.localStorage) {
-      window.localStorage.clear();
-    }
-    router.push("/verify-details");
   };
 
   const handleLogout = async () => {
-    // Handle logout logic here
+    setLogoutConfirmVisible(false);
+    if (Platform.OS !== "web") {
+      try {
+        await AsyncStorage.clear();
+        if (typeof SecureStore !== "undefined" && SecureStore.deleteItemAsync) {
+          await SecureStore.deleteItemAsync("userToken");
+          await SecureStore.deleteItemAsync("userData"); // Clear userData
+          await SecureStore.deleteItemAsync("isLoggedIn");
+          await SecureStore.deleteItemAsync("mobile_details_updated");
+        }
+      } catch (e) {
+        console.error("Error clearing user data:", e);
+      }
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.clear();
+      }
+    }
+    // Reset in-memory user state so the next login starts clean instead of
+    // merging fresh data on top of the previous account's stale fields.
+    clearUserData();
+    clearUser();
     console.log("User logged out");
-    await hideLogoutConfirmation();
     onClose(); // Close the profile modal after logout
+    router.push("/verify-details");
   };
 
   // Settings handlers
@@ -751,15 +755,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   // LocationSelection still renders its own native <Modal> (it's a shared
   // component also used outside this screen, e.g. booking.tsx), so iOS's
   // "only one Modal at a time" restriction still applies to it specifically —
-  // hide this outer modal while it's open. FamilyMembersModal is also still
-  // a real <Modal> for now (same restriction applies) even though it's only
-  // used here — a candidate for the same overlay conversion later. Everything
-  // else below (Edit Profile, Logout, the ProfileScreenModal-wrapped screens,
+  // hide this outer modal while it's open. Everything else below (Edit
+  // Profile, Logout, Family Members, the ProfileScreenModal-wrapped screens,
   // Food Allergies, About/Rate App/T&C/Privacy) renders as a plain overlay
   // nested *inside* this modal instead, so it stays visible underneath and
   // never needs to hide.
-  const isThirdPartyModalVisible =
-    familyMembersModalVisible || locationSelectionVisible;
+  const isThirdPartyModalVisible = locationSelectionVisible;
 
   return (
     <>
@@ -889,7 +890,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             style={styles.modalBackdrop}
             onPress={hideEditProfileModal}
           />
-          <SafeAreaView style={styles.editProfileModalContent}>
+          <SafeAreaView style={styles.editProfileModalContent} edges={['bottom']}>
             <Animated.View
               style={[
                 {
@@ -1237,7 +1238,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         {/* About Modal */}
         {aboutModalVisible && (
         <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.settingsModalContent}>
+          <SafeAreaView style={styles.settingsModalContent} edges={['bottom']}>
             <View
               style={[
                 styles.settingsModalHeader,
@@ -1331,7 +1332,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         {/* Terms & Conditions Modal */}
         {termsModalVisible && (
         <View style={styles.fullModalOverlay}>
-          <SafeAreaView style={styles.fullModalContent}>
+          <SafeAreaView style={styles.fullModalContent} edges={['bottom']}>
             <View
               style={[
                 styles.fullModalHeader,
@@ -1454,14 +1455,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             }))
           }
         />
-      </Modal>
 
-      {/* Family Members Modal */}
-      <FamilyMembersModal
-        visible={familyMembersModalVisible}
-        onClose={hideFamilyMembersModal}
-        maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
-      />
+        {/* Family Members Modal */}
+        <FamilyMembersModal
+          visible={familyMembersModalVisible}
+          onClose={hideFamilyMembersModal}
+          maxFamilyMembers={Number(profileForm.noFamilyMembers) || 0}
+        />
+      </Modal>
 
       {/* Location Selection Modal */}
       <LocationSelection

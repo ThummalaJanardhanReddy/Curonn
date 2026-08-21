@@ -26,8 +26,7 @@ import { useUser } from "../../shared/context/UserContext"; // adjust path as ne
 import { useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import Toast from "@/app/shared/components/Toast";
-import { KeyboardAvoidingView, ScrollView } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { Keyboard, ScrollView } from "react-native";
 import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { colors } from "@/app/shared/styles/commonStyles";
 import PrimaryButton from "@/app/shared/components/PrimaryButton";
@@ -91,6 +90,24 @@ export default function LocationSelection({
     type: "",
   });
   const { setUserData } = useUser();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const restoreUserData = async () => {
@@ -360,7 +377,7 @@ export default function LocationSelection({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <View style={styles.container}>
           {/* Header */}
           <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -418,7 +435,7 @@ export default function LocationSelection({
             styles={{
               container: {
                 position: "absolute",
-                top: 80,
+                top: insets.top + 65,
                 width: "85%",
                 alignSelf: "center",
                 zIndex: 10,
@@ -549,37 +566,42 @@ export default function LocationSelection({
             <Animated.View
               style={[
                 styles.overlay,
-                { transform: [{ translateY: slideAnim }] },
+                {
+                  transform: [{ translateY: slideAnim }],
+                  bottom: keyboardHeight,
+                  maxHeight: screenHeight * 0.7 - keyboardHeight,
+                },
               ]}
             >
-              <SafeAreaView style={{ flex: 1 }}>
-                <KeyboardAwareScrollView
-                  enableOnAndroid
-                  extraScrollHeight={120}
+              <SafeAreaView style={{ flex: 1 }} edges={keyboardHeight > 0 ? [] : ["bottom"]}>
+                {/* Current Location Info — kept outside the scroll view so
+                    it stays visible while typing */}
+                <View style={[styles.overlayContent, { paddingBottom: 0 }]}>
+                  <View style={styles.locationInfo}>
+                    <View style={styles.locationHeader}>
+                      <images.icons.locationfill
+                        width={20}
+                        height={20}
+                        fill="#6200ee"
+                        style={styles.locationIcon}
+                      />
+
+                      <Text style={styles.locationTitle}>
+                        Current Address
+                      </Text>
+                    </View>
+                    <Text style={styles.locationAddress}>
+                      {address || "Getting address..."}
+                    </Text>
+                  </View>
+                </View>
+                <ScrollView
+                  style={{ flex: 1 }}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: 0 }}
                 >
-                  <View style={styles.overlayContent}>
-                    {/* Current Location Info */}
-                    <View style={styles.locationInfo}>
-                      <View style={styles.locationHeader}>
-                        <images.icons.locationfill
-                          width={20}
-                          height={20}
-                          fill="#6200ee"
-                          style={styles.locationIcon}
-                        />
-
-                        <Text style={styles.locationTitle}>
-                          Current Address
-                        </Text>
-                      </View>
-                      <Text style={styles.locationAddress}>
-                        {address || "Getting address..."}
-                      </Text>
-                    </View>
-
+                  <View style={[styles.overlayContent, { paddingTop: 0 }]}>
                     {/* Address Fields */}
                     <View style={styles.addressFields}>
                       <TextInput
@@ -630,7 +652,11 @@ export default function LocationSelection({
                                 selectedNickname === nickname &&
                                   styles.chipSelected,
                               ]}
-                              selectedColor={colors.primary}
+                              selectedColor={
+                                selectedNickname === nickname
+                                  ? colors.white
+                                  : colors.primary
+                              }
                               textStyle={[
                                 styles.chipText,
                                 selectedNickname === nickname &&
@@ -659,7 +685,7 @@ export default function LocationSelection({
                       />
                     </View>
                   </View>
-                </KeyboardAwareScrollView>
+                </ScrollView>
               </SafeAreaView>
             </Animated.View>
           )}
@@ -766,6 +792,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 1000,
+    elevation: 1000,
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -853,20 +881,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   chip: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#FBEDEA",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#FBEDEA",
   },
   chipSelected: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   chipText: {
-    color: "#666",
+    color: colors.primaryText,
     fontFamily: fonts.medium,
   },
   chipTextSelected: {
-    color: colors.primary,
+    color: colors.white,
   },
   confirmButton: {
     borderRadius: 50,
