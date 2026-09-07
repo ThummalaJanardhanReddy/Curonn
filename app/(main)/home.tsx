@@ -57,7 +57,7 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserStore } from "@/src/store/UserStore";
 import WebView from "react-native-webview";
-import { domVisitors } from "@/src/constants/constants";
+import { domVisitors, formatDateTime } from "@/src/constants/constants";
 
 const { width } = Dimensions.get("window");
 const guidelineBaseWidth = 375;
@@ -246,6 +246,10 @@ export default function HomeScreen() {
 
   const renderWellnessCard = useCallback(
     ({ item, index }: { item: any; index: number }) => {
+      let programName =
+        item?.programName === "Physiotherapy Rehabilitation"
+          ? `Physiotherapy \nRehabilitation`
+          : item.programName;
       const bgImage =
         index % 2 === 0 ? images.panels.wellness : images.panels.panel_card2;
       const isLast = index === wellnessall.length - 1;
@@ -253,7 +257,7 @@ export default function HomeScreen() {
         <View
           style={[
             styles.featureCard,
-            { marginRight: isLast ? 0 : 16, borderWidth: 0 },
+            { marginRight: isLast ? 0 : 16, borderWidth: 0, width: 300 },
           ]}
         >
           <Image
@@ -261,26 +265,38 @@ export default function HomeScreen() {
             style={styles.featureBackground}
             resizeMode="cover"
           />
-          <images.home.book_wellness
-            style={{ position: "absolute", right: 20, bottom: 0 }}
-          />
+          {item?.programName?.startsWith("Nutrition") && (
+            <images.home.book_wellness
+              style={{ position: "absolute", right: 20, bottom: 0 }}
+            />
+          )}
           <View style={styles.featureContent}>
             <Text style={[styles.featureTitle, { color: "#fff" }]}>
-              {item.programName}
+              {programName}
             </Text>
 
-            <Text
-              style={[
-                styles.featureSubtitle,
-                { color: "#fff", opacity: item.enrolled ? 0 : 1 },
-              ]}
-            >
-              Duration: {item.duration}
-            </Text>
+            {!item?.enrolled ? (
+              <Text style={[styles.featureSubtitle, { color: "#fff" }]}>
+                Duration: {item.duration}
+              </Text>
+            ) : (
+              <View style={styles.dateRow}>
+                <Text style={styles.dateText}>
+                  {formatDateTime(item?.startDate)}
+                </Text>
+
+                <Text style={styles.dateArrow}>to</Text>
+
+                <Text style={styles.dateText}>
+                  {formatDateTime(item?.endDate)}
+                </Text>
+              </View>
+            )}
             <Text
               style={{
                 color: "#fff",
-                fontSize: 14,
+                fontSize: 16,
+                fontWeight: "700",
                 marginBottom: 8,
                 opacity: item.enrolled ? 0 : 1,
               }}
@@ -313,6 +329,7 @@ export default function HomeScreen() {
                   pathname: "/wellnessdetails",
                   params: {
                     wellnessMasterId: item.wellnessMasterId || item.id,
+                    bookingId: item.bookingId || null,
                     enrolled: String(item.enrolled),
                     startDate: item.startDate ?? "",
                     endDate: item.endDate ?? "",
@@ -320,7 +337,7 @@ export default function HomeScreen() {
                 });
               }}
             >
-              {item.enrolled ? "View Details" : "Get Now"}
+              {item.enrolled ? "View subscription details" : "Get Now"}
             </Button>
           </View>
         </View>
@@ -733,8 +750,6 @@ export default function HomeScreen() {
     const fetchArticles = async () => {
       try {
         const res = await axiosClient.get(ApiRoutes.ArticlesData.Allarticles);
-
-        console.log("Articles: ", res);
         // API returns array of articles with titleName, thumbnailImag, descriptionName, etc.
         if (Array.isArray(res)) {
           setArticles(res);
@@ -766,7 +781,8 @@ export default function HomeScreen() {
         : enrolledResponse
           ? [enrolledResponse]
           : [];
-
+      console.log("Wellness List:", wellnessList);
+      console.log("Enrolled List:", enrolledList);
       const enrichedWellness = wellnessList
         .map((wellness: any) => {
           const wellnessId = wellness.wellnessMasterId ?? wellness.id;
@@ -785,13 +801,15 @@ export default function HomeScreen() {
             startDate: enrollment?.createdOn ?? null,
 
             endDate: enrollment?.expiryDate ?? null,
+            bookingId: enrollment?.wellnessBookingId ?? null,
+            // duration: enrollment?.duration,
           };
         })
         .sort((a: any, b: any) => {
           // Enrolled first
           return Number(b.enrolled) - Number(a.enrolled);
         });
-
+      console.log("Enriched Wellness List:", enrichedWellness);
       setWellnessall(enrichedWellness);
     } catch (error) {
       console.error("Failed to fetch wellness programs", error);
@@ -1046,9 +1064,9 @@ export default function HomeScreen() {
     );
   }, []);
 
-
   return (
     <View style={styles.container}>
+      {/* <StatusBar barStyle={"dark-content"} animated  backgroundColor={colors.bg_primary}/> */}
       {/* Header */}
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
         <CommonHeader
@@ -1141,9 +1159,6 @@ export default function HomeScreen() {
         <View style={styles.section}>
           {wellnessall.length === 0 ? (
             <View style={{ padding: 24, alignItems: "center" }}>
-              {/* <Text style={{ color: "#ff0000", fontSize: 16 }}>
-                Data is not available
-              </Text> */}
               <ActivityIndicator size={24} color={colors.primary} />
             </View>
           ) : (
@@ -2134,5 +2149,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+
+  dateText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.white,
+  },
+
+  dateArrow: {
+    marginHorizontal: 8,
+    fontSize: 16,
+    color: colors.white,
+    fontWeight: "600",
   },
 });

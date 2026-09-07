@@ -441,7 +441,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     clearUser();
     console.log("User logged out");
     onClose(); // Close the profile modal after logout
-    router.push("/verify-details");
+    router.dismissAll();
+    router.replace("/verify-details");
   };
 
   // Settings handlers

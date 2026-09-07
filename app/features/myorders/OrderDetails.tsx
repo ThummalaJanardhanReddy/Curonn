@@ -26,7 +26,11 @@ import { fontStyles, fonts } from "../../shared/styles/fonts";
 import { Button } from "react-native-paper";
 import { getResponsiveSpacing } from "@/app/shared/utils/responsive";
 import Toast from "../../shared/components/Toast";
-import { colors, statusColors, statusTextColors } from "../..//shared/styles/commonStyles";
+import {
+  colors,
+  statusColors,
+  statusTextColors,
+} from "../..//shared/styles/commonStyles";
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 import { Linking } from "react-native";
 import ChatConsultationDetails from "@/app/shared/components/doctor/ChatConsultationDetails";
@@ -178,7 +182,6 @@ function OrderDetails({
     }
     return { category, iconSource };
   }
-  const navigation = useNavigation();
   // ...existing code...
   const [loading, setLoading] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -186,9 +189,7 @@ function OrderDetails({
   const [rescheduleReason, setRescheduleReason] = useState(
     "Professional not assigned",
   );
-  const [cancelReason, setCancelReason] = useState(
-    "Professionals not assigned",
-  );
+  const [cancelReason, setCancelReason] = useState<string | undefined>();
   const [newRescheduleDate, setNewRescheduleDate] = useState(
     "Professionals not assigned",
   );
@@ -227,35 +228,6 @@ function OrderDetails({
     return `${year}-${month}-${day}`;
   };
 
-  // const statusColors: { [key: string]: string } = {
-  //   Requested: "#d0eaff",
-  //   Completed: "#ccface",
-  //   Cancelled: "#ffd8d5",
-  //   Inprogress: "#f8d7a7",
-  //   Ongoing: "#f7cdff",
-  //   Pending: "#ffeeba",
-  //   Rescheduled: "#bbecf3",
-  //   "Admin Doctor": "#f7cdff",
-  // };
-
-  // const statusTextColors: { [key: string]: string } = {
-  //   Requested: "#006cc5",
-  //   Completed: "#4CAF50",
-  //   Cancelled: "#F44336",
-  //   Inprogress: "#FF9800",
-  //   Ongoing: "#9C27B0",
-  //   Pending: "#9e7600",
-  //   Rescheduled: "#00BCD4",
-  //   "Admin Doctor": "#9C27B0",
-  // };
-  //  console.log("Order statusName:", order?.statusName, "statusId:", order?.statusId);
-
-  // Extra null checks and debug logs
-  if (!orderDetails) {
-    console.warn("orderDetails is null");
-  } else if (!orderDetails.data) {
-    console.warn("orderDetails.data is null");
-  }
   const statusKey =
     (order && (order.serviceName || order.statusName)) ||
     (orderDetails && orderDetails.data ? orderDetails.data.statusName : "") ||
@@ -668,6 +640,94 @@ function OrderDetails({
     return `${day}/${month}/${year}`;
   };
 
+  const handleCancelOrder = async () => {
+    if (!cancelReason || cancelReason.trim() === "") {
+      setToastMessage({
+        title: "Cancel Failed",
+        subtitle: "Please select a reason for cancellation.",
+        type: "error",
+      });
+      setShowToast(true);
+      return;
+    }
+    try {
+      if (orderDetails?.type === "lab") {
+        await axiosClient.post(
+          `${ApiRoutes.LabOrders.cancelOrder}?labOrderId=${order.masterId}&cancelReason=${encodeURIComponent(cancelReason)}`,
+          {},
+        );
+      } else if (orderDetails?.type === "wellness") {
+        await axiosClient.post(
+          `${ApiRoutes.WellnessData.Wellnesscancel}?bookingId=${order.masterId}&reason=${encodeURIComponent(cancelReason)}`,
+          {},
+        );
+      } else if (
+        orderDetails?.type === "medicine" ||
+        orderDetails?.type?.toLowerCase() === "prescription"
+      ) {
+        await axiosClient.post(ApiRoutes.MedicalOrders.medicineCancel, {
+          medicineOrderId: order.masterId,
+          cancelReason: cancelReason,
+        });
+      } else if (orderDetails?.type === "consultation") {
+        const payload = {
+          appointmentId: orderDetails.data.appointmentId,
+          statusId: 2713,
+          modifiedBy: orderDetails.data.patientId,
+        };
+        console.log(
+          "Cancelling consultation with appointmentId:",
+          orderDetails.data.appointmentId,
+        );
+        console.log(
+          "Payload of Cancelling consultation with appointmentId:",
+          payload,
+        );
+        const responce = await axiosClient.put(
+          `${ApiRoutes.ConsultationsData.cancelAppointment}?appointmentId=${orderDetails.data.appointmentId}&statusId=2713&modifiedBy=${orderDetails.data.patientId}`,
+          {},
+        );
+        console.log("Consultation Cancel Response:", responce);
+      } else if (orderDetails?.type === "ambulance") {
+        const res = await axiosClient.put(
+          `${ApiRoutes.Ambulance.cancelBooking(order.masterId, cancelReason)}`,
+          {},
+        );
+        console.log("Ambulance Cancel Response:", res);
+      }
+
+      setShowCancelModal(false);
+      setToastMessage(
+        orderDetails?.type === "consultation"
+          ? {
+              title: "Consultation cancelled",
+              subtitle: "Consultation cancelled successfully!",
+              type: "success",
+            }
+          : {
+              title: "Order Cancelled",
+              subtitle: "Order cancelled successfully!",
+              type: "success",
+            },
+      );
+
+      setShowToast(true);
+      setCancelReason(undefined);
+      setTimeout(() => {
+        setShowToast(false);
+        if (refreshOrders) refreshOrders();
+        onClose && onClose();
+      }, 3500);
+    } catch (e) {
+      setToastMessage({
+        title: "Cancel Failed",
+        subtitle: "Failed to cancel order.",
+        type: "error",
+      });
+      setShowToast(true);
+    }
+  };
+
   if (!order) return null;
   // Helper: statusName check for button display
 
@@ -690,7 +750,9 @@ function OrderDetails({
     >
       <View style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}>
+          <View
+            style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}
+          >
             <View style={styles.modalHeaderRow}>
               {orderDetails?.type === "consultation" && (
                 <Text style={styles.modalHeading}>Reschedule Consultation</Text>
@@ -1016,7 +1078,9 @@ function OrderDetails({
     >
       <View style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}>
+          <View
+            style={[styles.bottomModal, { paddingBottom: 24 + insets.bottom }]}
+          >
             <View style={styles.modalHeaderRow}>
               {orderDetails?.type === "consultation" ? (
                 <Text style={styles.modalHeading}>Cancel Consultation</Text>
@@ -1066,89 +1130,7 @@ function OrderDetails({
             <TouchableOpacity
               style={styles.cancelButton}
               disabled={!cancelReason}
-              onPress={async () => {
-                if (!cancelReason || cancelReason.trim() === "") {
-                  setToastMessage({
-                    title: "Cancel Failed",
-                    subtitle: "Please select a reason for cancellation.",
-                    type: "error",
-                  });
-                  setShowToast(true);
-                  return;
-                }
-                try {
-                  if (orderDetails?.type === "lab") {
-                    await axiosClient.post(
-                      `${ApiRoutes.LabOrders.cancelOrder}?labOrderId=${order.masterId}&cancelReason=${encodeURIComponent(cancelReason)}`,
-                      {},
-                    );
-                  } else if (orderDetails?.type === "wellness") {
-                    await axiosClient.post(
-                      `${ApiRoutes.WellnessData.Wellnesscancel}?bookingId=${order.masterId}&reason=${encodeURIComponent(cancelReason)}`,
-                      {},
-                    );
-                  } else if (
-                    orderDetails?.type === "medicine" ||
-                    orderDetails?.type === "prescription"
-                  ) {
-                    await axiosClient.post(
-                      ApiRoutes.MedicalOrders.medicineCancel,
-                      {
-                        medicineOrderId: order.masterId,
-                        cancelReason: cancelReason,
-                      },
-                    );
-                  } else if (orderDetails?.type === "consultation") {
-                    const payload = {
-                      appointmentId: orderDetails.data.appointmentId,
-                      statusId: 2713,
-                      modifiedBy: orderDetails.data.patientId,
-                    };
-                    console.log(
-                      "Cancelling consultation with appointmentId:",
-                      orderDetails.data.appointmentId,
-                    );
-                    console.log(
-                      "Payload of Cancelling consultation with appointmentId:",
-                      payload,
-                    );
-                    const responce = await axiosClient.put(
-                      `${ApiRoutes.ConsultationsData.cancelAppointment}?appointmentId=${orderDetails.data.appointmentId}&statusId=2713&modifiedBy=${orderDetails.data.patientId}`,
-                      {},
-                    );
-                    console.log("Consultation Cancel Response:", responce);
-                  }
-
-                  setShowCancelModal(false);
-                  setToastMessage(
-                    orderDetails?.type === "consultation"
-                      ? {
-                          title: "Consultation cancelled",
-                          subtitle: "Consultation cancelled successfully!",
-                          type: "success",
-                        }
-                      : {
-                          title: "Order Cancelled",
-                          subtitle: "Order cancelled successfully!",
-                          type: "success",
-                        },
-                  );
-
-                  setShowToast(true);
-                  setTimeout(() => {
-                    setShowToast(false);
-                    if (refreshOrders) refreshOrders();
-                    onClose && onClose();
-                  }, 3500);
-                } catch (e) {
-                  setToastMessage({
-                    title: "Cancel Failed",
-                    subtitle: "Failed to cancel order.",
-                    type: "error",
-                  });
-                  setShowToast(true);
-                }
-              }}
+              onPress={handleCancelOrder}
             >
               <Text
                 style={{
@@ -1172,7 +1154,10 @@ function OrderDetails({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }} edges={['bottom']}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: colors.white }}
+        edges={["bottom"]}
+      >
         <View style={{ flex: 1, backgroundColor: colors.bg_rest }}>
           {/* <StatusBar barStyle="dark-content" /> */}
           {/* Header Section with safe area support for iOS */}
@@ -1180,7 +1165,7 @@ function OrderDetails({
             style={[
               styles.header,
               {
-                paddingTop: Platform.OS === "ios" ? insets.top : 10,
+                paddingTop: insets.top,
                 paddingBottom: 15,
               },
             ]}
@@ -1404,11 +1389,7 @@ function OrderDetails({
                       {/* Reports Section (Lab)*/}
                       {(() => {
                         // Debug logs to help diagnose why Reports section is not displaying
-                        console.log(
-                          "DEBUG: statusName:",
-                          orderDetails.data.statusName || order.statusName,
-                        );
-                        console.log("DEBUG: labReports:", labReports);
+
                         if (
                           orderDetails.data.statusName === "Completed" &&
                           Array.isArray(labReports) &&
@@ -1635,7 +1616,7 @@ function OrderDetails({
                       )}
                     </View>
                   )}
-                  {orderDetails.type === "prescription" && (
+                  {orderDetails?.type?.toLowerCase() === "prescription" && (
                     <View style={styles.servicepage}>
                       <Text style={styles.sectionTitle}>Prescriptions</Text>
                       <View style={styles.databox2}>
@@ -2198,11 +2179,7 @@ function OrderDetails({
                       {/* Reports Section (Lab)*/}
                       {(() => {
                         // Debug logs to help diagnose why Reports section is not displaying
-                        console.log(
-                          "DEBUG: statusName:",
-                          orderDetails.data.statusName || order.statusName,
-                        );
-                        console.log("DEBUG: labReports:", labReports);
+
                         if (
                           orderDetails.data.statusName === "Completed" &&
                           Array.isArray(labReports) &&
@@ -2415,11 +2392,6 @@ function OrderDetails({
                       {/* Reports Section (Lab)*/}
                       {(() => {
                         // Debug logs to help diagnose why Reports section is not displaying
-                        console.log(
-                          "DEBUG: statusName:",
-                          orderDetails.data.statusName || order.statusName,
-                        );
-                        console.log("DEBUG: labReports:", labReports);
                         if (
                           orderDetails.data.statusName === "Completed" &&
                           Array.isArray(labReports) &&
@@ -2541,6 +2513,34 @@ function OrderDetails({
                 </View>
               )}
 
+            {orderDetails?.type === "ambulance" &&
+              !["Completed", "Cancelled"].includes(
+                orderDetails.data.statusName,
+              ) && (
+                <View style={styles.footerRow}>
+                  <TouchableOpacity
+                    style={styles.cancelOrderBtn}
+                    onPress={handleCancelPress}
+                  >
+                    <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+            {orderDetails?.type === "prescription" &&
+              !["Completed", "Cancelled"].includes(
+                orderDetails.data.statusName,
+              ) && (
+                <View style={styles.footerRow}>
+                  <TouchableOpacity
+                    style={styles.cancelOrderBtn}
+                    onPress={handleCancelPress}
+                  >
+                    <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
             {orderDetails?.type === "lab" &&
               !["Completed", "Cancelled"].includes(
                 orderDetails.data.statusName,
@@ -2581,7 +2581,9 @@ function OrderDetails({
                       style={styles.cancelOrderBtn1}
                       onPress={handleCancelPress}
                     >
-                      <Text style={styles.cancelOrderBtnText}>Cancel booking</Text>
+                      <Text style={styles.cancelOrderBtnText}>
+                        Cancel booking
+                      </Text>
                     </TouchableOpacity>
                     {candocReschedule && (
                       <TouchableOpacity
@@ -3283,7 +3285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 5,
     marginTop: getResponsiveSpacing(0),
-    gap: 5
+    gap: 5,
   },
   addressection: {
     paddingHorizontal: 20,

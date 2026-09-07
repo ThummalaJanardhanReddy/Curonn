@@ -3,7 +3,7 @@
     "name": "curonn",
     "slug": "curonn",
     "icon": "./assets/curonn_appicon.png",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",
@@ -52,7 +52,13 @@
       "expo-maps",
       "expo-font",
       "expo-secure-store",
-      "expo-image-picker",
+      [ 
+        "expo-image-picker",
+        {
+          "photosPermission": "Curonn Health accesses your photos so you can select and upload medical documents, prescriptions, and images to your healthcare provider.",
+          "cameraPermission": "Curonn Health uses your camera to capture medical documents, prescriptions, and images that you choose to upload to your healthcare provider."
+        }
+      ],
       "expo-document-picker",
       "expo-file-system",
       "@react-native-community/datetimepicker",

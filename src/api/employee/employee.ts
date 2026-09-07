@@ -210,6 +210,8 @@ export const AmbulanceApi = {
   getdataById: (id: string | number) => `/Ambulances/GetById/${id}`,
   getbookingId: (bookingId: string | number) =>
     `/AmbulanceBooking/get-by-id/${bookingId}`,
+  cancelBooking: (bookingId: string | number, reason: string | number) =>
+    `/AmbulanceBooking/cancel/?bookingId=${bookingId}&reason=${reason}`,
 } as const;
 
 export const NotificationApi = {

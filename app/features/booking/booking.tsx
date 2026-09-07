@@ -126,7 +126,7 @@ export default function BookingScreen({
       .get(ApiRoutes.Employee.getById(patientId))
       .then((response) => {
         const pdata = response?.data ?? response;
-        console.log("Fetched employee data for booking screen:", pdata);
+        // console.log("Fetched employee data for booking screen:", pdata);
         setUserData(pdata);
       })
       .catch(() => setUserData(null));
@@ -938,7 +938,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -1189,7 +1189,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -1666,14 +1666,7 @@ export default function BookingScreen({
   const medicineDiscountAmount = Math.round(
     (safeItemsTotal * safeDiscountPercent) / 100,
   );
-  console.log(
-    "Items Total:",
-    safeItemsTotal,
-    "Discount Percent:",
-    safeDiscountPercent,
-    "Discount Amount:",
-    medicineDiscountAmount,
-  );
+  
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
   const displayedTotal = useMemo(
@@ -1945,7 +1938,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -2005,7 +1998,7 @@ export default function BookingScreen({
               : "Added successfully!"),
           type: "success",
         });
-        // setShowToastMed(true);
+        setShowToastMed(true);
       } catch (error) {
         let errorMsg = "Something went wrong";
         if (error && typeof error === "object") {
@@ -2756,7 +2749,6 @@ export default function BookingScreen({
         <Modal
           visible={visible}
           animationType="slide"
-          presentationStyle="fullScreen"
           onRequestClose={closeHandler}
         >
           {content}
@@ -2768,12 +2760,7 @@ export default function BookingScreen({
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
@@ -2796,7 +2783,7 @@ export default function BookingScreen({
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
                   {type !== "ambulance" && type !== "wellness" && (
-                    <View style={{flexDirection: 'column', gap:2}}>
+                    <View style={{ flexDirection: "column", gap: 2 }}>
                       <Text style={styles.serviceLocation}>
                         {isAtHome ? "AT-HOME" : "AT-LAB"}
                       </Text>

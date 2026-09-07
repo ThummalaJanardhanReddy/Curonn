@@ -24,6 +24,7 @@ import { fontStyles, fonts } from "./shared/styles/fonts";
 import BookingScreen from "./features/booking/booking";
 import dayjs from "dayjs";
 import { useUserStore } from "@/src/store/UserStore";
+import { formatDateTime } from "@/src/constants/constants";
 
 interface RouteParams {
   wellnessMasterId: string;
@@ -45,6 +46,14 @@ interface TestItem {
 }
 
 interface ICareteam {
+  eId: number;
+  nutritionistId: number;
+  physiotherapistId: number;
+  careCoordinatorId: number;
+  primaryPhysicianId: number;
+  careCoordinatorName: string;
+  careCoordinatorSpeciality: string;
+  wellnessBookingId: string;
   nutritionistName: string;
   nutritionistSpeciality: string;
   physiotherapistName: string;
@@ -392,14 +401,14 @@ export default function WellnessDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [bookingVisible, setBookingVisible] = useState(false);
-  const { wellnessMasterId, enrolled, startDate, endDate } =
+  const { wellnessMasterId, bookingId, enrolled, startDate, endDate } =
     route.params as RouteParams;
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("wellness");
   const [details, setDetails] = useState<any>(null);
   const [planModalVisible, setPlanModalVisible] = useState(false);
-  const [careteam, setCareteam] = useState<any>([]);
+  const [careteam, setCareteam] = useState<any>();
   const [activity, setActivity] = useState();
   const [vitals, setVitals] = useState();
   const [diet, setDiet] = useState();
@@ -438,20 +447,20 @@ export default function WellnessDetailsScreen() {
   const fetchCareteam = async () => {
     try {
       if (!user?.eId) return;
-      const res = await axiosClient.get<ICareteam>(
+      const res = await axiosClient.get<ICareteam[]>(
         ApiRoutes.WellnessData.getCareTeam(user?.eId),
       );
       console.log("careteam : ", res.data);
-      const data = res.data;
+      const data = res.data?.find((d) => d.wellnessBookingId === bookingId?.toString());
       const formattedData = [
-        { label: data.nutritionistSpeciality, value: data.nutritionistName },
+        { label: data?.nutritionistSpeciality, value: data?.nutritionistName },
         {
-          label: data.physiotherapistSpeciality,
-          value: data.physiotherapistName,
+          label: data?.physiotherapistSpeciality,
+          value: data?.physiotherapistName,
         },
         {
-          label: data.primaryPhysicianSpeciality,
-          value: data.primaryPhysicianName,
+          label: data?.primaryPhysicianSpeciality,
+          value: data?.primaryPhysicianName,
         },
       ];
       setCareteam(formattedData);
@@ -535,14 +544,6 @@ export default function WellnessDetailsScreen() {
   const handleBookTest = (id: string) => {
     // setSelectedTest(testItem);
     setBookingVisible(true);
-  };
-
-  const formatDateTime = (date?: string | null) => {
-    if (!date || !dayjs(date).isValid()) {
-      return "";
-    }
-
-    return dayjs(date).format("DD MMM YYYY, hh:mm A");
   };
 
   if (loading) {
@@ -750,7 +751,7 @@ export default function WellnessDetailsScreen() {
                       {formatDateTime(startDate)}
                     </Text>
 
-                    <Text style={styles.dateArrow}>→</Text>
+                    <Text style={styles.dateArrow}>to</Text>
 
                     <Text style={styles.dateText}>
                       {formatDateTime(endDate)}

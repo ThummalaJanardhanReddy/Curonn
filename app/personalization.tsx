@@ -1,71 +1,69 @@
-import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View
-} from 'react-native';
-import { Text, TextInput } from 'react-native-paper';
-import { images } from '../assets';
-import BackButton from './shared/components/BackButton';
-import PrimaryButton from './shared/components/PrimaryButton';
-import RegistrationLayout from './shared/components/ui/registration-layout';
-import commonStyles, { colors } from './shared/styles/commonStyles';
-import { saveUserData, setRegistrationCompleted } from './shared/utils/storage';
-import axiosClient from '../src/api/axiosClient';
-import { ApiRoutes } from '../src/api/employee/employee';
-import { fonts } from './shared/styles/fonts';
+  View,
+} from "react-native";
+import { Text, TextInput } from "react-native-paper";
+import { images } from "../assets";
+import BackButton from "./shared/components/BackButton";
+import PrimaryButton from "./shared/components/PrimaryButton";
+import RegistrationLayout from "./shared/components/ui/registration-layout";
+import commonStyles, { colors } from "./shared/styles/commonStyles";
+import { saveUserData, setRegistrationCompleted } from "./shared/utils/storage";
+import axiosClient from "../src/api/axiosClient";
+import { ApiRoutes } from "../src/api/employee/employee";
+import { fonts } from "./shared/styles/fonts";
 import { useUser } from "./shared/context/UserContext";
-import Toast from './shared/components/Toast';
+import Toast from "./shared/components/Toast";
 
-import { useLocalSearchParams } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { useUserStore } from '@/src/store/UserStore';
+import { useLocalSearchParams } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useUserStore } from "@/src/store/UserStore";
 
 interface PersonalizationData {
   gender: string;
   age: string;
   height: {
     value: string;
-    unit: 'ft' | 'cm';
+    unit: "ft" | "cm";
   };
   weight: {
     value: string;
-    unit: 'kg' | 'lb';
+    unit: "kg" | "lb";
   };
   medicalConditions: string[];
 }
 
 const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
+  { label: "Male", value: "male" },
+  { label: "Female", value: "female" },
+  { label: "Other", value: "other" },
 ];
 
 const MEDICAL_CONDITIONS = [
-  { label: 'Diabetes', key: 'diabetes' },
-  { label: 'Hypertension', key: 'hypertension' },
-  { label: 'Thyroid', key: 'thyroid' },
-  { label: 'Heart Disease', key: 'heartDisease' },
-  { label: 'Asthma', key: 'asthma' },
-  { label: 'No Issues', key: 'noIssues' },
+  { label: "Diabetes", key: "diabetes" },
+  { label: "Hypertension", key: "hypertension" },
+  { label: "Thyroid", key: "thyroid" },
+  { label: "Heart Disease", key: "heartDisease" },
+  { label: "Asthma", key: "asthma" },
+  { label: "No Issues", key: "noIssues" },
   // { label: 'Issues', key: 'issues'}
   // { label: 'No Issues 1', key: 'noIssues1' },
 ];
-
-
 
 export default function PersonalizationScreen() {
   const params = useLocalSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<PersonalizationData>({
-    gender: '',
-    age: '',
-    height: { value: '', unit: 'ft' },
-    weight: { value: '', unit: 'kg' },
+    gender: "",
+    age: "",
+    height: { value: "", unit: "ft" },
+    weight: { value: "", unit: "kg" },
     medicalConditions: [],
   });
   const [profileForm, setProfileForm] = useState({
@@ -88,7 +86,11 @@ export default function PersonalizationScreen() {
   const heightInputRef = useRef<any>(null);
   const weightInputRef = useRef<any>(null);
   const { userData } = useUser();
-  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [toastMessage, setToastMessage] = useState<{
+    title: string;
+    subtitle: string;
+    type: "success" | "error";
+  }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [navigating, setNavigating] = useState(false);
@@ -109,7 +111,7 @@ export default function PersonalizationScreen() {
     }
   }, [currentStep]);
 
- const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
@@ -117,14 +119,14 @@ export default function PersonalizationScreen() {
   // Conversion functions
   const convertHeight = (
     value: string,
-    fromUnit: 'ft' | 'cm',
-    toUnit: 'ft' | 'cm'
+    fromUnit: "ft" | "cm",
+    toUnit: "ft" | "cm",
   ) => {
-    if (!value || isNaN(parseFloat(value))) return '';
+    if (!value || isNaN(parseFloat(value))) return "";
     const numValue = parseFloat(value);
-    if (fromUnit === 'ft' && toUnit === 'cm') {
+    if (fromUnit === "ft" && toUnit === "cm") {
       return (numValue * 30.48).toFixed(1);
-    } else if (fromUnit === 'cm' && toUnit === 'ft') {
+    } else if (fromUnit === "cm" && toUnit === "ft") {
       return (numValue / 30.48).toFixed(1);
     }
     return value;
@@ -132,14 +134,14 @@ export default function PersonalizationScreen() {
 
   const convertWeight = (
     value: string,
-    fromUnit: 'kg' | 'lb',
-    toUnit: 'kg' | 'lb'
+    fromUnit: "kg" | "lb",
+    toUnit: "kg" | "lb",
   ) => {
-    if (!value || isNaN(parseFloat(value))) return '';
+    if (!value || isNaN(parseFloat(value))) return "";
     const numValue = parseFloat(value);
-    if (fromUnit === 'kg' && toUnit === 'lb') {
+    if (fromUnit === "kg" && toUnit === "lb") {
       return (numValue * 2.20462).toFixed(1);
-    } else if (fromUnit === 'lb' && toUnit === 'kg') {
+    } else if (fromUnit === "lb" && toUnit === "kg") {
       return (numValue / 2.20462).toFixed(1);
     }
     return value;
@@ -154,7 +156,9 @@ export default function PersonalizationScreen() {
     // console.log("[ProfileModal] Fetching profile for patientId:", patientId);
     const fetchProfile = async () => {
       try {
-        const response = await axiosClient.get(ApiRoutes.Employee.getById(patientId));
+        const response = await axiosClient.get(
+          ApiRoutes.Employee.getById(patientId),
+        );
         // console.log("[ProfileModal] Profile data response:", response);
         const data = response?.data ?? response;
         setProfileForm({
@@ -175,13 +179,10 @@ export default function PersonalizationScreen() {
         });
       } catch (error) {
         console.error("[ProfileModal] Failed to fetch profile data:", error);
-
       }
     };
     fetchProfile();
   }, [patientId]);
-
-
 
   const handleContinue = async () => {
     if (currentStep < totalSteps) {
@@ -207,11 +208,14 @@ export default function PersonalizationScreen() {
           heightMeasurement: data.height.unit,
           weight: data.weight.value,
           weightMeasurement: data.weight.unit,
-          medicalCondition: data.medicalConditions.join(','),
+          medicalCondition: data.medicalConditions.join(","),
         };
-        console.log('Updating employee with payload:', payload);
-        const response: any = await axiosClient.post(ApiRoutes.Employee.update, payload);
-        console.log('Employee update response:', response);
+        console.log("Updating employee with payload:", payload);
+        const response: any = await axiosClient.post(
+          ApiRoutes.Employee.update,
+          payload,
+        );
+        console.log("Employee update response:", response);
         let message = "Employee registration completed successfully";
         if (response?.id) {
           await setRegistrationCompleted(true);
@@ -220,25 +224,28 @@ export default function PersonalizationScreen() {
           setTimeout(() => {
             setShowLoading(false);
             setNavigating(true);
-            router.push('/home');
+            router.push("/home");
           }, 2000); // 2 seconds delay
         } else {
           // Show error or handle failure
-          const msg = response?.message || response?.data?.message || 'Failed to update employee details.';
+          const msg =
+            response?.message ||
+            response?.data?.message ||
+            "Failed to update employee details.";
           setToastMessage({
             title: "Failed to update employee details.",
             subtitle: response?.data?.message,
-            type: "error"
+            type: "error",
           });
           setShowToast(true);
         }
       } catch (err) {
-        console.error('Failed to update employee:', err);
+        console.error("Failed to update employee:", err);
         setShowLoading(true);
         setTimeout(() => {
           setShowLoading(false);
           setNavigating(true);
-          router.push('/home');
+          router.push("/home");
         }, 2000);
       }
     }
@@ -255,15 +262,15 @@ export default function PersonalizationScreen() {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return data.gender !== '';
+        return data.gender !== "";
       case 2:
         return (
-          data.age !== '' && parseInt(data.age) > 0 && parseInt(data.age) < 120
+          data.age !== "" && parseInt(data.age) > 0 && parseInt(data.age) < 120
         );
       case 3:
-        return data.height.value !== '' && parseFloat(data.height.value) > 0;
+        return data.height.value !== "" && parseFloat(data.height.value) > 0;
       case 4:
-        return data.weight.value !== '' && parseFloat(data.weight.value) > 0;
+        return data.weight.value !== "" && parseFloat(data.weight.value) > 0;
       case 5:
         return data.medicalConditions.length > 0;
       default:
@@ -278,7 +285,7 @@ export default function PersonalizationScreen() {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>What&apos;s your Gender?</Text>
             <Text style={styles.stepSubtitle}>
-              This helps us in providing relevant {'\n'} information to gender.
+              This helps us in providing relevant {"\n"} information to gender.
             </Text>
 
             <View style={styles.genderOptionsContainer}>
@@ -294,7 +301,7 @@ export default function PersonalizationScreen() {
                       style={[
                         styles.radioButton,
                         data.gender === option.value &&
-                        styles.radioButtonSelected,
+                          styles.radioButtonSelected,
                       ]}
                     >
                       {data.gender === option.value && (
@@ -313,7 +320,7 @@ export default function PersonalizationScreen() {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>What&apos;s your Age?</Text>
             <Text style={styles.stepSubtitle}>
-              This helps us in providing relevant information {'\n'} to certain
+              This helps us in providing relevant information {"\n"} to certain
               age group.
             </Text>
 
@@ -327,12 +334,17 @@ export default function PersonalizationScreen() {
               }}
               mode="outlined"
               style={styles.textInput}
-              contentStyle={{ fontSize: 28, height: 75, textAlign: 'left', justifyContent: 'flex-start', paddingHorizontal: 16, }}
+              contentStyle={{
+                fontSize: 28,
+                height: 75,
+                textAlign: "left",
+                justifyContent: "flex-start",
+                paddingHorizontal: 16,
+              }}
               keyboardType="numeric"
               theme={{ roundness: 17 }}
-              // left={<TextInput.Icon icon="calendar" />}
               placeholder="0"
-              placeholderTextColor='#9D9D9F'
+              placeholderTextColor="#9D9D9F"
               outlineColor="#9D9D9F"
               activeOutlineColor="#9D9D9F"
               outlineStyle={{ borderWidth: 1 }}
@@ -344,7 +356,7 @@ export default function PersonalizationScreen() {
                   textInputRef.current?.blur();
                 }
               }}
-            // textColor="#9D9D9F"
+              // textColor="#9D9D9F"
             />
           </View>
         );
@@ -363,15 +375,25 @@ export default function PersonalizationScreen() {
                 value={data.height.value}
                 onChangeText={(text) => {
                   // For ft unit, auto-add decimal point
-                  if (data.height.unit === 'ft' && text.length > 0) {
+                  if (data.height.unit === "ft" && text.length > 0) {
                     // Only format if user is adding characters (not deleting)
                     if (text.length > data.height.value.length) {
-                      const cleanText = text.replace(/\./g, '');
+                      const cleanText = text.replace(/\./g, "");
                       if (cleanText.length === 1) {
-                        setData({ ...data, height: { ...data.height, value: cleanText + '.' } });
+                        setData({
+                          ...data,
+                          height: { ...data.height, value: cleanText + "." },
+                        });
                         return;
                       } else if (cleanText.length >= 2) {
-                        setData({ ...data, height: { ...data.height, value: cleanText.charAt(0) + '.' + cleanText.slice(1) } });
+                        setData({
+                          ...data,
+                          height: {
+                            ...data.height,
+                            value:
+                              cleanText.charAt(0) + "." + cleanText.slice(1),
+                          },
+                        });
                         return;
                       }
                     }
@@ -383,10 +405,16 @@ export default function PersonalizationScreen() {
                 mode="outlined"
                 style={styles.heightWeightInput}
                 theme={{ roundness: 17 }}
-                contentStyle={{ fontSize: 28, height: 75, textAlign: 'left', justifyContent: 'flex-start', paddingHorizontal: 16, }}
+                contentStyle={{
+                  fontSize: 28,
+                  height: 75,
+                  textAlign: "left",
+                  justifyContent: "flex-start",
+                  paddingHorizontal: 16,
+                }}
                 keyboardType="numeric"
                 placeholder={`0.0`}
-                placeholderTextColor={'#9D9D9F'}
+                placeholderTextColor={"#9D9D9F"}
                 outlineColor="#9D9D9F"
                 outlineStyle={{ borderWidth: 1 }}
                 activeOutlineColor="#9D9D9F"
@@ -398,21 +426,21 @@ export default function PersonalizationScreen() {
                     heightInputRef.current?.blur();
                   }
                 }}
-              // textColor="#9D9D9F"
+                // textColor="#9D9D9F"
               />
 
               <View style={styles.unitButtonsContainer}>
                 <View
                   style={[
                     styles.unitButton,
-                    data.height.unit === 'ft' && styles.unitButtonSelected,
+                    data.height.unit === "ft" && styles.unitButtonSelected,
                   ]}
                   onTouchEnd={() => {
-                    const newUnit = 'ft';
+                    const newUnit = "ft";
                     const convertedValue = convertHeight(
                       data.height.value,
                       data.height.unit,
-                      newUnit
+                      newUnit,
                     );
                     setData({
                       ...data,
@@ -423,8 +451,8 @@ export default function PersonalizationScreen() {
                   <Text
                     style={[
                       styles.unitButtonText,
-                      data.height.unit === 'ft' &&
-                      styles.unitButtonTextSelected,
+                      data.height.unit === "ft" &&
+                        styles.unitButtonTextSelected,
                     ]}
                   >
                     ft
@@ -434,14 +462,14 @@ export default function PersonalizationScreen() {
                 <View
                   style={[
                     styles.unitButton,
-                    data.height.unit === 'cm' && styles.unitButtonSelected,
+                    data.height.unit === "cm" && styles.unitButtonSelected,
                   ]}
                   onTouchEnd={() => {
-                    const newUnit = 'cm';
+                    const newUnit = "cm";
                     const convertedValue = convertHeight(
                       data.height.value,
                       data.height.unit,
-                      newUnit
+                      newUnit,
                     );
                     setData({
                       ...data,
@@ -452,8 +480,8 @@ export default function PersonalizationScreen() {
                   <Text
                     style={[
                       styles.unitButtonText,
-                      data.height.unit === 'cm' &&
-                      styles.unitButtonTextSelected,
+                      data.height.unit === "cm" &&
+                        styles.unitButtonTextSelected,
                     ]}
                   >
                     cm
@@ -481,11 +509,17 @@ export default function PersonalizationScreen() {
                 }
                 mode="outlined"
                 style={styles.heightWeightInput}
-                contentStyle={{ fontSize: 28, textAlign: 'left', }}
+                contentStyle={{
+                  fontSize: 28,
+                  height: 75,
+                  textAlign: "left",
+                  justifyContent: "flex-start",
+                  paddingHorizontal: 16,
+                }}
                 keyboardType="numeric"
                 theme={{ roundness: 17 }}
                 placeholder={`0.00`}
-                placeholderTextColor={'#9D9D9F'}
+                placeholderTextColor={"#9D9D9F"}
                 outlineColor="#9D9D9F"
                 outlineStyle={{ borderWidth: 1 }}
                 activeOutlineColor="#9D9D9F"
@@ -497,21 +531,21 @@ export default function PersonalizationScreen() {
                     weightInputRef.current?.blur();
                   }
                 }}
-              // textColor="#9D9D9F"
+                // textColor="#9D9D9F"
               />
 
               <View style={styles.unitButtonsContainer}>
                 <View
                   style={[
                     styles.unitButton,
-                    data.weight.unit === 'kg' && styles.unitButtonSelected,
+                    data.weight.unit === "kg" && styles.unitButtonSelected,
                   ]}
                   onTouchEnd={() => {
-                    const newUnit = 'kg';
+                    const newUnit = "kg";
                     const convertedValue = convertWeight(
                       data.weight.value,
                       data.weight.unit,
-                      newUnit
+                      newUnit,
                     );
                     setData({
                       ...data,
@@ -522,8 +556,8 @@ export default function PersonalizationScreen() {
                   <Text
                     style={[
                       styles.unitButtonText,
-                      data.weight.unit === 'kg' &&
-                      styles.unitButtonTextSelected,
+                      data.weight.unit === "kg" &&
+                        styles.unitButtonTextSelected,
                     ]}
                   >
                     kg
@@ -533,14 +567,14 @@ export default function PersonalizationScreen() {
                 <View
                   style={[
                     styles.unitButton,
-                    data.weight.unit === 'lb' && styles.unitButtonSelected,
+                    data.weight.unit === "lb" && styles.unitButtonSelected,
                   ]}
                   onTouchEnd={() => {
-                    const newUnit = 'lb';
+                    const newUnit = "lb";
                     const convertedValue = convertWeight(
                       data.weight.value,
                       data.weight.unit,
-                      newUnit
+                      newUnit,
                     );
                     setData({
                       ...data,
@@ -551,8 +585,8 @@ export default function PersonalizationScreen() {
                   <Text
                     style={[
                       styles.unitButtonText,
-                      data.weight.unit === 'lb' &&
-                      styles.unitButtonTextSelected,
+                      data.weight.unit === "lb" &&
+                        styles.unitButtonTextSelected,
                     ]}
                   >
                     lb
@@ -566,7 +600,9 @@ export default function PersonalizationScreen() {
       case 5:
         return (
           <>
-            <Text style={styles.stepTitle}>Any medical condition we {'\n'} should be aware of?</Text>
+            <Text style={styles.stepTitle}>
+              Any medical condition we {"\n"} should be aware of?
+            </Text>
             {/* <Text style={styles.stepSubtitle}>
               Select all that apply (this helps us provide better care)
             </Text> */}
@@ -577,22 +613,24 @@ export default function PersonalizationScreen() {
                   key={condition.key}
                   style={[
                     styles.medicalConditionRow,
-                    data.medicalConditions.includes(condition.label) && { borderColor: colors.primary }
+                    data.medicalConditions.includes(condition.label) && {
+                      borderColor: colors.primary,
+                    },
                   ]}
                   onPress={() => {
-                    if (condition.label === 'No Issues') {
+                    if (condition.label === "No Issues") {
                       // If "No Issues" is selected, clear all other selections
-                      setData({ ...data, medicalConditions: ['No Issues'] });
+                      setData({ ...data, medicalConditions: ["No Issues"] });
                     } else {
                       // Remove "No Issues" if it exists and toggle the current condition
                       let newConditions = data.medicalConditions.filter(
-                        (c) => c !== 'No Issues'
+                        (c) => c !== "No Issues",
                       );
 
                       if (newConditions.includes(condition.label)) {
                         // Remove the condition if it's already selected
                         newConditions = newConditions.filter(
-                          (c) => c !== condition.label
+                          (c) => c !== condition.label,
                         );
                       } else {
                         // Add the condition if it's not selected
@@ -644,11 +682,16 @@ export default function PersonalizationScreen() {
                   <View style={styles.medicalConditionContent}>
                     <View style={styles.medicalConditionLeft}>
                       <View style={styles.medicalConditionImageContainer}>
-                        {React.createElement(images.medicalConditions[condition.key as keyof typeof images.medicalConditions], {
-                          width: 27,
-                          height: 27,
-                          style: styles.medicalConditionImage
-                        })}
+                        {React.createElement(
+                          images.medicalConditions[
+                            condition.key as keyof typeof images.medicalConditions
+                          ],
+                          {
+                            width: 27,
+                            height: 27,
+                            style: styles.medicalConditionImage,
+                          },
+                        )}
                       </View>
                       <Text style={styles.medicalConditionText}>
                         {condition.label}
@@ -660,7 +703,7 @@ export default function PersonalizationScreen() {
                         style={[
                           styles.medicalRadioButton,
                           data.medicalConditions.includes(condition.label) &&
-                          styles.medicalRadioButtonSelected,
+                            styles.medicalRadioButtonSelected,
                         ]}
                       >
                         {data.medicalConditions.includes(condition.label) && (
@@ -687,15 +730,37 @@ export default function PersonalizationScreen() {
   return (
     <>
       {showLoading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg_primary }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: colors.bg_primary,
+          }}
+        >
           <View style={{ marginBottom: 24 }}>
             {/* Replace below with your preferred loading spinner */}
             <ActivityIndicator size="large" color={colors.white} />
           </View>
-          <Text style={{ fontSize: 20,  fontWeight: "700", color: colors.white, marginBottom: 8 }}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: colors.white,
+              marginBottom: 8,
+            }}
+          >
             Registration Complete
           </Text>
-          <Text style={{ fontSize: 16, fontFamily: fonts.regular,color: '#fff', textAlign: 'center', maxWidth: 300 }}>
+          <Text
+            style={{
+              fontSize: 16,
+              fontFamily: fonts.regular,
+              color: "#fff",
+              textAlign: "center",
+              maxWidth: 300,
+            }}
+          >
             Your registration has been successfully completed.
           </Text>
         </View>
@@ -735,7 +800,7 @@ export default function PersonalizationScreen() {
 
           <View style={styles.buttonContainer}>
             <PrimaryButton
-              title={currentStep === totalSteps ? 'Submit' : 'Continue'}
+              title={currentStep === totalSteps ? "Submit" : "Continue"}
               onPress={handleContinue}
               disabled={!isStepValid()}
               style={styles.continueButton}
@@ -750,7 +815,6 @@ export default function PersonalizationScreen() {
               resizeMode="stretch"
             />
           </View>
-
         </RegistrationLayout>
       )}
       <Toast
@@ -771,20 +835,20 @@ const styles = StyleSheet.create({
     ...commonStyles.container_layout,
   },
   header: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     marginBottom: 10,
   },
   backButton: {
     // marginBottom: 20,
   },
   stepTextContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 0,
   },
   stepsText: {
     fontSize: 14,
     color: colors.primaryText,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 10,
     fontFamily: fonts.regular,
   },
@@ -792,13 +856,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.primaryText,
     marginBottom: 8,
-    textAlign: 'left',
+    textAlign: "left",
     fontFamily: fonts.regular,
   },
   subtitle: {
     fontSize: 16,
     color: colors.primaryText,
-    textAlign: 'left',
+    textAlign: "left",
     fontFamily: fonts.regular,
 
     // marginBottom: 10,
@@ -808,24 +872,24 @@ const styles = StyleSheet.create({
   progressContainer: {
     // paddingHorizontal: 40,
     // marginBottom: 30,
-    alignItems: 'center',
+    alignItems: "center",
   },
   progressBar: {
-    width: '100%',
+    width: "100%",
     height: 4,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     borderRadius: 2,
     marginBottom: 12,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: colors.primary,
     borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
     color: colors.primaryText,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   contentContainer: {
     flex: 1,
@@ -841,21 +905,21 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 22,
-    fontWeight: 'regular',
+    fontWeight: "regular",
     color: colors.primaryText,
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: fonts.regular,
-    lineHeight: 26
+    lineHeight: 26,
     // lineHeight: 32,
   },
   stepSubtitle: {
     fontSize: 13,
     color: colors.primaryText,
-    fontWeight: '400',
-    textAlign: 'center',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    fontWeight: "400",
+    textAlign: "center",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
     fontFamily: fonts.regular,
 
     // marginBottom: 10,
@@ -863,20 +927,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   textInput: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginTop: 40,
     borderRadius: 16,
     height: 75,
-    alignContent: 'center',
-    justifyContent: 'center',
-    textAlignVertical: 'center',
-    // paddingHorizontal: 14,
-    width: '75%',
-    alignSelf: 'center',
+    textAlign: "left",
+    width: "75%",
+    alignSelf: "center",
   },
   unitToggle: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginBottom: 20,
     gap: 12,
   },
@@ -884,9 +945,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 12,
     marginBottom: 20,
   },
@@ -902,31 +963,31 @@ const styles = StyleSheet.create({
   // Gender section styles
   genderOptionsContainer: {
     marginTop: 20,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
     borderRadius: 20,
-    justifyContent: 'center',
-    textAlign: 'center',
+    justifyContent: "center",
+    textAlign: "center",
     gap: 12,
     // backgroundColor: '#fff',
     // borderRadius: 30,
     // padding: 16,
   },
   genderOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     // paddingVertical: 12,
     // paddingHorizontal: 0,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: '#CAC8C8',
+    borderColor: "#CAC8C8",
     borderRadius: 20,
     padding: 16,
     height: 68,
-    width: '98%',
-    marginLeft: '1%',
+    width: "98%",
+    marginLeft: "1%",
   },
   radioContainer: {
     marginLeft: 16,
@@ -936,10 +997,10 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E2CCDC',
-    backgroundColor: '#E2CCDC',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#E2CCDC",
+    backgroundColor: "#E2CCDC",
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioButtonSelected: {
     borderColor: colors.primary,
@@ -949,7 +1010,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   genderOptionText: {
     fontSize: 16,
@@ -959,28 +1020,28 @@ const styles = StyleSheet.create({
 
   // Height/Weight section styles
   inputUnitContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginTop: 20,
     gap: 16,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 40,
   },
   heightWeightInput: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     height: 75,
-    textAlign: 'left',
+    textAlign: "left",
     fontFamily: fonts.regular,
     // maxWidth: '100%',
     borderRadius: 16,
   },
   unitButtonsContainer: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '35%',
+    justifyContent: "center",
+    alignItems: "center",
+    width: "35%",
     // minWidth: 120,
   },
   unitButton: {
@@ -989,37 +1050,37 @@ const styles = StyleSheet.create({
     borderRadius: 43,
     paddingVertical: 8,
     // paddingHorizontal: 30,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
     width: 83,
     minHeight: 25,
     // height: 35,
   },
   unitButtonSelected: {
-    borderColor: '#1A82F7',
-    backgroundColor: 'transparent',
+    borderColor: "#1A82F7",
+    backgroundColor: "transparent",
   },
   unitButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primaryText,
-    textAlign: 'center',
+    textAlign: "center",
   },
   unitButtonTextSelected: {
-    color: '#000000',
+    color: "#000000",
   },
   unitOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 8,
     paddingHorizontal: 0,
     marginBottom: 8,
   },
   unitOptionText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primaryText,
   },
   unitRadioButton: {
@@ -1027,10 +1088,10 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#ccc",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   unitRadioButtonSelected: {
     borderColor: colors.primary,
@@ -1040,63 +1101,63 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
 
   // Medical conditions section styles
   medicalConditionsContainer: {
     marginTop: 5,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
     gap: 10,
-    marginBottom: 10
+    marginBottom: 10,
   },
   medicalConditionRow: {
     marginBottom: 3,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: '#CAC8C8',
-    overflow: 'hidden',
+    borderColor: "#CAC8C8",
+    overflow: "hidden",
     height: 64,
-    width: '100%',
+    width: "100%",
   },
   medicalConditionGradient: {
     flex: 1,
     borderRadius: 32,
-    height: '100%',
+    height: "100%",
   },
   medicalConditionBackground: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     zIndex: 0,
   },
   medicalConditionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     paddingLeft: 8,
     paddingRight: 0,
-    height: '100%',
-    backgroundColor: '#ffffff',
+    height: "100%",
+    backgroundColor: "#ffffff",
   },
   medicalConditionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   medicalConditionImageContainer: {
     width: 49,
     height: 49,
     borderRadius: 24.5,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: '#d6d6d6',
+    borderColor: "#d6d6d6",
     // shadowColor: '#000',
     // shadowOffset: {
     //   width: 0,
@@ -1105,8 +1166,8 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.2,
     // shadowRadius: 6,
     // elevation: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 8,
   },
   medicalConditionImage: {
@@ -1115,9 +1176,9 @@ const styles = StyleSheet.create({
   },
   medicalConditionText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: "600",
+    color: "#333",
+    textShadowColor: "rgba(255, 255, 255, 0.8)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
     fontFamily: fonts.regular,
@@ -1131,10 +1192,10 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E2CCDC',
-    backgroundColor: '#E2CCDC',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#E2CCDC",
+    backgroundColor: "#E2CCDC",
+    justifyContent: "center",
+    alignItems: "center",
   },
   medicalRadioButtonSelected: {
     borderColor: colors.primary,
@@ -1144,22 +1205,22 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   buttonContainer: {
     // backgroundColor: 'red',
     // paddingTop: 5,
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 10,
     zIndex: 1,
   },
   continueButton: {
-    width: '100%',
+    width: "100%",
     zIndex: 1,
     fontFamily: fonts.regular,
   },
   backgroundImageContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 30,
     left: 0,
     right: 0,
@@ -1167,7 +1228,7 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   backgroundImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
 });

@@ -8,7 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
-const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
+const RAZORPAY_KEY_ID = "rzp_live_TXDv4ySvPCeAlK";
 
 type RazorpayPaymentScreenProps = {
   amount: number | string;
