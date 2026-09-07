@@ -16,11 +16,11 @@ import { useRoute, useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
 
 import PrimaryButton from "./shared/components/PrimaryButton";
+import NativeDatePickerModal from "./shared/components/NativeDatePickerModal";
 import BookingScreen from "./features/booking/booking";
 
 import { images } from "@/assets";
@@ -159,16 +159,14 @@ export default function ViewDetailsScreen() {
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
   };
-  const handleMedDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      if (
-        errors === "Please select service start date" ||
-        errors === "Please select delivery date"
-      )
-        setErrors("");
-    }
+  const handleConfirmDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (
+      errors === "Please select service start date" ||
+      errors === "Please select delivery date"
+    )
+      setErrors("");
   };
 
   const fetchDiagCenters = async () => {
@@ -260,6 +258,7 @@ export default function ViewDetailsScreen() {
         selectedTimeSlot,
         selectedDiagCenter: center,
       });
+      setdiagsticVisible(false);
       setBookingVisible(true);
     }
   };
@@ -950,18 +949,16 @@ export default function ViewDetailsScreen() {
               )}
             </View>
           </ScrollView>
+          {/* Date Picker */}
+          <NativeDatePickerModal
+            visible={showDatePicker}
+            value={selectedDate || new Date()}
+            onCancel={() => setShowDatePicker(false)}
+            onConfirm={handleConfirmDate}
+            minimumDate={new Date()}
+          />
         </SafeAreaView>
       </Modal>
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate || new Date()}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handleMedDateChange}
-          minimumDate={new Date()}
-        />
-      )}
     </SafeAreaView>
   );
 }

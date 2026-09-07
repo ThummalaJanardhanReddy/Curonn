@@ -1,5 +1,5 @@
 // import { router } from 'expo-router';
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "@/app/shared/components/NativeDatePickerModal";
 import React, { useCallback, useState, useEffect } from "react";
 import {
   Image,
@@ -59,7 +59,6 @@ export default function PastProceduresScreen({
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [showNativeDatePicker, setShowNativeDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [tempDate, setTempDate] = useState(new Date());
   const [procedureModalVisible, setProcedureModalVisible] = useState(false);
   const [newProcedure, setNewProcedure] = useState({
     procedureName: "",
@@ -208,36 +207,13 @@ export default function PastProceduresScreen({
     setDropdownSearch("");
   };
 
-  const handleNativeDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === "android") {
-      setShowNativeDatePicker(false);
-      if (date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        const dateString = `${year}-${month}-${day}`;
-        setNewProcedure({ ...newProcedure, date: dateString });
-        setSelectedDate(date);
-      }
-    } else {
-      // iOS
-      if (date) {
-        setTempDate(date);
-      }
-    }
-  };
-
-  const handleDoneDatePicker = () => {
-    const year = tempDate.getFullYear();
-    const month = String(tempDate.getMonth() + 1).padStart(2, "0");
-    const day = String(tempDate.getDate()).padStart(2, "0");
+  const handleConfirmProcedureDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     const dateString = `${year}-${month}-${day}`;
     setNewProcedure({ ...newProcedure, date: dateString });
-    setSelectedDate(tempDate);
-    setShowNativeDatePicker(false);
-  };
-
-  const handleCancelDatePicker = () => {
+    setSelectedDate(date);
     setShowNativeDatePicker(false);
   };
 
@@ -254,7 +230,6 @@ export default function PastProceduresScreen({
       }
     }
     setSelectedDate(initialDate);
-    setTempDate(initialDate);
     setShowNativeDatePicker(true);
   };
 
@@ -627,58 +602,15 @@ export default function PastProceduresScreen({
               />
             </View>
           </KeyboardAwareScrollView>
-        </View>
-      </Modal>
-
-      {showNativeDatePicker &&
-        (Platform.OS === "ios" ? (
-          <Modal
-            transparent={true}
-            animationType="slide"
+          <NativeDatePickerModal
             visible={showNativeDatePicker}
-            onRequestClose={handleCancelDatePicker}
-          >
-            <View style={styles.pickerModalOverlay}>
-              <TouchableOpacity
-                style={styles.pickerModalBackdrop}
-                onPress={handleCancelDatePicker}
-              />
-              <View style={styles.pickerContainer}>
-                <View style={styles.pickerHeader}>
-                  <TouchableOpacity onPress={handleCancelDatePicker}>
-                    <Text style={styles.pickerHeaderButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleDoneDatePicker}>
-                    <Text
-                      style={[
-                        styles.pickerHeaderButtonText,
-                        { color: colors.primary },
-                      ]}
-                    >
-                      Done
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={tempDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleNativeDateChange}
-                  maximumDate={new Date()}
-                  textColor="black"
-                />
-              </View>
-            </View>
-          </Modal>
-        ) : (
-          <DateTimePicker
             value={selectedDate}
-            mode="date"
-            display="default"
-            onChange={handleNativeDateChange}
+            onCancel={() => setShowNativeDatePicker(false)}
+            onConfirm={handleConfirmProcedureDate}
             maximumDate={new Date()}
           />
-        ))}
+        </View>
+      </Modal>
 
       <Toast
         visible={showToast}

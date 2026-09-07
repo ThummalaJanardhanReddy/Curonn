@@ -5,7 +5,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "../../shared/components/NativeDatePickerModal";
 import React, { useCallback, useState, useEffect } from "react";
 import { router } from "expo-router";
 import {
@@ -541,16 +541,14 @@ export default function LabTestsScreen() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleMedDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      if (
-        errors === "Please select service start date" ||
-        errors === "Please select delivery date"
-      )
-        setErrors("");
-    }
+  const handleConfirmDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (
+      errors === "Please select service start date" ||
+      errors === "Please select delivery date"
+    )
+      setErrors("");
   };
   // Fetch Scans
   const fetchScans = async (
@@ -669,6 +667,7 @@ export default function LabTestsScreen() {
         selectedTimeSlot,
         selectedDiagCenter: center,
       });
+      setdiagsticVisible(false);
       setBookingVisible(true);
     }
   };
@@ -1395,22 +1394,20 @@ export default function LabTestsScreen() {
                 )}
               </View>
             </ScrollView>
+            {/* Date Picker */}
+            <NativeDatePickerModal
+              visible={showDatePicker}
+              value={selectedDate || new Date()}
+              onCancel={() => setShowDatePicker(false)}
+              onConfirm={handleConfirmDate}
+              minimumDate={
+                isTodayAvailable
+                  ? new Date()
+                  : new Date(Date.now() + 24 * 60 * 60 * 1000)
+              }
+            />
           </SafeAreaView>
         </Modal>
-        {/* Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate || new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "default" : "default"}
-            onChange={handleMedDateChange}
-            minimumDate={
-              isTodayAvailable
-                ? new Date()
-                : new Date(Date.now() + 24 * 60 * 60 * 1000)
-            }
-          />
-        )}
       </View>
     </View>
   );

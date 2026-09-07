@@ -1,6 +1,6 @@
 import React, { cloneElement, isValidElement } from "react";
-import { Modal, StyleSheet, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../styles/commonStyles";
 
 interface ProfileScreenModalProps {
@@ -9,6 +9,13 @@ interface ProfileScreenModalProps {
   children: React.ReactNode;
 }
 
+/**
+ * Renders as a plain full-screen overlay rather than an RN <Modal> — iOS only
+ * allows one native Modal presented at a time, and this is always used from
+ * inside the already-open "User Profile" Modal. Render this as a child inside
+ * that enclosing Modal (not a sibling after it) so it paints on top without
+ * needing to hide the parent first.
+ */
 export default function ProfileScreenModal({
   visible,
   onClose,
@@ -19,18 +26,22 @@ export default function ProfileScreenModal({
     ? cloneElement(children, {onClose})
     : children;
 
-    const inset = useSafeAreaInsets();
+  const inset = useSafeAreaInsets();
+
+  if (!visible) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, {paddingTop: inset.top, paddingBottom: inset.bottom}]} >{childWithProps}</View>
-    </Modal>
+    <View style={[styles.overlay, {paddingTop: inset.top, paddingBottom: inset.bottom}]}>
+      {childWithProps}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
     backgroundColor: colors.white,
   },
 });

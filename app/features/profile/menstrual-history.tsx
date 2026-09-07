@@ -38,6 +38,12 @@ interface MenstrualRecord {
   menopauseAge: string;
 }
 
+type NewMenstrualRecord = {
+  frequency: "regular" | "irregular" | "";
+  menorrhagia: "yes" | "no" | "";
+  menopauseAge: string;
+};
+
 interface MenstrualHistoryScreenProps {
   onClose?: () => void;
   onDataStatusChange?: (hasData: boolean) => void;
@@ -55,9 +61,9 @@ export default function MenstrualHistoryScreen({
   // fetch user id from context
   const { userData } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
-  const [newRecord, setNewRecord] = useState({
-    frequency: "regular" as "regular" | "irregular",
-    menorrhagia: "no" as "yes" | "no",
+  const [newRecord, setNewRecord] = useState<NewMenstrualRecord>({
+    frequency: "",
+    menorrhagia: "",
     menopauseAge: "",
   });
   const [saveLoading, setSaveLoading] = useState(false);
@@ -83,14 +89,15 @@ export default function MenstrualHistoryScreen({
   const handleCloseModal = () => {
     setModalVisible(false);
     setNewRecord({
-      frequency: "regular",
-      menorrhagia: "no",
+      frequency: "",
+      menorrhagia: "",
       menopauseAge: "",
     });
   };
 
   const handleSaveRecord = async () => {
     if (!userData || !patientId) return;
+    if (!newRecord.frequency || !newRecord.menorrhagia) return;
     setSaveLoading(true);
     try {
       const payload = {
@@ -400,7 +407,7 @@ export default function MenstrualHistoryScreen({
                 title={saveLoading ? "Saving..." : "Save"}
                 onPress={handleSaveRecord}
                 style={styles.saveButton}
-                disabled={saveLoading}
+                disabled={saveLoading || !newRecord.frequency || !newRecord.menorrhagia}
               />
             </View>
           </KeyboardAwareScrollView>

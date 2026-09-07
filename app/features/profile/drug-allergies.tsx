@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
@@ -48,6 +48,7 @@ interface DrugAllergiesScreenProps {
 }
 
 export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: DrugAllergiesScreenProps) {
+  const insets = useSafeAreaInsets();
   const [allergies, setAllergies] = useState<DrugAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [reactionOptions, setreactionOptions] = useState<any[]>([]);
@@ -648,8 +649,8 @@ export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: Dru
           onRequestClose={handleCloseSearchModal}
         >
           <View style={styles.searchModalOverlay}>
-            <SafeAreaView style={styles.searchModalContent}>
-              <View style={styles.searchModalHeader}>
+            <SafeAreaView style={styles.searchModalContent} edges={['bottom']}>
+              <View style={[styles.searchModalHeader, { paddingTop: insets.top + getResponsiveSpacing(16) }]}>
                 <Text style={styles.searchModalTitle}>Search of Drug Allergies</Text>
                 <TouchableOpacity
                   onPress={handleCloseSearchModal}

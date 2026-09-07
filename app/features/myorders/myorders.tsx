@@ -221,6 +221,7 @@ export default function OrdersScreen() {
     // Map orderType to category
     let category = "";
     let iconSource = null;
+    // console.log("Rendering order card for: ", item);
     switch (item.orderType) {
       case "Single Test":
         category = "Lab Test";
@@ -259,32 +260,9 @@ export default function OrdersScreen() {
     const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
     const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
     const duration = item.duration ? `${item.duration}` : "";
-    // Status color mapping
-    // const statusColors: { [key: string]: string } = {
-    //   Requested: "#d0eaff",
-    //   Completed: "#ccface",
-    //   Cancelled: "#ffd8d5",
-
-    //   Inprogress: "#f8d7a7",
-    //   Assigned: "#f7cdff",
-    //   Ongoing: "#f7cdff",
-    //   Pending: "#d0eaff",
-    //   Rescheduled: "#bbecf3",
-    //   "Admin Doctor": "#f7cdff",
-    // };
+   
     const statusColor = statusColors[item.statusName] || "#666";
 
-    // const statusTextColors: { [key: string]: string } = {
-    //   Requested: "#006cc5",
-    //   Completed: "#4CAF50",
-    //   Cancelled: "#F44336",
-    //   Inprogress: "#FF9800",
-    //   Assigned: "#9C27B0",
-    //   Ongoing: "#9C27B0",
-    //   Pending: "#006cc5",
-    //   Rescheduled: "#00BCD4",
-    //   "Admin Doctor": "#9C27B0",
-    // };
     const statusTextColor =
       statusTextColors[item.statusName] || colors.primaryText;
     // Display 'Inprogress' instead of 'Requested'

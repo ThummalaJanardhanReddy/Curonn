@@ -14,7 +14,7 @@ import {
   View,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
@@ -60,6 +60,7 @@ export default function FamilyHistoryScreen({
   onClose,
   onDataStatusChange
 }: FamilyHistoryScreenProps) {
+  const insets = useSafeAreaInsets();
   const { userData } = useUser();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -745,8 +746,8 @@ export default function FamilyHistoryScreen({
         animationType="slide"
         onRequestClose={handleCloseSearchModal}
       >
-        <SafeAreaView style={styles.searchModalContent}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={styles.searchModalContent} edges={['bottom']}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + getResponsiveSpacing(16) }]}>
             <Text style={styles.modalTitle}>Search Medical History</Text>
             <TouchableOpacity
               onPress={handleCloseSearchModal}

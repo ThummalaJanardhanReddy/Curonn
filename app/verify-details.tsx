@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -186,43 +185,6 @@ export default function VerifyDetailsScreen() {
     }
   };
 
-  const handleContinueTest = async () => {
-    const isEmployeeIdValid = validateEmployeeId(employeeId);
-    const isEmailValid = validateEmail(email);
-
-    if (!isEmployeeIdValid || !isEmailValid) return;
-
-    setIsLoading(true);
-    try {
-      // const validateUser = await axiosClient.get(ApiRoutes.Employee.validate, {
-      //   params: { employeeId: employeeId, emailId: email },
-      // }) as ValidationResponse;
-
-      // console.log('Validation response: ', validateUser);
-
-      // // Since axiosClient interceptor returns response.data, validateUser is already the data object
-      // if (validateUser?.isSuccess) {
-      //   // Store user data in context before navigating
-      //   setUserData({
-      //     email: email,
-      //     employeeId: employeeId,
-      //     isVerified: false, // Will be true after OTP verification
-      //   });
-      //   router.push('/otp-verify');
-      // } else {
-      //   setCommonError(validateUser?.message || 'Validation failed. Please check your details.');
-      // }
-      router.push("/otp-verify");
-    } catch (error) {
-      console.error("Validation error:", error);
-      setCommonError(
-        "Network error. Please check your connection and try again.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleBack = () => {
     router.back();
   };
@@ -230,22 +192,17 @@ export default function VerifyDetailsScreen() {
   const isFormValid = employeeId.trim() && email.trim();
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {/* <StatusBar style="dark" backgroundColor={colors.bg_primary} /> */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+    <View style={{ flex: 1, backgroundColor:colors.bg_rest, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} />
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={80}
+        showsVerticalScrollIndicator={false}
       >
-        <KeyboardAwareScrollView
-          style={styles.container}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid
-          extraScrollHeight={80}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
+        {/* Header */}
           <View style={styles.header}>
             <images.curonnLogo style={styles.image} width={234} height={60} />
             <Text style={styles.title}>Verify your details</Text>
@@ -376,9 +333,8 @@ export default function VerifyDetailsScreen() {
               />
             </View>
           </View>
-        </KeyboardAwareScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -388,7 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // minHeight: 100,
     // paddingBottom: getResponsivePadding(40),
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
   },
   scrollContainer: {
     flex: 1,
@@ -481,14 +437,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: colors.bg_rest,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
+    marginTop: "auto",
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },

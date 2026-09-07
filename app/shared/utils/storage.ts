@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -20,7 +21,17 @@ export const setRegistrationCompleted = async (completed: boolean) => {
 export const getRegistrationCompleted = async (): Promise<boolean> => {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEYS.REGISTRATION_COMPLETED);
-    return value ? JSON.parse(value) : false;
+    if (value && JSON.parse(value)) return true;
+
+    // AsyncStorage is wiped on every reinstall, but the "isLoggedIn" flag in
+    // SecureStore/Keychain survives it — a returning TestFlight tester who
+    // already completed onboarding in a previous build would otherwise get
+    // bounced back to /welcome forever because registration_completed was
+    // reset while isLoggedIn wasn't. Treat either as proof of registration.
+    if (Platform.OS === 'web') return false;
+    const SecureStore = await import('expo-secure-store');
+    const isLoggedIn = await SecureStore.getItemAsync('isLoggedIn');
+    return isLoggedIn === 'true';
   } catch (error) {
     console.error('Error reading registration status:', error);
     return false;

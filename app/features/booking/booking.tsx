@@ -4,7 +4,7 @@ import {
   getResponsiveSpacing,
 } from "@/app/shared/utils/responsive";
 import CartItemsList from "@/app/shared/components/CartItemsList";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "@/app/shared/components/NativeDatePickerModal";
 import { router } from "expo-router";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -116,6 +116,9 @@ export default function BookingScreen({
     restoreUserData();
   }, []);
 
+  const effectiveUserData = userData ?? userDataFromHook;
+  const patientId = Number(effectiveUserData?.e_id || user?.eId);
+
   // Fetch employee data and assign to userData
   useEffect(() => {
     if (!patientId) return;
@@ -123,7 +126,7 @@ export default function BookingScreen({
       .get(ApiRoutes.Employee.getById(patientId))
       .then((response) => {
         const pdata = response?.data ?? response;
-        console.log("Fetched employee data for booking screen:", pdata);
+        // console.log("Fetched employee data for booking screen:", pdata);
         setUserData(pdata);
       })
       .catch(() => setUserData(null));
@@ -224,8 +227,6 @@ export default function BookingScreen({
 
   // ─── Shared constants ──────────────────────────────────────────────
   const genderOptions = ["Male", "Female", "Other"];
-  const effectiveUserData = userData ?? userDataFromHook;
-  const patientId = Number(effectiveUserData?.e_id || user?.eId);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -937,7 +938,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -1188,7 +1189,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -1485,12 +1486,10 @@ export default function BookingScreen({
     }
   };
 
-  const handleLabDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (date) {
-      setSelectedDate(date);
-      if (errors === "Please select service start date") setErrors("");
-    }
+  const handleConfirmLabDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (errors === "Please select service start date") setErrors("");
   };
 
   const handleEdit = () => {
@@ -1667,14 +1666,7 @@ export default function BookingScreen({
   const medicineDiscountAmount = Math.round(
     (safeItemsTotal * safeDiscountPercent) / 100,
   );
-  console.log(
-    "Items Total:",
-    safeItemsTotal,
-    "Discount Percent:",
-    safeDiscountPercent,
-    "Discount Amount:",
-    medicineDiscountAmount,
-  );
+  
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
   const displayedTotal = useMemo(
@@ -1946,7 +1938,7 @@ export default function BookingScreen({
       }
     } else {
       // New member (relationId === 0)
-      shouldSaveOrUpdate = true;
+      shouldSaveOrUpdate = false;
     }
 
     if (shouldSaveOrUpdate) {
@@ -2006,7 +1998,7 @@ export default function BookingScreen({
               : "Added successfully!"),
           type: "success",
         });
-        // setShowToastMed(true);
+        setShowToastMed(true);
       } catch (error) {
         let errorMsg = "Something went wrong";
         if (error && typeof error === "object") {
@@ -2099,12 +2091,10 @@ export default function BookingScreen({
     }
   };
 
-  const handleMedDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-      if (errors === "Please select delivery date") setErrors("");
-    }
+  const handleConfirmMedDate = (date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
+    if (errors === "Please select delivery date") setErrors("");
   };
 
   const closeHandler = () => {
@@ -2688,15 +2678,13 @@ export default function BookingScreen({
           </Modal>
 
           {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate || new Date()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleMedDateChange}
-              minimumDate={new Date()}
-            />
-          )}
+          <NativeDatePickerModal
+            visible={showDatePicker}
+            value={selectedDate || new Date()}
+            onCancel={() => setShowDatePicker(false)}
+            onConfirm={handleConfirmMedDate}
+            minimumDate={new Date()}
+          />
 
           {/* All Address View Modal */}
           {patientId && (
@@ -2761,7 +2749,6 @@ export default function BookingScreen({
         <Modal
           visible={visible}
           animationType="slide"
-          presentationStyle="fullScreen"
           onRequestClose={closeHandler}
         >
           {content}
@@ -2773,12 +2760,7 @@ export default function BookingScreen({
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
@@ -2801,7 +2783,7 @@ export default function BookingScreen({
                 <View style={styles.serviceHeader}>
                   <Text style={styles.serviceName}>{serviceName}</Text>
                   {type !== "ambulance" && type !== "wellness" && (
-                    <View style={{flexDirection: 'column', gap:2}}>
+                    <View style={{ flexDirection: "column", gap: 2 }}>
                       <Text style={styles.serviceLocation}>
                         {isAtHome ? "AT-HOME" : "AT-LAB"}
                       </Text>
@@ -3451,7 +3433,7 @@ export default function BookingScreen({
               }
             }}
           >
-            <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
                 amount={
@@ -3542,27 +3524,25 @@ export default function BookingScreen({
                   }, 300);
                 }}
               />
-            </SafeAreaView>
+            </View>
           </Modal>
 
           {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate || new Date()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleLabDateChange}
-              minimumDate={
-                isTodayAvailable
-                  ? new Date()
-                  : (() => {
-                      let d = new Date();
-                      d.setDate(d.getDate() + 1);
-                      return d;
-                    })()
-              }
-            />
-          )}
+          <NativeDatePickerModal
+            visible={showDatePicker}
+            value={selectedDate || new Date()}
+            onCancel={() => setShowDatePicker(false)}
+            onConfirm={handleConfirmLabDate}
+            minimumDate={
+              isTodayAvailable
+                ? new Date()
+                : (() => {
+                    let d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    return d;
+                  })()
+            }
+          />
 
           {/* All Address View Modal */}
           {patientId && (
@@ -3633,7 +3613,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    // paddingTop: getResponsiveSpacing(5),
+    paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
     borderBottomWidth: 1,

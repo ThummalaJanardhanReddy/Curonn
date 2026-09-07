@@ -10,7 +10,7 @@ import {
   Image,
   TextInput,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import NativeDatePickerModal from "../NativeDatePickerModal";
 import dayjs from "dayjs";
 import { Ionicons } from "@expo/vector-icons";
 import { useDoctorConsultationStore } from "@/src/store/doctor-consultation";
@@ -321,6 +321,8 @@ export default function ConfirmConsultationScreen() {
         type: "success",
       });
       setTimeout(() => {
+        useVideoStore.getState().reset();
+        useDoctorConsultationStore.getState().reset();
         router.push("/(main)/orders");
       }, 1500);
     } catch (error) {
@@ -334,8 +336,6 @@ export default function ConfirmConsultationScreen() {
     } finally {
       setShowConfirm(true);
       setLoading(false);
-      useVideoStore.getState().reset();
-      useDoctorConsultationStore.getState().reset();
     }
   };
 
@@ -739,23 +739,6 @@ export default function ConfirmConsultationScreen() {
               )}
             </View>
           </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              minimumDate={new Date()}
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              onChange={(event, date) => {
-                setShowDatePicker(false);
-
-                if (event.type === "set" && date) {
-                  console.log("date selected: ", date.toString());
-                  setSelectedDate(date);
-                }
-              }}
-            />
-          )}
         </ScrollView>
 
         {/* CONFIRM BUTTON */}
@@ -766,6 +749,17 @@ export default function ConfirmConsultationScreen() {
             style={styles.proceedButton}
           />
         </View>
+
+        <NativeDatePickerModal
+          visible={showDatePicker}
+          value={selectedDate}
+          onCancel={() => setShowDatePicker(false)}
+          onConfirm={(date) => {
+            setShowDatePicker(false);
+            setSelectedDate(date);
+          }}
+          minimumDate={new Date()}
+        />
 
         {/* Toast Notification */}
 

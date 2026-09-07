@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { images } from "../../../assets";
@@ -49,6 +49,7 @@ export default function FoodAllergiesModal({
   onClose,
   onDataStatusChange
 }: FoodAllergiesModalProps) {
+  const insets = useSafeAreaInsets();
   const [allergies, setAllergies] = useState<FoodAllergy[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -347,19 +348,16 @@ const patientId = Number(userData?.e_id || user?.eId);
     []
   );
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      // presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <View style={styles.screenOverlay}>
       <>
 
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }} edges={['bottom']}>
           <View style={styles.container}>
             {/* Header - Food Allergies Screen */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + getResponsiveSpacing(15) }]}>
               <View style={styles.headerLeft}>
                 <BackButton title="" onPress={handleBack} style={styles.backButton} color={colors.black} />
 
@@ -616,8 +614,8 @@ const patientId = Number(userData?.e_id || user?.eId);
               onRequestClose={handleCloseSearchModal}
             >
               <View style={styles.searchModalOverlay}>
-                <SafeAreaView style={styles.searchModalContent}>
-                  <View style={styles.searchModalHeader}>
+                <SafeAreaView style={styles.searchModalContent} edges={['bottom']}>
+                  <View style={[styles.searchModalHeader, { paddingTop: insets.top + getResponsiveSpacing(16) }]}>
                     <Text style={styles.searchModalTitle}>
                       Search of Food Allergies
                     </Text>
@@ -688,12 +686,17 @@ const patientId = Number(userData?.e_id || user?.eId);
         onHide={() => setShowToast(false)}
         duration={3000}
       />
-    </Modal>
-
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
+    backgroundColor: colors.white,
+  },
   container: {
     flex: 1,
   },
