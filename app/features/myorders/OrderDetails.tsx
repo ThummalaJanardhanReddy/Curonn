@@ -11,6 +11,7 @@ import {
   Dimensions,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { RadioButton, Checkbox } from "react-native-paper";
 import {
@@ -651,6 +652,7 @@ function OrderDetails({
       return;
     }
     try {
+      setLoading(true);
       if (orderDetails?.type === "lab") {
         await axiosClient.post(
           `${ApiRoutes.LabOrders.cancelOrder}?labOrderId=${order.masterId}&cancelReason=${encodeURIComponent(cancelReason)}`,
@@ -725,21 +727,12 @@ function OrderDetails({
         type: "error",
       });
       setShowToast(true);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!order) return null;
-  // Helper: statusName check for button display
-
-  // useEffect(() => {
-  //     if (showRescheduleModal) {
-  //         setSelectedSlot(null);
-  //         setSelectedDate(null);
-  //         setErrors('');
-  //     }
-  // }, [showRescheduleModal]);
-  // Removed patientId effect; now handled after fetchMedicineOrderById resolves
-  // Helper: Render Reschedule Modal
 
   const renderRescheduleModal = () => (
     <Modal
@@ -1147,6 +1140,16 @@ function OrderDetails({
       </View>
     </Modal>
   );
+
+  if (loading) {
+    return (
+      <ActivityIndicator
+        size="large"
+        color={colors.primary}
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      />
+    );
+  }
   return (
     <Modal
       visible={visible}
@@ -1890,7 +1893,7 @@ function OrderDetails({
                                       fontSize: 13,
                                     }}
                                   >
-                                    Pay Now{" "}
+                                    Pay Now
                                   </Text>
                                 </TouchableOpacity>
                               )}
@@ -2591,7 +2594,7 @@ function OrderDetails({
                         onPress={() => setShowRescheduleModal(true)}
                       >
                         <Text style={styles.rescheduleBtnText}>
-                          Reschedule{" "}
+                          Reschedule
                         </Text>
                       </TouchableOpacity>
                     )}

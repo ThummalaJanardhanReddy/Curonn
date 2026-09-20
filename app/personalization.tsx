@@ -740,7 +740,7 @@ export default function PersonalizationScreen() {
         >
           <View style={{ marginBottom: 24 }}>
             {/* Replace below with your preferred loading spinner */}
-            <ActivityIndicator size="large" color={colors.white} />
+            <ActivityIndicator size="large" color={colors.bg_primary} />
           </View>
           <Text
             style={{

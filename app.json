@@ -3,7 +3,7 @@
     "name": "curonn",
     "slug": "curonn",
     "icon": "./assets/curonn_appicon.png",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",

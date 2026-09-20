@@ -83,10 +83,6 @@ export default function MainLayout() {
 
   useEffect(() => {
     Font.loadAsync({
-      // "Poppins-Regular": require("../../assets/fonts/Poppins-Regular.ttf"),
-      // "Poppins-Medium": require("../../assets/fonts/Poppins-Medium.ttf"),
-      // "Poppins-SemiBold": require("../../assets/fonts/Poppins-SemiBold.ttf"),
-      // "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
       "Lato-Black": require("../../assets/fonts/Lato/Lato-Black.ttf"),
       "Lato-Bold": require("../../assets/fonts/Lato/Lato-Bold.ttf"),
       "Lato-Regular": require("../../assets/fonts/Lato/Lato-Regular.ttf"),
@@ -185,32 +181,3 @@ export default function MainLayout() {
     </RegistrationGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  bottomTabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#B83A1E",
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: getResponsiveSpacing(16),
-    marginHorizontal: getResponsiveSpacing(4),
-  },
-  tabIcon: {
-    ...getResponsiveImageSize(22, 22),
-  },
-  tabText: {
-    fontSize: getResponsiveFontSize(12),
-    fontWeight: "500",
-    marginTop: getResponsiveSpacing(4),
-    textAlign: "center",
-  },
-});

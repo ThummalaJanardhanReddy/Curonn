@@ -1,14 +1,14 @@
 import { colors } from "@/app/shared/styles/commonStyles";
 import React, { useEffect } from "react";
+import { View, BackHandler, StatusBar, Linking } from "react-native";
 import {
-  View,
-  BackHandler,
-  StatusBar,
-} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 const RAZORPAY_KEY_ID = "rzp_live_TXDv4ySvPCeAlK";
+// const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
 
 type RazorpayPaymentScreenProps = {
   amount: number | string;
@@ -103,7 +103,11 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* <StatusBar barStyle="light-content" backgroundColor={colors.primary} /> */}
       <SafeAreaView
-        style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
+        style={{
+          flex: 1,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        }}
         edges={[]}
       >
         <WebView
@@ -131,6 +135,39 @@ const RazorpayPaymentScreen: React.FC<RazorpayPaymentScreenProps> = ({
             if (!navState.loading && navState.canGoBack) {
               // block internal navigation
             }
+          }}
+          setSupportMultipleWindows={true}
+          onShouldStartLoadWithRequest={(request) => {
+            const { url } = request;
+            if (
+              url.startsWith("http://") ||
+              url.startsWith("https://") ||
+              url === "about:blank"
+            ) {
+              return true;
+            }
+            // intent://, upi://, tez://, phonepe:// etc — hand off to native
+            Linking.canOpenURL(url).then((supported) => {
+              if (supported) Linking.openURL(url);
+            });
+            return false;
+          }}
+          onOpenWindow={(event) => {
+            const { targetUrl } = event.nativeEvent;
+            Linking.openURL(targetUrl);
+          }}
+          onError={(e) => console.log("WebView error:", e.nativeEvent)}
+          onHttpError={(e) => console.log("HTTP error:", e.nativeEvent)}
+          injectedJavaScript={`
+    window.onerror = function(msg) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ success: false, jsError: msg }));
+      return true;
+    };
+    true;
+  `}
+          onJsAlert={(event, callback) => {
+            console.log("JS ALERT:", event.nativeEvent.message);
+            callback(); // dismiss without showing native dialog
           }}
         />
       </SafeAreaView>
