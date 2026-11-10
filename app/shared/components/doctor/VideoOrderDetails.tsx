@@ -15,7 +15,11 @@ import { useVideoStore } from "@/src/store/VideoStore";
 import { signalRVideoService } from "@/src/api/SignalRVideoService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import dayjs from "dayjs";
-import { colors, statusColors, statusTextColors } from "../../styles/commonStyles";
+import {
+  colors,
+  statusColors,
+  statusTextColors,
+} from "../../styles/commonStyles";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import { IPatientReport, S3Link } from "@/src/constants/constants";
@@ -28,7 +32,7 @@ interface Props {
   onReschedule?: () => void;
   onCancel?: () => void;
   onBookAgain?: () => void;
- 
+
   order: any;
   getReports: any;
   setSelectedPdfUrl: any;
@@ -49,15 +53,12 @@ export default function VideoOrderDetails({
   const { status, roomUrl } = useVideoStore();
   const [reports, setReports] = useState([]);
 
-
-
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
     return dayjs(data.scheduleDate).format("DD-MM-YYYY");
   }, [data.scheduleDate]);
 
   // Get status color and text color based on statusName
-
 
   const fetchReportInfo = useCallback(async () => {
     if (!data) return;
@@ -71,7 +72,7 @@ export default function VideoOrderDetails({
         // Show all prescription reports for the patient
         setReports(response || []);
       }
-    } catch (error) { }
+    } catch (error) {}
   }, [data?.appointmentId]);
 
   useEffect(() => {
@@ -143,7 +144,6 @@ export default function VideoOrderDetails({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Information</Text>
 
-
           <View style={styles.infoCard}>
             {/* Left Icon */}
             <View style={styles.serviceImageContainer}>
@@ -184,7 +184,6 @@ export default function VideoOrderDetails({
 
               {/* Consultation Type Badge */}
 
-
               {/* <View style={{ paddingVertical: 10 }}>
                 <Text style={[styles.label, { color: colors.black }]}>
                   Scheduled On:
@@ -204,9 +203,81 @@ export default function VideoOrderDetails({
             </View> */}
           </View>
 
+          {/* ---------------- Patient Details ---------------- */}
+          <Text style={styles.sectionTitle}>Patient Details</Text>
+          <View style={styles.card}>
+            <View style={styles.patiendetails}>
+              <Text style={styles.primaryText}>
+                {data.patientName || "N/A"}
+              </Text>
+              <Text style={styles.secondaryText}>
+                {[
+                  data.relationAge
+                    ? `${data.relationAge} yrs`
+                    : data.patientAge,
+                  data.relationGender
+                    ? data.relationGender
+                    : data.patientGender,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "N/A"}
+              </Text>
+            </View>
+            {data?.symptoms && (
+              <View style={styles.symtomsSection}>
+                <Text style={styles.symtomsheader}>Symptoms</Text>
+                <Text style={styles.symtomText}>{data.symptoms}</Text>
+              </View>
+            )}
+
+            <View
+              style={{
+                paddingVertical: 10,
+                borderTopWidth: 1,
+                borderTopColor: colors.border,
+                marginTop: 10,
+              }}
+            >
+              <Text style={styles.appointmentprepredText}>
+                Appointment preffered data & Time
+              </Text>
+              <Text style={[styles.datelabel, { marginTop: 4 }]}>
+                {data.scheduleBetween}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadgeContainer,
+                  { flexDirection: "row", alignItems: "center" },
+                ]}
+              >
+                <Text>Status: </Text>
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      backgroundColor: statusColor,
+                      color: statusTextColor,
+                      borderRadius: 30,
+                      marginTop: 3,
+                      marginBottom: 5,
+                      paddingHorizontal: 15,
+                      paddingVertical: 2,
+                      alignSelf: "flex-start",
+                      fontSize: 11,
+                      fontFamily: fonts.regular,
+                    },
+                  ]}
+                >
+                  {data.statusName}
+                </Text>
+                {/* <Text style={styles.statusBadgeText}>Status:  <Text style={styles.statusBadgeText}>{data.statusName}</Text></Text> */}
+              </View>
+            </View>
+          </View>
+
+          {/* ---------------- Consultation Info ---------------- */}
 
           <Text style={styles.sectionTitle}>Consultation info</Text>
-
 
           <View style={styles.card}>
             <View style={styles.consultTypeBadge}>
@@ -215,9 +286,14 @@ export default function VideoOrderDetails({
               </Text>
             </View>
 
-            <View style={{ paddingVertical: 0 }}>
-              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text>
-
+            <View style={{ paddingVertical: 0, marginTop: 4 }}>
+              {data.scheduleDate ? (
+                <Text style={styles.datelabel}>
+                  {dayjs(data.scheduleDate).format("DD-MM-YYYY h:mm A")}
+                </Text>
+              ) : (
+                <Text style={styles.datelabel}>{data.scheduleBetween}</Text>
+              )}
             </View>
 
             {/* Booking ID */}
@@ -228,73 +304,90 @@ export default function VideoOrderDetails({
             {/* Right Side Status Badge */}
 
             <View style={styles.statusBadgeContainer}>
-              <Text style={[styles.value, { backgroundColor: statusColor, color: statusTextColor, borderRadius: 30, marginTop: 3, marginBottom: 5, paddingHorizontal: 15, paddingVertical: 2, alignSelf: 'flex-start', fontSize: 11, fontFamily: fonts.regular }]}>
+              <Text
+                style={[
+                  styles.value,
+                  {
+                    backgroundColor: statusColor,
+                    color: statusTextColor,
+                    borderRadius: 30,
+                    marginTop: 3,
+                    marginBottom: 5,
+                    paddingHorizontal: 15,
+                    paddingVertical: 2,
+                    alignSelf: "flex-start",
+                    fontSize: 11,
+                    fontFamily: fonts.regular,
+                  },
+                ]}
+              >
                 {data.statusName}
               </Text>
               {/* <Text style={styles.statusBadgeText}>Status:  <Text style={styles.statusBadgeText}>{data.statusName}</Text></Text> */}
             </View>
-
-          </View>
-
-          {/* ---------------- Patient Details ---------------- */}
-          <Text style={styles.sectionTitle}>Patient Details</Text>
-          <View style={styles.card}>
-            <View style={styles.patiendetails}>
-              <Text style={styles.primaryText}>{data.patientName || "N/A"}</Text>
-              <Text style={styles.secondaryText}>
-                {[
-                  data.relationAge ? `${data.relationAge} yrs` : data.patientAge,
-                  data.relationGender ? data.relationGender : data.patientGender,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "N/A"}
-              </Text>
-              {/* <Text style={styles.appointmentprepredText}>Appointment preffered data & Time</Text>
-              <Text style={styles.datelabel}>{formattedDate}, {data.scheduleBetween}</Text> */}
-            </View>
-            {data?.symptoms && (
-              <View style={styles.symtomsSection}>
-                <Text style={styles.symtomsheader}>Symptoms</Text>
-                <Text style={styles.symtomText}>{data.symptoms}</Text>
-              </View>
-            )}
           </View>
 
           {/* ---------------- Prescription Section ---------------- */}
-          {data?.statusName === "Completed" && (<> 
-          {data.prescription && (
+          {data?.statusName === "Completed" && (
             <>
-
-              <Text style={styles.sectionTitle}>View Prescription</Text>
-              <View style={styles.individualcard}>
-                <Image source={images.reportsimage} style={styles.closeIcon} />
-                <Text style={styles.value}>{data.prescription}</Text>
-              </View>
+              {data.prescription && (
+                <>
+                  <Text style={styles.sectionTitle}>View Prescription</Text>
+                  <View style={styles.individualcard}>
+                    <Image
+                      source={images.reportsimage}
+                      style={styles.closeIcon}
+                    />
+                    <Text style={styles.value}>{data.prescription}</Text>
+                  </View>
+                </>
+              )}
+              {reports.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>View Prescription</Text>
+                  {reports.map((report: any) => (
+                    <View
+                      key={report.patientReportId}
+                      style={styles.individualcard}
+                    >
+                      <Image
+                        source={images.reportsimage}
+                        style={styles.closeIcon}
+                      />
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          padding: 5,
+                        }}
+                        onPress={() => handleViewReport(report.filePath)}
+                      >
+                        <Text
+                          style={{
+                            marginBottom: 10,
+                            flex: 1,
+                            color: "#fff",
+                            fontFamily: fonts.bold,
+                            fontSize: 14,
+                          }}
+                          numberOfLines={1}
+                          ellipsizeMode="middle"
+                        >
+                          {report.reportName
+                            ? report.reportName
+                            : report.fileName || "Report"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              )}
             </>
           )}
-          {reports.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>View Prescription</Text>
-              {reports.map((report: any) => (
-                <View key={report.patientReportId} style={styles.individualcard}>
-                  <Image source={images.reportsimage} style={styles.closeIcon} />
-                  <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 5 }}
-                    onPress={() => handleViewReport(report.filePath)}
-                  >
-                    <Text style={{ marginBottom: 10, flex: 1, color: '#fff', fontFamily: fonts.bold, fontSize: 14 }} numberOfLines={1} ellipsizeMode="middle">
-                      {report.reportName ? report.reportName : report.fileName || "Report"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </>
-          )}
-          </>)}
 
           {/* ---------------- Join Call Button ---------------- */}
           {data?.scheduleTypeName == "Video Consultation" &&
-           !["Completed", "Cancelled"].includes(data?.statusName) && (
+            !["Completed", "Cancelled"].includes(data?.statusName) && (
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
@@ -336,7 +429,6 @@ export default function VideoOrderDetails({
         {/* <TouchableOpacity style={styles.secondaryButton} onPress={onBookAgain}>
         <Text style={styles.secondaryButtonText}>Book Again</Text>
       </TouchableOpacity> */}
-
       </ScrollView>
     </View>
   );
@@ -370,23 +462,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(212,212,212,1)",
     paddingBottom: 6,
-    marginBottom: 6
+    marginBottom: 6,
   },
   primaryText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
 
   appointmentprepredText: {
-    color: '#333',
+    color: "#333",
     fontFamily: fonts.medium,
     fontSize: 15,
     marginTop: 0,
   },
 
   secondaryText: {
-    color: '#333',
+    color: "#333",
     fontFamily: fonts.regular,
     fontSize: 13,
     marginTop: 0,
@@ -430,15 +522,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     minHeight: 100,
     borderRadius: 20,
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start',
-    position: 'relative',
-    overflow: 'hidden',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    position: "relative",
+    overflow: "hidden",
   },
   closeIcon: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
-    height: '100%',
+    height: "100%",
     opacity: 0.15,
     zIndex: 0,
     borderRadius: 20,

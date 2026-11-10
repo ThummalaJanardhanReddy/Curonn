@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  Platform,
   Image,
   TextInput,
 } from "react-native";
@@ -23,13 +22,11 @@ import PrimaryButton from "../PrimaryButton";
 import { router, useNavigation } from "expo-router";
 import Toast from "../Toast";
 import { useUserStore } from "@/src/store/UserStore";
-import { useUser } from "../../context/UserContext";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes, { EmployeeApi, MasterApi } from "@/src/api/employee/employee";
 import {
   ICreateAppointmentRequest,
   IMaster,
-  IRelation,
 } from "@/src/constants/constants";
 import { fonts } from "@/app/shared/styles/fonts";
 import { images } from "@/assets";
@@ -38,6 +35,10 @@ import {
   getResponsiveSpacing,
 } from "../../utils/responsive";
 import { useVideoStore } from "@/src/store/VideoStore";
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const SLOT_GROUPS = {
   morning: ["08:00 AM", "09:30 AM"],
@@ -282,6 +283,10 @@ export default function ConfirmConsultationScreen() {
     if (validateFields()) return;
     try {
       setLoading(true);
+      const scheduleddate = selectedDate ? formatDateLab(selectedDate) : "";
+      const scheduledbetween = selectedSlot ?? "";
+      const scheduledTime = scheduleddate + " " + scheduledbetween;
+
       let payload: ICreateAppointmentRequest = {
         patientId: user.eId,
         specialityId: departmentId || 0,
@@ -293,7 +298,7 @@ export default function ConfirmConsultationScreen() {
         patientAge: user.age,
 
         scheduleDate: selectedDate ? formatDateLab(selectedDate) : "",
-        scheduleBetween: selectedSlot || "",
+        scheduleBetween: scheduledTime,
 
         scheduleTypeId: consultationTypeId || 1340,
         scheduledBy: user.eId,
@@ -306,6 +311,8 @@ export default function ConfirmConsultationScreen() {
           relationGender: gender?.trim() || "",
         }),
       };
+
+      console.log("Video consultation appointment payload: ", payload);
 
       const res = await axiosClient.post<ICreateAppointmentRequest>(
         ApiRoutes.Appointments.save,

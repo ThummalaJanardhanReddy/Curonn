@@ -16,6 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from "react-native";
 // import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator } from "react-native";
@@ -47,6 +48,7 @@ export default function OrdersScreen() {
   const [currentLocation] = useState("New York, NY");
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const { userData } = useUser();
   const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
@@ -95,10 +97,10 @@ export default function OrdersScreen() {
 
   const refreshOrders = useCallback(async () => {
     if (!patientId) return;
-    setLoading(true);
+    setRefreshing(true);
     const ordersData = await fetchAllOrders();
     setAllOrders(ordersData);
-    setLoading(false);
+    setRefreshing(false);
   }, [patientId, fetchAllOrders]);
 
   // Fetch the full order list once on mount / whenever the patient changes.
@@ -221,7 +223,7 @@ export default function OrdersScreen() {
     // Map orderType to category
     let category = "";
     let iconSource = null;
-    // console.log("Rendering order card for: ", item);
+    console.log("Rendering order card for: ", item);
     switch (item.orderType) {
       case "Single Test":
         category = "Lab Test";
@@ -257,10 +259,12 @@ export default function OrdersScreen() {
     }
 
     // Format createdOn date
-    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
-    const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
+    const createdOn = item.scheduleDate
+      ? dayjs(item.scheduleDate).format("DD-MM-YYYY h:mm A")
+      : "";
+    const timeSlot = item.timeSlot ? `${item.timeSlot}` : "";
     const duration = item.duration ? `${item.duration}` : "";
-   
+
     const statusColor = statusColors[item.statusName] || "#666";
 
     const statusTextColor =
@@ -288,10 +292,12 @@ export default function OrdersScreen() {
                 <Text style={styles.categorytitle1}>Duration: {duration}</Text>
               </View>
             ) : (
-              <View style={styles.categoryrow}>
+              <View style={[styles.categoryrow, {flexDirection: "column", alignItems: "flex-start"}]}>
                 <Text style={styles.categorytitle}>
-                  {createdOn}
-                  {timeSlot}{" "}
+                  Booked Slot: {timeSlot}
+                </Text>
+                <Text style={[styles.categorytitle, {fontWeight: "600"}]}>
+                  Scheduled On: {createdOn}
                 </Text>
               </View>
             )}
@@ -302,7 +308,7 @@ export default function OrdersScreen() {
                 key={item.orderNo + "-status"}
                 style={{
                   alignSelf: "flex-start",
-                  alignItems: 'center',
+                  alignItems: "center",
                   backgroundColor: statusColor,
                   borderRadius: 30,
                   paddingHorizontal: 12,
@@ -459,6 +465,14 @@ export default function OrdersScreen() {
                 contentContainerStyle={[styles.ordersList]}
                 showsVerticalScrollIndicator={true}
                 style={{ flex: 1, backgroundColor: colors.bg_rest }}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={refreshOrders}
+                    colors={[colors.primary]}
+                    tintColor={colors.primary}
+                  />
+                }
               />
             </View>
           )}

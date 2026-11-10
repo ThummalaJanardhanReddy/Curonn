@@ -2332,26 +2332,6 @@ export default function BookingScreen({
               <Text style={styles.sectionTitle}>Service Address</Text>
 
               {selectedLocation ? (
-                // <View style={styles.addressCard}>
-                //   <View style={styles.addressInfoNew}>
-                //     <Text style={styles.addressNameBold}>
-                //       {userData?.fullName || "Patient Name"}
-                //     </Text>
-                //     <Text style={styles.addressTextNew}>
-                //       {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
-                //       {selectedLocation.address}
-                //       {selectedLocation.landmark && `, Near ${selectedLocation.landmark}`}
-                //     </Text>
-
-                //     <TouchableOpacity
-                //       style={styles.editAddressButtonNew}
-                //       onPress={handleViewAddress}
-                //     >
-                //       <Text style={styles.editAddressTextNew}>Edit Address</Text>
-                //     </TouchableOpacity>
-                //   </View>
-                // </View>
-
                 <View style={styles.addressCard}>
                   <View style={styles.addressHeader}>
                     <View style={styles.addressInfo}>

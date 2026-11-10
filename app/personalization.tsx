@@ -216,6 +216,35 @@ export default function PersonalizationScreen() {
           payload,
         );
         console.log("Employee update response:", response);
+
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+        const Medpayload = {
+          medicalHistoryId: 0,
+          patientId: patientId,
+          historyName: data.medicalConditions.join(","),
+          reactions: "",
+          status: "active",
+          onsetDate: formattedDate,
+          durationValue: 0,
+          duration: "",
+          notes: "",
+          appointmentId: 0,
+          isActive: true,
+          conditionType: "Chronic",
+          createdBy: patientId,
+          createdOn: formattedDate,
+          totalCount: 0,
+        };
+
+        const savedMedicalDataResponse = await axiosClient.post(
+          ApiRoutes.MedicalHistory.save,
+          Medpayload,
+        );
         let message = "Employee registration completed successfully";
         if (response?.id) {
           await setRegistrationCompleted(true);
