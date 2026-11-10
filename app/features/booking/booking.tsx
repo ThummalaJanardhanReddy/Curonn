@@ -868,6 +868,7 @@ export default function BookingScreen({
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
+    
     // Validate address, date, timeSlot as string errors
     if (!selectedLocation) {
       setErrors("Please select or add new address");
@@ -1058,6 +1059,7 @@ export default function BookingScreen({
     }
 
     try {
+      setLoading(true);
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log(
         "📤 Lab Razorpay Order Request:",
@@ -1088,6 +1090,8 @@ export default function BookingScreen({
         type: "error",
       });
       setShowToastLab(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1309,6 +1313,7 @@ export default function BookingScreen({
     }
 
     try {
+      setLoading(true);
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
       console.log(
         "📤 Lab Razorpay Order Request:",
@@ -1339,6 +1344,8 @@ export default function BookingScreen({
         type: "error",
       });
       setShowToastLab(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1704,13 +1711,6 @@ export default function BookingScreen({
     }
   };
 
-  // Medicine: date format DD/MM/YYYY
-  const formatDateMed = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
 
   // Medicine: build order payload for /api/medicine-orders/save-order
   const buildMedOrderPayload = (paymentData?: {
@@ -2058,6 +2058,7 @@ export default function BookingScreen({
     }
 
     try {
+      setLoading(true);
       const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${newRelationPatientId || patientId}`;
       console.log(
         "\uD83D\uDCE4 Razorpay Order Request:",
@@ -2088,6 +2089,8 @@ export default function BookingScreen({
         type: "error",
       });
       setShowToastMed(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2329,26 +2332,6 @@ export default function BookingScreen({
               <Text style={styles.sectionTitle}>Service Address</Text>
 
               {selectedLocation ? (
-                // <View style={styles.addressCard}>
-                //   <View style={styles.addressInfoNew}>
-                //     <Text style={styles.addressNameBold}>
-                //       {userData?.fullName || "Patient Name"}
-                //     </Text>
-                //     <Text style={styles.addressTextNew}>
-                //       {selectedLocation.houseNumber && `${selectedLocation.houseNumber}, `}
-                //       {selectedLocation.address}
-                //       {selectedLocation.landmark && `, Near ${selectedLocation.landmark}`}
-                //     </Text>
-
-                //     <TouchableOpacity
-                //       style={styles.editAddressButtonNew}
-                //       onPress={handleViewAddress}
-                //     >
-                //       <Text style={styles.editAddressTextNew}>Edit Address</Text>
-                //     </TouchableOpacity>
-                //   </View>
-                // </View>
-
                 <View style={styles.addressCard}>
                   <View style={styles.addressHeader}>
                     <View style={styles.addressInfo}>
@@ -2532,6 +2515,7 @@ export default function BookingScreen({
               title={`Confirm & Pay \u20B9${displayedTotal.toFixed(0)}`}
               onPress={handleBookNowMed}
               style={{ width: "100%" }}
+              disabled={loading}
             />
           </View>
 
@@ -2760,12 +2744,12 @@ export default function BookingScreen({
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Order Info </Text>
+            <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
             </TouchableOpacity>
@@ -3315,6 +3299,7 @@ export default function BookingScreen({
                 title={`Confirm & Pay \u20B9${totalAmount}`}
                 onPress={handleBookNowScan}
                 style={{ width: "100%" }}
+                disabled={loading}
               />
             </View>
           ) : type === "wellness" ? (
@@ -3323,6 +3308,7 @@ export default function BookingScreen({
                 title={`Confirm & Pay wellness \u20B9${totalAmount}`}
                 onPress={handleBookWellness}
                 style={{ width: "100%" }}
+               
               />
               {/* Select Patient Modal for Wellness */}
               <SelectPatientModal
@@ -3338,6 +3324,7 @@ export default function BookingScreen({
                 title={`Confirm & Pay \u20B9${totalAmount}`}
                 onPress={handleBookNowLab}
                 style={{ width: "100%" }}
+                disabled={loading}
               />
             </View>
           )}
@@ -3613,7 +3600,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(20),
+    // paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
     backgroundColor: "#fff",
     borderBottomWidth: 1,

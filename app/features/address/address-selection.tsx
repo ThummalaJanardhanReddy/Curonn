@@ -14,7 +14,10 @@ import {
 import { Button } from "react-native-paper";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "@/app/shared/components/PrimaryButton";
 import Toast from "@/app/shared/components/Toast";
@@ -63,28 +66,32 @@ export default function AddressSelection({
   const [loading, setLoading] = useState(false);
   const [defaultAddressId, setDefaultAddressId] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
+    null,
+  );
 
   const [toastMessage, setToastMessage] = useState({
     title: "",
     subtitle: "",
     color: "#4BB543", // default to success green
   });
-  const handleSelectAddress = (addressId: number) => {
-    setSelectedAddressId(addressId);
-    onSelect(addressId);
-  };
+
   useEffect(() => {
     // Set default addressId when addresses are fetched
-    const defaultAddr = addresses.find(addr => addr.isDefault);
-    setDefaultAddressId(defaultAddr ? defaultAddr.addressId : null);
+    const defaultAddr =
+      addresses?.length === 1
+        ? addresses[0]
+        : addresses?.find((addr) => addr.isDefault);
+    const addressId = defaultAddr?.addressId ?? null;
+    setDefaultAddressId(addressId);
+    setSelectedAddressId(addressId);
   }, [addresses]);
   const fetchAddresses = async () => {
     try {
       setLoading(true);
 
       const responcedata: any = await axiosClient.get(
-        ApiRoutes.Address.getAddressByPatientId(patientId)
+        ApiRoutes.Address.getAddressByPatientId(patientId),
       );
 
       console.log("Fetched addresses:", responcedata);
@@ -97,10 +104,12 @@ export default function AddressSelection({
           setSelectedAddressId(selectedAddressId);
         } else {
           // ⭐ Priority 2: default address
-            const defaultAddr = addressList.find((a: SavedAddress) => a.isDefault);
-            if (defaultAddr) {
-              setSelectedAddressId(defaultAddr.addressId);
-            }
+          const defaultAddr = addressList.find(
+            (a: SavedAddress) => a.isDefault,
+          );
+          if (defaultAddr) {
+            setSelectedAddressId(defaultAddr.addressId);
+          }
         }
       }
     } catch (error) {
@@ -110,15 +119,10 @@ export default function AddressSelection({
     }
   };
 
-  const handleEditAddress = (addressId: number) => {
-    onClose(); // Close the current modal
-    router.push({
-      pathname: "/features/location/location-selection",
-      params: { addressId }
-    });
-  };
-
   const handleBack = () => {
+    if(addresses.length === 1) {
+      onSelect(addresses[0].addressId);
+    }
     onClose();
   };
   // 🔥 Auto fetch when modal opens
@@ -137,12 +141,12 @@ export default function AddressSelection({
       console.log("Set default response:", response);
       if (response.isSuccess === true) {
         setDefaultAddressId(addressId);
-        setAddresses(prev =>
-          prev.map(addr =>
+        setAddresses((prev) =>
+          prev.map((addr) =>
             addr.addressId === addressId
               ? { ...addr, isDefault: true }
-              : { ...addr, isDefault: false }
-          )
+              : { ...addr, isDefault: false },
+          ),
         );
         // Match the radio button's behavior — setting an address as default
         // also selects it for the current flow.
@@ -168,15 +172,18 @@ export default function AddressSelection({
       });
       setShowToast(true);
     }
-  }
-
+  };
 
   return (
-    <Modal visible={visible} animationType="slide" >
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-
+    <Modal visible={visible} animationType="slide">
+      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         <View style={styles.container}>
-          <View style={[styles.header, { paddingTop: insets.top + getResponsiveSpacing(10) }]}>
+          <View
+            style={[
+              styles.header,
+              { paddingTop: insets.top + getResponsiveSpacing(10) },
+            ]}
+          >
             <Text style={styles.headerTitle}>All Address</Text>
             <View style={styles.headerSpacer} />
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -186,144 +193,229 @@ export default function AddressSelection({
 
           {loading ? (
             <ActivityIndicator size="large" />
-          ) : (<>
-            <FlatList
-              data={addresses}
-              keyExtractor={item => item.addressId.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.card}>
-
-                  {/* Address details */}
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <RadioButton.Android
-                            value={item.addressId.toString()}
-                            status={selectedAddressId === item.addressId ? "checked" : "unchecked"}
-                            onPress={() => {
-                              setSelectedAddressId(item.addressId);
-                              onSelect(item.addressId);
+          ) : (
+            <>
+              <FlatList
+                data={addresses}
+                keyExtractor={(item) => item.addressId.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.card}>
+                    {/* Address details */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginTop: 8,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
                             }}
-                            color={colors.primary}
-                            uncheckedColor={colors.primary}
-                          />
+                          >
+                            <RadioButton.Android
+                              value={item.addressId.toString()}
+                              status={
+                                selectedAddressId === item.addressId
+                                  ? "checked"
+                                  : "unchecked"
+                              }
+                              onPress={() => {
+                                setSelectedAddressId(item.addressId);
+                                onSelect(item.addressId);
+                              }}
+                              color={colors.primary}
+                              uncheckedColor={colors.primary}
+                            />
 
-                          <Text style={styles.nickname}>
-                            {item.addressNickname?.toUpperCase()}
-                          </Text>
+                            <Text style={styles.nickname}>
+                              {item.addressNickname?.toUpperCase()}
+                            </Text>
+                          </View>
+
+                          {item.isDefault ? (
+                            <Text
+                              style={{
+                                color: "#4BB543",
+                                fontFamily: fonts.medium,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              Default
+                            </Text>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => {
+                                handlesetdefault(item.addressId);
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: colors.primary,
+                                  fontWeight: "bold",
+                                  fontFamily: fonts.medium,
+                                }}
+                              >
+                                Set as Default
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
 
-                        {item.isDefault ? (
-                          <Text style={{ color: "#4BB543", fontFamily: fonts.medium, fontWeight: "bold" }}>Default</Text>
-                        ) : (
-                          <TouchableOpacity
-                            onPress={ () => {
-                              handlesetdefault(item.addressId);
-                            }}>
-                          
-                            <Text style={{ color: colors.primary, fontWeight: "bold", fontFamily: fonts.medium, }}>Set as Default</Text>
-                          </TouchableOpacity>
+                        <Text style={styles.address}>
+                          H.No: {item.hNo}, {item.address}
+                        </Text>
+                        {item.landMark && item.landMark.trim() !== "" && (
+                          <Text style={[styles.address, { color: "#888" }]}>
+                            Landmark: {item.landMark}
+                          </Text>
                         )}
                       </View>
-
-                      <Text style={styles.address}>
-                        H.No: {item.hNo}, {item.address}
-                      </Text>
-                      {item.landMark && item.landMark.trim() !== "" && (
-                        <Text style={[styles.address, { color: "#888" }]}>
-                          Landmark: {item.landMark}
-                        </Text>
-                      )}
                     </View>
-                  </View>
-                  {/* Select Address button */}
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 7, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 }}>
-                    <View style={{ flexDirection: "row", gap: 10 }}>
-                      <TouchableOpacity style={styles.editbutton}
-                        onPress={() => onEdit(item.addressId)}>
-                        <Text style={{ color: colors.primary, paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.deletebutton}
-                        onPress={async () => {
-                          try {
-                            // Use query params as per Swagger
-                            const url = `${ApiRoutes.Address.deleteaddress}?addressId=${item.addressId}&patientId=${item.patientId}`;
-                            console.log("Delete address URL:", url);
-                            const response: any = await axiosClient.post(url, {});
-                            console.log("Delete address response:", response);
-                            if (response.isSuccess === true) {
-                              setAddresses(prev => prev.filter(addr => addr.addressId !== item.addressId));
-                              setToastMessage({
-                                title: "Success",
-                                subtitle: response.message || "Address deleted successfully.",
-                                color: "#4BB543",
-                              });
-                              setShowToast(true);
-                              // Notify parent to refresh addresses (e.g. Booking screen)
-                              if (typeof onAddressChanged === "function") {
-                                onAddressChanged();
+                    {/* Select Address button */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginTop: 7,
+                        borderTopWidth: 1,
+                        borderTopColor: "#eee",
+                        paddingTop: 10,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", gap: 10 }}>
+                        <TouchableOpacity
+                          style={styles.editbutton}
+                          onPress={() => onEdit(item.addressId)}
+                        >
+                          <Text
+                            style={{
+                              color: colors.primary,
+                              paddingTop: 3,
+                              fontSize: 11,
+                              fontFamily: fonts.regular,
+                            }}
+                          >
+                            Edit
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.deletebutton}
+                          onPress={async () => {
+                            try {
+                              // Use query params as per Swagger
+                              const url = `${ApiRoutes.Address.deleteaddress}?addressId=${item.addressId}&patientId=${item.patientId}`;
+                              console.log("Delete address URL:", url);
+                              const response: any = await axiosClient.post(
+                                url,
+                                {},
+                              );
+                              console.log("Delete address response:", response);
+                              if (response.isSuccess === true) {
+                                const updatedAddresses = addresses.filter(
+                                  (addr) => addr.addressId !== item.addressId,
+                                );
+
+                                setAddresses(updatedAddresses);
+
+                                if (updatedAddresses.length === 1) {
+                                  await handlesetdefault(
+                                    updatedAddresses[0].addressId,
+                                  );
+                                  setSelectedAddressId(
+                                    updatedAddresses[0].addressId,
+                                  );
+                                }
+                                setToastMessage({
+                                  title: "Success",
+                                  subtitle:
+                                    response.message ||
+                                    "Address deleted successfully.",
+                                  color: "#4BB543",
+                                });
+                                setShowToast(true);
+                                // Notify parent to refresh addresses (e.g. Booking screen)
+                                if (typeof onAddressChanged === "function") {
+                                  onAddressChanged();
+                                }
+                                setTimeout(() => setShowToast(false), 2000);
+                              } else {
+                                setToastMessage({
+                                  title: "Error",
+                                  subtitle:
+                                    response.message ||
+                                    "Failed to delete address.",
+                                  color: "#FF3333",
+                                });
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
                               }
-                              setTimeout(() => setShowToast(false), 2000);
-                            } else {
+                            } catch (error) {
                               setToastMessage({
                                 title: "Error",
-                                subtitle: response.message || "Failed to delete address.",
+                                subtitle: "Failed to delete address.",
                                 color: "#FF3333",
                               });
                               setShowToast(true);
-                              setTimeout(() => setShowToast(false), 2000);
                             }
-                          } catch (error) {
-                            setToastMessage({
-                              title: "Error",
-                              subtitle: "Failed to delete address.",
-                              color: "#FF3333",
-                            });
-                            setShowToast(true);
-                          }
-                        }}>
-                        <Text style={{ color: "#ff0000", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#ff0000",
+                              paddingTop: 3,
+                              fontSize: 11,
+                              fontFamily: fonts.regular,
+                            }}
+                          >
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
 
-
-                    {/* <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
+                      {/* <TouchableOpacity style={styles.selectbutton} onPress={() => onSelect(item.addressId)}>
                       <Text style={{ color: "#fff", paddingTop: 3, fontSize: 11, fontFamily: fonts.regular }}>Select this address</Text>
                     </TouchableOpacity> */}
 
-                    {/* <PrimaryButton
+                      {/* <PrimaryButton
                       title="Select"
                       onPress={() => onSelect(item.addressId)}
                       style={styles.buttonLabel}
                     /> */}
+                    </View>
                   </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={{ alignItems: "center", marginTop: 40 }}>
-                  <Text>No saved address found</Text>
-
-                </View>
-              }
-            />
-            <View style={styles.footer}>
-              <PrimaryButton
-                title={` + Add New Address`}
-                style={{ width: "100%" }}
-                onPress={onAddNew}
+                )}
+                ListEmptyComponent={
+                  <View style={{ alignItems: "center", marginTop: 40 }}>
+                    <Text>No saved address found</Text>
+                  </View>
+                }
               />
-
-
-            </View>
-          </>)}
+              <View style={styles.footer}>
+                <PrimaryButton
+                  title={` + Add New Address`}
+                  style={{ width: "100%" }}
+                  onPress={onAddNew}
+                />
+              </View>
+            </>
+          )}
         </View>
         {/* Toast message */}
         <Toast
           visible={showToast}
           title={toastMessage.title}
           subtitle={toastMessage.subtitle}
-          color={toastMessage.color} // Pass the color to your Toast component
           onHide={() => setShowToast(false)}
           duration={3000}
         />
@@ -358,9 +450,12 @@ const styles = StyleSheet.create({
   nickname: {
     fontWeight: "700",
     marginBottom: 4,
-    fontWeight: 'bold'
   },
-  address: { fontFamily: fonts.medium, flexWrap: 'wrap', color: "#555" },
+  address: {
+    fontFamily: fonts.medium,
+    flexWrap: "wrap",
+    color: colors.primaryText,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -379,20 +474,19 @@ const styles = StyleSheet.create({
   backIcon: {
     width: 24,
     height: 24,
-    tintColor: "#333",
+    tintColor: colors.primaryText,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
-    fontWeight: "700",
+    color: colors.primaryText,
   },
   headerSpacer: {
     width: 40,
   },
   buttonLabel: {
     fontSize: 11,
-    width: 'auto',
+    width: "auto",
     paddingHorizontal: 12,
     paddingVertical: 3,
     fontFamily: fonts.medium,
