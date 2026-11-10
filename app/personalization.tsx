@@ -365,9 +365,8 @@ export default function PersonalizationScreen() {
               style={styles.textInput}
               contentStyle={{
                 fontSize: 28,
-                height: 75,
                 textAlign: "left",
-                justifyContent: "flex-start",
+                textAlignVertical: "center",
                 paddingHorizontal: 16,
               }}
               keyboardType="numeric"
@@ -436,9 +435,8 @@ export default function PersonalizationScreen() {
                 theme={{ roundness: 17 }}
                 contentStyle={{
                   fontSize: 28,
-                  height: 75,
                   textAlign: "left",
-                  justifyContent: "flex-start",
+                  textAlignVertical: "center",
                   paddingHorizontal: 16,
                 }}
                 keyboardType="numeric"
@@ -540,9 +538,8 @@ export default function PersonalizationScreen() {
                 style={styles.heightWeightInput}
                 contentStyle={{
                   fontSize: 28,
-                  height: 75,
                   textAlign: "left",
-                  justifyContent: "flex-start",
+                  textAlignVertical: "center",
                   paddingHorizontal: 16,
                 }}
                 keyboardType="numeric"
@@ -959,7 +956,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginTop: 40,
     borderRadius: 16,
-    height: 75,
+  
     textAlign: "left",
     width: "75%",
     alignSelf: "center",
