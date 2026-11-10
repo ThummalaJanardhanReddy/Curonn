@@ -956,7 +956,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginTop: 40,
     borderRadius: 16,
-  
+    height: 75,
+    fontSize: 28,
     textAlign: "left",
     width: "75%",
     alignSelf: "center",
@@ -1057,6 +1058,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     height: 75,
+    fontSize: 28,
     textAlign: "left",
     fontFamily: fonts.regular,
     // maxWidth: '100%',
