@@ -7,8 +7,8 @@ import {
   Modal,
   StyleSheet,
   Image,
-  TextInput,
 } from "react-native";
+import TextInput from "../FormTextInput";
 import NativeDatePickerModal from "../NativeDatePickerModal";
 import dayjs from "dayjs";
 import { Ionicons } from "@expo/vector-icons";

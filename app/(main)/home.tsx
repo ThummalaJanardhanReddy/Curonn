@@ -25,7 +25,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -38,6 +37,7 @@ import {
 } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
+import TextInput from "../shared/components/FormTextInput";
 import commonStyles, {
   colors,
   customTagsStyles,

@@ -22,13 +22,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { images } from "../../../assets";
 import CommonHeader from "../../shared/components/CommonHeader";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import TextInput from "../../shared/components/FormTextInput";
 import BookingScreen from "../booking/booking";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";

@@ -13,7 +13,6 @@ import {
   StatusBar,
   Text,
   Image,
-  TextInput,
   TouchableOpacity,
   View,
   RefreshControl,
@@ -22,6 +21,7 @@ import {
 import { ActivityIndicator } from "react-native";
 import { Button, Card, Chip } from "react-native-paper";
 import CommonHeader from "../../shared/components/CommonHeader";
+import TextInput from "../../shared/components/FormTextInput";
 import commonStyles, {
   colors,
   statusColors,

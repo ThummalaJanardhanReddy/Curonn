@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import {
   View,
-  TextInput,
   FlatList,
   Text,
   StyleSheet,
@@ -18,6 +17,7 @@ import {
   BackHandler,
   StatusBar,
 } from "react-native";
+import TextInput from "@/app/shared/components/FormTextInput";
 import {
   KeyboardAvoidingView,
   KeyboardStickyView,

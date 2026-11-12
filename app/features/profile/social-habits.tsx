@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   Alert,
@@ -14,6 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
+import TextInput from "../../shared/components/FormTextInput";
 import { colors } from "../../shared/styles/commonStyles";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {
