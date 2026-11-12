@@ -376,7 +376,7 @@ export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: Dru
       translucent={false}
       backgroundColor="#ffffff"
     /> */}
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <View style={{ flex: 1, backgroundColor: colors.white }}>
       <View style={styles.container}>
 
         {/* Header */}
@@ -711,7 +711,7 @@ export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: Dru
           duration={3000}
         />
       </View>
-    </SafeAreaView>
+    </View>
   </>);
 }
 

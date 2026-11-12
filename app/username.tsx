@@ -78,7 +78,7 @@ export default function UsernameScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Hi {apiUsername}.</Text>
+          <Text style={styles.title}>Hi {apiUsername}</Text>
           <Text style={styles.subtitle}>
             Answer a few questions{"\n"}to start personalising your{"\n"}
             Journey.

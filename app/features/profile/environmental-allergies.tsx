@@ -360,7 +360,7 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
       style="light"
       animated
     /> */}
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -662,7 +662,7 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
           duration={3000}
         />
       </View>
-    </SafeAreaView>
+    </View>
   </>);
 }
 

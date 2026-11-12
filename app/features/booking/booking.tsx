@@ -2224,7 +2224,7 @@ export default function BookingScreen({
                             : "Select Relation"}
                         </Text>
                         <Image
-                          source={images.icons.edit as any}
+                          source={images.arrowdown as any}
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
@@ -2306,7 +2306,7 @@ export default function BookingScreen({
                           {gender || "Select"}
                         </Text>
                         <Image
-                          source={images.icons.edit as any}
+                          source={images.arrowdown as any}
                           style={styles.dropdownIcon}
                         />
                       </TouchableOpacity>
@@ -3070,7 +3070,7 @@ export default function BookingScreen({
                                 : "Select Relation"}
                             </Text>
                             <Image
-                              source={images.icons.edit as any}
+                              source= {images.arrowdown as any}
                               style={styles.dropdownIcon}
                             />
                           </TouchableOpacity>
@@ -3155,7 +3155,7 @@ export default function BookingScreen({
                               {gender || "Select"}
                             </Text>
                             <Image
-                              source={images.icons.edit as any}
+                              source={images.arrowdown as any}
                               style={styles.dropdownIcon}
                             />
                           </TouchableOpacity>

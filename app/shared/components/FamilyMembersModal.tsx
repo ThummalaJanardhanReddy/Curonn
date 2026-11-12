@@ -82,7 +82,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
   const [formData, setFormData] = useState({
     name: '',
     relation: '',
-    gender: 'male',
+    gender: '',
     age: ''
   });
 
@@ -125,7 +125,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     setFormData({
       name: '',
       relation: '',
-      gender: 'male',
+      gender: '',
       age: ''
     });
     setEditingMember(null);
@@ -140,7 +140,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     setFormData({
       name: '',
       relation: '',
-      gender: 'male',
+      gender: '',
       age: ''
     });
   };
@@ -642,8 +642,8 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsivePadding(20),
     paddingHorizontal: getResponsivePadding(25),
     // paddingBottom: getResponsivePadding(12),
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#000000',
+    borderBottomWidth: 0.8,
+    borderBottomColor: colors.border,
     backgroundColor: '#fff',
   },
   modalTitle: {

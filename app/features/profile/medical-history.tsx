@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -10,23 +10,26 @@ import {
   View,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { images } from '../../../assets';
-import BackButton from '../../shared/components/BackButton';
-import PrimaryButton from '../../shared/components/PrimaryButton';
-import { colors } from '../../shared/styles/commonStyles';
-import { fonts, fontStyles } from '@/app/shared/styles/fonts';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { images } from "../../../assets";
+import BackButton from "../../shared/components/BackButton";
+import PrimaryButton from "../../shared/components/PrimaryButton";
+import { colors } from "../../shared/styles/commonStyles";
+import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {
   getResponsiveFontSize,
   getResponsiveImageSize,
   getResponsiveSpacing,
-} from '../../shared/utils/responsive';
-import { useUser } from '../../shared/context/UserContext';
-import axiosClient from '@/src/api/axiosClient';
-import ApiRoutes from '@/src/api/employee/employee';
-import Toast from '@/app/shared/components/Toast';
-import { useUserStore } from '@/src/store/UserStore';
+} from "../../shared/utils/responsive";
+import { useUser } from "../../shared/context/UserContext";
+import axiosClient from "@/src/api/axiosClient";
+import ApiRoutes from "@/src/api/employee/employee";
+import Toast from "@/app/shared/components/Toast";
+import { useUserStore } from "@/src/store/UserStore";
 
 interface MedicalCondition {
   medicalHistoryId: number;
@@ -41,49 +44,60 @@ interface MedicalHistoryScreenProps {
   onDataStatusChange?: (hasData: boolean) => void;
 }
 
-export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStatusChange }: MedicalHistoryScreenProps) {
+export default function MedicalHistoryScreen({
+  onClose,
+  showAddModal,
+  onDataStatusChange,
+}: MedicalHistoryScreenProps) {
   const insets = useSafeAreaInsets();
   const { userData } = useUser();
   const [conditions, setConditions] = useState<MedicalCondition[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [newCondition, setNewCondition] = useState({
-    condition: '',
-    status: 'active',
+    condition: "",
+    status: "active",
   });
-  const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string; type: "success" | "error" }>({ title: "", subtitle: "", type: "success" });
+  const [toastMessage, setToastMessage] = useState<{
+    title: string;
+    subtitle: string;
+    type: "success" | "error";
+  }>({ title: "", subtitle: "", type: "success" });
   const [showToast, setShowToast] = useState(false);
 
   // Dropdown for master data (categoryId=13)
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [masterOptions, setMasterOptions] = useState<Array<{ id: number | string; name: string }>>([]);
+  const [masterOptions, setMasterOptions] = useState<
+    Array<{ id: number | string; name: string }>
+  >([]);
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [dropdownSearch, setDropdownSearch] = useState('');
+  const [dropdownSearch, setDropdownSearch] = useState("");
 
   const filteredMasterOptions = React.useMemo(() => {
+    console.log("Filtering master options with search:", masterOptions);
     if (!dropdownSearch) return masterOptions;
-    return masterOptions.filter(item =>
-      item.name.toLowerCase().includes(dropdownSearch.toLowerCase())
+    return masterOptions.filter((item) =>
+      item.name.toLowerCase().includes(dropdownSearch.toLowerCase()),
     );
   }, [masterOptions, dropdownSearch]);
 
-    const { restoreUserData, user } = useUserStore();
+  const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
-  
-    const patientId = Number(userData?.e_id || user?.eId);
+
+  const patientId = Number(userData?.e_id || user?.eId);
   const fetchMedicalHistory = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
     try {
       const today = new Date();
       const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
       const formattedDate = `${yyyy}-${mm}-${dd}`;
 
       const payload = {
@@ -96,9 +110,18 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         groupName: "",
       };
 
-      console.log('📤 Medical History Request Payload:', JSON.stringify(payload, null, 2));
-      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.getAll, payload);
-      console.log('📥 Medical History Response:', JSON.stringify(response, null, 2));
+      console.log(
+        "📤 Medical History Request Payload:",
+        JSON.stringify(payload, null, 2),
+      );
+      const response: any = await axiosClient.post(
+        ApiRoutes.MedicalHistory.getAll,
+        payload,
+      );
+      console.log(
+        "📥 Medical History Response:",
+        JSON.stringify(response, null, 2),
+      );
 
       let list: MedicalCondition[] = [];
 
@@ -117,7 +140,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         onDataStatusChange(list.length > 0);
       }
     } catch (error) {
-      console.error('Fetch medical history error:', error);
+      console.error("Fetch medical history error:", error);
     } finally {
       setLoading(false);
     }
@@ -139,24 +162,26 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
   // Prefetch master options when Add modal opens
   useEffect(() => {
     if (modalVisible) {
-      fetchMasterOptions('');
+      fetchMasterOptions("");
     }
   }, [modalVisible]);
 
-  const fetchMasterOptions = useCallback(async (q: string = '') => {
+  const fetchMasterOptions = useCallback(async (q: string = "") => {
     try {
       setDropdownLoading(true);
-      const url = `${ApiRoutes.Master.getmasterdata(13)}&search=${encodeURIComponent(q || '')}`;
-      console.log('[MedicalHistory] fetching master options URL:', url);
+      const url = `${ApiRoutes.Master.getmasterdata(13)}&search=${encodeURIComponent(q || "")}`;
+      console.log("[MedicalHistory] fetching master options URL:", url);
       const response: any = await axiosClient.get(url);
 
       let items: any[] = [];
       if (Array.isArray(response)) items = response;
       else if (Array.isArray(response?.data)) items = response.data;
       else if (Array.isArray(response?.data?.data)) items = response.data.data;
-      else if (Array.isArray(response?.data?.result)) items = response.data.result;
+      else if (Array.isArray(response?.data?.result))
+        items = response.data.result;
       else if (Array.isArray(response?.items)) items = response.items;
-      else if (response?.isSuccess && Array.isArray(response.data)) items = response.data;
+      else if (response?.isSuccess && Array.isArray(response.data))
+        items = response.data;
 
       const mapped = (items || []).map((it: any) => ({
         id: it.masterDataId ?? it.id ?? it.value ?? Math.random(),
@@ -164,7 +189,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
       }));
       setMasterOptions(mapped);
     } catch (err) {
-      console.error('Failed to fetch master options:', err);
+      console.error("Failed to fetch master options:", err);
       setMasterOptions([]);
     } finally {
       setDropdownLoading(false);
@@ -173,11 +198,19 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
 
   // Merge master options and existing conditions for search modal suggestions
   const suggestions = React.useMemo(() => {
-    const fromMaster = masterOptions.map((m) => ({ id: m.id, name: m.name, status: undefined as string | undefined }));
-    const fromHistory = (conditions || []).map((c) => ({ id: `h-${c.medicalHistoryId}`, name: c.historyName, status: c.status }));
+    const fromMaster = masterOptions.map((m) => ({
+      id: m.id,
+      name: m.name,
+      status: undefined as string | undefined,
+    }));
+    const fromHistory = (conditions || []).map((c) => ({
+      id: `h-${c.medicalHistoryId}`,
+      name: c.historyName,
+      status: c.status,
+    }));
     const map = new Map<string, { id: any; name: string; status?: string }>();
     [...fromMaster, ...fromHistory].forEach((it) => {
-      const key = (it.name || '').toString().toLowerCase().trim();
+      const key = (it.name || "").toString().toLowerCase().trim();
       if (!map.has(key)) map.set(key, it);
       else {
         const prev = map.get(key)!;
@@ -185,7 +218,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
       }
     });
     const arr = Array.from(map.values());
-    const q = (searchQuery || '').toLowerCase();
+    const q = (searchQuery || "").toLowerCase();
     if (!q) return arr;
     return arr.filter((it) => it.name.toLowerCase().includes(q));
   }, [masterOptions, conditions, searchQuery]);
@@ -203,30 +236,38 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
   };
 
   const handleOpenSearchModal = () => {
-    setSearchQuery('');
+    setSearchQuery("");
     setSearchModalVisible(true);
     setDropdownVisible(false);
-    fetchMasterOptions('');
+    fetchMasterOptions("");
   };
 
   const handleCloseSearchModal = () => {
     setSearchModalVisible(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
-  const handleSelectCondition = (item: { id: any; name: string; status?: string }) => {
-    setNewCondition({ ...newCondition, condition: item.name, status: item.status ?? newCondition.status });
+  const handleSelectCondition = (item: {
+    id: any;
+    name: string;
+    status?: string;
+  }) => {
+    setNewCondition({
+      ...newCondition,
+      condition: item.name,
+      status: item.status ?? newCondition.status,
+    });
     handleCloseSearchModal();
   };
 
   const handleCloseModal = () => {
     setModalVisible(false);
     setDropdownVisible(false);
-    setSearchQuery('');
-    setDropdownSearch('');
+    setSearchQuery("");
+    setDropdownSearch("");
     setNewCondition({
-      condition: '',
-      status: 'active',
+      condition: "",
+      status: "active",
     });
   };
 
@@ -235,11 +276,16 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
 
     // Duplicate check
     const isDuplicate = conditions.some(
-      (c) => (c.historyName || '').toLowerCase().trim() === newCondition.condition.toLowerCase().trim()
+      (c) =>
+        (c.historyName || "").toLowerCase().trim() ===
+        newCondition.condition.toLowerCase().trim(),
     );
 
     if (isDuplicate) {
-      Alert.alert('Record already exists', 'This medical condition is already in your history.');
+      Alert.alert(
+        "Record already exists",
+        "This medical condition is already in your history.",
+      );
       return;
     }
 
@@ -247,8 +293,8 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
     try {
       const today = new Date();
       const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
       const formattedDate = `${yyyy}-${mm}-${dd}`;
 
       const payload = {
@@ -269,26 +315,38 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         totalCount: 0,
       };
 
-      console.log('📤 Save Medical History Request:', JSON.stringify(payload, null, 2));
-      const response: any = await axiosClient.post(ApiRoutes.MedicalHistory.save, payload);
-      console.log('📥 Save Medical History Response:', JSON.stringify(response, null, 2));
+      console.log(
+        "📤 Save Medical History Request:",
+        JSON.stringify(payload, null, 2),
+      );
+      const response: any = await axiosClient.post(
+        ApiRoutes.MedicalHistory.save,
+        payload,
+      );
+      console.log(
+        "📥 Save Medical History Response:",
+        JSON.stringify(response, null, 2),
+      );
 
       if (response) {
         handleCloseModal();
         setToastMessage({
           title: "Condition Saved Successfully",
           subtitle: response?.data?.message || "Saved successfully!",
-          type: "success"
+          type: "success",
         });
         setShowToast(true);
         await fetchMedicalHistory();
       }
     } catch (error: any) {
-      console.error('Save medical history error:', error);
+      console.error("Save medical history error:", error);
       setToastMessage({
         title: "Save Failed",
-        subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-        type: "error"
+        subtitle:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong",
+        type: "error",
       });
       setShowToast(true);
     } finally {
@@ -300,52 +358,66 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
     if (!patientId) return;
 
     Alert.alert(
-      'Delete Record',
-      'Are you sure you want to delete this record?',
+      "Delete Record",
+      "Are you sure you want to delete this record?",
       [
         {
-          text: 'No',
-          style: 'cancel',
+          text: "No",
+          style: "cancel",
         },
         {
-          text: 'Yes',
+          text: "Yes",
           onPress: async () => {
             try {
-              console.log(`📤 Deleting Medical History item: ${id}, deletedBy: ${patientId!}`);
-              const response: any = await axiosClient.delete(ApiRoutes.MedicalHistory.delete(id, patientId!));
-              console.log('📥 Delete Medical History Response:', JSON.stringify(response, null, 2));
+              console.log(
+                `📤 Deleting Medical History item: ${id}, deletedBy: ${patientId!}`,
+              );
+              const response: any = await axiosClient.delete(
+                ApiRoutes.MedicalHistory.delete(id, patientId!),
+              );
+              console.log(
+                "📥 Delete Medical History Response:",
+                JSON.stringify(response, null, 2),
+              );
 
               if (response || response === "OK") {
                 setToastMessage({
                   title: "Condition Deleted Successfully",
                   subtitle: "Deleted successfully!",
-                  type: "success"
+                  type: "success",
                 });
                 setShowToast(true);
                 await fetchMedicalHistory();
               }
             } catch (error: any) {
-              console.error('Delete medical history error:', error);
+              console.error("Delete medical history error:", error);
               setToastMessage({
                 title: "Delete Failed",
-                subtitle: error?.response?.data?.message || error?.message || "Something went wrong",
-                type: "error"
+                subtitle:
+                  error?.response?.data?.message ||
+                  error?.message ||
+                  "Something went wrong",
+                type: "error",
               });
               setShowToast(true);
             }
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return colors.error;
-      case 'resolved': return colors.success;
-      case 'chronic': return colors.warning;
-      default: return colors.textSecondary;
+      case "active":
+        return colors.error;
+      case "resolved":
+        return colors.success;
+      case "chronic":
+        return colors.warning;
+      default:
+        return colors.textSecondary;
     }
   };
 
@@ -355,25 +427,35 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         <View style={styles.conditionContent}>
           <Text style={styles.conditionName}>{item.historyName}</Text>
           <View style={styles.statusContainer}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A'}
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(item.status) },
+              ]}
+            >
+              {item.status
+                ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
+                : "N/A"}
             </Text>
           </View>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => item.medicalHistoryId && handleDeleteCondition(item.medicalHistoryId)}
+          onPress={() =>
+            item.medicalHistoryId &&
+            handleDeleteCondition(item.medicalHistoryId)
+          }
         >
           {/* <Image source={images.icons.close} style={styles.deleteIcon} /> */}
           <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    []
+    [],
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -413,7 +495,10 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
             </View>
           ) : (
             conditions.map((condition) => (
-              <View key={condition.medicalHistoryId} style={styles.conditionCardWrapper}>
+              <View
+                key={condition.medicalHistoryId}
+                style={styles.conditionCardWrapper}
+              >
                 {renderConditionCard({ item: condition })}
               </View>
             ))
@@ -454,13 +539,13 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
                     onPress={() => setDropdownVisible(!dropdownVisible)}
                   >
                     <Text style={styles.dropdownText}>
-                      {newCondition.condition || 'Select'}
+                      {newCondition.condition || "Select"}
                     </Text>
                     <Text style={styles.dropdownIcon}>▼</Text>
                   </TouchableOpacity>
 
                   {/* Dropdown Options */}
-                  {dropdownVisible && (
+                  {/* {dropdownVisible && (
                     <>
                       <TouchableOpacity
                         style={styles.dropdownBackdrop}
@@ -475,34 +560,142 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
                           value={dropdownSearch}
                           onChangeText={setDropdownSearch}
                         />
-                        <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                        <ScrollView
+                          style={{ flexShrink: 1, maxHeight: getResponsiveSpacing(200) }}
+                          nestedScrollEnabled={true}
+                          keyboardShouldPersistTaps="handled"
+                          showsVerticalScrollIndicator={false}
+                        >
                           {dropdownLoading ? (
-                            <View style={{ padding: getResponsiveSpacing(12), alignItems: 'center' }}>
-                              <ActivityIndicator size="small" color={colors.primary} />
+                            <View
+                              style={{
+                                padding: getResponsiveSpacing(12),
+                                alignItems: "center",
+                              }}
+                            >
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                              />
                             </View>
-                          ) : filteredMasterOptions && filteredMasterOptions.length > 0 ? (
+                          ) : filteredMasterOptions &&
+                            filteredMasterOptions.length > 0 ? (
                             filteredMasterOptions.map((item) => (
                               <TouchableOpacity
                                 key={String(item.id)}
                                 style={styles.dropdownOption}
                                 onPress={() => {
-                                  setNewCondition({ ...newCondition, condition: item.name });
+                                  setNewCondition({
+                                    ...newCondition,
+                                    condition: item.name,
+                                  });
                                   setDropdownVisible(false);
-                                  setDropdownSearch('');
+                                  setDropdownSearch("");
                                 }}
                               >
-                                <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                                <Text style={styles.dropdownOptionText}>
+                                  {item.name}
+                                </Text>
                               </TouchableOpacity>
                             ))
                           ) : (
                             <View style={styles.noResultsContainer}>
-                              <Text style={styles.noResultsText}>No options</Text>
+                              <Text style={styles.noResultsText}>
+                                No options
+                              </Text>
                             </View>
                           )}
                         </ScrollView>
                       </View>
                     </>
-                  )}
+                  )} */}
+
+                  {/* Dropdown Options */}
+                  {/* {dropdownVisible && ( */}
+                    <Modal
+                      visible={dropdownVisible}
+                      animationType="fade"
+                      transparent={true}
+                      onRequestClose={() => {
+                        setDropdownVisible(false);
+                        setDropdownSearch("");
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={styles.dropdownModalOverlay}
+                        onPress={() => {
+                          setDropdownVisible(false);
+                          setDropdownSearch("");
+                        }}
+                        activeOpacity={1}
+                      >
+
+                      <View style={styles.dropdownModalContainer}>
+                        {/* Search Input */}
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search condition..."
+                          placeholderTextColor="#999"
+                          value={dropdownSearch}
+                          onChangeText={setDropdownSearch}
+                          returnKeyType="search"
+                        />
+
+                        {/* Scrollable Options */}
+                        <ScrollView
+                          style={{
+                            maxHeight: getResponsiveSpacing(200),
+                            flexGrow: 0,
+                          }}
+                          nestedScrollEnabled
+                          keyboardShouldPersistTaps="handled"
+                          showsVerticalScrollIndicator
+                        >
+                          {dropdownLoading ? (
+                            <View
+                              style={{
+                                padding: getResponsiveSpacing(12),
+                                alignItems: "center",
+                              }}
+                            >
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                              />
+                            </View>
+                          ) : filteredMasterOptions?.length > 0 ? (
+                            filteredMasterOptions.map((item) => (
+                              <TouchableOpacity
+                                key={String(item.id)}
+                                style={styles.dropdownOption}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                  setNewCondition((prev) => ({
+                                    ...prev,
+                                    condition: item.name,
+                                  }));
+
+                                  setDropdownVisible(false);
+                                  setDropdownSearch("");
+                                }}
+                              >
+                                <Text style={styles.dropdownOptionText}>
+                                  {item.name}
+                                </Text>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <View style={styles.noResultsContainer}>
+                              <Text style={styles.noResultsText}>
+                                No options
+                              </Text>
+                            </View>
+                          )}
+                        </ScrollView>
+                      </View>
+                      </TouchableOpacity>
+                    </Modal>
+                  {/* // )} */}
                 </View>
               </View>
 
@@ -511,14 +704,19 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
                 <Text style={styles.inputLabel}>Status</Text>
                 <View style={styles.radioContainer}>
                   {[
-                    { value: 'active', label: 'Active' },
-                    { value: 'resolved', label: 'Resolved' },
-                    { value: 'chronic', label: 'Chronic' },
+                    { value: "active", label: "Active" },
+                    { value: "resolved", label: "Resolved" },
+                    { value: "chronic", label: "Chronic" },
                   ].map((option) => (
                     <TouchableOpacity
                       key={option.value}
                       style={styles.radioOption}
-                      onPress={() => setNewCondition({ ...newCondition, status: option.value })}
+                      onPress={() =>
+                        setNewCondition({
+                          ...newCondition,
+                          status: option.value,
+                        })
+                      }
                     >
                       <View style={styles.radioButton}>
                         {newCondition.status === option.value && (
@@ -547,12 +745,17 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
 
       {/* Search Medical Conditions Modal */}
       <Modal
-        visible={searchModalVisible}
+        visible={false}
         animationType="slide"
         onRequestClose={handleCloseSearchModal}
       >
-        <SafeAreaView style={styles.searchModalContent} edges={['bottom']}>
-          <View style={[styles.modalHeader, { paddingTop: insets.top + getResponsiveSpacing(16) }]}>
+        <SafeAreaView style={styles.searchModalContent} edges={["bottom"]}>
+          <View
+            style={[
+              styles.modalHeader,
+              { paddingTop: insets.top + getResponsiveSpacing(16) },
+            ]}
+          >
             <Text style={styles.modalTitle}>Search Medical History</Text>
             <TouchableOpacity
               onPress={handleCloseSearchModal}
@@ -579,25 +782,42 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
             </View>
 
             {/* Search Results */}
-            <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.searchResultsContainer}
+              showsVerticalScrollIndicator={false}
+            >
               {filteredResults.map((item, index) => (
                 <TouchableOpacity
-                  key={String(item.id) + '-' + index}
+                  key={String(item.id) + "-" + index}
                   style={styles.searchResultItem}
                   onPress={() => handleSelectCondition(item)}
                 >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
                     <Text style={styles.searchResultText}>{item.name}</Text>
                     {item.status ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
+                      >
                         <View
                           style={[
                             styles.statusIndicator,
                             { backgroundColor: getStatusColor(item.status) },
                           ]}
                         />
-                        <Text style={{ color: '#666', fontSize: getResponsiveFontSize(12) }}>
-                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        <Text
+                          style={{
+                            color: "#666",
+                            fontSize: getResponsiveFontSize(12),
+                          }}
+                        >
+                          {item.status.charAt(0).toUpperCase() +
+                            item.status.slice(1)}
                         </Text>
                       </View>
                     ) : null}
@@ -621,7 +841,7 @@ export default function MedicalHistoryScreen({ onClose, showAddModal, onDataStat
         onHide={() => setShowToast(false)}
         duration={3000}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -631,22 +851,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: getResponsiveSpacing(20),
     paddingVertical: getResponsiveSpacing(20),
     backgroundColor: colors.white,
     borderBottomWidth: 1,
-        borderColor: '#DADADA',
+    borderColor: "#DADADA",
   },
   headerLeft: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    // flexDirection: "row",
+    // alignItems: "center",
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   headerTitle: {
     ...fontStyles.headercontent,
@@ -655,7 +875,7 @@ const styles = StyleSheet.create({
   addButton: {
     paddingHorizontal: getResponsiveSpacing(16),
     paddingVertical: getResponsiveSpacing(8),
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
@@ -664,8 +884,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
-    shadowColor: '#000',
+    backgroundColor: "#eee",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -682,18 +902,18 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSpacing(12),
   },
   conditionCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderRadius: getResponsiveSpacing(12),
-     borderWidth: 1,
-        borderColor: '#DADADA',
+    borderWidth: 1,
+    borderColor: "#DADADA",
     padding: getResponsiveSpacing(16),
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 2 },
     // shadowOpacity: 0.1,
     // shadowRadius: 3.84,
     // elevation: 5,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   conditionContent: {
     flex: 1,
@@ -701,14 +921,14 @@ const styles = StyleSheet.create({
   },
   conditionName: {
     fontSize: getResponsiveFontSize(18),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.black,
     marginBottom: getResponsiveSpacing(4),
     fontFamily: fonts.bold,
   },
   statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   statusIndicator: {
     width: getResponsiveSpacing(10),
@@ -719,7 +939,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.success,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: fonts.medium,
   },
   deleteButton: {
@@ -737,31 +957,31 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: getResponsiveSpacing(20),
     borderTopRightRadius: getResponsiveSpacing(20),
-    maxHeight: '80%',
-    overflow: 'visible',
+    maxHeight: "80%",
+    overflow: "visible",
     zIndex: 1000,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: getResponsiveSpacing(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
@@ -777,7 +997,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: getResponsiveSpacing(20),
-    overflow: 'visible',
+    overflow: "visible",
   },
   inputGroup: {
     marginBottom: getResponsiveSpacing(20),
@@ -785,27 +1005,27 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: getResponsiveFontSize(14),
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
     marginBottom: getResponsiveSpacing(8),
     fontFamily: fonts.medium,
   },
   // Dropdown styles — matching FamilyHistoryScreen pattern
   dropdownContainer: {
-    position: 'relative',
+    position: "relative",
     zIndex: 99999,
-    overflow: 'visible',
+    overflow: "visible",
   },
   dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     minHeight: getResponsiveSpacing(48),
   },
   dropdownText: {
@@ -818,41 +1038,56 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(12),
     color: colors.textSecondary,
   },
+
+   dropdownModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 20,
+  },
+
+  dropdownModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    maxHeight: "70%",
+  },
+
   dropdownBackdrop: {
-    position: 'fixed' as any,
+    position: "fixed" as any,
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 99998,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   dropdownOptions: {
-    position: 'absolute',
-    bottom: '100%',
+    position: "absolute",
+    bottom: "100%",
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderBottomWidth: 0,
     borderTopLeftRadius: getResponsiveSpacing(8),
     borderTopRightRadius: getResponsiveSpacing(8),
     maxHeight: getResponsiveSpacing(200),
     zIndex: 100000,
     elevation: 100,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     marginBottom: getResponsiveSpacing(2),
-    flexDirection: 'column-reverse',
+    flexDirection: "column-reverse",
   },
   dropdownSearchInput: {
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(10),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
     fontSize: getResponsiveFontSize(14),
     fontFamily: fonts.regular,
     color: colors.text,
@@ -861,8 +1096,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "#fff",
   },
   dropdownOptionText: {
     fontSize: getResponsiveFontSize(14),
@@ -871,13 +1106,13 @@ const styles = StyleSheet.create({
   },
   // Radio button styles
   radioContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: getResponsiveSpacing(16),
   },
   radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: getResponsiveSpacing(12),
   },
   radioButton: {
@@ -887,8 +1122,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
     marginRight: getResponsiveSpacing(8),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioButtonSelected: {
     width: getResponsiveSpacing(10),
@@ -909,51 +1144,51 @@ const styles = StyleSheet.create({
   saveButton: {
     // borderRadius: getResponsiveSpacing(6),
     // height: getResponsiveSpacing(45),
-    width: '100%',
+    width: "100%",
   },
   // Loading/empty states
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: getResponsiveSpacing(40),
   },
   emptyContainer: {
     padding: getResponsiveSpacing(40),
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
     fontSize: getResponsiveFontSize(16),
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: getResponsiveSpacing(8),
     fontFamily: fonts.regular,
   },
   emptySubtext: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: fonts.regular,
   },
   // Search modal styles
   searchModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     flex: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   searchModalBody: {
     padding: getResponsiveSpacing(20),
     flex: 1,
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: getResponsiveSpacing(8),
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(6),
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginBottom: getResponsiveSpacing(16),
   },
   searchInput: {
@@ -974,23 +1209,23 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSpacing(12),
     paddingHorizontal: getResponsiveSpacing(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "#fff",
   },
   searchResultText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: "500",
     fontFamily: fonts.regular,
   },
   noResultsContainer: {
     padding: getResponsiveSpacing(20),
-    alignItems: 'center',
+    alignItems: "center",
   },
   noResultsText: {
     fontSize: getResponsiveFontSize(14),
     color: colors.textSecondary,
-    fontStyle: 'italic',
+    fontStyle: "italic",
     fontFamily: fonts.regular,
   },
 });

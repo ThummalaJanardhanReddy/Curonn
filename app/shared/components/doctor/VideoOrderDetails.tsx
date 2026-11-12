@@ -289,7 +289,7 @@ export default function VideoOrderDetails({
             <View style={{ paddingVertical: 0, marginTop: 4 }}>
               {data.scheduleDate ? (
                 <Text style={styles.datelabel}>
-                  {dayjs(data.scheduleDate).format("DD-MM-YYYY h:mm A")}
+                  {dayjs(data.scheduleDate).format("DD-MMM-YYYY h:mm A")}
                 </Text>
               ) : (
                 <Text style={styles.datelabel}>{data.scheduleBetween}</Text>

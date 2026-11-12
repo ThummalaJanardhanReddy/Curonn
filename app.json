@@ -51,8 +51,10 @@
       "expo-router",
       "expo-maps",
       "expo-font",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       "expo-secure-store",
-      [ 
+      [
         "expo-image-picker",
         {
           "photosPermission": "Curonn Health accesses your photos so you can select and upload medical documents, prescriptions, and images to your healthcare provider.",
@@ -84,7 +86,8 @@
           "width": 375,
           "height": 375
         }
-      ]
+      ],
+      "@react-native-firebase/app"
     ],
     "assetBundlePatterns": [
       "**/*"
