@@ -7,13 +7,13 @@ import {
   StyleSheet,
   Text,
   Dimensions,
-  TextInput,
   TouchableOpacity,
   Platform,
   View,
   Alert
 } from 'react-native';
-import { IconButton, RadioButton } from 'react-native-paper';
+import TextInput from './FormTextInput';
+import { IconButton } from 'react-native-paper';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { images } from '../../../assets';
 import commonStyles, { colors } from '../styles/commonStyles';
@@ -466,24 +466,22 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
               style={styles.radioOption}
               onPress={() => handleInputChange('gender', 'male')}
             >
-              <RadioButton
-                value="male"
-                status={formData.gender === 'male' ? 'checked' : 'unchecked'}
-                onPress={() => handleInputChange('gender', 'male')}
-                color={colors.primary}
-              />
+              <View style={styles.radioButton}>
+                {formData.gender === 'male' && (
+                  <View style={styles.radioButtonSelected} />
+                )}
+              </View>
               <Text style={styles.radioText}>Male</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.radioOption}
               onPress={() => handleInputChange('gender', 'Female')}
             >
-              <RadioButton
-                value="Female"
-                status={formData.gender === 'Female' ? 'checked' : 'unchecked'}
-                onPress={() => handleInputChange('gender', 'Female')}
-                color={colors.primary}
-              />
+              <View style={styles.radioButton}>
+                {formData.gender === 'Female' && (
+                  <View style={styles.radioButtonSelected} />
+                )}
+              </View>
               <Text style={styles.radioText}>Female</Text>
             </TouchableOpacity>
           </View>
@@ -862,6 +860,22 @@ const styles = StyleSheet.create({
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
   },
   radioText: {
     fontSize: 16,

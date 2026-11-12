@@ -7,7 +7,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   Alert,
@@ -16,6 +15,7 @@ import {
 // import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from "../../assets";
 import CommonHeader from "../shared/components/CommonHeader";
+import TextInput from "../shared/components/FormTextInput";
 import PrescriptionUploadModal from "../shared/components/PrescriptionUploadModal";
 import commonStyles, { colors } from "../shared/styles/commonStyles";
 import {

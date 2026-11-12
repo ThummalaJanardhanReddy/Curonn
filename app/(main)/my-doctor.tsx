@@ -17,13 +17,13 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   Linking,
   ActivityIndicator,
   Modal,
 } from "react-native";
+import TextInput from "../shared/components/FormTextInput";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   KeyboardStickyView,

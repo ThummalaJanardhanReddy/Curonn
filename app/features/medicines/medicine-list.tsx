@@ -9,7 +9,6 @@ import {
   Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   StatusBar as RNStatusBar,
@@ -18,6 +17,7 @@ import {
 } from "react-native";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
+import TextInput from "../../shared/components/FormTextInput";
 import commonStyles, { colors } from "../../shared/styles/commonStyles";
 import {
   getResponsiveFontSize,

@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
 import SecondaryButton from '../../shared/components/SecondaryButton';
+import TextInput from '../../shared/components/FormTextInput';
 import { colors } from '../../shared/styles/commonStyles';
 import {
   getResponsiveFontSize,

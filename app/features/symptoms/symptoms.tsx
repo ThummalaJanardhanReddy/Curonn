@@ -5,13 +5,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import TextInput from "../../shared/components/FormTextInput";
 import { colors } from "../../shared/styles/commonStyles";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -41,6 +41,8 @@ export default function SymptomsScreen() {
     [],
   );
   const [allSymptoms, setAllSymptoms] = useState<ISymptomMaster[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [customSymptomText, setCustomSymptomText] = useState("");
   const { setSymptoms, departmentId } = useDoctorConsultationStore();
   // Mock symptoms data - in real app this would come from API
   // const allSymptoms: Symptom[] = useMemo(
@@ -102,6 +104,27 @@ export default function SymptomsScreen() {
 
   const handleSymptomSelect = (symptom: ISymptomMaster) => {
     setSelectedSymptoms((prev) => [...prev, symptom]);
+  };
+
+  const handleAddCustomSymptom = () => {
+    const text = customSymptomText.trim();
+    if (!text) return;
+    const customSymptom: ISymptomMaster = {
+      symptomMasterId: -Date.now(),
+      speciality: "",
+      specialityId: departmentId ?? 0,
+      symptom: text,
+      createdBy: 0,
+      modifiedBy: null,
+      createdOn: new Date().toISOString(),
+      modifiedOn: null,
+      deletedBy: null,
+      deletedOn: null,
+      isActive: true,
+      totalCount: 0,
+    };
+    setSelectedSymptoms((prev) => [...prev, customSymptom]);
+    setCustomSymptomText("");
   };
 
 const handleSymptomDeselect = (symptomId: string | number) => {
@@ -174,7 +197,12 @@ const handleSymptomDeselect = (symptomId: string | number) => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
+          <View
+            style={[
+              styles.searchInputContainer,
+              searchFocused && styles.searchInputContainerFocused,
+            ]}
+          >
             {/* <Image source={images.icons.search} style={styles.searchIcon} /> */}
             <SeacrchIcon width={18} height={18} style={styles.searchIcon} />
             <TextInput
@@ -183,6 +211,8 @@ const handleSymptomDeselect = (symptomId: string | number) => {
               placeholderTextColor="#000"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              showFocusRing={false}
+              onFocusChange={setSearchFocused}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
@@ -204,24 +234,60 @@ const handleSymptomDeselect = (symptomId: string | number) => {
           </View>
         )}
 
-        {/* Most Selected Issue Title */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>Most selected issue</Text>
-        </View>
+        {filteredSymptoms && filteredSymptoms.length > 0 ? (
+          <>
+            {/* Most Selected Issue Title */}
+            <View style={styles.titleContainer}>
+              <Text style={styles.titleText}>Most selected issue</Text>
+            </View>
 
-        {/* Symptoms Grid */}
-        <View style={styles.symptomsContainer}>
-          <View style={styles.symptomsGrid}>
-            {filteredSymptoms?.map((symptom) => (
-              <View
-                key={symptom.symptomMasterId}
-                style={styles.symptomCardWrapper}
-              >
-                {renderSymptomCard({ item: symptom })}
+            {/* Symptoms Grid */}
+            <View style={styles.symptomsContainer}>
+              <View style={styles.symptomsGrid}>
+                {filteredSymptoms.map((symptom) => (
+                  <View
+                    key={symptom.symptomMasterId}
+                    style={styles.symptomCardWrapper}
+                  >
+                    {renderSymptomCard({ item: symptom })}
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
+          </>
+        ) : (
+          /* No matching symptoms — let the user describe it instead */
+          <View style={styles.customSymptomContainer}>
+            <Text style={styles.titleText}>
+              {searchQuery
+                ? "No matching symptoms found"
+                : "No symptoms listed for this department"}
+            </Text>
+            <Text style={styles.customSymptomSubtext}>
+              Describe what you're experiencing instead
+            </Text>
+            <TextInput
+              style={styles.customSymptomInput}
+              placeholder="e.g. Sharp pain in my lower back when I bend"
+              placeholderTextColor="#808080"
+              value={customSymptomText}
+              onChangeText={setCustomSymptomText}
+              multiline
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={[
+                styles.addCustomSymptomButton,
+                !customSymptomText.trim() &&
+                  styles.addCustomSymptomButtonDisabled,
+              ]}
+              onPress={handleAddCustomSymptom}
+              disabled={!customSymptomText.trim()}
+            >
+              <Text style={styles.addCustomSymptomButtonText}>Add</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        )}
 
         {/* Bottom spacing for button */}
         <View style={styles.bottomSpacing} />
@@ -284,6 +350,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(12),
     paddingVertical: getResponsiveSpacing(4),
     height: 40,
+  },
+  searchInputContainerFocused: {
+    borderColor: colors.primary,
+    borderWidth: 1,
   },
   searchIcon: {
     ...getResponsiveImageSize(20, 20),
@@ -354,6 +424,45 @@ const styles = StyleSheet.create({
   symptomsContainer: {
     paddingHorizontal: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(20),
+  },
+  customSymptomContainer: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(20),
+  },
+  customSymptomSubtext: {
+    fontSize: getResponsiveFontSize(12),
+    color: "#808080",
+    fontFamily: fonts.regular,
+    marginTop: getResponsiveSpacing(4),
+    marginBottom: getResponsiveSpacing(12),
+  },
+  customSymptomInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: getResponsiveSpacing(8),
+    backgroundColor: "#fff",
+    padding: getResponsiveSpacing(12),
+    minHeight: 100,
+    fontSize: getResponsiveFontSize(12),
+    color: "#000",
+    fontFamily: fonts.regular,
+  },
+  addCustomSymptomButton: {
+    alignSelf: "flex-end",
+    backgroundColor: colors.primary,
+    borderRadius: getResponsiveSpacing(8),
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(8),
+    marginTop: getResponsiveSpacing(10),
+  },
+  addCustomSymptomButtonDisabled: {
+    backgroundColor: "#CCCCCC",
+  },
+  addCustomSymptomButtonText: {
+    color: "#fff",
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: "700",
+    fontFamily: fonts.medium,
   },
   symptomsGrid: {
     flexDirection: "row",

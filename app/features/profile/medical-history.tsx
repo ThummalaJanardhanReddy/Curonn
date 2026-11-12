@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import {
 import { images } from "../../../assets";
 import BackButton from "../../shared/components/BackButton";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import TextInput from "../../shared/components/FormTextInput";
 import { colors } from "../../shared/styles/commonStyles";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import {

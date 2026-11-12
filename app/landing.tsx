@@ -10,7 +10,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { Button, IconButton } from 'react-native-paper';
 import commonStyles, { colors } from '../app/shared/styles/commonStyles';
 import { images } from '../assets';
 import ProfileModal from './shared/components/ProfileModal';
+import TextInput from './shared/components/FormTextInput';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function LandingScreen() {

@@ -9,7 +9,6 @@ import {
   Platform,
   StatusBar as RNStatusBar,
   StatusBar,
-  TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { images } from '../../../assets';
 import BackButton from '../../shared/components/BackButton';
 import PrimaryButton from '../../shared/components/PrimaryButton';
+import TextInput from '../../shared/components/FormTextInput';
 import { colors } from '../../shared/styles/commonStyles';
 import { fonts, fontStyles } from '@/app/shared/styles/fonts';
 import { useUser } from "../../shared/context/UserContext";

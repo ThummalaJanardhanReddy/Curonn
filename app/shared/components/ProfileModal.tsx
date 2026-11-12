@@ -11,10 +11,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import TextInput from "./FormTextInput";
 import {
   SafeAreaView,
   useSafeAreaInsets,

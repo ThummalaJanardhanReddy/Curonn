@@ -14,14 +14,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Button, RadioButton } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import TextInput from "../../shared/components/FormTextInput";
 import SelectPatientModal from "../../shared/components/SelectPatientModal";
 import SecondaryButton from "../../shared/components/SecondaryButton";
 import Toast from "../../shared/components/Toast";
@@ -108,6 +108,7 @@ export default function BookingScreen({
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
+  const insets = useSafeAreaInsets();
   const { userData: userDataFromHook } = useUser();
   const [userData, setUserData] = useState<any>(null);
 
@@ -194,7 +195,7 @@ export default function BookingScreen({
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   // Unified address state (shared by both flows)
   const [selectedLocation, setSelectedLocation] = useState<{
-    addressId: number;
+    addressId?: number;
     address: string;
     houseNumber: string;
     landmark: string;
@@ -2139,7 +2140,9 @@ export default function BookingScreen({
       <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.headerRow}>
+          <View
+            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
+          >
             <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -2709,8 +2712,9 @@ export default function BookingScreen({
                 ...prev,
                 { id: Date.now().toString(), ...newAddress },
               ]);
+              setSelectedLocation(newAddress);
               setLocationModalVisible(false);
-              setAddressVisible(true);
+              setAddressVisible(false);
             }}
           />
 
@@ -2748,7 +2752,9 @@ export default function BookingScreen({
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.headerRow}>
+          <View
+            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
+          >
             <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -3570,8 +3576,9 @@ export default function BookingScreen({
                 ...prev,
                 { id: Date.now().toString(), ...newAddress },
               ]);
+              setSelectedLocation(newAddress);
               setLocationModalVisible(false);
-              setAddressVisible(true);
+              setAddressVisible(false);
             }}
           />
         </View>

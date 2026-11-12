@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   View,
-  TextInput,
   FlatList,
   Text,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   Linking,
   BackHandler,
 } from "react-native";
+import TextInput from "@/app/shared/components/FormTextInput";
 import {
   KeyboardStickyView,
   useKeyboardState,
