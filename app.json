@@ -16,7 +16,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service."
-      }
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
