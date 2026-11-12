@@ -223,10 +223,28 @@ export default function PersonalizationScreen() {
         const dd = String(today.getDate()).padStart(2, "0");
         const formattedDate = `${yyyy}-${mm}-${dd}`;
 
-        const Medpayload = {
+        // const Medpayload = {
+        //   medicalHistoryId: 0,
+        //   patientId: patientId,
+        //   historyName: data.medicalConditions.join(","),
+        //   reactions: "",
+        //   status: "active",
+        //   onsetDate: formattedDate,
+        //   durationValue: 0,
+        //   duration: "",
+        //   notes: "",
+        //   appointmentId: 0,
+        //   isActive: true,
+        //   conditionType: "Chronic",
+        //   createdBy: patientId,
+        //   createdOn: formattedDate,
+        //   totalCount: 0,
+        // };
+
+        const Medpayload = data.medicalConditions.map((condition) => ({
           medicalHistoryId: 0,
           patientId: patientId,
-          historyName: data.medicalConditions.join(","),
+          historyName: condition,
           reactions: "",
           status: "active",
           onsetDate: formattedDate,
@@ -239,13 +257,13 @@ export default function PersonalizationScreen() {
           createdBy: patientId,
           createdOn: formattedDate,
           totalCount: 0,
-        };
+        }));
 
         const savedMedicalDataResponse = await axiosClient.post(
           ApiRoutes.MedicalHistory.save,
           Medpayload,
         );
-        let message = "Employee registration completed successfully";
+        
         if (response?.id) {
           await setRegistrationCompleted(true);
           await saveUserData(data);
@@ -772,7 +790,7 @@ export default function PersonalizationScreen() {
             style={{
               fontSize: 20,
               fontWeight: "700",
-              color: colors.white,
+              color: colors.text,
               marginBottom: 8,
             }}
           >
@@ -782,7 +800,7 @@ export default function PersonalizationScreen() {
             style={{
               fontSize: 16,
               fontFamily: fonts.regular,
-              color: "#fff",
+              color: colors.text,
               textAlign: "center",
               maxWidth: 300,
             }}

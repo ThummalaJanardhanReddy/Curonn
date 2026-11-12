@@ -27,6 +27,7 @@ import BellIcon from "../../../assets/AppIcons/Curonn_icons/bell_ic.svg"; // TOD
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserStore } from "@/src/store/UserStore";
 import { colors } from "../styles/commonStyles";
+import { router } from "expo-router";
 
 interface CommonHeaderProps {
   title?: string;
@@ -238,7 +239,8 @@ export default function CommonHeader({
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => {
-                setProfileVisible(true);
+                router.push("/shared/components/ProfileModal");
+                // setProfileVisible(true);
                 onProfilePress?.();
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -304,10 +306,10 @@ export default function CommonHeader({
         )}
       </View>
 
-      <ProfileModal
+      {/* <ProfileModal
         visible={profileVisible}
         onClose={() => setProfileVisible(false)}
-      />
+      /> */}
       <CartModal visible={cartVisible} onClose={() => setCartVisible(false)} />
       <LocationSelection
         visible={locationVisible}

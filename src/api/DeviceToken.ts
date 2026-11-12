@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import messaging from "@react-native-firebase/messaging";
 import * as Device from "expo-device";
 import { Alert, Platform } from "react-native";
 import axiosClient from "./axiosClient";
@@ -53,15 +54,17 @@ export async function registerForPushNotifications(patientId: number) {
       return;
     }
 
-    const { status } = await Notifications.requestPermissionsAsync();
+    // const { status } = await Notifications.requestPermissionsAsync();
 
-    if (status !== "granted") {
-      alert("Permission not granted");
-      return;
-    }
+    // if (status !== "granted") {
+    //   alert("Permission not granted");
+    //   return;
+    // }
 
-    const tokenData = await Notifications.getDevicePushTokenAsync();
-    const fcmToken = tokenData.data;
+    // const tokenData = await Notifications.getDevicePushTokenAsync();
+    // const fcmToken = tokenData.data;
+
+    const fcmToken = await getFCMToken();
 
     console.log("FCM Token:", fcmToken);
 
@@ -77,3 +80,25 @@ export async function registerForPushNotifications(patientId: number) {
     console.log("token error: ", error);
   }
 }
+
+const getFCMToken = async () => {
+  try {
+    const authStatus = await messaging().requestPermission();
+
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+    if (!enabled) {
+      console.log("Push notification permission not granted");
+      return null;
+    }
+
+    const fcmToken = await messaging().getToken();
+
+    return fcmToken;
+  } catch (error) {
+    console.error("FCM token error:", error);
+    return null;
+  }
+};

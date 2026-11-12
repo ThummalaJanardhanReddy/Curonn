@@ -410,7 +410,7 @@ export default function PastProceduresScreen({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -468,6 +468,7 @@ export default function PastProceduresScreen({
         onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
+          <SafeAreaView style={styles.modalContent}>
           <TouchableOpacity
             style={styles.modalBackdrop}
             onPress={handleCloseModal}
@@ -609,6 +610,7 @@ export default function PastProceduresScreen({
             onConfirm={handleConfirmProcedureDate}
             maximumDate={new Date()}
           />
+          </SafeAreaView>
         </View>
       </Modal>
 
@@ -619,7 +621,7 @@ export default function PastProceduresScreen({
         type={toastMessage.type}
         onHide={() => setShowToast(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -680,7 +682,6 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "600",
     color: colors.primary,
     fontWeight: "700",
   },
@@ -962,7 +963,6 @@ const styles = StyleSheet.create({
   pickerHeaderButtonText: {
     fontSize: getResponsiveFontSize(16),
     color: "#666",
-    fontWeight: "600",
     fontWeight: "700",
   },
   deleteButtonText: {

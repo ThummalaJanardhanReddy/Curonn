@@ -161,7 +161,7 @@ export default function HealthFeedScreen({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -265,7 +265,7 @@ export default function HealthFeedScreen({
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

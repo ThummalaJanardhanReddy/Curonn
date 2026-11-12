@@ -863,7 +863,6 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: getResponsiveFontSize(16),
-    fontWeight: "600",
     color: colors.primary,
     fontWeight: "700",
   },
@@ -959,7 +958,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: getResponsiveFontSize(15),
-    fontWeight: '600',
     color: colors.text,
     fontWeight: "700",
   },

@@ -7,7 +7,7 @@ import { colors } from '../styles/commonStyles';
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
-  disabled?: boolean;
+  disabled?: boolean | undefined | null;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
   width?: number;

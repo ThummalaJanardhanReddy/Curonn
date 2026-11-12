@@ -254,7 +254,7 @@ export default function MenstrualHistoryScreen({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -421,7 +421,7 @@ export default function MenstrualHistoryScreen({
         onHide={() => setShowToast(false)}
         duration={3000}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
