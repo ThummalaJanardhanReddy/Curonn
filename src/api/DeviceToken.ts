@@ -94,6 +94,23 @@ const getFCMToken = async () => {
       return null;
     }
 
+    if (Platform.OS === "ios") {
+      // FCM needs an APNs token before it can issue its own token on iOS.
+      let apnsToken = await messaging().getAPNSToken();
+      let attempts = 0;
+      while (!apnsToken && attempts < 10) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        apnsToken = await messaging().getAPNSToken();
+        attempts++;
+      }
+      if (!apnsToken) {
+        console.log(
+          "APNs token never arrived; cannot generate FCM token. Check aps-environment entitlement matches the build's provisioning profile.",
+        );
+        return null;
+      }
+    }
+
     const fcmToken = await messaging().getToken();
 
     return fcmToken;

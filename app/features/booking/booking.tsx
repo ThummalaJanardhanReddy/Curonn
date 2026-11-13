@@ -5,7 +5,8 @@ import {
 } from "@/app/shared/utils/responsive";
 import CartItemsList from "@/app/shared/components/CartItemsList";
 import NativeDatePickerModal from "@/app/shared/components/NativeDatePickerModal";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Image,
@@ -18,7 +19,7 @@ import {
   View,
 } from "react-native";
 import { Button, RadioButton } from "react-native-paper";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import TextInput from "../../shared/components/FormTextInput";
@@ -59,47 +60,36 @@ type ServiceType =
   | "ambulance"
   | "wellness";
 
-interface BookingScreenProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
-  serviceName: string;
-  servicePrice: number;
-  isAtHome: boolean;
-  /** Lab-test flow only */
-  masterId?: number;
-  /** Lab-test flow only */
-  programeId?: number;
-  type?: ServiceType;
-  /** Lab-test flow only */
-  reportTime?: string;
-  serviceId?: number;
-  duration?: string;
-  selectedDiagCenter?: any;
-  selectedDate?: Date;
-  selectedTimeSlot?: string;
-}
+export default function BookingScreen() {
+  const params = useLocalSearchParams<{
+    serviceName?: string;
+    servicePrice?: string;
+    isAtHome?: string;
+    masterId?: string;
+    type?: string;
+    reportTime?: string;
+    duration?: string;
+    selectedDiagCenter?: string;
+    selectedDate?: string;
+    selectedTimeSlot?: string;
+  }>();
+  const serviceName = params.serviceName ?? "";
+  const servicePrice = Number(params.servicePrice ?? 0);
+  const isAtHome = params.isAtHome === "true";
+  const masterId = params.masterId ? Number(params.masterId) : undefined;
+  const type = params.type as ServiceType | undefined;
+  const reportTime = params.reportTime;
+  const duration = params.duration;
+  const selectedDiagCenter = params.selectedDiagCenter
+    ? JSON.parse(params.selectedDiagCenter)
+    : undefined;
+  const propSelectedDate = params.selectedDate
+    ? new Date(params.selectedDate)
+    : undefined;
+  const propSelectedTimeSlot = params.selectedTimeSlot ?? "";
 
-export default function BookingScreen({
-  visible,
-  onClose,
-  onSuccess,
-  serviceName,
-  servicePrice,
-  isAtHome,
-  masterId,
-  type,
-  reportTime,
-  selectedDiagCenter,
-  serviceId,
-  duration,
-  selectedDate: propSelectedDate,
-  selectedTimeSlot: propSelectedTimeSlot,
-}: BookingScreenProps) {
   console.log(
-    "🚀 BookingScreen Rendered - visible:",
-    visible,
-    "type:",
+    "🚀 BookingScreen Rendered - type:",
     type,
     "service:",
     serviceName,
@@ -108,7 +98,6 @@ export default function BookingScreen({
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
-  const insets = useSafeAreaInsets();
   const { userData: userDataFromHook } = useUser();
   const [userData, setUserData] = useState<any>(null);
 
@@ -150,13 +139,6 @@ export default function BookingScreen({
   // Track the member being edited (if any)
   const [editingMember, setEditingMember] = useState<any>(null);
 
-  // Sync state with props when modal opens
-  useEffect(() => {
-    if (visible) {
-      setSelectedDate(propSelectedDate || null);
-      setSelectedTimeSlot(propSelectedTimeSlot || "");
-    }
-  }, [visible, propSelectedDate, propSelectedTimeSlot]);
   const [patientType, setPatientType] = useState("self");
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState("");
@@ -672,7 +654,6 @@ export default function BookingScreen({
             setIsEditMode(false);
             setEditingMember(null); // if you use this state
           }
-          if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
       } else {
@@ -761,7 +742,6 @@ export default function BookingScreen({
             setIsEditMode(false);
             setEditingMember(null); // if you use this state
           }
-          if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
       } else {
@@ -845,7 +825,6 @@ export default function BookingScreen({
         setTimeout(() => {
           setShowToastLab(false);
           setShowPayment(false);
-          if (onClose) onClose();
           router.replace("/(main)/orders");
         }, 1500);
       } else {
@@ -1454,8 +1433,6 @@ export default function BookingScreen({
             setIsEditMode(false);
             setEditingMember(null); // if you use this state
           }
-          if (onClose) onClose();
-          if (onSuccess) onSuccess();
           router.replace("/(main)/orders");
         }, 1500);
       } else {
@@ -1501,7 +1478,7 @@ export default function BookingScreen({
   };
 
   const handleEdit = () => {
-    onClose();
+    closeHandler();
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1847,10 +1824,6 @@ export default function BookingScreen({
           console.log("🕒 Timeout finished. Closing modal and navigating...");
           setShowToastMed(false);
           setShowPayment(false);
-          if (onClose) {
-            console.log("Calling onClose...");
-            onClose();
-          }
           if (patientType === "others") {
             setSelectedRelation(null);
             setFullName("");
@@ -2102,7 +2075,6 @@ export default function BookingScreen({
   };
 
   const closeHandler = () => {
-    if (onClose) return onClose();
     router.back();
   };
 
@@ -2141,12 +2113,12 @@ export default function BookingScreen({
         <View style={styles.container}>
           {/* Header */}
           <View
-            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
+            style={[styles.headerRow, { paddingTop: getResponsiveSpacing(15) }]}
           >
-            <Text style={styles.headerTitle}>Order Info</Text>
-            <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
-              <Image source={images.icons.close} style={styles.closeIcon} />
+            <TouchableOpacity onPress={closeHandler} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Order Info</Text>
           </View>
 
           <KeyboardAwareScrollView
@@ -2731,34 +2703,22 @@ export default function BookingScreen({
       </SafeAreaView>
     );
 
-    // If this component was opened as a modal (visible prop provided), wrap content in Modal
-    if (visible) {
-      return (
-        <Modal
-          visible={visible}
-          animationType="slide"
-          onRequestClose={closeHandler}
-        >
-          {content}
-        </Modal>
-      );
-    }
     return content;
   }
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
+    <>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
           <View
-            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
+            style={[styles.headerRow, { paddingTop: getResponsiveSpacing(15) }]}
           >
-            <Text style={styles.headerTitle}>Order Info</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Image source={images.icons.close} style={styles.closeIcon} />
+            <TouchableOpacity onPress={closeHandler} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Order Info</Text>
           </View>
 
           <KeyboardAwareScrollView
@@ -3593,7 +3553,7 @@ export default function BookingScreen({
         onHide={() => setShowToastLab(false)}
         duration={3000}
       />
-    </Modal>
+    </>
   );
 }
 
@@ -3605,7 +3565,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingHorizontal: getResponsiveSpacing(20),
     // paddingTop: getResponsiveSpacing(20),
     paddingBottom: getResponsiveSpacing(15),
@@ -3618,14 +3578,8 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize(16),
     color: colors.black,
   },
-  closeButton: {
+  backButton: {
     padding: 4,
-  },
-
-  closeIcon: {
-    width: 28,
-    height: 28,
-    tintColor: "black",
   },
   content: {
     flex: 1,
