@@ -718,7 +718,7 @@ export default function BookingPayLaterScreen() {
                   style={styles.editAddressButtonNew}
                   onPress={handleViewAddress}
                 >
-                  <Text style={styles.editAddressTextNew}>Edit Address</Text>
+                  <Text style={styles.editAddressTextNew}>Change Address</Text>
                 </TouchableOpacity>
               </View>
             </View>

@@ -1,5 +1,10 @@
 import * as Notifications from "expo-notifications";
-import messaging from "@react-native-firebase/messaging";
+import {
+  getMessaging,
+  getToken,
+  requestPermission,
+  AuthorizationStatus,
+} from "@react-native-firebase/messaging";
 import * as Device from "expo-device";
 import { Alert, Platform } from "react-native";
 import axiosClient from "./axiosClient";
@@ -49,10 +54,10 @@ import { EmployeeApi } from "./employee/employee";
 
 export async function registerForPushNotifications(patientId: number) {
   try {
-    if (!Device.isDevice) {
-      alert("Must use physical device");
-      return;
-    }
+    // if (!Device.isDevice) {
+    //   alert("Must use physical device");
+    //   return;
+    // }
 
     // const { status } = await Notifications.requestPermissionsAsync();
 
@@ -65,6 +70,11 @@ export async function registerForPushNotifications(patientId: number) {
     // const fcmToken = tokenData.data;
 
     const fcmToken = await getFCMToken();
+
+    if (!fcmToken) {
+      console.log("Unable to generate FCM token");
+      return;
+    }
 
     console.log("FCM Token:", fcmToken);
 
@@ -81,37 +91,43 @@ export async function registerForPushNotifications(patientId: number) {
   }
 }
 
-const getFCMToken = async () => {
+const getFCMToken = async (): Promise<string | null> => {
   try {
-    const authStatus = await messaging().requestPermission();
-
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-    if (!enabled) {
-      console.log("Push notification permission not granted");
+    if (!Device.isDevice) {
+      console.log("Must use a physical device");
       return null;
     }
 
-    if (Platform.OS === "ios") {
-      // FCM needs an APNs token before it can issue its own token on iOS.
-      let apnsToken = await messaging().getAPNSToken();
-      let attempts = 0;
-      while (!apnsToken && attempts < 10) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        apnsToken = await messaging().getAPNSToken();
-        attempts++;
-      }
-      if (!apnsToken) {
-        console.log(
-          "APNs token never arrived; cannot generate FCM token. Check aps-environment entitlement matches the build's provisioning profile.",
-        );
-        return null;
-      }
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "Default",
+        importance: Notifications.AndroidImportance.MAX,
+      });
     }
 
-    const fcmToken = await messaging().getToken();
+    // Request notification permission through Expo
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      console.log("Notification permission not granted");
+      return null;
+    }
+
+    // Get FCM token through React Native Firebase
+    const messagingInstance = getMessaging();
+
+    const fcmToken = await getToken(messagingInstance);
+
+    console.log("FCM Token:", fcmToken);
 
     return fcmToken;
   } catch (error) {
