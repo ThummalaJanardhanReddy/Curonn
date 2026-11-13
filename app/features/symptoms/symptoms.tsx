@@ -234,7 +234,7 @@ const handleSymptomDeselect = (symptomId: string | number) => {
           </View>
         )}
 
-        {filteredSymptoms && filteredSymptoms.length > 0 ? (
+        {filteredSymptoms && filteredSymptoms.length > 0 && (
           <>
             {/* Most Selected Issue Title */}
             <View style={styles.titleContainer}>
@@ -255,39 +255,41 @@ const handleSymptomDeselect = (symptomId: string | number) => {
               </View>
             </View>
           </>
-        ) : (
-          /* No matching symptoms — let the user describe it instead */
-          <View style={styles.customSymptomContainer}>
-            <Text style={styles.titleText}>
-              {searchQuery
+        )}
+
+        {/* Let the user describe their symptom in their own words too */}
+        <View style={styles.customSymptomContainer}>
+          <Text style={styles.titleText}>
+            {filteredSymptoms && filteredSymptoms.length > 0
+              ? "Can't find your symptom?"
+              : searchQuery
                 ? "No matching symptoms found"
                 : "No symptoms listed for this department"}
-            </Text>
-            <Text style={styles.customSymptomSubtext}>
-              Describe what you're experiencing instead
-            </Text>
-            <TextInput
-              style={styles.customSymptomInput}
-              placeholder="e.g. Sharp pain in my lower back when I bend"
-              placeholderTextColor="#808080"
-              value={customSymptomText}
-              onChangeText={setCustomSymptomText}
-              multiline
-              textAlignVertical="top"
-            />
-            <TouchableOpacity
-              style={[
-                styles.addCustomSymptomButton,
-                !customSymptomText.trim() &&
-                  styles.addCustomSymptomButtonDisabled,
-              ]}
-              onPress={handleAddCustomSymptom}
-              disabled={!customSymptomText.trim()}
-            >
-              <Text style={styles.addCustomSymptomButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </Text>
+          <Text style={styles.customSymptomSubtext}>
+            Describe what you're experiencing instead
+          </Text>
+          <TextInput
+            style={styles.customSymptomInput}
+            placeholder="e.g. Sharp pain in my lower back when I bend"
+            placeholderTextColor="#808080"
+            value={customSymptomText}
+            onChangeText={setCustomSymptomText}
+            multiline
+            textAlignVertical="top"
+          />
+          <TouchableOpacity
+            style={[
+              styles.addCustomSymptomButton,
+              !customSymptomText.trim() &&
+                styles.addCustomSymptomButtonDisabled,
+            ]}
+            onPress={handleAddCustomSymptom}
+            disabled={!customSymptomText.trim()}
+          >
+            <Text style={styles.addCustomSymptomButtonText}>Add</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Bottom spacing for button */}
         <View style={styles.bottomSpacing} />

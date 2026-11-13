@@ -25,14 +25,11 @@ import {
 import { images } from "../../../assets";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import TextInput from "../../shared/components/FormTextInput";
-import BookingScreen from "../booking/booking";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import SeacrchIcon from '../../../assets/AppIcons/Curonn_icons/search.svg';
 import LabdefaultIcon from '../../../assets/AppIcons/Curonn_icons/lab_detault_ic.svg';
 // import Svg, { Defs, Rect, Stop, RadialGradient } from 'react-native-svg';
-
-type ServiceType = "ambulance";
 
 
 interface TestItem {
@@ -73,8 +70,6 @@ export default function AmbulanceScreen() {
 
   const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [bookingVisible, setBookingVisible] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
   const [pageNo, setPageNo] = useState(1);
   const [ambulanceItems, setAmbulanceItems] = useState<TestItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -168,8 +163,17 @@ export default function AmbulanceScreen() {
     const ambulanceItem = ambulanceItems.find(item => item.id === id);
     console.log("Selected ambulance item for booking:", ambulanceItem);
     if (ambulanceItem) {
-      setSelectedTest(ambulanceItem);
-      setBookingVisible(true);
+      router.push({
+        pathname: "/features/booking/booking",
+        params: {
+          serviceName: String(ambulanceItem.name ?? ""),
+          servicePrice: String(Number(ambulanceItem.price) || 0),
+          masterId: String(ambulanceItem.ambulanceMasterId ?? ""),
+          type: "ambulance",
+          isAtHome: "true",
+          reportTime: "10-12 hours",
+        },
+      });
     }
   };
 
@@ -292,20 +296,6 @@ export default function AmbulanceScreen() {
           </View>
         </View>
 
-        {/* Booking Modal */}
-        {selectedTest && (
-          <BookingScreen
-            visible={bookingVisible}
-            onClose={() => {
-              setBookingVisible(false);
-              setSelectedTest(null);
-            }}
-            serviceName={selectedTest.name}
-            servicePrice={Number(selectedTest.price)}
-            masterId={selectedTest.ambulanceMasterId}
-            type={"ambulance" as ServiceType} isAtHome={true}
-            reportTime={"10-12 hours"} />
-        )}
       </View>
     </SafeAreaView>
   </>);

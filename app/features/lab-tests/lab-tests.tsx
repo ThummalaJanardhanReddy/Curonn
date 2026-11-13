@@ -29,7 +29,6 @@ import { images } from "../../../assets";
 import CommonHeader from "../../shared/components/CommonHeader";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import TextInput from "../../shared/components/FormTextInput";
-import BookingScreen from "../booking/booking";
 import ApiRoutes from "@/src/api/employee/employee";
 import axiosClient from "@/src/api/axiosClient";
 import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
@@ -124,8 +123,6 @@ interface ScansResponse {
   totalCount: number;
 }
 
-type ServiceType = "lab-test" | "health-checks" | "scans";
-
 export default function LabTestsScreen() {
   const [isTodayAvailable, setIsTodayAvailable] = useState(true);
   // Restrict Service Start Date based on labTimeSlots
@@ -166,7 +163,6 @@ export default function LabTestsScreen() {
   const [selectedSubTest, setSelectedSubTest] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
-  const [bookingVisible, setBookingVisible] = useState(false);
   const [diagsticVisible, setdiagsticVisible] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
   const [diagCenters, setDiagCenters] = useState<any[]>([]);
@@ -635,7 +631,22 @@ export default function LabTestsScreen() {
     console.log("Selected test for booking:", testItem);
     if (testItem) {
       setSelectedTest(testItem);
-      setBookingVisible(true);
+      router.push({
+        pathname: "/features/booking/booking",
+        params: {
+          serviceName: String(testItem.name ?? ""),
+          servicePrice: String(Number(testItem.curonnPrice) || 0),
+          reportTime: String(testItem.reportTime ?? ""),
+          isAtHome: String(testItem.isAtHome ?? false),
+          masterId: String(
+            testItem.labTestMasterId ||
+              testItem.labPackageMasterId ||
+              testItem.xrayMasterId ||
+              "",
+          ),
+          type: String(selectedCategory ?? ""),
+        },
+      });
     }
   };
 
@@ -661,14 +672,26 @@ export default function LabTestsScreen() {
     const center = diagCenters.find((c: any) => c.id === centerId);
     console.log("Selected test for booking:", testItem);
     if (testItem && center) {
-      setSelectedTest({
-        ...testItem,
-        selectedDate,
-        selectedTimeSlot,
-        selectedDiagCenter: center,
-      });
       setdiagsticVisible(false);
-      setBookingVisible(true);
+      router.push({
+        pathname: "/features/booking/booking",
+        params: {
+          serviceName: String(testItem.name ?? ""),
+          servicePrice: String(Number(testItem.curonnPrice) || 0),
+          reportTime: String(testItem.reportTime ?? ""),
+          isAtHome: String(testItem.isAtHome ?? false),
+          masterId: String(
+            testItem.labTestMasterId ||
+              testItem.labPackageMasterId ||
+              testItem.xrayMasterId ||
+              "",
+          ),
+          type: String(selectedCategory ?? ""),
+          selectedDiagCenter: JSON.stringify(center),
+          selectedDate: new Date(selectedDate).toISOString(),
+          selectedTimeSlot: String(selectedTimeSlot),
+        },
+      });
     }
   };
 
@@ -1093,36 +1116,6 @@ export default function LabTestsScreen() {
         </View>
         {/* </LinearGradient> */}
 
-        {/* Booking Modal */}
-        {selectedTest && (
-          <BookingScreen
-            visible={bookingVisible}
-            onClose={() => {
-              setBookingVisible(false);
-              if (selectedTest?.selectedDiagCenter) {
-                setdiagsticVisible(true);
-              }
-            }}
-            onSuccess={() => {
-              setdiagsticVisible(false);
-              setSelectedDate(null);
-              setSelectedTimeSlot("");
-            }}
-            serviceName={selectedTest.name}
-            servicePrice={Number(selectedTest.curonnPrice)}
-            reportTime={selectedTest.reportTime}
-            isAtHome={selectedTest.isAtHome}
-            masterId={
-              selectedTest.labTestMasterId ||
-              selectedTest.labPackageMasterId ||
-              selectedTest.xrayMasterId
-            }
-            type={selectedCategory as ServiceType}
-            selectedDiagCenter={selectedTest.selectedDiagCenter}
-            selectedDate={selectedTest.selectedDate}
-            selectedTimeSlot={selectedTest.selectedTimeSlot}
-          />
-        )}
 
         {/* Diagnostic Center Modal */}
         <Modal

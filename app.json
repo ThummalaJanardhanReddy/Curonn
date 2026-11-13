@@ -16,7 +16,9 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service."
+        "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service.",
+        "NSLocalNetworkUsageDescription": "Curonn uses your local network connection to load app updates during development.",
+        "NSBonjourServices": ["_dev._tcp"]
       }
     },
     "android": {
