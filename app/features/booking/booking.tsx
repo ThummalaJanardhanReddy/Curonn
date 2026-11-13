@@ -1,4 +1,4 @@
-import commonStyles, { colors } from "@/app/shared/styles/commonStyles";
+import { colors } from "@/app/shared/styles/commonStyles";
 import {
   getResponsiveFontSize,
   getResponsiveSpacing,
@@ -10,20 +10,19 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Image,
   Modal,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, RadioButton } from "react-native-paper";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { images } from "../../../assets";
 import PrimaryButton from "../../shared/components/PrimaryButton";
-import TextInput from "../../shared/components/FormTextInput";
 import SelectPatientModal from "../../shared/components/SelectPatientModal";
-import SecondaryButton from "../../shared/components/SecondaryButton";
 import Toast from "../../shared/components/Toast";
 import {
   orderManager,
@@ -108,9 +107,9 @@ export default function BookingScreen({
     console.log("[BookingScreen] selectedDiagCenter:", selectedDiagCenter);
   }
   // ─── Shared context ────────────────────────────────────────────────
-  const insets = useSafeAreaInsets();
   const { userData: userDataFromHook } = useUser();
   const [userData, setUserData] = useState<any>(null);
+  const insets = useSafeAreaInsets();
 
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
@@ -193,9 +192,10 @@ export default function BookingScreen({
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [editAddressId, setEditAddressId] = useState<number | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [addressCount, setAddressCount] = useState(0);
   // Unified address state (shared by both flows)
   const [selectedLocation, setSelectedLocation] = useState<{
-    addressId?: number;
+    addressId: number;
     address: string;
     houseNumber: string;
     landmark: string;
@@ -418,13 +418,17 @@ export default function BookingScreen({
     if (patientId) {
       fetchAddresses();
     }
+
+    return () => {
+      setSelectedLocation(null);
+    };
   }, [patientId]);
 
-  useCallback(() => {
+  const fetchAddressesIfNeeded = useCallback(() => {
     if (patientId) {
       fetchAddresses();
     }
-  }, [patientId]);
+  }, [patientId, addressVisible, locationModalVisible]);
 
   const fetchAddresses = async () => {
     try {
@@ -869,7 +873,6 @@ export default function BookingScreen({
 
   // Lab-test: handleBookNow
   const handleBookNowLab = async () => {
-    
     // Validate address, date, timeSlot as string errors
     if (!selectedLocation) {
       setErrors("Please select or add new address");
@@ -1674,7 +1677,7 @@ export default function BookingScreen({
   const medicineDiscountAmount = Math.round(
     (safeItemsTotal * safeDiscountPercent) / 100,
   );
-  
+
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
   const displayedTotal = useMemo(
@@ -1711,7 +1714,6 @@ export default function BookingScreen({
       }
     }
   };
-
 
   // Medicine: build order payload for /api/medicine-orders/save-order
   const buildMedOrderPayload = (paymentData?: {
@@ -2140,9 +2142,7 @@ export default function BookingScreen({
       <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
         <View style={styles.container}>
           {/* Header */}
-          <View
-            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
-          >
+          <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -2364,7 +2364,7 @@ export default function BookingScreen({
                     style={styles.addnewaddressButton}
                     onPress={handleViewAddress}
                   >
-                    <Text style={styles.AddressText}> + Add New Address</Text>
+                    <Text style={styles.AddressText}> Change Address</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -2699,6 +2699,9 @@ export default function BookingScreen({
                 // Refresh addresses in Booking screen when changed from AddressSelection
                 if (typeof fetchAddresses === "function") fetchAddresses();
               }}
+              getCount={(count) => {
+                setAddressCount(count);
+              }}
             />
           )}
 
@@ -2712,9 +2715,8 @@ export default function BookingScreen({
                 ...prev,
                 { id: Date.now().toString(), ...newAddress },
               ]);
-              setSelectedLocation(newAddress);
               setLocationModalVisible(false);
-              setAddressVisible(false);
+              setAddressVisible(true);
             }}
           />
 
@@ -2748,13 +2750,16 @@ export default function BookingScreen({
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
-          <View
-            style={[styles.headerRow, { paddingTop: insets.top + getResponsiveSpacing(15) }]}
-          >
+          <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Order Info</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
@@ -2868,7 +2873,7 @@ export default function BookingScreen({
                       style={styles.addnewaddressButton}
                       onPress={handleViewAddress}
                     >
-                      <Text style={styles.AddressText}> + Add New Address</Text>
+                      <Text style={styles.AddressText}>Change Address</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -3076,7 +3081,7 @@ export default function BookingScreen({
                                 : "Select Relation"}
                             </Text>
                             <Image
-                              source= {images.arrowdown as any}
+                              source={images.arrowdown as any}
                               style={styles.dropdownIcon}
                             />
                           </TouchableOpacity>
@@ -3314,7 +3319,6 @@ export default function BookingScreen({
                 title={`Confirm & Pay wellness \u20B9${totalAmount}`}
                 onPress={handleBookWellness}
                 style={{ width: "100%" }}
-               
               />
               {/* Select Patient Modal for Wellness */}
               <SelectPatientModal
@@ -3426,7 +3430,13 @@ export default function BookingScreen({
               }
             }}
           >
-            <View style={{ flex: 1 }}>
+            <View
+              style={{
+                flex: 1,
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+              }}
+            >
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
                 amount={
@@ -3560,8 +3570,12 @@ export default function BookingScreen({
               }}
               onClose={() => setAddressVisible(false)}
               onAddressChanged={() => {
+                console.log("Address changed, refreshing addresses...");
                 // Refresh addresses in Booking screen when changed from AddressSelection
                 if (typeof fetchAddresses === "function") fetchAddresses();
+              }}
+              getCount={(count) => {
+                setAddressCount(count);
               }}
             />
           )}
@@ -3571,14 +3585,29 @@ export default function BookingScreen({
             visible={locationModalVisible}
             addressId={editAddressId}
             onClose={() => setLocationModalVisible(false)}
+            count={addressCount} // Pass the count of addresses to LocationSelection
+            setCount={(count) => {
+              console.log("Address count updated from LocationSelection:", count);
+              setAddressCount(count); // Update the address count in Booking screen
+              if (count > 1) setAddressVisible(true);
+            }}
             onLocationSelected={(newAddress) => {
-              setSavedAddresses((prev) => [
-                ...prev,
-                { id: Date.now().toString(), ...newAddress },
-              ]);
-              setSelectedLocation(newAddress);
-              setLocationModalVisible(false);
-              setAddressVisible(false);
+              console.log("New address selected:", newAddress);
+              const addressWithId = {
+                id: Date.now().toString(),
+                ...newAddress,
+              };
+              const addressId = {
+                addressId: Number(addressWithId.id),
+                address: newAddress.address,
+                houseNumber: newAddress.houseNumber ?? "",
+                landmark: newAddress.landmark ?? "",
+                nickname: newAddress.nickname ?? "",
+              };
+
+              setSavedAddresses((prev) => [...prev, addressWithId]);
+              setLocationModalVisible(false);fetchAddresses();
+              // setAddressVisible(true);
             }}
           />
         </View>
@@ -4050,12 +4079,13 @@ const styles = StyleSheet.create({
   },
   addnewaddressButton: {
     borderRadius: 8,
-    width: "45%",
+    // maxWidth: "45%",
     borderColor: "#0580FA",
     borderWidth: 1,
     paddingVertical: 4,
     paddingHorizontal: 12,
-    textAlign: "center",
+    // textAlign: "center",
+    alignSelf: "flex-start",
     marginTop: 12,
     height: 30,
     justifyContent: "center",

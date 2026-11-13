@@ -1258,7 +1258,7 @@ export default function LabTestsScreen() {
                 <View style={styles.modalHeader}></View>
                 {diagLoading ? (
                   <View style={{ alignItems: "center", padding: 20 }}>
-                    <ActivityIndicator size="large" color="#694664" />
+                    <ActivityIndicator size="large" color={colors.primary} />
                   </View>
                 ) : (
                   <View style={styles.modalScrollableContent}>
