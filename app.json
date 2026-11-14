@@ -3,20 +3,23 @@
     "name": "curonn",
     "slug": "curonn",
     "icon": "./assets/curonn_appicon.png",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.curonn.health",
+      "buildNumber": "24",
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "production"
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service."
+        "NSLocationWhenInUseUsageDescription": "Curonn uses your location to find healthcare services near you. For example, your location helps us show nearby diagnostic centers, hospitals, doctors, and pharmacies when you search or book a healthcare service.",
+        "NSLocalNetworkUsageDescription": "Curonn uses your local network connection to load app updates during development.",
+        "NSBonjourServices": ["_dev._tcp"]
       }
     },
     "android": {
@@ -92,7 +95,8 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "dynamic"
+            "useFrameworks": "dynamic",
+            "deploymentTarget": "15.1"
           }
         }
       ]

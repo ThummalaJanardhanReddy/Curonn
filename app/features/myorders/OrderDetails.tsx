@@ -1143,11 +1143,18 @@ function OrderDetails({
 
   if (loading) {
     return (
-      <ActivityIndicator
-        size="large"
-        color={colors.primary}
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      />
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={onClose}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </SafeAreaView>
+      </Modal>
     );
   }
   return (

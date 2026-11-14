@@ -50,6 +50,7 @@ interface AddressSelectionProps {
   onClose: () => void;
   /** Called when addresses change (delete/default/add/edit) so parent can refresh */
   onAddressChanged?: () => void;
+  getCount?: (count: number) => void; // Callback to get the count of addresses
 }
 
 export default function AddressSelection({
@@ -60,6 +61,7 @@ export default function AddressSelection({
   onEdit,
   onClose,
   onAddressChanged,
+  getCount,
 }: AddressSelectionProps) {
   const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
@@ -85,6 +87,7 @@ export default function AddressSelection({
     const addressId = defaultAddr?.addressId ?? null;
     setDefaultAddressId(addressId);
     setSelectedAddressId(addressId);
+    getCount?.(addresses.length); // Call getCount if provided
   }, [addresses]);
   const fetchAddresses = async () => {
     try {
@@ -94,9 +97,7 @@ export default function AddressSelection({
         ApiRoutes.Address.getAddressByPatientId(patientId),
       );
 
-      console.log("Fetched addresses:", responcedata);
       if (responcedata.isSuccess) {
-        console.log("Address data:", responcedata.data);
         const addressList = responcedata.data ?? [];
         setAddresses(addressList);
         // ⭐ Priority 1: previously selected address
@@ -123,6 +124,7 @@ export default function AddressSelection({
     if(addresses.length === 1) {
       onSelect(addresses[0].addressId);
     }
+    getCount?.(addresses.length); // Call getCount if provided
     onClose();
   };
   // 🔥 Auto fetch when modal opens
@@ -136,9 +138,8 @@ export default function AddressSelection({
     try {
       // Use query params as per Swagger
       const url = `${ApiRoutes.Address.setDfaultaddress}?addressId=${addressId}&patientId=${patientId}`;
-      console.log("Set default address URL:", url);
       const response: any = await axiosClient.post(url, {});
-      console.log("Set default response:", response);
+      
       if (response.isSuccess === true) {
         setDefaultAddressId(addressId);
         setAddresses((prev) =>
@@ -257,6 +258,13 @@ export default function AddressSelection({
                               onPress={() => {
                                 handlesetdefault(item.addressId);
                               }}
+                              style={{
+                                borderWidth: 1,
+                                borderColor: colors.primary,
+                                paddingHorizontal: 10,
+                                paddingVertical: 3,
+                                borderRadius: 5,
+                              }}
                             >
                               <Text
                                 style={{
@@ -272,7 +280,7 @@ export default function AddressSelection({
                         </View>
 
                         <Text style={styles.address}>
-                          H.No: {item.hNo}, {item.address}
+                          {item.hNo}, {item.address}
                         </Text>
                         {item.landMark && item.landMark.trim() !== "" && (
                           <Text style={[styles.address, { color: "#888" }]}>

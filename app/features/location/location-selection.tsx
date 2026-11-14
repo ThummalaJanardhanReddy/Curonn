@@ -15,7 +15,10 @@ import {
 } from "react-native";
 import TextInput from "@/app/shared/components/FormTextInput";
 import { Button, Chip } from "react-native-paper";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { images } from "../../../assets";
 const { height: screenHeight } = Dimensions.get("window");
 import MapView, { Marker } from "react-native-maps";
@@ -46,6 +49,8 @@ interface LocationSelectionProps {
   onLocationSelected: (location: LocationData) => void;
   addressId?: number | null;
   isSimpleLocationSelect?: boolean; // Optional prop to indicate simple location selection
+  setCount?: (count: number) => void; // Optional prop to pass the count of addresses
+  count?: number; // Optional prop to pass the count of addresses
 }
 
 const GOOGLE_PLACES_API_KEY = "AIzaSyBrbqkkwpKdU0qIOkmJm6JnULSDr729oic";
@@ -56,6 +61,8 @@ export default function LocationSelection({
   onLocationSelected,
   addressId,
   isSimpleLocationSelect = false, // Default to false if not provided
+  setCount = () => {}, // Default to empty function if not provided
+  count = 0, // Default to 0 if not provided
 }: LocationSelectionProps) {
   const insets = useSafeAreaInsets();
   const { userData } = useUser();
@@ -93,8 +100,10 @@ export default function LocationSelection({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
@@ -322,7 +331,6 @@ export default function LocationSelection({
         ApiRoutes.Address.saveAddress,
         payload,
       );
-      console.log("saved addresses:", responsedata);
 
       if (responsedata && responsedata.responseCode === "200") {
         setToastMessage({
@@ -331,6 +339,7 @@ export default function LocationSelection({
           type: "success",
         });
         setShowToast(true);
+        setCount(count + 1); // Increment the count of addresses
         // Optionally close modal or call onLocationSelected
         onLocationSelected(locationData);
         // await AsyncStorage.removeItem("userLocationLatLng");
@@ -341,11 +350,7 @@ export default function LocationSelection({
             longitude: locationData?.longitude,
           }),
         );
-        console.log("Address: ", locationData);
-        console.log(
-          "saved address: ",
-          await AsyncStorage.getItem("userLocationLatLng"),
-        );
+
         onClose();
       }
     } catch (error) {
@@ -377,7 +382,7 @@ export default function LocationSelection({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
         <View style={styles.container}>
           {/* Header */}
           <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -573,7 +578,10 @@ export default function LocationSelection({
                 },
               ]}
             >
-              <SafeAreaView style={{ flex: 1 }} edges={keyboardHeight > 0 ? [] : ["bottom"]}>
+              <SafeAreaView
+                style={{ flex: 1 }}
+                edges={keyboardHeight > 0 ? [] : ["bottom"]}
+              >
                 {/* Current Location Info — kept outside the scroll view so
                     it stays visible while typing */}
                 <View style={[styles.overlayContent, { paddingBottom: 0 }]}>
@@ -586,9 +594,7 @@ export default function LocationSelection({
                         style={styles.locationIcon}
                       />
 
-                      <Text style={styles.locationTitle}>
-                        Current Address
-                      </Text>
+                      <Text style={styles.locationTitle}>Current Address</Text>
                     </View>
                     <Text style={styles.locationAddress}>
                       {address || "Getting address..."}
@@ -846,7 +852,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     fontFamily: fonts.regular,
     color: colors.primaryText,
-    
   },
   errortext: {
     ...fontStyles.errortext,
@@ -865,7 +870,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
     fontFamily: fonts.regular,
-    color: colors.primaryText
+    color: colors.primaryText,
   },
   nicknameSection: {
     marginBottom: 20,

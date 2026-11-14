@@ -16,11 +16,6 @@ import MedicineIcon from "../../assets/AppIcons/Curonn_icons/menu/new/medicine.s
 import MedicineIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/medicine_select.svg";
 import OrderIcon from "../../assets/AppIcons/Curonn_icons/menu/new/orders.svg";
 import OrderIconSelected from "../../assets/AppIcons/Curonn_icons/menu/new/orders_select.svg";
-import {
-  getResponsiveFontSize,
-  getResponsiveImageSize,
-  getResponsiveSpacing,
-} from "../shared/utils/responsive";
 import { colors } from "../shared/styles/commonStyles";
 
 export default function MainLayout() {

@@ -61,9 +61,16 @@ export default function RootLayout() {
               >
                 {/* Update the screen to match an existing route */}
                <Stack.Screen
-                  name="shared/components/SplashScreen" 
+                  name="shared/components/SplashScreen"
                   options={{
                     animation: "none",
+                  }}
+                />
+                <Stack.Screen
+                  name="features/booking/booking"
+                  options={{
+                    presentation: "card",
+                    animation: "slide_from_right",
                   }}
                 />
               </Stack>
