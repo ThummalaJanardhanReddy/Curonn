@@ -3,13 +3,14 @@
     "name": "curonn",
     "slug": "curonn",
     "icon": "./assets/curonn_appicon.png",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "curonn",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.curonn.health",
+      "buildNumber": "24",
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "production"
