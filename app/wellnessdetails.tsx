@@ -21,7 +21,6 @@ import { getResponsiveSpacing } from "./shared/utils/responsive";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fontStyles, fonts } from "./shared/styles/fonts";
-import BookingScreen from "./features/booking/booking";
 import dayjs from "dayjs";
 import { useUserStore } from "@/src/store/UserStore";
 import { formatDateTime } from "@/src/constants/constants";
@@ -210,7 +209,6 @@ const DietNutritionTypes = [
   },
 ];
 
-type ServiceType = "wellness";
 export default function WellnessDetailsScreen() {
   // Wellness program data map
   const wellnessProgramsData = {
@@ -400,7 +398,6 @@ export default function WellnessDetailsScreen() {
   const route = useRoute();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [bookingVisible, setBookingVisible] = useState(false);
   const { wellnessMasterId, bookingId, enrolled, startDate, endDate } =
     route.params as RouteParams;
   const [selectedTest, setSelectedTest] = useState<TestItem | null>(null);
@@ -542,8 +539,19 @@ export default function WellnessDetailsScreen() {
     handleBookTest(details.wellnessMasterId);
   };
   const handleBookTest = (id: string) => {
-    // setSelectedTest(testItem);
-    setBookingVisible(true);
+    if (!details) return;
+    router.push({
+      pathname: "/features/booking/booking",
+      params: {
+        serviceName: String(details.programName ?? ""),
+        duration: String(details.duration ?? ""),
+        isAtHome: String(details.isAtHome ?? false),
+        type: String(selectedCategory ?? ""),
+        servicePrice: String(Number(details.price) || 0),
+        reportTime: String(details.createdOn ?? ""),
+        masterId: String(details.wellnessMasterId ?? ""),
+      },
+    });
   };
 
   if (loading) {
@@ -842,23 +850,6 @@ export default function WellnessDetailsScreen() {
           </View>
         )}
       </View>
-
-      {details && (
-        <BookingScreen
-          visible={bookingVisible}
-          onClose={() => {
-            setBookingVisible(false);
-          }}
-          serviceName={details.programName}
-          duration={details.duration}
-          programeId={details.programId}
-          isAtHome={details.isAtHome}
-          type={selectedCategory as ServiceType}
-          servicePrice={Number(details.price)}
-          reportTime={details.createdOn}
-          masterId={details.wellnessMasterId}
-        />
-      )}
 
       {/* Plan Modal */}
       <Modal

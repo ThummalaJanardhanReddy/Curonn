@@ -21,7 +21,6 @@ import ApiRoutes from "@/src/api/employee/employee";
 
 import PrimaryButton from "./shared/components/PrimaryButton";
 import NativeDatePickerModal from "./shared/components/NativeDatePickerModal";
-import BookingScreen from "./features/booking/booking";
 
 import { images } from "@/assets";
 import { colors } from "./shared/styles/commonStyles";
@@ -73,7 +72,6 @@ export default function ViewDetailsScreen() {
   const [details, setDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState("New York, NY");
-  const [bookingVisible, setBookingVisible] = useState(false);
 
   const [diagsticVisible, setdiagsticVisible] = useState(false);
   const [selectedDiagCenter, setSelectedDiagCenter] = useState<any>(null);
@@ -259,7 +257,41 @@ export default function ViewDetailsScreen() {
         selectedDiagCenter: center,
       });
       setdiagsticVisible(false);
-      setBookingVisible(true);
+      router.push({
+        pathname: "/features/booking/booking",
+        params: {
+          serviceName: String(
+            testItem.testName ||
+              testItem.packageName ||
+              testItem.centerName ||
+              testItem.programName ||
+              testItem.name ||
+              "",
+          ),
+          servicePrice: String(
+            Number(testItem.curonnprice || testItem.curonnPrice) ||
+              Number(testItem.price) ||
+              Number(routeCuronnPrice) ||
+              Number(routePrice) ||
+              0,
+          ),
+          reportTime: String(testItem.reportTime || testItem.duration || ""),
+          isAtHome: String(testItem.isAtHome ?? false),
+          masterId: String(
+            testItem.labTestMasterId ||
+              testItem.labPackageMasterId ||
+              testItem.xrayMasterId ||
+              testItem.id ||
+              "",
+          ),
+          type: String(type),
+          selectedDiagCenter: JSON.stringify(center),
+          ...(selectedDate
+            ? { selectedDate: new Date(selectedDate).toISOString() }
+            : {}),
+          ...(selectedTimeSlot ? { selectedTimeSlot: String(selectedTimeSlot) } : {}),
+        },
+      });
     }
   };
 
@@ -663,8 +695,27 @@ export default function ViewDetailsScreen() {
                   if (type === "scans") {
                     setdiagsticVisible(true);
                     fetchDiagCenters();
-                  } else {
-                    setBookingVisible(true);
+                  } else if (bookingData) {
+                    router.push({
+                      pathname: "/features/booking/booking",
+                      params: {
+                        serviceName: String(bookingData.serviceName ?? ""),
+                        servicePrice: String(bookingData.servicePrice ?? 0),
+                        reportTime: String(bookingData.reportTime ?? ""),
+                        isAtHome: String(bookingData.isAtHome ?? false),
+                        masterId: String(bookingData.masterId ?? ""),
+                        type: String(bookingData.type ?? ""),
+                        ...(selectedDiagCenter
+                          ? { selectedDiagCenter: JSON.stringify(selectedDiagCenter) }
+                          : {}),
+                        ...(selectedDate
+                          ? { selectedDate: new Date(selectedDate).toISOString() }
+                          : {}),
+                        ...(selectedTimeSlot
+                          ? { selectedTimeSlot: String(selectedTimeSlot) }
+                          : {}),
+                      },
+                    });
                   }
                 }}
                 style={styles.bookButton}
@@ -690,18 +741,6 @@ export default function ViewDetailsScreen() {
               style={styles.bookButton}
             />
           </View>
-        )}
-
-        {bookingVisible && bookingData && (
-          <BookingScreen
-            visible={bookingVisible}
-            onClose={() => setBookingVisible(false)}
-            onSuccess={() => setBookingVisible(false)}
-            {...bookingData}
-            selectedDiagCenter={selectedDiagCenter}
-            selectedDate={selectedDate}
-            selectedTimeSlot={selectedTimeSlot}
-          />
         )}
       </View>
       {/* Diagnostic Center Modal */}
