@@ -781,8 +781,8 @@ export default function HomeScreen() {
         : enrolledResponse
           ? [enrolledResponse]
           : [];
-      console.log("Wellness List:", wellnessList);
-      console.log("Enrolled List:", enrolledList);
+      // console.log("Wellness List:", wellnessList);
+      // console.log("Enrolled List:", enrolledList);
       const enrichedWellness = wellnessList
         .map((wellness: any) => {
           const wellnessId = wellness.wellnessMasterId ?? wellness.id;
@@ -809,7 +809,7 @@ export default function HomeScreen() {
           // Enrolled first
           return Number(b.enrolled) - Number(a.enrolled);
         });
-      console.log("Enriched Wellness List:", enrichedWellness);
+      // console.log("Enriched Wellness List:", enrichedWellness);
       setWellnessall(enrichedWellness);
     } catch (error) {
       console.error("Failed to fetch wellness programs", error);
