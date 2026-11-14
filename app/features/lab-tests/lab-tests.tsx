@@ -40,6 +40,7 @@ import {
 } from "react-native-safe-area-context";
 import SamplecollectionIcon from "../../../assets/images/howtosamplecollect.svg";
 import { StatusBar } from "expo-status-bar";
+import dayjs from "dayjs";
 
 interface TestCategory {
   id: string;
@@ -531,10 +532,11 @@ export default function LabTestsScreen() {
   };
 
   const formatDateLab = (date: Date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    // const day = date.getDate().toString().padStart(2, "0");
+    // const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    // const year = date.getFullYear();
+    // return `${day}/${month}/${year}`;
+    return dayjs(date).format("DD MMM YYYY")
   };
 
   const handleConfirmDate = (date: Date) => {
@@ -1141,9 +1143,11 @@ export default function LabTestsScreen() {
                 },
               ]}
             >
+              {/* to-do: remove header and add title */}
               <CommonHeader
                 onProfilePress={() => console.log("Profile pressed")}
                 showCart={false}
+                showProfile={false}
                 onLocationChange={handleLocationChange}
               />
               <TouchableOpacity
@@ -1282,9 +1286,9 @@ export default function LabTestsScreen() {
                               <View style={styles.testCard1}>
                                 <View style={styles.testInfo}>
                                   <Text style={styles.testName}>
-                                    {center.centerName}
+                                    {center.centerName} - <Text style={styles.testReportTime}>{center.distanceKm?.toFixed(2)} km away</Text>
                                   </Text>
-
+                                  
                                   <Text style={styles.testReportTime}>
                                     {center.address}
                                   </Text>
@@ -1574,7 +1578,6 @@ const styles = StyleSheet.create({
   },
   centerName: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#251729",
     fontWeight: "700",
   },
@@ -1781,6 +1784,8 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
     marginBottom: 3,
     fontFamily: fonts.bold,
+    alignSelf: "flex-start",
+    alignItems: 'center'
   },
   // testPrice: {
   //   fontSize: 11,

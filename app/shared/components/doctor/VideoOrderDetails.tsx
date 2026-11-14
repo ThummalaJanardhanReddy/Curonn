@@ -53,6 +53,27 @@ export default function VideoOrderDetails({
   const { status, roomUrl } = useVideoStore();
   const [reports, setReports] = useState([]);
 
+  const scheduleBetween = data.scheduleBetween || "";
+  const [datePart, timePart] = scheduleBetween.split(" ");
+  const [date, setDate] = useState("");
+  const [timeSlot, setTimeSlot] = useState("");
+  useEffect(() => {
+    const match = scheduleBetween.match(
+      /^(\d{4}-\d{2}-\d{2})\s+(.+?)\s+-\s+(.+)$/,
+    );
+
+    if (match) {
+      const [, datePart, startTime, endTime] = match;
+
+      const date = dayjs(datePart, "YYYY-MM-DD").format("DD MMM YYYY");
+
+      const timeSlot = `${startTime} - ${endTime}`;
+
+      setDate(date);
+      setTimeSlot(timeSlot);
+    }
+  }, [scheduleBetween]);
+
   const formattedDate = useMemo(() => {
     if (!data.scheduleDate) return "N/A";
     return dayjs(data.scheduleDate).format("DD-MM-YYYY");
@@ -156,9 +177,9 @@ export default function VideoOrderDetails({
                 <>
                   <Text style={styles.primaryText}>{data.doctorName}</Text>
 
-                  {data.speciality && (
+                  {/* {data.speciality && (
                     <Text style={styles.secondaryText}>{data.speciality}</Text>
-                  )}
+                  )} */}
                 </>
               ) : (
                 <>
@@ -223,12 +244,11 @@ export default function VideoOrderDetails({
                   .join(", ") || "N/A"}
               </Text>
             </View>
-            {data?.symptoms && (
-              <View style={styles.symtomsSection}>
-                <Text style={styles.symtomsheader}>Symptoms</Text>
-                <Text style={styles.symtomText}>{data.symptoms}</Text>
-              </View>
-            )}
+
+            <View style={styles.symtomsSection}>
+              <Text style={styles.symtomsheader}>Symptoms</Text>
+              <Text style={styles.symtomText}>{data.symptoms ?? "--"}</Text>
+            </View>
 
             <View
               style={{
@@ -242,7 +262,7 @@ export default function VideoOrderDetails({
                 Appointment preffered data & Time
               </Text>
               <Text style={[styles.datelabel, { marginTop: 4 }]}>
-                {data.scheduleBetween}
+                {date ? `${date}, ${timeSlot}` : "--"}
               </Text>
               <View
                 style={[
@@ -277,55 +297,63 @@ export default function VideoOrderDetails({
 
           {/* ---------------- Consultation Info ---------------- */}
 
-          <Text style={styles.sectionTitle}>Consultation info</Text>
+          {data?.statusName !== "Pending" && (
+            <>
+              <Text style={styles.sectionTitle}>Consultation info</Text>
 
-          <View style={styles.card}>
-            <View style={styles.consultTypeBadge}>
-              <Text style={styles.consultTypeText}>
-                {data.scheduleTypeName || "Video Consultation"}
-              </Text>
-            </View>
+              <View style={styles.card}>
+                <View style={styles.consultTypeBadge}>
+                  <Text style={styles.consultTypeText}>
+                    {data.scheduleTypeName || "Video Consultation"}
+                  </Text>
+                </View>
 
-            <View style={{ paddingVertical: 0, marginTop: 4 }}>
-              {data.scheduleDate ? (
-                <Text style={styles.datelabel}>
-                  {dayjs(data.scheduleDate).format("DD-MMM-YYYY h:mm A")}
-                </Text>
-              ) : (
-                <Text style={styles.datelabel}>{data.scheduleBetween}</Text>
-              )}
-            </View>
+                <View style={{ paddingVertical: 0, marginTop: 4 }}>
+                  {data.scheduleDate ? (
+                    <Text style={styles.datelabel}>
+                      {dayjs(data.scheduleDate).format("DD MMM YYYY, h:mm A")}
+                    </Text>
+                  ) : (
+                    <Text style={styles.datelabel}>
+                      {dayjs(data.scheduleBetween).format(
+                        "DD MMM YYYY, h:mm A",
+                      )}
+                    </Text>
+                  )}
+                </View>
 
-            {/* Booking ID */}
-            {/* <Text style={styles.bookingIdText}>
+                {/* Booking ID */}
+                {/* <Text style={styles.bookingIdText}>
                 Booking ID: {data.bookingId}
               </Text> */}
 
-            {/* Right Side Status Badge */}
+                {/* Right Side Status Badge */}
 
-            <View style={styles.statusBadgeContainer}>
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    backgroundColor: statusColor,
-                    color: statusTextColor,
-                    borderRadius: 30,
-                    marginTop: 3,
-                    marginBottom: 5,
-                    paddingHorizontal: 15,
-                    paddingVertical: 2,
-                    alignSelf: "flex-start",
-                    fontSize: 11,
-                    fontFamily: fonts.regular,
-                  },
-                ]}
-              >
-                {data.statusName}
-              </Text>
-              {/* <Text style={styles.statusBadgeText}>Status:  <Text style={styles.statusBadgeText}>{data.statusName}</Text></Text> */}
-            </View>
-          </View>
+                <View style={styles.statusBadgeContainer}>
+                  <Text
+                    style={[
+                      styles.value,
+                      {
+                        backgroundColor: statusColor,
+                        color: statusTextColor,
+                        borderRadius: 30,
+                        marginTop: 3,
+                        marginBottom: 5,
+                        paddingHorizontal: 15,
+                        paddingVertical: 2,
+                        alignSelf: "flex-start",
+                        fontSize: 11,
+                        fontFamily: fonts.regular,
+                      },
+                    ]}
+                  >
+                    {data.statusName}
+                  </Text>
+                  {/* <Text style={styles.statusBadgeText}>Status:  <Text style={styles.statusBadgeText}>{data.statusName}</Text></Text> */}
+                </View>
+              </View>
+            </>
+          )}
 
           {/* ---------------- Prescription Section ---------------- */}
           {data?.statusName === "Completed" && (
@@ -345,41 +373,45 @@ export default function VideoOrderDetails({
               {reports.length > 0 && (
                 <>
                   <Text style={styles.sectionTitle}>View Prescription</Text>
-                  {reports.map((report: any) => (
-                    <View
-                      key={report.patientReportId}
-                      style={styles.individualcard}
-                    >
-                      <Image
-                        source={images.reportsimage}
-                        style={styles.closeIcon}
-                      />
+                  {reports
+                    .filter(
+                      (report: any) => report.typeId === data.appointmentId,
+                    )
+                    ?.map((report: any) => (
                       <TouchableOpacity
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          padding: 5,
-                        }}
+                        key={report.patientReportId}
+                        style={styles.individualcard}
                         onPress={() => handleViewReport(report.filePath)}
                       >
-                        <Text
+                        <Image
+                          source={images.reportsimage}
+                          style={styles.closeIcon}
+                        />
+                        <View
                           style={{
-                            marginBottom: 10,
-                            flex: 1,
-                            color: "#fff",
-                            fontFamily: fonts.bold,
-                            fontSize: 14,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            padding: 5,
                           }}
-                          numberOfLines={1}
-                          ellipsizeMode="middle"
                         >
-                          {report.reportName
-                            ? report.reportName
-                            : report.fileName || "Report"}
-                        </Text>
+                          <Text
+                            style={{
+                              marginBottom: 10,
+                              flex: 1,
+                              color: "#fff",
+                              fontFamily: fonts.bold,
+                              fontSize: 14,
+                            }}
+                            numberOfLines={1}
+                            ellipsizeMode="middle"
+                          >
+                            {report.reportName
+                              ? report.reportName
+                              : report.fileName || "Report"}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
-                    </View>
-                  ))}
+                    ))}
                 </>
               )}
             </>

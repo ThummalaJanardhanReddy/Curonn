@@ -223,7 +223,7 @@ export default function OrdersScreen() {
     // Map orderType to category
     let category = "";
     let iconSource = null;
-    console.log("Rendering order card for: ", item);
+    // console.log("Rendering order card for: ", item);
     switch (item.orderType) {
       case "Single Test":
         category = "Lab Test";
@@ -260,9 +260,14 @@ export default function OrdersScreen() {
 
     // Format createdOn date
     const createdOn = item.scheduleDate
-      ? dayjs(item.scheduleDate).format("DD-MM-YYYY h:mm A")
+      ? dayjs(item.scheduleDate).format("DD MMM YYYY, h:mm A")
+      : "";
+
+    const bookedOn = item.bookedDate
+      ? dayjs(item.bookedDate).format("DD MMM YYYY,")
       : "";
     const timeSlot = item.timeSlot ? `${item.timeSlot}` : "";
+
     const duration = item.duration ? `${item.duration}` : "";
 
     const statusColor = statusColors[item.statusName] || "#666";
@@ -292,13 +297,18 @@ export default function OrdersScreen() {
                 <Text style={styles.categorytitle1}>Duration: {duration}</Text>
               </View>
             ) : (
-              <View style={[styles.categoryrow, {flexDirection: "column", alignItems: "flex-start"}]}>
-                <Text style={styles.categorytitle}>
-                  Booked Slot: {timeSlot}
-                </Text>
-                <Text style={[styles.categorytitle, {fontWeight: "600"}]}>
-                  Scheduled On: {createdOn}
-                </Text>
+              <View
+                style={[
+                  styles.categoryrow,
+                  { flexDirection: "column", alignItems: "flex-start" },
+                ]}
+              >
+                <Text style={styles.categorytitle}>Preffered Date: {bookedOn} {timeSlot}</Text>
+                {createdOn && item.orderType === "Consultation" && (
+                  <Text style={[styles.categorytitle, { fontWeight: "600" }]}>
+                    Scheduled On: {createdOn}
+                  </Text>
+                )}
               </View>
             )}
 

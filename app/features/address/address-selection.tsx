@@ -309,7 +309,7 @@ export default function AddressSelection({
                           <Text
                             style={{
                               color: colors.primary,
-                              paddingTop: 3,
+                              // paddingTop: 3,
                               fontSize: 11,
                               fontFamily: fonts.regular,
                             }}
@@ -380,7 +380,7 @@ export default function AddressSelection({
                         >
                           <Text
                             style={{
-                              color: "#ff0000",
+                              color: colors.primary,
                               paddingTop: 3,
                               fontSize: 11,
                               fontFamily: fonts.regular,
@@ -507,14 +507,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingVertical: 3,
     height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
   deletebutton: {
     borderWidth: 1,
-    borderColor: "#ff0000",
+    borderColor: colors.primary,
     paddingHorizontal: 12,
     borderRadius: 5,
     paddingVertical: 3,
     height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
   selectbutton: {
     borderWidth: 1,
@@ -524,5 +528,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 3,
     height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

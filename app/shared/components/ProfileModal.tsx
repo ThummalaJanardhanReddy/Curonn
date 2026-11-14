@@ -447,9 +447,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const handleRateApp = async () => {
     try {
       // App store URLs for rating
-      const appStoreUrl = "https://apps.apple.com/app/id123456789"; // Replace with actual App Store ID
-      const playStoreUrl =
-        "https://play.google.com/store/apps/details?id=com.curonn.app"; // Replace with actual package name
+      const appStoreUrl = "https://apps.apple.com/in/app/curonn/id6760606043"; // Replace with actual App Store ID
+      const playStoreUrl = "https://play.google.com/store/apps/details?id=com.curonn.health"; // Replace with actual package name
 
       let storeUrl = "";
 
@@ -749,7 +748,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     //   onClose();
     // }
     router.dismissAll(); // Dismiss all modals when closing the profile modal
-    router.back(); // Navigate back to the previous screen
+    router.replace("/(main)/home"); // Navigate to the home screen
+    // router.back(); // Navigate back to the previous screen
   };
 
   return (

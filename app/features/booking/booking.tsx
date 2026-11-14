@@ -1390,6 +1390,7 @@ export default function BookingScreen() {
       xrayMasterId: masterId || 0,
       testType: "Xray",
       diagnosisCenter: selectedDiagCenter.centerName || "",
+      centerAddress: selectedDiagCenter.address || "",
       statusId: statusId,
       paymentDetails: String(totalAmount),
       paymentAmount: totalAmount,
@@ -1397,6 +1398,7 @@ export default function BookingScreen() {
       razorpayPaymentId: paymentData?.razorpayPaymentId || "",
       razorpaySignature: paymentData?.razorpaySignature || "",
       req: "web",
+      centerid: selectedDiagCenter.id || 0,
     };
     if (patientType === "others" && selectedRelation) {
       payload.relationId = selectedRelation.masterDataId;
@@ -2112,7 +2114,14 @@ export default function BookingScreen() {
   if (isFromMedicalFlag) {
     // ─── MEDICINE FLOW RENDER ─────────────────────────────────────────
     const content = (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <View
+        style={{
+          flex: 1,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          backgroundColor: "#fff",
+        }}
+      >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -2120,7 +2129,6 @@ export default function BookingScreen() {
             <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Order Info</Text>
           </View>
 
           <KeyboardAwareScrollView
@@ -2704,7 +2712,7 @@ export default function BookingScreen() {
             duration={3000}
           />
         </View>
-      </SafeAreaView>
+      </View>
     );
 
     return content;
@@ -2712,21 +2720,22 @@ export default function BookingScreen() {
 
   // ─── LAB TEST FLOW RENDER ───────────────────────────────────────────
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="fullScreen"
-    >
-      <SafeAreaView style={{ flex: 1 }}>
+    <>
+      <View
+        style={{
+          flex: 1,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          backgroundColor: "#fff",
+        }}
+      >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Order Info</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
               <Image source={images.icons.close} style={styles.closeIcon} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Order Info</Text>
           </View>
 
           <KeyboardAwareScrollView
@@ -2778,14 +2787,16 @@ export default function BookingScreen() {
                       >
                         <View style={{ marginBottom: 8 }}>
                           <Text style={styles.serviceCenter}>
-                            {selectedDiagCenter.centerName}
+                            {selectedDiagCenter.centerName} - <Text style={styles.centerDistance}>
+                              {selectedDiagCenter.distanceKm?.toFixed(2)} km away
+                            </Text>
                           </Text>
                           <Text style={styles.centerAddress}>
                             {selectedDiagCenter.address}
                           </Text>
-                          <Text style={styles.centerDistance}>
+                          {/* <Text style={styles.centerDistance}>
                             {selectedDiagCenter.distanceKm?.toFixed(2)} km away
-                          </Text>
+                          </Text> */}
                         </View>
                       </View>
                     </>
@@ -3550,7 +3561,10 @@ export default function BookingScreen() {
             onClose={() => setLocationModalVisible(false)}
             count={addressCount} // Pass the count of addresses to LocationSelection
             setCount={(count) => {
-              console.log("Address count updated from LocationSelection:", count);
+              console.log(
+                "Address count updated from LocationSelection:",
+                count,
+              );
               setAddressCount(count); // Update the address count in Booking screen
               if (count > 1) setAddressVisible(true);
             }}
@@ -3569,12 +3583,13 @@ export default function BookingScreen() {
               };
 
               setSavedAddresses((prev) => [...prev, addressWithId]);
-              setLocationModalVisible(false);fetchAddresses();
+              setLocationModalVisible(false);
+              fetchAddresses();
               // setAddressVisible(true);
             }}
           />
         </View>
-      </SafeAreaView>
+      </View>
 
       {/* Toast Notification */}
       <Toast
@@ -3604,6 +3619,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
+    justifyContent: "space-between",
   },
   headerTitle: {
     fontWeight: "700",
@@ -3702,7 +3718,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   centerDistance: {
-    fontSize: 11,
+    fontSize: 15,
     color: colors.primaryText,
     marginTop: 2,
     fontFamily: fonts.regular,
@@ -4109,5 +4125,14 @@ const styles = StyleSheet.create({
   contentt: {
     flex: 1,
     paddingHorizontal: getResponsiveSpacing(0),
+  },
+  closeButton: {
+    padding: 4,
+  },
+
+  closeIcon: {
+    width: 28,
+    height: 28,
+    tintColor: "black",
   },
 });

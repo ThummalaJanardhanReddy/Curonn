@@ -38,6 +38,7 @@ import ChatConsultationDetails from "@/app/shared/components/doctor/ChatConsulta
 import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { useUser } from "@/app/shared/context/UserContext";
 import { useUserStore } from "@/src/store/UserStore";
+import dayjs from "dayjs";
 interface OrderDetailsProps {
   visible: boolean;
   order: any;
@@ -638,7 +639,7 @@ function OrderDetails({
     const day = d.getDate().toString().padStart(2, "0");
     const month = (d.getMonth() + 1).toString().padStart(2, "0");
     const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    return dayjs(d).format("DD MMM YYYY"); // `${day}/${month}/${year}`;
   };
 
   const handleCancelOrder = async () => {
@@ -659,10 +660,12 @@ function OrderDetails({
           {},
         );
       } else if (orderDetails?.type === "wellness") {
-        await axiosClient.post(
-          `${ApiRoutes.WellnessData.Wellnesscancel}?bookingId=${order.masterId}&reason=${encodeURIComponent(cancelReason)}`,
-          {},
+        const reason = encodeURIComponent(cancelReason);
+        const url = ApiRoutes.WellnessData.Wellnesscancel(
+          order.masterId,
+          reason,
         );
+        const response = await axiosClient.post(url);
       } else if (
         orderDetails?.type === "medicine" ||
         orderDetails?.type?.toLowerCase() === "prescription"
@@ -721,6 +724,7 @@ function OrderDetails({
         onClose && onClose();
       }, 3500);
     } catch (e) {
+      console.error("Error cancelling order:", e);
       setToastMessage({
         title: "Cancel Failed",
         subtitle: "Failed to cancel order.",
@@ -729,6 +733,7 @@ function OrderDetails({
       setShowToast(true);
     } finally {
       setLoading(false);
+      setShowCancelModal(false);
     }
   };
 
@@ -1150,7 +1155,9 @@ function OrderDetails({
         onRequestClose={onClose}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         </SafeAreaView>
@@ -1290,15 +1297,23 @@ function OrderDetails({
                                 {orderDetails.data.diagnosiscenter || "N/A"}
                               </Text>
                             </View>
-                            {/* <View style={styles.addressection}>
-                                                <Text style={styles.value}>
-                                                    {[
-                                                        orderDetails.data.hNo ? orderDetails.data.hNo : null,
-                                                        orderDetails.data.address ? orderDetails.data.address : null,
-                                                        orderDetails.data.landMark ? orderDetails.data.landMark : null
-                                                    ].filter(Boolean).join(', ') || 'N/A'}
-                                                </Text>
-                                            </View> */}
+                            <View style={styles.addressection}>
+                              <Text style={styles.value}>
+                                {[
+                                  orderDetails.data.hNo
+                                    ? orderDetails.data.hNo
+                                    : null,
+                                  orderDetails.data.centerAddress
+                                    ? orderDetails.data.centerAddress
+                                    : null,
+                                  orderDetails.data.landMark
+                                    ? orderDetails.data.landMark
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ") || ""}
+                              </Text>
+                            </View>
                           </View>
                         </>
                       )}
@@ -1307,7 +1322,9 @@ function OrderDetails({
                       {order.orderType === "Xray" ? (
                         <Text style={styles.sectionTitle}>Patient Info</Text>
                       ) : (
-                        <Text style={styles.sectionTitle}>Address Info</Text>
+                        <Text style={styles.sectionTitle}>
+                          Sample collection address
+                        </Text>
                       )}
                       <View style={styles.databox}>
                         <View style={{ padding: 16 }}>
@@ -1361,7 +1378,7 @@ function OrderDetails({
                           </>
                         )}
                       </View>
-                      {canOngoing && (
+                      {canOngoing && order.orderType === "Medicine" && (
                         <>
                           <View style={styles.databox}>
                             <View style={{ padding: 16 }}>
@@ -1413,46 +1430,46 @@ function OrderDetails({
                                   const { category, iconSource } =
                                     getCategoryAndIcon(report.orderType);
                                   return (
-                                    <View
+                                    <TouchableOpacity
                                       key={report.reportId || idx}
                                       style={styles.individualcard}
+                                      onPress={() => {
+                                        console.log(
+                                          "Preview pressed:",
+                                          report.url,
+                                        );
+                                        setPdfLoading(true);
+                                        setSelectedPdfUrl(report.url);
+                                        // Encode the file name part of the URL
+                                        try {
+                                          const url = report.url;
+                                          const lastSlash =
+                                            url.lastIndexOf("/");
+                                          const base = url.substring(
+                                            0,
+                                            lastSlash + 1,
+                                          );
+                                          const file = url.substring(
+                                            lastSlash + 1,
+                                          );
+                                          const encodedUrl =
+                                            base + encodeURIComponent(file);
+                                          setEncodedPdfUrl(encodedUrl);
+                                        } catch (e) {
+                                          setEncodedPdfUrl(report.url);
+                                        }
+                                        setPdfModalVisible(true);
+                                      }}
                                     >
                                       <Image
                                         source={images.reportsimage}
                                         style={styles.closeIcon}
                                       />
-                                      <TouchableOpacity
+                                      <View
                                         style={{
                                           flexDirection: "row",
                                           alignItems: "center",
                                           padding: 5,
-                                        }}
-                                        onPress={() => {
-                                          console.log(
-                                            "Preview pressed:",
-                                            report.url,
-                                          );
-                                          setPdfLoading(true);
-                                          setSelectedPdfUrl(report.url);
-                                          // Encode the file name part of the URL
-                                          try {
-                                            const url = report.url;
-                                            const lastSlash =
-                                              url.lastIndexOf("/");
-                                            const base = url.substring(
-                                              0,
-                                              lastSlash + 1,
-                                            );
-                                            const file = url.substring(
-                                              lastSlash + 1,
-                                            );
-                                            const encodedUrl =
-                                              base + encodeURIComponent(file);
-                                            setEncodedPdfUrl(encodedUrl);
-                                          } catch (e) {
-                                            setEncodedPdfUrl(report.url);
-                                          }
-                                          setPdfModalVisible(true);
                                         }}
                                       >
                                         {/* {iconSource && <Image source={iconSource} style={{ width: 18, height: 18, marginRight: 6 }} />} */}
@@ -1469,8 +1486,8 @@ function OrderDetails({
                                         >
                                           {report.reportname}
                                         </Text>
-                                      </TouchableOpacity>
-                                    </View>
+                                      </View>
+                                    </TouchableOpacity>
                                   );
                                 })}
                               </View>
@@ -1595,10 +1612,23 @@ function OrderDetails({
                           <View style={styles.databox}>
                             <View style={{ padding: 16 }}>
                               <Text style={styles.DeliveryLabel}>
+                                Expected Delivery Date
+                              </Text>
+                              <Text style={styles.ongoingLabel}>
+                                {
+                                  dayjs(orderDetails.data?.medicines[0]?.expectedDeliveryDate).format("DD MMM YYYY") ||
+                                  "N/A"}
+                              </Text>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={{ padding: 16 }}>
+                              <Text style={styles.DeliveryLabel}>
                                 Delivery Notes
                               </Text>
                               <Text style={styles.ongoingLabel}>
-                                {orderDetails.data.deliveryNotes || "N/A"}
+                                {orderDetails.data.deliveryNotes ||
+                                  orderDetails.data?.medicines[0]?.deliveryNotes ||
+                                  "N/A"}
                               </Text>
                             </View>
                             <View style={styles.divider} />
@@ -1978,6 +2008,17 @@ function OrderDetails({
                       {canOngoing && (
                         <>
                           <View style={styles.databox}>
+                            <View style={{ padding: 16 }}>
+                              <Text style={styles.DeliveryLabel}>
+                                Expected Delivery Date
+                              </Text>
+                              <Text style={styles.ongoingLabel}>
+                                {
+                                  dayjs(orderDetails.data?.medicines[0]?.expectedDeliveryDate).format("DD MMM YYYY") ||
+                                  "N/A"}
+                              </Text>
+                            </View>
+                            <View style={styles.divider} />
                             <View style={{ padding: 16 }}>
                               <Text style={styles.DeliveryLabel}>
                                 Delivery Notes
@@ -2600,9 +2641,7 @@ function OrderDetails({
                         style={styles.rescheduleBtn1}
                         onPress={() => setShowRescheduleModal(true)}
                       >
-                        <Text style={styles.rescheduleBtnText}>
-                          Reschedule
-                        </Text>
+                        <Text style={styles.rescheduleBtnText}>Reschedule</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -3380,8 +3419,9 @@ const styles = StyleSheet.create({
   },
   diagname: {
     fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
+    fontFamily: fonts.bold,
+    // fontWeight: "800",
+    color: colors.text,
   },
 });
 export default OrderDetails;

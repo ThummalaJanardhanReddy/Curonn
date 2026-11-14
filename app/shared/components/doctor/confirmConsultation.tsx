@@ -283,7 +283,7 @@ export default function ConfirmConsultationScreen() {
     if (validateFields()) return;
     try {
       setLoading(true);
-      const scheduleddate = selectedDate ? formatDateLab(selectedDate) : "";
+      const scheduleddate = selectedDate ? dayjs(selectedDate).format("YYYY-MM-DD") : "";
       const scheduledbetween = selectedSlot ?? "";
       const scheduledTime = scheduleddate + " " + scheduledbetween;
 
@@ -297,7 +297,7 @@ export default function ConfirmConsultationScreen() {
         patientGender: user.gender,
         patientAge: user.age,
 
-        scheduleDate: selectedDate ? formatDateLab(selectedDate) : "",
+        scheduleDate: selectedDate ? dayjs(selectedDate).format("YYYY-MM-DD") : "",
         scheduleBetween: scheduledTime,
 
         scheduleTypeId: consultationTypeId || 1340,
@@ -347,7 +347,7 @@ export default function ConfirmConsultationScreen() {
   };
 
   const formatDateLab = (date: Date) => {
-    return dayjs(date).format("YYYY-MM-DD");
+    return dayjs(date).format("DD MMM YYYY");
   };
 
   const handleServiceEdit = () => {
