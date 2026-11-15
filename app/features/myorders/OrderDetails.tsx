@@ -39,6 +39,7 @@ import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
 import { useUser } from "@/app/shared/context/UserContext";
 import { useUserStore } from "@/src/store/UserStore";
 import dayjs from "dayjs";
+import { router } from "expo-router";
 interface OrderDetailsProps {
   visible: boolean;
   order: any;
@@ -108,12 +109,26 @@ function OrderDetails({
   const [statusName, setstatusName] = useState<string | null>(null);
   const { userData } = useUser();
 
+
   const { restoreUserData, user } = useUserStore();
   useEffect(() => {
     restoreUserData();
   }, []);
   //console.log("Order received in OrderDetails component:", order);
   const insets = useSafeAreaInsets();
+
+  const handleViewWellnessDetailsPress = () => {
+    router.push({
+      pathname: "/wellnessdetails",
+      params: {
+        wellnessMasterId: orderDetails.data.programId || orderDetails.data.id,
+        bookingId: orderDetails.data.wellnessBookingId || null,
+        enrolled: "true",
+        startDate: orderDetails.data.startFrom ?? "",
+        endDate: orderDetails.data.endFrom ?? "",
+      },
+    });
+  };
 
   const handleCancelPress = () => {
     setShowCancelModal(true);
@@ -1615,9 +1630,10 @@ function OrderDetails({
                                 Expected Delivery Date
                               </Text>
                               <Text style={styles.ongoingLabel}>
-                                {
-                                  dayjs(orderDetails.data?.medicines[0]?.expectedDeliveryDate).format("DD MMM YYYY") ||
-                                  "N/A"}
+                                {dayjs(
+                                  orderDetails.data?.medicines[0]
+                                    ?.expectedDeliveryDate,
+                                ).format("DD MMM YYYY") || "N/A"}
                               </Text>
                             </View>
                             <View style={styles.divider} />
@@ -1627,7 +1643,8 @@ function OrderDetails({
                               </Text>
                               <Text style={styles.ongoingLabel}>
                                 {orderDetails.data.deliveryNotes ||
-                                  orderDetails.data?.medicines[0]?.deliveryNotes ||
+                                  orderDetails.data?.medicines[0]
+                                    ?.deliveryNotes ||
                                   "N/A"}
                               </Text>
                             </View>
@@ -2013,9 +2030,10 @@ function OrderDetails({
                                 Expected Delivery Date
                               </Text>
                               <Text style={styles.ongoingLabel}>
-                                {
-                                  dayjs(orderDetails.data?.medicines[0]?.expectedDeliveryDate).format("DD MMM YYYY") ||
-                                  "N/A"}
+                                {dayjs(
+                                  orderDetails.data?.medicines[0]
+                                    ?.expectedDeliveryDate,
+                                ).format("DD MMM YYYY") || "N/A"}
                               </Text>
                             </View>
                             <View style={styles.divider} />
@@ -2405,7 +2423,7 @@ function OrderDetails({
                         </View>
                       </View>
 
-                      {canOngoing && (
+                      {/* {canOngoing && (
                         <>
                           <View style={styles.databox}>
                             <View style={{ padding: 16 }}>
@@ -2438,7 +2456,7 @@ function OrderDetails({
                             </View>
                           </View>
                         </>
-                      )}
+                      )} */}
 
                       {/* Reports Section (Lab)*/}
                       {(() => {
@@ -2557,9 +2575,9 @@ function OrderDetails({
                 <View style={styles.footerRow}>
                   <TouchableOpacity
                     style={styles.cancelOrderBtn}
-                    onPress={handleCancelPress}
+                    onPress={handleViewWellnessDetailsPress}
                   >
-                    <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                    <Text style={styles.cancelOrderBtnText}>View Details</Text>
                   </TouchableOpacity>
                 </View>
               )}

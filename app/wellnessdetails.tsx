@@ -30,6 +30,7 @@ interface RouteParams {
   enrolled: boolean | string;
   startDate: string;
   endDate: string;
+  bookingId?: string;
 }
 
 interface TestItem {
@@ -374,27 +375,6 @@ export default function WellnessDetailsScreen() {
     // Add more programs as needed
   };
 
-  useEffect(() => {
-    fetchDetails();
-  }, []);
-
-  const fetchDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await axiosClient.get(
-        ApiRoutes.WellnessData.getdataById(wellnessMasterId),
-      );
-
-      setDetails(response.data);
-      // Debug: log the full details object after fetching
-      console.log("Fetched details:", response.data);
-    } catch (error) {
-      console.log("Wellness details fetch error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const route = useRoute();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -441,14 +421,35 @@ export default function WellnessDetailsScreen() {
   const mainimage = selectedProgramData.mainimage;
   const isEnrolled = enrolled === "true";
 
+   useEffect(() => {
+    fetchDetails();
+  }, []);
+
+  const fetchDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosClient.get(
+        ApiRoutes.WellnessData.getdataById(wellnessMasterId),
+      );
+
+      setDetails(response.data);
+      // Debug: log the full details object after fetching
+      console.log("Fetched details:", response.data);
+    } catch (error) {
+      console.log("Wellness details fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchCareteam = async () => {
     try {
       if (!user?.eId) return;
       const res = await axiosClient.get<ICareteam[]>(
         ApiRoutes.WellnessData.getCareTeam(user?.eId),
       );
-      console.log("careteam : ", res.data);
-      const data = res.data?.find((d) => d.wellnessBookingId === bookingId?.toString());
+      // console.log("careteam : ", res.data);
+      const data = res.data?.find((d) => d.wellnessBookingId.toString() === bookingId?.toString());
       const formattedData = [
         { label: data?.nutritionistSpeciality, value: data?.nutritionistName },
         {
@@ -458,6 +459,10 @@ export default function WellnessDetailsScreen() {
         {
           label: data?.primaryPhysicianSpeciality,
           value: data?.primaryPhysicianName,
+        },
+        {
+          label: data?.careCoordinatorSpeciality,
+          value: data?.careCoordinatorName,
         },
       ];
       setCareteam(formattedData);
@@ -495,7 +500,7 @@ export default function WellnessDetailsScreen() {
         ApiRoutes.WellnessData.getPatientVitalsMonitoring(user?.eId),
       );
       setVitals(normalizeMonitoringResponse(res));
-      console.log("vitals data: ", res);
+      // console.log("vitals data: ", res);
     } catch (error) {
       console.error("fetch vitals error: ", error);
     }
@@ -508,7 +513,7 @@ export default function WellnessDetailsScreen() {
         ApiRoutes.WellnessData.getPatientActivity(user?.eId),
       );
       setActivity(normalizeMonitoringResponse(res));
-      console.log("activity data: ", res);
+      // console.log("activity data: ", res);
     } catch (error) {
       console.error("fetch activity error: ", error);
     }
@@ -521,7 +526,7 @@ export default function WellnessDetailsScreen() {
         ApiRoutes.WellnessData.getPatientDiet(user?.eId),
       );
       setDiet(normalizeMonitoringResponse(res));
-      console.log("Diet data: ", res);
+      // console.log("Diet data: ", res);
     } catch (error) {
       console.error("fetch diet error: ", error);
     }
