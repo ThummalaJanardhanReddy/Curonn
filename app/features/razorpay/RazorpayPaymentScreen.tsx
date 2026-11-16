@@ -7,8 +7,11 @@ import {
 } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
-const RAZORPAY_KEY_ID = "rzp_live_TXDv4ySvPCeAlK";
-// const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
+//const RAZORPAY_KEY_ID = "rzp_live_TXDv4ySvPCeAlK";
+const RAZORPAY_KEY_ID = "rzp_test_SEr0Dn9sZ2CsDF";
+
+// Derived from whichever key above is active, so it can't drift out of sync.
+export const IS_RAZORPAY_LIVE_MODE = RAZORPAY_KEY_ID.startsWith("rzp_live_");
 
 type RazorpayPaymentScreenProps = {
   amount: number | string;
