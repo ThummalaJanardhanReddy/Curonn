@@ -330,6 +330,7 @@ export default function ConfirmConsultationScreen() {
       setTimeout(() => {
         useVideoStore.getState().reset();
         useDoctorConsultationStore.getState().reset();
+        setLoading(false);
         router.push("/(main)/orders");
       }, 1500);
     } catch (error) {
@@ -340,9 +341,10 @@ export default function ConfirmConsultationScreen() {
           "There was an error creating your consultation. Please try again.",
         type: "error",
       });
+      setLoading(false);
     } finally {
       setShowConfirm(true);
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
