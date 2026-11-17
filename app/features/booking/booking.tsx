@@ -37,7 +37,9 @@ import { useCart } from "../../shared/context/CartContext";
 // import RazorpayCheckout from "../../shared/components/RazorpayCheckout";
 import axiosClient from "@/src/api/axiosClient";
 import ApiRoutes from "@/src/api/employee/employee";
-import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
+import RazorpayPaymentScreen, {
+  IS_RAZORPAY_LIVE_MODE,
+} from "../razorpay/RazorpayPaymentScreen";
 import { fonts } from "@/app/shared/styles/fonts";
 import { useUserStore } from "@/src/store/UserStore";
 import dayjs from "dayjs";
@@ -1044,7 +1046,7 @@ export default function BookingScreen() {
 
     try {
       setLoading(true);
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       console.log(
         "📤 Lab Razorpay Order Request:",
         ApiRoutes.LabOrders.RazopayOrder + query,
@@ -1298,7 +1300,7 @@ export default function BookingScreen() {
 
     try {
       setLoading(true);
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${patientId || 0}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       console.log(
         "📤 Lab Razorpay Order Request:",
         ApiRoutes.LabOrders.RazopayOrder + query,
@@ -1609,7 +1611,7 @@ export default function BookingScreen() {
 
     // Always trigger API call for new selection
     try {
-      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${normalized.patientId || patientId || 0}`;
+      const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${normalized.patientId || patientId || 0}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query,
       );
@@ -2038,7 +2040,7 @@ export default function BookingScreen() {
 
     try {
       setLoading(true);
-      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${newRelationPatientId || patientId}`;
+      const query = `?amount=${Math.round(displayedTotal * 100)}&patientId=${newRelationPatientId || patientId}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       console.log(
         "\uD83D\uDCE4 Razorpay Order Request:",
         ApiRoutes.LabOrders.RazopayOrder + query,
@@ -3429,13 +3431,7 @@ export default function BookingScreen() {
               }
             }}
           >
-            <View
-              style={{
-                flex: 1,
-                paddingTop: insets.top,
-                paddingBottom: insets.bottom,
-              }}
-            >
+            <View style={{ flex: 1 }}>
               <RazorpayPaymentScreen
                 key={razorpayOrderId}
                 amount={

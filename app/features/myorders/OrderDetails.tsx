@@ -35,7 +35,9 @@ import {
 import VideoOrderDetails from "@/app/shared/components/doctor/VideoOrderDetails";
 import { Linking } from "react-native";
 import ChatConsultationDetails from "@/app/shared/components/doctor/ChatConsultationDetails";
-import RazorpayPaymentScreen from "../razorpay/RazorpayPaymentScreen";
+import RazorpayPaymentScreen, {
+  IS_RAZORPAY_LIVE_MODE,
+} from "../razorpay/RazorpayPaymentScreen";
 import { useUser } from "@/app/shared/context/UserContext";
 import { useUserStore } from "@/src/store/UserStore";
 import dayjs from "dayjs";
@@ -417,7 +419,7 @@ function OrderDetails({
       "Book Now for Prescription clicked. Calculating total price and creating Razorpay order...",
     );
     try {
-      const query = `?amount=${Math.round(totalPrice * 100)}&patientId=${patientId || 0}`;
+      const query = `?amount=${Math.round(totalPrice * 100)}&patientId=${patientId || 0}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       console.log("Total price calculated from orderDetails:", query);
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query,
