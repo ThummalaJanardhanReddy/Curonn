@@ -4,6 +4,9 @@ import {
   getToken,
   requestPermission,
   AuthorizationStatus,
+  registerDeviceForRemoteMessages,
+  isDeviceRegisteredForRemoteMessages,
+  getAPNSToken,
 } from "@react-native-firebase/messaging";
 import * as Device from "expo-device";
 import { Alert, Platform } from "react-native";
@@ -73,10 +76,12 @@ export async function registerForPushNotifications(patientId: number) {
 
     if (!fcmToken) {
       console.log("Unable to generate FCM token");
+      // Alert.alert("Push Token", "Unable to generate push token (see console logs for the reason).");
       return;
     }
 
     console.log("FCM Token:", fcmToken);
+    // Alert.alert("Push Token", fcmToken);
 
     const tokenUpdateResponse = await axiosClient.post(
       EmployeeApi.updateDeviceToken,
@@ -88,6 +93,7 @@ export async function registerForPushNotifications(patientId: number) {
     console.log("token generated: ", tokenUpdateResponse);
   } catch (error) {
     console.log("token error: ", error);
+    // Alert.alert("Push Token Error", String(error));
   }
 }
 
@@ -125,9 +131,39 @@ const getFCMToken = async (): Promise<string | null> => {
     // Get FCM token through React Native Firebase
     const messagingInstance = getMessaging();
 
+    if (Platform.OS === "ios") {
+      // iOS requires registering for remote messages (APNs) before
+      // getToken() will resolve. Without this, getToken() can hang
+      // or resolve with no value on iOS, while Android works fine.
+      if (!isDeviceRegisteredForRemoteMessages(messagingInstance)) {
+        console.log("iOS: registering device for remote messages (APNs)...");
+        await registerDeviceForRemoteMessages(messagingInstance);
+      }
+
+      const apnsToken = await getAPNSToken(messagingInstance);
+      console.log("iOS APNs Token:", apnsToken);
+
+      if (!apnsToken) {
+        const message =
+          "iOS: APNs token not available yet. Push token will not be generated. " +
+          "Check that push notifications capability + a valid provisioning profile " +
+          "(matching aps-environment) are set, and that this is a real device, not simulator.";
+        console.log(message);
+        // Alert.alert("APNs Token", message);
+        return null;
+      }
+
+      // Alert.alert("APNs Token", apnsToken);
+    }
+
+    console.log("Requesting FCM token...");
     const fcmToken = await getToken(messagingInstance);
 
-    console.log("FCM Token:", fcmToken);
+    if (fcmToken) {
+      console.log("FCM Token received:", fcmToken);
+    } else {
+      console.log("FCM Token NOT received (getToken returned empty).");
+    }
 
     return fcmToken;
   } catch (error) {

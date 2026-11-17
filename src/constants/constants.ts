@@ -18,7 +18,7 @@ export interface ISymptomMaster {
   symptomMasterId: number;
   speciality: string;
   specialityId: number;
-  symptom: string;
+  symptoms: string[];
   createdBy: number;
   modifiedBy: number | null;
   createdOn: string; // ISO string

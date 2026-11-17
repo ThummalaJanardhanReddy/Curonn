@@ -21,10 +21,7 @@ import {
 } from "../../shared/utils/responsive";
 import { useDoctorConsultationStore } from "@/src/store/doctor-consultation";
 import axiosClient from "@/src/api/axiosClient";
-import {
-  ISymptomMaster,
-  ISymptomMasterApiResponse,
-} from "@/src/constants/constants";
+import { ISymptomMasterApiResponse } from "@/src/constants/constants";
 import ApiRoutes from "@/src/api/employee/employee";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import SeacrchIcon from "../../../assets/AppIcons/Curonn_icons/search.svg";
@@ -35,12 +32,23 @@ interface Symptom {
   category: string;
 }
 
+// The symptoms API returns one row per speciality with a `symptoms` string
+// array. Each string is flattened into its own selectable item here, using
+// a synthetic `symptomId` since the API doesn't give individual symptom ids.
+interface IFlatSymptom {
+  symptomId: string;
+  symptomMasterId: number;
+  speciality: string;
+  specialityId: number;
+  symptom: string;
+}
+
 export default function SymptomsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSymptoms, setSelectedSymptoms] = useState<ISymptomMaster[]>(
+  const [selectedSymptoms, setSelectedSymptoms] = useState<IFlatSymptom[]>(
     [],
   );
-  const [allSymptoms, setAllSymptoms] = useState<ISymptomMaster[]>([]);
+  const [allSymptoms, setAllSymptoms] = useState<IFlatSymptom[]>([]);
   const [searchFocused, setSearchFocused] = useState(false);
   const [customSymptomText, setCustomSymptomText] = useState("");
   const { setSymptoms, departmentId } = useDoctorConsultationStore();
@@ -74,10 +82,20 @@ export default function SymptomsScreen() {
 
     if (response?.isSuccess) {
       const symptoms = response.data.items;
-      const data = symptoms?.filter((sym) => sym.specialityId == departmentId);
-      const _d = data || [];
-      console.log(data);
-      setAllSymptoms(_d);
+      const groups = symptoms?.filter(
+        (sym) => sym.specialityId == departmentId,
+      );
+      const flattened: IFlatSymptom[] = (groups || []).flatMap((group) =>
+        (group.symptoms || []).map((symptom, index) => ({
+          symptomId: `${group.symptomMasterId}-${index}`,
+          symptomMasterId: group.symptomMasterId,
+          speciality: group.speciality,
+          specialityId: group.specialityId,
+          symptom,
+        })),
+      );
+      console.log(flattened);
+      setAllSymptoms(flattened);
     }
   };
 
@@ -85,7 +103,7 @@ export default function SymptomsScreen() {
     let filtered = allSymptoms?.filter(
       (symptom) =>
         !selectedSymptoms.some(
-          (selected) => selected.symptomMasterId === symptom.symptomMasterId,
+          (selected) => selected.symptomId === symptom.symptomId,
         ),
     );
 
@@ -102,36 +120,27 @@ export default function SymptomsScreen() {
     router.back();
   };
 
-  const handleSymptomSelect = (symptom: ISymptomMaster) => {
+  const handleSymptomSelect = (symptom: IFlatSymptom) => {
     setSelectedSymptoms((prev) => [...prev, symptom]);
   };
 
   const handleAddCustomSymptom = () => {
     const text = customSymptomText.trim();
     if (!text) return;
-    const customSymptom: ISymptomMaster = {
+    const customSymptom: IFlatSymptom = {
+      symptomId: `custom-${Date.now()}`,
       symptomMasterId: -Date.now(),
       speciality: "",
       specialityId: departmentId ?? 0,
       symptom: text,
-      createdBy: 0,
-      modifiedBy: null,
-      createdOn: new Date().toISOString(),
-      modifiedOn: null,
-      deletedBy: null,
-      deletedOn: null,
-      isActive: true,
-      totalCount: 0,
     };
     setSelectedSymptoms((prev) => [...prev, customSymptom]);
     setCustomSymptomText("");
   };
 
-const handleSymptomDeselect = (symptomId: string | number) => {
+const handleSymptomDeselect = (symptomId: string) => {
   setSelectedSymptoms((prev) =>
-    prev.filter(
-      (symptom) => symptom.symptomMasterId.toString() !== symptomId.toString()
-    )
+    prev.filter((symptom) => symptom.symptomId !== symptomId)
   );
 };
 
@@ -153,7 +162,7 @@ const handleSymptomDeselect = (symptomId: string | number) => {
   };
 
   const renderSymptomCard = useCallback(
-    ({ item }: { item: ISymptomMaster }) => (
+    ({ item }: { item: IFlatSymptom }) => (
       <TouchableOpacity
         style={styles.symptomCard}
         onPress={() => handleSymptomSelect(item)}
@@ -166,11 +175,11 @@ const handleSymptomDeselect = (symptomId: string | number) => {
   );
 
   const renderSelectedChip = useCallback(
-    (symptom: ISymptomMaster) => (
-      <View key={symptom.symptomMasterId} style={styles.selectedChip}>
+    (symptom: IFlatSymptom) => (
+      <View key={symptom.symptomId} style={styles.selectedChip}>
         <Text style={styles.chipText}>{symptom.symptom}</Text>
         <TouchableOpacity
-          onPress={() => handleSymptomDeselect(symptom.symptomMasterId)}
+          onPress={() => handleSymptomDeselect(symptom.symptomId)}
           style={styles.chipCloseButton}
         >
           <Text style={styles.chipCloseText}>×</Text>
@@ -246,7 +255,7 @@ const handleSymptomDeselect = (symptomId: string | number) => {
               <View style={styles.symptomsGrid}>
                 {filteredSymptoms.map((symptom) => (
                   <View
-                    key={symptom.symptomMasterId}
+                    key={symptom.symptomId}
                     style={styles.symptomCardWrapper}
                   >
                     {renderSymptomCard({ item: symptom })}
