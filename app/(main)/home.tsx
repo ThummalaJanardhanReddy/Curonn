@@ -521,7 +521,9 @@ export default function HomeScreen() {
   };
 
   const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
-    const createdOn = item.scheduleDate ? formatDate(item.scheduleDate) : "";
+    console.log("Rendering order card:", item);
+    const _bookedDate = item.createdOn || item.bookedDate || item.scheduleDate;
+    const createdOn = _bookedDate ? formatDate(_bookedDate) : "";
     const duration = item.duration ? `${item.duration}` : "";
     const timeSlot = item.timeSlot ? `, ${item.timeSlot}` : "";
     // Status display

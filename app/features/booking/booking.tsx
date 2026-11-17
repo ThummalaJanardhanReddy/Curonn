@@ -2694,13 +2694,38 @@ export default function BookingScreen() {
             visible={locationModalVisible}
             addressId={editAddressId}
             onClose={() => setLocationModalVisible(false)}
+             count={addressCount} // Pass the count of addresses to LocationSelection
+            setCount={(count) => {
+              console.log(
+                "Address count updated from LocationSelection:",
+                count,
+              );
+              setAddressCount(count); // Update the address count in Booking screen
+              if (count > 1) setAddressVisible(true);
+            }}
             onLocationSelected={(newAddress) => {
-              setSavedAddresses((prev) => [
-                ...prev,
-                { id: Date.now().toString(), ...newAddress },
-              ]);
+               const addressWithId = {
+                id: Date.now().toString(),
+                ...newAddress,
+              };
+              const addressId = {
+                addressId: Number(addressWithId.id),
+                address: newAddress.address,
+                houseNumber: newAddress.houseNumber ?? "",
+                landmark: newAddress.landmark ?? "",
+                nickname: newAddress.nickname ?? "",
+              };
+
+              // setSavedAddresses((prev) => [
+              //   ...prev,
+              //   { id: Date.now().toString(), ...newAddress },
+              // ]);
+              // setLocationModalVisible(false);
+              // setAddressVisible(true);
+
+              setSavedAddresses((prev) => [...prev, addressWithId]);
               setLocationModalVisible(false);
-              setAddressVisible(true);
+              fetchAddresses();
             }}
           />
 
