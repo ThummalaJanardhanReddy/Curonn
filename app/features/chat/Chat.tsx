@@ -227,6 +227,7 @@ export default function ChatScreen() {
     type?: string;
   } | null>(null);
 
+  const [isCancellingAppointment, setIsCancellingAppointment] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({
     title: "",
@@ -504,6 +505,7 @@ export default function ChatScreen() {
         Alert.alert("Error", "User information not available");
         return;
       }
+      setIsCancellingAppointment(true);
       console.log(
         "[ChatScreen] Attempting to cancel appointment with requestId:",
         requestId,
@@ -528,6 +530,8 @@ export default function ChatScreen() {
     } catch (error) {
       console.error("[ChatScreen] Cancel appointment error:", error);
       Alert.alert("Error", "Failed to cancel appointment");
+    } finally {
+      setIsCancellingAppointment(false);
     }
   }, [requestId, relationPatientId, user, chatStoreReset]);
 
@@ -735,6 +739,7 @@ export default function ChatScreen() {
                 <PrimaryButton
                   title="Cancel Appointment"
                   onPress={handleCancelAppointment}
+                  loading={isCancellingAppointment}
                   style={{
                     backgroundColor: "transparent",
                     borderWidth: 1,
@@ -760,6 +765,7 @@ export default function ChatScreen() {
                 <PrimaryButton
                   title="Cancel Appointment"
                   onPress={handleCancelAppointment}
+                  loading={isCancellingAppointment}
                   style={{
                     backgroundColor: "transparent",
                     borderWidth: 1,
@@ -781,7 +787,7 @@ export default function ChatScreen() {
                 Please book an appointment after some time.
               </Text>
               <View style={styles.buttonWrapper}>
-                <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
+                <PrimaryButton title="Exit" onPress={handleCancelAppointment} loading={isCancellingAppointment} />
               </View>
             </View>
           )}

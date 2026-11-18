@@ -151,6 +151,7 @@ export default function HomeScreen() {
       connectionRef.current.on("NewNotification", async (data) => {
         console.log("📩 New notification received:", data);
         await fetchNotifications(); // Refresh notifications
+        notificationCountRefreshRef.current?.(); // Refresh bell badge count
       });
 
       // Handle disconnections
@@ -192,6 +193,18 @@ export default function HomeScreen() {
       if (patientId) {
         fetchNotifications();
       }
+    }, [patientId]),
+  );
+
+  // Poll the notification count while this screen is focused so the bell
+  // badge increases on its own even if the SignalR push is missed/delayed.
+  useFocusEffect(
+    useCallback(() => {
+      if (!patientId) return;
+      const intervalId = setInterval(() => {
+        notificationCountRefreshRef.current?.();
+      }, 15000);
+      return () => clearInterval(intervalId);
     }, [patientId]),
   );
 
@@ -883,7 +896,20 @@ export default function HomeScreen() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [slideAnim]);
+
+    if (patientId) {
+      const apiUrl = ApiRoutes.Notification.GetList(patientId, "patient");
+      axiosClient
+        .get(apiUrl)
+        .then((response) => {
+          console.log("[Notifications] GET", apiUrl, "response:", response);
+          setNotifications(response as any);
+        })
+        .catch((error) => {
+          console.log("Error fetching notifications:", error);
+        });
+    }
+  }, [slideAnim, patientId]);
 
   const hideNotificationModal = useCallback(() => {
     setNotificationVisible(false);

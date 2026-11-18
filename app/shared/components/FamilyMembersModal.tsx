@@ -73,6 +73,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
     [key: string]: string | undefined;
   }
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSavingMember, setIsSavingMember] = useState(false);
   const [relationTypes, setRelationTypes] = useState<{
 
     masterDataId: number;
@@ -263,6 +264,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
       createdOn: new Date().toISOString(),
     };
     console.log('Payload for save/update:', payload);
+    setIsSavingMember(true);
     axiosClient.post(ApiRoutes.Employee.saveandupdaterelative, payload)
       .then(async response => {
         const isEdit = isEditMode && editingMember;
@@ -293,6 +295,9 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           type: "error"
         });
         setShowToast(true);
+      })
+      .finally(() => {
+        setIsSavingMember(false);
       });
   };
 
@@ -521,6 +526,7 @@ export default function FamilyMembersModal({ visible, onClose, maxFamilyMembers 
           title={isEditMode ? 'Update Family' : 'Save Family'}
           onPress={handleSaveMember}
           style={styles.saveButton}
+          loading={isSavingMember}
           disabled={
             isEditMode
               ? (

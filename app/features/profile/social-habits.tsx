@@ -751,6 +751,7 @@ export default function SocialHabitsScreen({
                 onPress={handleSave}
                 disabled={saveLoading}
                 title={saveLoading ? "Saving" : "Save"}
+                loading={saveLoading}
               />
             </View>
           </SafeAreaView>

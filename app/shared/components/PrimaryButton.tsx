@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { getResponsiveFontSize, getResponsiveSpacing, wp } from '../utils/responsive';
 import { fonts } from '../styles/fonts';
 import { colors } from '../styles/commonStyles';
@@ -8,6 +8,7 @@ interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean | undefined | null;
+  loading?: boolean;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
   width?: number;
@@ -18,11 +19,13 @@ export default function PrimaryButton({
   title,
   onPress,
   disabled = false,
+  loading = false,
   style,
   textStyle,
   width = wp(80), // 80% of screen width
   height = getResponsiveSpacing(40),
 }: PrimaryButtonProps) {
+  const isDisabled = disabled || loading;
   return (
     <TouchableOpacity
       style={[
@@ -31,16 +34,20 @@ export default function PrimaryButton({
           width,
           height,
         },
-        disabled && styles.buttonDisabled,
+        isDisabled && styles.buttonDisabled,
         style,
       ]}
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       activeOpacity={0.8}
     >
-      <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled, textStyle]}>
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color="#FFFFFF" />
+      ) : (
+        <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled, textStyle]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

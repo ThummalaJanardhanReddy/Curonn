@@ -326,6 +326,7 @@ export default function OTPVerifyScreen() {
               onPress={handleVerify}
               // onPress={() => router.push("/username")} // TODO: Remove this after testing
               disabled={!isOtpComplete || isLoading}
+              loading={isLoading}
               style={styles.verifyButton}
             />
           </View>

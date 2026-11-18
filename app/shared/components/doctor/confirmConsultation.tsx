@@ -127,6 +127,7 @@ export default function ConfirmConsultationScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<IFamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState({
     title: "",
     subtitle: "",
@@ -300,7 +301,7 @@ export default function ConfirmConsultationScreen() {
     if (!user) return;
     if (validateFields()) return;
     try {
-      setLoading(true);
+      setConfirmLoading(true);
       const scheduleddate = selectedDate ? dayjs(selectedDate).format("YYYY-MM-DD") : "";
       const scheduledbetween = selectedSlot ?? "";
       const scheduledTime = scheduleddate + " " + scheduledbetween;
@@ -373,7 +374,7 @@ export default function ConfirmConsultationScreen() {
       setTimeout(() => {
         useVideoStore.getState().reset();
         useDoctorConsultationStore.getState().reset();
-        setLoading(false);
+        setConfirmLoading(false);
         router.push("/(main)/orders");
       }, 1500);
     } catch (error) {
@@ -384,10 +385,9 @@ export default function ConfirmConsultationScreen() {
           "There was an error creating your consultation. Please try again.",
         type: "error",
       });
-      setLoading(false);
+      setConfirmLoading(false);
     } finally {
       setShowConfirm(true);
-      // setLoading(false);
     }
   };
 
@@ -815,6 +815,7 @@ export default function ConfirmConsultationScreen() {
             <PrimaryButton
               title="Confirm"
               onPress={handleConfirm}
+              loading={confirmLoading}
               style={styles.proceedButton}
             />
           </View>

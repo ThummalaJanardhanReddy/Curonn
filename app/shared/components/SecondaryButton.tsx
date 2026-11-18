@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { getResponsiveSpacing, getResponsiveFontSize, wp } from '../utils/responsive';
 import { colors } from '../styles/commonStyles';
 
@@ -7,6 +7,7 @@ interface SecondaryButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
   width?: number;
@@ -17,11 +18,13 @@ export default function SecondaryButton({
   title,
   onPress,
   disabled = false,
+  loading = false,
   style,
   textStyle,
   width,
   height = getResponsiveSpacing(45),
 }: SecondaryButtonProps) {
+  const isDisabled = disabled || loading;
   return (
     <TouchableOpacity
       style={[
@@ -30,16 +33,20 @@ export default function SecondaryButton({
           height,
           ...(width && { width }),
         },
-        disabled && styles.buttonDisabled,
+        isDisabled && styles.buttonDisabled,
         style,
       ]}
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       activeOpacity={0.8}
     >
-      <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled, textStyle]}>
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : (
+        <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled, textStyle]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

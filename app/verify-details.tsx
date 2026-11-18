@@ -329,6 +329,7 @@ export default function VerifyDetailsScreen() {
                 title={isLoading ? "Verifying..." : "Continue"}
                 onPress={handleContinue}
                 disabled={!isFormValid || isLoading}
+                loading={isLoading}
                 style={styles.continueButton}
               />
             </View>

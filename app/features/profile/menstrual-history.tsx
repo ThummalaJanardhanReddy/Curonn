@@ -408,6 +408,7 @@ export default function MenstrualHistoryScreen({
                 onPress={handleSaveRecord}
                 style={styles.saveButton}
                 disabled={saveLoading || !newRecord.frequency || !newRecord.menorrhagia}
+                loading={saveLoading}
               />
             </View>
           </KeyboardAwareScrollView>

@@ -94,6 +94,7 @@ export default function PersonalizationScreen() {
   const [showToast, setShowToast] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Auto-focus TextInput when on step 2 (age input), step 3 (height input), or step 4 (weight input)
   useEffect(() => {
     if (currentStep === 2 && textInputRef.current) {
@@ -189,6 +190,7 @@ export default function PersonalizationScreen() {
       setCurrentStep(currentStep + 1);
     } else {
       // All steps completed, update employee profile, save registration status and user data
+      setIsSubmitting(true);
       try {
         const { ...formData } = profileForm;
         const payload = {
@@ -294,6 +296,8 @@ export default function PersonalizationScreen() {
           setNavigating(true);
           router.push("/home");
         }, 2000);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -847,6 +851,7 @@ export default function PersonalizationScreen() {
               title={currentStep === totalSteps ? "Submit" : "Continue"}
               onPress={handleContinue}
               disabled={!isStepValid()}
+              loading={isSubmitting}
               style={styles.continueButton}
             />
           </View>

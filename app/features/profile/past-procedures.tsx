@@ -600,6 +600,7 @@ export default function PastProceduresScreen({
                 onPress={handleSaveProcedure}
                 style={styles.saveButton}
                 disabled={!newProcedure.procedureName.trim() || saveLoading}
+                loading={saveLoading}
               />
             </View>
           </KeyboardAwareScrollView>

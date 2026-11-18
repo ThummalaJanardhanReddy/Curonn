@@ -688,6 +688,7 @@ export default function LocationSelection({
                               : "Confirm Address"
                         }
                         disabled={isSaving}
+                        loading={isSaving}
                       />
                     </View>
                   </View>

@@ -108,6 +108,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { userData, clearUserData } = useUser();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const { restoreUserData, user, clearUser } = useUserStore();
   useEffect(() => {
@@ -292,7 +293,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       return;
     }
     try {
-      setLoading(true);
+      setIsUpdatingProfile(true);
       // Use already fetched profileForm data and all fields from getById
       const { image, dob, ...formData } = profileForm;
       const payload = {
@@ -334,7 +335,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       });
       setShowToast(true);
     } finally {
-      setLoading(false);
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -1055,6 +1056,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   title="Update"
                   onPress={handleProfileUpdate}
                   style={styles.updateButton}
+                  loading={isUpdatingProfile}
                   disabled={
                     profileForm.fullName === originalProfile.fullName &&
                     profileForm.age === originalProfile.age &&

@@ -585,6 +585,7 @@ export default function EnvironmentalAllergiesScreen({ onClose, onDataStatusChan
                   onPress={handleSaveAllergy}
                   style={styles.saveButton}
                   disabled={!newAllergy.allergen.trim() || !newAllergy.reactions.trim() || saveLoading}
+                  loading={saveLoading}
                 />
               </View>
 

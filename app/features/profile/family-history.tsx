@@ -734,6 +734,7 @@ export default function FamilyHistoryScreen({
                   !newMember.condition.trim() ||
                   isSaving
                 }
+                loading={isSaving}
               />
             </View>
           </SafeAreaView>

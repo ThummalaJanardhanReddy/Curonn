@@ -81,6 +81,7 @@ export default function ViewDetailsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [errors, setErrors] = useState("");
+  const [addingToCart, setAddingToCart] = useState(false);
   // Lab-test time slots
   const labTimeSlots = [
     "07:00 AM - 08:00 AM",
@@ -301,6 +302,7 @@ export default function ViewDetailsScreen() {
       const medicineId = medicineDetails.medicineMasterId;
       const medicineName = medicineDetails.medicineName;
       setLoading((prev: any) => ({ ...prev, [medicineId]: true }));
+      setAddingToCart(true);
       try {
         // Prepare medicine object with required id, name, subtitle, and description fields
         const medicine = {
@@ -337,6 +339,7 @@ export default function ViewDetailsScreen() {
         console.log("Add to cart error:", e);
       } finally {
         setLoading((prev: any) => ({ ...prev, [medicineId]: false }));
+        setAddingToCart(false);
       }
     },
     [cartItems, setLoading, addItem, updateQuantity, refreshCart],
@@ -720,6 +723,7 @@ export default function ViewDetailsScreen() {
                 }}
                 style={styles.bookButton}
                 textStyle={styles.bookButtonText}
+                loading={type === "scans" ? diagLoading : false}
               />
             </>
           </View>
@@ -739,6 +743,7 @@ export default function ViewDetailsScreen() {
               title="Add to Cart"
               onPress={() => handleIncrement(details)}
               style={styles.bookButton}
+              loading={addingToCart}
             />
           </View>
         )}

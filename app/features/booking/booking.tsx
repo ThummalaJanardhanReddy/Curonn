@@ -1611,6 +1611,7 @@ export default function BookingScreen() {
 
     // Always trigger API call for new selection
     try {
+      setLoading(true);
       const query = `?amount=${Math.round(totalAmount * 100)}&patientId=${normalized.patientId || patientId || 0}&islivemode=${IS_RAZORPAY_LIVE_MODE}`;
       const orderRes: any = await axiosClient.get(
         ApiRoutes.LabOrders.RazopayOrder + query,
@@ -1633,6 +1634,8 @@ export default function BookingScreen() {
         type: "error",
       });
       setShowToastLab(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2503,6 +2506,7 @@ export default function BookingScreen() {
               onPress={handleBookNowMed}
               style={{ width: "100%" }}
               disabled={loading}
+              loading={loading}
             />
           </View>
 
@@ -3312,6 +3316,7 @@ export default function BookingScreen() {
                 onPress={handleBookNowScan}
                 style={{ width: "100%" }}
                 disabled={loading}
+                loading={loading}
               />
             </View>
           ) : type === "wellness" ? (
@@ -3320,6 +3325,7 @@ export default function BookingScreen() {
                 title={`Confirm & Pay wellness \u20B9${totalAmount}`}
                 onPress={handleBookWellness}
                 style={{ width: "100%" }}
+                loading={loading}
               />
               {/* Select Patient Modal for Wellness */}
               <SelectPatientModal
@@ -3336,6 +3342,7 @@ export default function BookingScreen() {
                 onPress={handleBookNowLab}
                 style={{ width: "100%" }}
                 disabled={loading}
+                loading={loading}
               />
             </View>
           )}

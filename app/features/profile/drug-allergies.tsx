@@ -635,6 +635,7 @@ export default function DrugAllergiesScreen({ onClose, onDataStatusChange }: Dru
                   onPress={handleSaveAllergy}
                   style={styles.saveButton}
                   disabled={!newAllergy.allergen.trim() || !newAllergy.reactions.trim() || saveLoading}
+                  loading={saveLoading}
                 />
               </View>
             </SafeAreaView>

@@ -737,6 +737,7 @@ export default function MedicalHistoryScreen({
                 onPress={handleSaveCondition}
                 style={styles.saveButton}
                 disabled={!newCondition.condition.trim() || saveLoading}
+                loading={saveLoading}
               />
             </View>
           </SafeAreaView>

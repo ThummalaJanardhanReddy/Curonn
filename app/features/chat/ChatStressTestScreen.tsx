@@ -138,6 +138,8 @@ export default function ChatScreen() {
   const [input,         setInput]         = useState("");
   const [attachment,    setAttachment]    = useState<any>(null);
   const [isChatStarted, setIsChatStarted] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+  const [isCancellingAppointment, setIsCancellingAppointment] = useState(false);
 
   const flatListRef   = useRef<FlatList>(null);
   const isNearBottom  = useRef(true);
@@ -278,16 +280,26 @@ export default function ChatScreen() {
 
   const handleChatStart = useCallback(async () => {
     if (!user) return;
-    const res = await axiosClient.post(ApiRoutes.Chat.start(user?.eId));
-    useChatStore.getState().setRequestId(res?.chatRequestId);
-    setIsChatStarted(true);
+    try {
+      setIsStartingChat(true);
+      const res = await axiosClient.post(ApiRoutes.Chat.start(user?.eId));
+      useChatStore.getState().setRequestId(res?.chatRequestId);
+      setIsChatStarted(true);
+    } finally {
+      setIsStartingChat(false);
+    }
   }, [user]);
 
   const handleCancelAppointment = useCallback(async () => {
     if (!requestId) { Alert.alert("Error", "Request ID not found!"); return; }
-    await axiosClient.post(ApiRoutes.Chat.cancel, { chatRequestId: requestId, patientid: user?.eId });
-    chatStoreReset();
-    router.replace("/(main)/my-doctor");
+    try {
+      setIsCancellingAppointment(true);
+      await axiosClient.post(ApiRoutes.Chat.cancel, { chatRequestId: requestId, patientid: user?.eId });
+      chatStoreReset();
+      router.replace("/(main)/my-doctor");
+    } finally {
+      setIsCancellingAppointment(false);
+    }
   }, [requestId, user]);
 
   const handleScroll = useCallback((event: any) => {
@@ -410,7 +422,7 @@ export default function ChatScreen() {
         {showWaiting && (
           <View style={styles.centerState}>
             <Text style={styles.stateText}>Please wait. Our doctor will join shortly</Text>
-            <PrimaryButton title="Cancel Appointment" onPress={handleCancelAppointment} />
+            <PrimaryButton title="Cancel Appointment" onPress={handleCancelAppointment} loading={isCancellingAppointment} />
           </View>
         )}
 
@@ -421,7 +433,7 @@ export default function ChatScreen() {
               We are really sorry, all our doctors are busy now.{"\n"}
               Please book an appointment after some time.
             </Text>
-            <PrimaryButton title="Exit" onPress={handleCancelAppointment} />
+            <PrimaryButton title="Exit" onPress={handleCancelAppointment} loading={isCancellingAppointment} />
           </View>
         )}
 
@@ -477,7 +489,7 @@ export default function ChatScreen() {
           <View style={styles.inputRow}>
             {!isChatStarted && chatStatus !== "requested" ? (
               <View style={{ flex: 1, alignSelf: "center" }}>
-                <PrimaryButton title="Start Chat" onPress={handleChatStart} />
+                <PrimaryButton title="Start Chat" onPress={handleChatStart} loading={isStartingChat} />
               </View>
             ) : (
               <>

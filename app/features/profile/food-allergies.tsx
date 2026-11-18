@@ -600,6 +600,7 @@ const patientId = Number(userData?.e_id || user?.eId);
                       disabled={
                         !newAllergy.allergen.trim() || !newAllergy.reactions.trim() || saveLoading
                       }
+                      loading={saveLoading}
                     />
                   </View>
                 </SafeAreaView>

@@ -283,7 +283,9 @@ function OrderDetails({
       : false;
   const canOngoing =
     orderDetails && orderDetails.data && orderDetails.data.statusName
-      ? ["Ongoing", "ongoing"].includes(orderDetails.data.statusName)
+      ? ["Ongoing", "ongoing", "Completed"].includes(
+          orderDetails.data.statusName,
+        )
       : false;
 
   const isImageFile =
