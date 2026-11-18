@@ -247,7 +247,9 @@ export default function VideoOrderDetails({
 
             <View style={styles.symtomsSection}>
               <Text style={styles.symtomsheader}>Symptoms</Text>
-              <Text style={styles.symtomText}>{data.symptoms ?? "--"}</Text>
+              <Text style={styles.symtomText}>
+                {data.symptoms ? data.symptoms.replace(/,\s*/g, ", ") : "--"}
+              </Text>
             </View>
 
             <View
@@ -258,12 +260,16 @@ export default function VideoOrderDetails({
                 marginTop: 10,
               }}
             >
-              <Text style={styles.appointmentprepredText}>
-                Appointment preffered data & Time
-              </Text>
-              <Text style={[styles.datelabel, { marginTop: 4 }]}>
-                {date ? `${date}, ${timeSlot}` : "--"}
-              </Text>
+              {data.scheduleTypeId !== 1340 && (
+                <>
+                  <Text style={styles.appointmentprepredText}>
+                    Appointment preffered data & Time
+                  </Text>
+                  <Text style={[styles.datelabel, { marginTop: 4 }]}>
+                    {date ? `${date}, ${timeSlot}` : "--"}
+                  </Text>
+                </>
+              )}
               <View
                 style={[
                   styles.statusBadgeContainer,
