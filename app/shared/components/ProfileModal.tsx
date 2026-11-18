@@ -726,7 +726,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
       {/* Version Number at Bottom */}
       <View style={styles.versionContainer}>
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        <Text style={styles.versionText}>Version 1.0.4</Text>
       </View>
     </ScrollView>
   );
@@ -1258,7 +1258,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 provide you with easy access to medical services, health
                 tracking, and wellness management.
               </Text>
-              <Text style={styles.versionInfo}>Version 1.0.0</Text>
+              <Text style={styles.versionInfo}>Version 1.0.4</Text>
             </View>
           </SafeAreaView>
         </View>
