@@ -19,6 +19,8 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import PrimaryButton from "../PrimaryButton";
+import SecondaryButton from "../SecondaryButton";
+import FamilyMembersModal from "../FamilyMembersModal";
 import { router, useNavigation } from "expo-router";
 import Toast from "../Toast";
 import { useUserStore } from "@/src/store/UserStore";
@@ -100,6 +102,9 @@ export default function ConfirmConsultationScreen() {
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
+  const [relationPatientId, setRelationPatientId] = useState<number | null>(
+    null,
+  );
   const [selectedRelation, setSelectedRelation] = useState<{
     masterDataId: number;
     name: string;
@@ -108,6 +113,8 @@ export default function ConfirmConsultationScreen() {
     { masterDataId: number; name: string }[]
   >([]);
   const [showRelationDropdown, setShowRelationDropdown] = useState(false);
+  const [showAddFamilyMemberModal, setShowAddFamilyMemberModal] =
+    useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -142,6 +149,17 @@ export default function ConfirmConsultationScreen() {
   const selectedMember =
     familyMembers.find((m) => m.empRelationId === patientId) ||
     familyMembers[0];
+
+  // Only show relation types that are already saved for this patient
+  // (i.e. present in Employee/GetPatientRelations), not every master relation type.
+  const savedRelationTypeIds = new Set(
+    familyMembers
+      .filter((m) => m.empRelationId !== 0)
+      .map((m) => m.relationId),
+  );
+  const availableRelationTypes = labRelationTypes.filter((rt) =>
+    savedRelationTypeIds.has(rt.masterDataId),
+  );
 
   useEffect(() => {
     const initialize = async () => {
@@ -287,8 +305,33 @@ export default function ConfirmConsultationScreen() {
       const scheduledbetween = selectedSlot ?? "";
       const scheduledTime = scheduleddate + " " + scheduledbetween;
 
+      let othersPatientId = relationPatientId;
+      // Commented out for now - use later: create relation first if it doesn't already exist
+      // if (patientType === "others" && !othersPatientId) {
+      //   // Selected relation doesn't exist yet - create it first and use the returned patientId
+      //   const relationSavePayload = {
+      //     empRelationId: 0,
+      //     relationId: selectedRelation?.masterDataId || 0,
+      //     relationName: fullName.trim(),
+      //     patientId: user.eId,
+      //     gender: gender.trim(),
+      //     age: age ? Number(age) : 0,
+      //     createdBy: user.eId,
+      //     createdOn: new Date().toISOString(),
+      //   };
+      //   const savedPatientId: any = await axiosClient.post(
+      //     ApiRoutes.Employee.saveandupdaterelative,
+      //     relationSavePayload,
+      //   );
+      //   othersPatientId = Number(savedPatientId) || null;
+      //   setRelationPatientId(othersPatientId);
+      // }
+
       let payload: ICreateAppointmentRequest = {
-        patientId: user.eId,
+        patientId:
+          patientType === "others" && othersPatientId
+            ? othersPatientId
+            : user.eId,
         specialityId: departmentId || 0,
         isAppointmentAssigned: true,
 
@@ -377,17 +420,20 @@ export default function ConfirmConsultationScreen() {
         // Capitalize gender if it's 'male'/'female'
         const g = detail.gender || "";
         setGender(g.charAt(0).toUpperCase() + g.slice(1).toLowerCase());
+        setRelationPatientId(detail.relationPatientId ?? null);
       } else {
         // Clear fields if no detail found for this relation type
         setFullName("");
         setAge("");
         setGender("");
+        setRelationPatientId(null);
       }
     } catch (error) {
       // console.error('Fetch relation details error:', error);
       setFullName("");
       setAge("");
       setGender("");
+      setRelationPatientId(null);
     } finally {
       setLoading(false);
     }
@@ -420,7 +466,8 @@ export default function ConfirmConsultationScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
@@ -651,113 +698,127 @@ export default function ConfirmConsultationScreen() {
                 </TouchableOpacity>
               </View>
 
-              {patientType === "others" && (
-                <View style={styles.othersForm}>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>Relation Type</Text>
-                    <TouchableOpacity
-                      style={styles.dropdown}
-                      onPress={() => setShowRelationDropdown(true)}
-                    >
-                      <Text style={styles.dropdownText}>
-                        {selectedRelation
-                          ? selectedRelation.name
-                          : "Select Relation"}
-                      </Text>
-                      <Image
-                        source={images.arrowdown}
-                        style={styles.dropdownIcon}
-                      />
-                    </TouchableOpacity>
-                    {fieldErrors.relation ? (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                      >
-                        {fieldErrors.relation}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>Full Name</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={fullName}
-                      onChangeText={(text) => {
-                        setFullName(text);
-                        if (fieldErrors.fullName) {
-                          setFieldErrors((prev) => ({ ...prev, fullName: "" }));
-                        }
-                      }}
-                      placeholder="Enter"
-                      placeholderTextColor="#999"
+              {patientType === "others" &&
+                (availableRelationTypes.length === 0 ? (
+                  <View style={styles.noFamilyMembersContainer}>
+                    <Text style={styles.noFamilyMembersText}>
+                      No Family Members
+                    </Text>
+                    <SecondaryButton
+                      title="Add Family Members"
+                      onPress={() => setShowAddFamilyMemberModal(true)}
+                      height={getResponsiveSpacing(40)}
                     />
-                    {fieldErrors.fullName ? (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
-                      >
-                        {fieldErrors.fullName}
-                      </Text>
-                    ) : null}
                   </View>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>Age</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={age}
-                      onChangeText={(text) => {
-                        setAge(text);
-                        if (fieldErrors.age) {
-                          setFieldErrors((prev) => ({ ...prev, age: "" }));
-                        }
-                      }}
-                      placeholder="Enter"
-                      placeholderTextColor="#999"
-                      keyboardType="numeric"
-                    />
-                    {fieldErrors.age ? (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                ) : (
+                  <View style={styles.othersForm}>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Relation Type</Text>
+                      <TouchableOpacity
+                        style={styles.dropdown}
+                        onPress={() => setShowRelationDropdown(true)}
                       >
-                        {fieldErrors.age}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>Gender</Text>
-                    <TouchableOpacity
-                      style={styles.dropdown}
-                      onPress={() => setShowGenderDropdown(true)}
-                    >
-                      <Text style={styles.dropdownText}>
-                        {gender || "Select"}
-                      </Text>
-                      <Image
-                        source={images.arrowdown}
-                        style={styles.dropdownIcon}
+                        <Text style={styles.dropdownText}>
+                          {selectedRelation
+                            ? selectedRelation.name
+                            : "Select Relation"}
+                        </Text>
+                        <Image
+                          source={images.arrowdown}
+                          style={styles.dropdownIcon}
+                        />
+                      </TouchableOpacity>
+                      {fieldErrors.relation ? (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                        >
+                          {fieldErrors.relation}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Full Name</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={fullName}
+                        onChangeText={(text) => {
+                          setFullName(text);
+                          if (fieldErrors.fullName) {
+                            setFieldErrors((prev) => ({ ...prev, fullName: "" }));
+                          }
+                        }}
+                        placeholder="Enter"
+                        placeholderTextColor="#999"
                       />
-                    </TouchableOpacity>
-                    {fieldErrors.gender ? (
-                      <Text
-                        style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                      {fieldErrors.fullName ? (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                        >
+                          {fieldErrors.fullName}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Age</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={age}
+                        onChangeText={(text) => {
+                          setAge(text);
+                          if (fieldErrors.age) {
+                            setFieldErrors((prev) => ({ ...prev, age: "" }));
+                          }
+                        }}
+                        placeholder="Enter"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                      />
+                      {fieldErrors.age ? (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                        >
+                          {fieldErrors.age}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.formField}>
+                      <Text style={styles.fieldLabel}>Gender</Text>
+                      <TouchableOpacity
+                        style={styles.dropdown}
+                        onPress={() => setShowGenderDropdown(true)}
                       >
-                        {fieldErrors.gender}
-                      </Text>
-                    ) : null}
+                        <Text style={styles.dropdownText}>
+                          {gender || "Select"}
+                        </Text>
+                        <Image
+                          source={images.arrowdown}
+                          style={styles.dropdownIcon}
+                        />
+                      </TouchableOpacity>
+                      {fieldErrors.gender ? (
+                        <Text
+                          style={{ color: "#ff0000", fontSize: 13, marginTop: 4 }}
+                        >
+                          {fieldErrors.gender}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              )}
+                ))}
             </View>
           </View>
         </ScrollView>
 
         {/* CONFIRM BUTTON */}
-        <View style={styles.buttonContainer}>
-          <PrimaryButton
-            title="Confirm"
-            onPress={handleConfirm}
-            style={styles.proceedButton}
-          />
-        </View>
+        {!showAddFamilyMemberModal && (
+          <View style={styles.buttonContainer}>
+            <PrimaryButton
+              title="Confirm"
+              onPress={handleConfirm}
+              style={styles.proceedButton}
+            />
+          </View>
+        )}
 
         <NativeDatePickerModal
           visible={showDatePicker}
@@ -785,7 +846,7 @@ export default function ConfirmConsultationScreen() {
               onPress={() => setShowRelationDropdown(false)}
             >
               <View style={styles.dropdownModal}>
-                {labRelationTypes.map((relation, index) => (
+                {availableRelationTypes.map((relation, index) => (
                   <TouchableOpacity
                     key={relation.masterDataId}
                     style={styles.dropdownOption}
@@ -911,7 +972,15 @@ export default function ConfirmConsultationScreen() {
           onHide={() => setShowConfirm(false)}
         />
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+      <FamilyMembersModal
+        visible={showAddFamilyMemberModal}
+        onClose={() => {
+          setShowAddFamilyMemberModal(false);
+          fetchPatientRelations();
+        }}
+      />
+    </>
   );
 }
 
@@ -1340,6 +1409,20 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
+  },
+  noFamilyMembersContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    alignItems: "center",
+  },
+  noFamilyMembersText: {
+    textAlign: "center",
+    color: "#999",
+    fontSize: getResponsiveFontSize(14),
+    fontFamily: fonts.regular,
+    marginBottom: 12,
   },
   selectedRadioOption: {
     borderColor: colors.primary,
