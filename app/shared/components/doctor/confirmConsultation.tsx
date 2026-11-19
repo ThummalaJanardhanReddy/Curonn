@@ -116,7 +116,7 @@ export default function ConfirmConsultationScreen() {
   const [showAddFamilyMemberModal, setShowAddFamilyMemberModal] =
     useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | undefined>(
     slotTime,
@@ -452,6 +452,7 @@ export default function ConfirmConsultationScreen() {
   }
 
   function isSlotCompleted(slot: string) {
+    if (!selectedDate) return false;
     const [, end] = slot.split(" - ");
     //console.log("End Time to Parse:", end);
     const convertedEndTime = convertTo24HourFormat(end);
@@ -816,6 +817,7 @@ export default function ConfirmConsultationScreen() {
               title="Confirm"
               onPress={handleConfirm}
               loading={confirmLoading}
+              disabled={!selectedDate || !selectedSlot}
               style={styles.proceedButton}
             />
           </View>
@@ -823,7 +825,7 @@ export default function ConfirmConsultationScreen() {
 
         <NativeDatePickerModal
           visible={showDatePicker}
-          value={selectedDate}
+          value={selectedDate ?? new Date()}
           onCancel={() => setShowDatePicker(false)}
           onConfirm={(date) => {
             setShowDatePicker(false);

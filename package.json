@@ -17,6 +17,7 @@
     "prebuild": "npx expo prebuild",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:sim": "bash scripts/run-ios-sim.sh",
     "web": "expo start --web",
     "lint": "expo lint",
     "postinstall": "patch-package"
