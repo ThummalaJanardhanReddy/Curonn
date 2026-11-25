@@ -105,6 +105,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     age: "",
     gender: "",
   });
+  // Full raw employee record from GetEmployeeById, kept so UpdateEmployee can
+  // be sent the complete payload instead of just the editable fields.
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const { userData, clearUserData } = useUser();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
@@ -127,6 +130,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         );
         // console.log("[ProfileModal] Profile data response:", response);
         const data = response?.data ?? response;
+        setEmployeeData(data);
         setProfileForm({
           fullName: data.fullName || "",
           EmployeeCode: data.employeeCode,
@@ -294,9 +298,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     }
     try {
       setIsUpdatingProfile(true);
-      // Use already fetched profileForm data and all fields from getById
+      // Start from the complete record fetched via GetEmployeeById, then
+      // overlay the fields editable on this screen so nothing else is lost.
       const { image, dob, ...formData } = profileForm;
       const payload = {
+        ...(employeeData || {}),
         eId: formData.eId,
         roleId: formData.roleId,
         companyName: formData.companyName,
@@ -310,6 +316,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         gender: formData.gender,
         age: formData.age ? Number(formData.age) : undefined,
       };
+      delete payload.employeeCode;
       console.log("Profile update payload:", payload);
       const response = await axiosClient.post(
         ApiRoutes.Employee.update,

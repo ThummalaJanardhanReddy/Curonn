@@ -297,7 +297,7 @@ export default function MedicalHistoryScreen({
       const dd = String(today.getDate()).padStart(2, "0");
       const formattedDate = `${yyyy}-${mm}-${dd}`;
 
-      const payload = {
+      const payload = [{
         medicalHistoryId: 0,
         patientId: patientId,
         historyName: newCondition.condition.trim(),
@@ -313,7 +313,7 @@ export default function MedicalHistoryScreen({
         createdBy: patientId,
         createdOn: formattedDate,
         totalCount: 0,
-      };
+      }];
 
       console.log(
         "📤 Save Medical History Request:",

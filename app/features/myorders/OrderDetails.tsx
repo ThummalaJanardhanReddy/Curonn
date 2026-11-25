@@ -146,11 +146,11 @@ function OrderDetails({
   const [showPayment, setShowPayment] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [useDirectUrl, setUseDirectUrl] = useState(false);
-  const SLOT_GROUPS = {
-    morning: ["09:00 AM", "09:30 AM", "10:00 AM"],
-    afternoon: ["01:00 PM", "01:30 PM", "02:00 PM"],
-    evening: ["06:00 PM", "06:30 PM", "07:00 PM"],
-  };
+  const consultationTimeSlots = [
+    "08:00 AM - 12:00 PM",
+    "12:00 PM - 05:00 PM",
+    "05:00 PM - 08:00 PM",
+  ];
   const [showToastMed, setShowToastMed] = useState(false);
   const [toastMessageMed, setToastMessageMed] = useState({
     title: "",
@@ -867,38 +867,29 @@ function OrderDetails({
               <View style={styles.timeSlotsContainer}>
                 {orderDetails?.type === "consultation" ? (
                   <View style={{ marginTop: 0 }}>
-                    {Object.entries(SLOT_GROUPS).map(([group, times]) => (
-                      <View key={group} style={{ marginBottom: 16 }}>
-                        <Text style={styles.slotGroupTitle}>
-                          {group.toUpperCase()}
-                        </Text>
-
-                        <View style={styles.chipContainer}>
-                          {times.map((time) => (
-                            <TouchableOpacity
-                              key={time}
-                              style={[
-                                styles.slotChip,
-                                selectedSlot === time &&
-                                  styles.selectedSlotChip,
-                              ]}
-                              onPress={() => handleSlotSelect(time)}
-                            >
-                              <Text
-                                style={[
-                                  styles.slotText,
-                                  selectedSlot === time && {
-                                    color: "#fff",
-                                  },
-                                ]}
-                              >
-                                {time}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-                    ))}
+                    <View style={styles.chipContainer}>
+                      {consultationTimeSlots.map((time) => (
+                        <TouchableOpacity
+                          key={time}
+                          style={[
+                            styles.slotChip,
+                            selectedSlot === time && styles.selectedSlotChip,
+                          ]}
+                          onPress={() => handleSlotSelect(time)}
+                        >
+                          <Text
+                            style={[
+                              styles.slotText,
+                              selectedSlot === time && {
+                                color: "#fff",
+                              },
+                            ]}
+                          >
+                            {time}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
                 ) : (
                   <View style={{ marginTop: 0 }}>
@@ -960,7 +951,7 @@ function OrderDetails({
                     appointmentId: orderDetails.data.appointmentId,
                     scheduleDate: newRescheduleDate,
                     reason: rescheduleReason,
-                    scheduleBetween: selectedSlot,
+                    scheduleBetween: `${newRescheduleDate} ${selectedSlot}`,
                     modifiedBy: orderDetails.data.patientId,
                   };
 
@@ -3047,14 +3038,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-  },
-  /* SLOT */
-  slotGroupTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#6B7280",
-    fontFamily: fonts.medium,
   },
   /* SYMPTOM CHIP */
   chipContainer: {

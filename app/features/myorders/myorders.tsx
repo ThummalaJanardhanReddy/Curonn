@@ -140,8 +140,8 @@ export default function OrdersScreen() {
     }
 
     return [...result].sort((a, b) => {
-      const dateA = a.scheduleDate ? new Date(a.scheduleDate).getTime() : 0;
-      const dateB = b.scheduleDate ? new Date(b.scheduleDate).getTime() : 0;
+      const dateA = a.createdOn ? new Date(a.createdOn).getTime() : 0;
+      const dateB = b.createdOn ? new Date(b.createdOn).getTime() : 0;
       return dateB - dateA;
     });
   }, [allOrders, selectedFilter, searchQuery, filters]);
@@ -303,7 +303,11 @@ export default function OrdersScreen() {
                   { flexDirection: "column", alignItems: "flex-start" },
                 ]}
               >
-                <Text style={styles.categorytitle}>Preffered Date: {bookedOn} {timeSlot}</Text>
+                {(bookedOn || timeSlot) && (
+                  <Text style={styles.categorytitle}>
+                    Preffered Date: {bookedOn} {timeSlot}
+                  </Text>
+                )}
                 {createdOn && item.orderType === "Consultation" && (
                   <Text style={[styles.categorytitle, { fontWeight: "600" }]}>
                     Scheduled On: {createdOn}

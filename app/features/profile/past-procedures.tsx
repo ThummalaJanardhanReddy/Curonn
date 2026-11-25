@@ -30,10 +30,7 @@ import ApiRoutes from "@/src/api/employee/employee";
 import Toast from "@/app/shared/components/Toast";
 import { fonts, fontStyles } from "@/app/shared/styles/fonts";
 import { useUserStore } from "@/src/store/UserStore";
-import {
-  KeyboardAvoidingView,
-  KeyboardAwareScrollView,
-} from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 interface Procedure {
   surgicalHistoryId: number;
@@ -468,12 +465,11 @@ export default function PastProceduresScreen({
         onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.modalContent}>
           <TouchableOpacity
             style={styles.modalBackdrop}
             onPress={handleCloseModal}
           />
-          <KeyboardAwareScrollView style={styles.modalContent}>
+          <SafeAreaView style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Surgical History</Text>
               <TouchableOpacity
@@ -603,14 +599,13 @@ export default function PastProceduresScreen({
                 loading={saveLoading}
               />
             </View>
-          </KeyboardAwareScrollView>
-          <NativeDatePickerModal
-            visible={showNativeDatePicker}
-            value={selectedDate}
-            onCancel={() => setShowNativeDatePicker(false)}
-            onConfirm={handleConfirmProcedureDate}
-            maximumDate={new Date()}
-          />
+            <NativeDatePickerModal
+              visible={showNativeDatePicker}
+              value={selectedDate}
+              onCancel={() => setShowNativeDatePicker(false)}
+              onConfirm={handleConfirmProcedureDate}
+              maximumDate={new Date()}
+            />
           </SafeAreaView>
         </View>
       </Modal>

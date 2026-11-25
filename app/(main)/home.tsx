@@ -81,9 +81,7 @@ export default function HomeScreen() {
 
   const [articles, setArticles] = useState<any[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [closedOrderIds, setClosedOrderIds] = useState<string[]>([]);
-  const [notificationVisible, setNotificationVisible] = useState(false);
   const [faqVisible, setFaqVisible] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
   // Lock the visible set of 3 orders per session
@@ -98,20 +96,7 @@ export default function HomeScreen() {
     message: "",
   });
   const bottomSlideAnim = useRef(new Animated.Value(400)).current;
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   const insets = useSafeAreaInsets();
-
-  const fetchNotifications = async () => {
-    if (!patientId) return;
-    try {
-      const response: any = await axiosClient.get(
-        ApiRoutes.Notification.GetList(patientId, "patient"),
-      );
-      setNotifications(response); // Set notifications in the state
-    } catch (error) {
-      console.log("Error fetching notifications:", error);
-    }
-  };
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
 
@@ -150,7 +135,6 @@ export default function HomeScreen() {
       // Listen for new notifications
       connectionRef.current.on("NewNotification", async (data) => {
         console.log("📩 New notification received:", data);
-        await fetchNotifications(); // Refresh notifications
         notificationCountRefreshRef.current?.(); // Refresh bell badge count
       });
 
@@ -179,22 +163,6 @@ export default function HomeScreen() {
       }
     };
   }, [patientId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (patientId) {
-        fetchNotifications();
-      }
-    }, [patientId]),
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      if (patientId) {
-        fetchNotifications();
-      }
-    }, [patientId]),
-  );
 
   // Poll the notification count while this screen is focused so the bell
   // badge increases on its own even if the SignalR push is missed/delayed.
@@ -719,48 +687,6 @@ export default function HomeScreen() {
   // Ref to trigger notification count refresh in CommonHeader
   const notificationCountRefreshRef = useRef<() => void>(null);
 
-  const markNotificationAsRead = async (notificationId: number) => {
-    try {
-      // Optimistically update the state before the API call
-      setNotifications((prev: any) =>
-        Array.isArray(prev)
-          ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: true } : n,
-            )
-          : prev,
-      );
-
-      // Call the backend API to mark the notification as read
-      const readnotific = await axiosClient.post(
-        ApiRoutes.Notification.readmark(notificationId),
-        {
-          notificationId,
-        },
-      );
-      console.log(`Notification ${notificationId} marked as read on backend`);
-      console.log(`After read Notificaiton`, readnotific);
-
-      // Refresh notification count in CommonHeader
-      if (notificationCountRefreshRef.current) {
-        notificationCountRefreshRef.current();
-      }
-
-      // Add a short delay before re-fetching notifications to allow backend to update
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await fetchNotifications(); // Fetch notifications after successful API call
-    } catch (error) {
-      console.error("Failed to mark notification as read", error);
-      // Optionally, revert the state change if there's an error
-      setNotifications((prev: any) =>
-        Array.isArray(prev)
-          ? prev.map((n) =>
-              n.notificationId === notificationId ? { ...n, isRead: false } : n,
-            )
-          : prev,
-      );
-    }
-  };
-
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -833,18 +759,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Handle status bar when notification modal opens/closes
-  // useEffect(() => {
-  // console.log("Home Page data Started");
-  // if (notificationVisible) {
-  //   StatusBar.setBarStyle('dark-content', true);
-  //   StatusBar.setBackgroundColor('#fff', true);
-  // } else {
-  //   StatusBar.setBarStyle('light-content', true);
-  //   StatusBar.setBackgroundColor('transparent', true);
-  // }
-  // }, [notificationVisible]);
-
   // Dummy services data (would come from API)
   const services = useMemo(
     () => [
@@ -890,37 +804,7 @@ export default function HomeScreen() {
   );
 
   const showNotificationModal = useCallback(() => {
-    setNotificationVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    if (patientId) {
-      const apiUrl = ApiRoutes.Notification.GetList(patientId, "patient");
-      axiosClient
-        .get(apiUrl)
-        .then((response) => {
-          console.log("[Notifications] GET", apiUrl, "response:", response);
-          setNotifications(response as any);
-        })
-        .catch((error) => {
-          console.log("Error fetching notifications:", error);
-        });
-    }
-  }, [slideAnim, patientId]);
-
-  const hideNotificationModal = useCallback(() => {
-    setNotificationVisible(false);
-    //   Animated.timing(slideAnim, {
-    //     toValue: SCREEN_WIDTH,
-    //     duration: 300,
-    //     useNativeDriver: true,
-    //   }).start(() => {
-    //     setNotificationVisible(false);
-    //   });
-    // }, [slideAnim]);
+    router.push("/notifications" as any);
   }, []);
   const showBottomModal = useCallback(
     (type: "faq" | "feedback") => {
@@ -1044,53 +928,6 @@ export default function HomeScreen() {
     ),
     [],
   );
-
-  const renderNotification = useCallback(({ item }: { item: any }) => {
-    const bgColor = item.isRead ? colors.bg_rest : "#FFF6F4";
-    return (
-      <TouchableOpacity
-        style={[styles.notificationItem, { backgroundColor: bgColor }]}
-        activeOpacity={0.7}
-        onPress={() => {
-          // Mark as read if not already
-          if (!item.isRead) markNotificationAsRead(item.notificationId);
-          // Set selectedOrderDetails and open modal
-          setSelectedOrderDetails({
-            ...item,
-            masterId: item.referenceId,
-            orderType:
-              item.source === "Lab"
-                ? "Single Test"
-                : item.source === "Scan"
-                  ? "Xray"
-                  : item.source === "Wellness"
-                    ? "Wellness Program"
-                    : item.source === "ChatRequest"
-                      ? "ChatRequest"
-                      : item.source === "Consulation"
-                        ? "Consultation"
-                        : item.source,
-            statusName: item.statusName || "",
-          });
-          hideNotificationModal();
-          setOrderDetailsModalVisible(true);
-        }}
-      >
-        <View style={styles.notificationItemIconContainer}>
-          <Image
-            source={images.notification}
-            style={styles.notificationItemIcon}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationMessage}>{item.message}</Text>
-          {/* <Text style={styles.notificationTime}>{item.time}</Text> */}
-        </View>
-      </TouchableOpacity>
-    );
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -1570,55 +1407,6 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Notification Modal */}
-      <Modal
-        visible={notificationVisible}
-        animationType="slide"
-        // presentationStyle="pageSheet"
-        onRequestClose={hideNotificationModal}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg_rest }}>
-          <TouchableOpacity
-            style={styles.notificationModalBackdrop}
-            onPress={hideNotificationModal}
-          />
-          <Animated.View
-            style={[
-              styles.notificationModalContent,
-              {
-                transform: [{ translateX: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.notificationModalHeader}>
-              <Text style={styles.notificationModalTitle}>Notifications</Text>
-              <TouchableOpacity
-                onPress={hideNotificationModal}
-                style={styles.notificationCloseButton}
-              >
-                <Image
-                  source={images.icons.close}
-                  style={styles.notificationCloseIcon}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.notificationModalBody}>
-              <FlatList
-                data={notifications}
-                renderItem={renderNotification}
-                keyExtractor={(item) => item.notificationId.toString()}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.notificationList}
-                accessibilityRole="list"
-                accessibilityLabel="Notification list"
-              />
-            </View>
-          </Animated.View>
-        </SafeAreaView>
-      </Modal>
-      {/* </SafeAreaView> */}
-
       <OrderDetails
         visible={orderDetailsModalVisible}
         order={selectedOrderDetails}
@@ -2031,97 +1819,6 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 8,
-  },
-  notificationModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  notificationModalBackdrop: {
-    flex: 1,
-  },
-  notificationModalContent: {
-    // position: "absolute",
-    // top: 0,
-    // right: 0,
-    width: SCREEN_WIDTH,
-    height: "100%",
-    // backgroundColor: "#ffffffff",
-  },
-  notificationModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: "#eee",
-  },
-  notificationModalTitle: {
-    fontSize: 16,
-    color: "#202427",
-    fontWeight: "700",
-  },
-  notificationCloseButton: {
-    padding: 4,
-  },
-  notificationCloseIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#000",
-  },
-  notificationModalBody: {
-    flex: 1,
-    //backgroundColor: colors.bg_primary,
-  },
-  emptyNotificationText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  notificationList: {
-    paddingVertical: 0,
-  },
-  notificationItem: {
-    flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#70707080",
-    alignItems: "flex-start",
-  },
-  notificationItemIconContainer: {
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 4,
-  },
-  notificationItemIcon: {
-    width: 24,
-    height: 24,
-    // tintColor: "#ee2f2177",
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 15,
-    color: "#000000",
-    flex: 1,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: "#666",
-    fontFamily: fonts.regular,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  notificationTime: {
-    fontSize: 11,
-    fontWeight: "400",
-    fontFamily: fonts.regular,
-    color: "#999",
   },
   articlesContainer: {
     paddingRight: 10,
