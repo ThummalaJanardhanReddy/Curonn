@@ -182,7 +182,7 @@ export default function ViewDetailsScreen() {
       const payload = {
         latitude,
         longitude,
-        radiusKm: 10,
+        radiusKm: 0,
       };
 
       const response: any = await axiosClient.post(

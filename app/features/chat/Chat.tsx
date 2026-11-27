@@ -744,11 +744,10 @@ export default function ChatScreen() {
                     backgroundColor: "transparent",
                     borderWidth: 1,
                     borderColor: colors.primary,
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                    width: 200,
+                    paddingHorizontal: 20,
+                    width: 230,
                   }}
-                  textStyle={{ color: colors.primary, paddingHorizontal: 10 }}
+                  textStyle={{ color: colors.primary }}
                 />
               </View>
             </View>
@@ -771,9 +770,9 @@ export default function ChatScreen() {
                     borderWidth: 1,
                     borderColor: colors.primary,
                     paddingHorizontal: 20,
-                    width: 200,
+                    width: 230,
                   }}
-                  textStyle={{ color: colors.primary, paddingHorizontal: 10 }}
+                  textStyle={{ color: colors.primary }}
                 />
               </View>
             </View>

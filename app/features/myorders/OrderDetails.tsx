@@ -1617,9 +1617,9 @@ function OrderDetails({
                           </Text>
                         </View>
                       </View>
-                      {canOngoing && (
-                        <>
-                          <View style={styles.databox}>
+                      <View style={styles.databox}>
+                        {canOngoing && (
+                          <>
                             <View style={{ padding: 16 }}>
                               <Text style={styles.DeliveryLabel}>
                                 Expected Delivery Date
@@ -1632,17 +1632,20 @@ function OrderDetails({
                               </Text>
                             </View>
                             <View style={styles.divider} />
-                            <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>
-                                Delivery Notes
-                              </Text>
-                              <Text style={styles.ongoingLabel}>
-                                {orderDetails.data.deliveryNotes ||
-                                  orderDetails.data?.medicines[0]
-                                    ?.deliveryNotes ||
-                                  "N/A"}
-                              </Text>
-                            </View>
+                          </>
+                        )}
+                        <View style={{ padding: 16 }}>
+                          <Text style={styles.DeliveryLabel}>
+                            Delivery Notes
+                          </Text>
+                          <Text style={styles.ongoingLabel}>
+                            {orderDetails.data.deliveryNotes ||
+                              orderDetails.data?.medicines[0]?.deliveryNotes ||
+                              "N/A"}
+                          </Text>
+                        </View>
+                        {canOngoing && (
+                          <>
                             <View style={styles.divider} />
                             <View style={{ padding: 16 }}>
                               <Text style={styles.DeliveryLabel}>Traking</Text>
@@ -1663,9 +1666,9 @@ function OrderDetails({
                                 </Text>
                               </TouchableOpacity>
                             </View>
-                          </View>
-                        </>
-                      )}
+                          </>
+                        )}
+                      </View>
                     </View>
                   )}
                   {orderDetails?.type?.toLowerCase() === "prescription" && (
@@ -1765,6 +1768,16 @@ function OrderDetails({
                               </Text>
                             )}
                           </ScrollView>
+                        </View>
+
+                        {/* Delivery Notes */}
+                        <View style={{ padding: 16, paddingTop: 0 }}>
+                          <Text style={styles.DeliveryLabel}>
+                            Delivery Notes
+                          </Text>
+                          <Text style={styles.ongoingLabel}>
+                            {orderDetails.data.deliveryNotes || "N/A"}
+                          </Text>
                         </View>
 
                         {/* Medicines Table Section */}
@@ -2018,50 +2031,39 @@ function OrderDetails({
                         </View>
                       </View>
                       {canOngoing && (
-                        <>
-                          <View style={styles.databox}>
-                            <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>
-                                Expected Delivery Date
-                              </Text>
-                              <Text style={styles.ongoingLabel}>
-                                {dayjs(
-                                  orderDetails.data?.medicines[0]
-                                    ?.expectedDeliveryDate,
-                                ).format("DD MMM YYYY") || "N/A"}
-                              </Text>
-                            </View>
-                            <View style={styles.divider} />
-                            <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>
-                                Delivery Notes
-                              </Text>
-                              <Text style={styles.ongoingLabel}>
-                                {orderDetails.data.deliveryNotes || "N/A"}
-                              </Text>
-                            </View>
-                            <View style={styles.divider} />
-                            <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>Traking</Text>
-                              <TouchableOpacity
-                                disabled={!orderDetails.data.trackingLink}
-                                onPress={() => {
-                                  let url = orderDetails.data.trackingLink;
-                                  if (url && !/^https?:\/\//i.test(url)) {
-                                    url = "https://" + url;
-                                  }
-                                  if (url) {
-                                    Linking.openURL(url);
-                                  }
-                                }}
-                              >
-                                <Text style={styles.trackingLabel}>
-                                  {orderDetails.data.trackingLink || "N/A"}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
+                        <View style={styles.databox}>
+                          <View style={{ padding: 16 }}>
+                            <Text style={styles.DeliveryLabel}>
+                              Expected Delivery Date
+                            </Text>
+                            <Text style={styles.ongoingLabel}>
+                              {dayjs(
+                                orderDetails.data?.medicines[0]
+                                  ?.expectedDeliveryDate,
+                              ).format("DD MMM YYYY") || "N/A"}
+                            </Text>
                           </View>
-                        </>
+                          <View style={styles.divider} />
+                          <View style={{ padding: 16 }}>
+                            <Text style={styles.DeliveryLabel}>Traking</Text>
+                            <TouchableOpacity
+                              disabled={!orderDetails.data.trackingLink}
+                              onPress={() => {
+                                let url = orderDetails.data.trackingLink;
+                                if (url && !/^https?:\/\//i.test(url)) {
+                                  url = "https://" + url;
+                                }
+                                if (url) {
+                                  Linking.openURL(url);
+                                }
+                              }}
+                            >
+                              <Text style={styles.trackingLabel}>
+                                {orderDetails.data.trackingLink || "N/A"}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       )}
                     </View>
                   )}
@@ -2205,17 +2207,17 @@ function OrderDetails({
                         </View>
                       </View>
 
-                      {canOngoing && (
-                        <>
-                          <View style={styles.databox}>
-                            <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>
-                                Delivery Notes
-                              </Text>
-                              <Text style={styles.ongoingLabel}>
-                                {orderDetails.data.deliveryNotes || "N/A"}
-                              </Text>
-                            </View>
+                      <View style={styles.databox}>
+                        <View style={{ padding: 16 }}>
+                          <Text style={styles.DeliveryLabel}>
+                            Delivery Notes
+                          </Text>
+                          <Text style={styles.ongoingLabel}>
+                            {orderDetails.data.deliveryNotes || "N/A"}
+                          </Text>
+                        </View>
+                        {canOngoing && (
+                          <>
                             <View style={styles.divider} />
                             <View style={{ padding: 16 }}>
                               <Text style={styles.DeliveryLabel}>Traking</Text>
@@ -2236,9 +2238,9 @@ function OrderDetails({
                                 </Text>
                               </TouchableOpacity>
                             </View>
-                          </View>
-                        </>
-                      )}
+                          </>
+                        )}
+                      </View>
 
                       {/* Reports Section (Lab)*/}
                       {(() => {

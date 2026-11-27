@@ -1666,8 +1666,8 @@ export default function BookingScreen() {
   const medicineTotalAmount = safeItemsTotal - medicineDiscountAmount;
 
   const displayedTotal = useMemo(
-    () => medicineTotalAmount + deliveryCharges,
-    [medicineTotalAmount, deliveryCharges],
+    () => medicineTotalAmount,
+    [medicineTotalAmount],
   );
   // Quantity handlers for medical cart items
   const handleIncreaseQuantity = async (index: number) => {
@@ -2423,7 +2423,8 @@ export default function BookingScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Pricing Info</Text>
               <View style={styles.deliveryCardNew}>
-                <View style={styles.chargeRow}>
+                {/* Delivery Charges row hidden */}
+                {/* <View style={styles.chargeRow}>
                   <Text
                     style={{
                       fontSize: 14,
@@ -2434,7 +2435,7 @@ export default function BookingScreen() {
                     Delivery Charges
                   </Text>
                   <Text style={styles.chargeValue}>₹{deliveryCharges}</Text>
-                </View>
+                </View> */}
                 {/* Local discount calculation for Pricing Info only */}
                 {(() => {
                   return (

@@ -728,7 +728,7 @@ export default function LabTestsScreen() {
         console.warn("No latLng found in AsyncStorage, using default 0,0");
       }
 
-      const payload = { latitude, longitude, radiusKm: 10 };
+      const payload = { latitude, longitude, radiusKm: 0 };
       const response = await axiosClient.post(
         ApiRoutes.DiagCenter.Diagsticcenter,
         payload,
