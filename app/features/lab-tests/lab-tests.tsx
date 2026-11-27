@@ -728,7 +728,7 @@ export default function LabTestsScreen() {
         console.warn("No latLng found in AsyncStorage, using default 0,0");
       }
 
-      const payload = { latitude, longitude, radiusKm: 0 };
+      const payload = { latitude, longitude, radiusKm: 30 };
       const response = await axiosClient.post(
         ApiRoutes.DiagCenter.Diagsticcenter,
         payload,
@@ -902,7 +902,7 @@ export default function LabTestsScreen() {
 
               <View style={styles.healthprice}>
                 {/* <Text style={styles.priceRow}> */}
-                  <Text style={styles.originalPrice}>
+                  <Text style={[styles.originalPrice, { marginRight: 6 }]}>
                     ₹{String(item.price)}
                   </Text>
                   <Text style={[styles.finalPrice1, { marginLeft: 5 }]}>
@@ -1313,29 +1313,6 @@ export default function LabTestsScreen() {
                               </View>
 
                               <View style={styles.testActioncard}>
-                                <TouchableOpacity
-                                  style={styles.viewdetailsbutton}
-                                  onPress={() =>
-                                    router.push({
-                                      pathname: "/viewdetails",
-                                      params: {
-                                        id: center.id,
-                                        type: "diagncenter",
-                                        price: selectedTest?.price
-                                          ? String(selectedTest.price)
-                                          : "",
-                                        curonnPrice: selectedTest?.curonnPrice
-                                          ? String(selectedTest.curonnPrice)
-                                          : "",
-                                      },
-                                    })
-                                  }
-                                >
-                                  <Text style={styles.viewdetailstext}>
-                                    View Details
-                                  </Text>
-                                </TouchableOpacity>
-
                                 <PrimaryButton
                                   title="Book Now"
                                   onPress={() => {

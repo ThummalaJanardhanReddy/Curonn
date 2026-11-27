@@ -1388,6 +1388,31 @@ function OrderDetails({
                           </>
                         )}
                       </View>
+
+                      {order.orderType !== "Xray" &&
+                        (orderDetails.data.scaname ||
+                          orderDetails.data.sampleCollectionDateTime) && (
+                          <>
+                            <Text style={styles.sectionTitle}>
+                              Lab Partner Details
+                            </Text>
+                            <View style={styles.databox}>
+                              <View style={{ padding: 16 }}>
+                                <Text style={styles.patientname}>
+                                  {orderDetails.data.scaname || "N/A"}
+                                </Text>
+                                <Text style={styles.itemSubText}>
+                                  {orderDetails.data.sampleCollectionDateTime
+                                    ? dayjs(
+                                        orderDetails.data
+                                          .sampleCollectionDateTime,
+                                      ).format("DD MMM YYYY, hh:mm A")
+                                    : "N/A"}
+                                </Text>
+                              </View>
+                            </View>
+                          </>
+                        )}
                       {canOngoing && order.orderType === "Medicine" && (
                         <>
                           <View style={styles.databox}>
@@ -2207,40 +2232,18 @@ function OrderDetails({
                         </View>
                       </View>
 
-                      <View style={styles.databox}>
-                        <View style={{ padding: 16 }}>
-                          <Text style={styles.DeliveryLabel}>
-                            Delivery Notes
-                          </Text>
-                          <Text style={styles.ongoingLabel}>
-                            {orderDetails.data.deliveryNotes || "N/A"}
-                          </Text>
-                        </View>
-                        {canOngoing && (
-                          <>
-                            <View style={styles.divider} />
+                      {orderDetails.data.notes && (
+                        <>
+                          <Text style={styles.sectionTitle}>Notes</Text>
+                          <View style={styles.databox}>
                             <View style={{ padding: 16 }}>
-                              <Text style={styles.DeliveryLabel}>Traking</Text>
-                              <TouchableOpacity
-                                disabled={!orderDetails.data.trackingLink}
-                                onPress={() => {
-                                  let url = orderDetails.data.trackingLink;
-                                  if (url && !/^https?:\/\//i.test(url)) {
-                                    url = "https://" + url;
-                                  }
-                                  if (url) {
-                                    Linking.openURL(url);
-                                  }
-                                }}
-                              >
-                                <Text style={styles.trackingLabel}>
-                                  {orderDetails.data.trackingLink || "N/A"}
-                                </Text>
-                              </TouchableOpacity>
+                              <Text style={styles.ongoingLabel}>
+                                {orderDetails.data.notes}
+                              </Text>
                             </View>
-                          </>
-                        )}
-                      </View>
+                          </View>
+                        </>
+                      )}
 
                       {/* Reports Section (Lab)*/}
                       {(() => {
@@ -2691,13 +2694,17 @@ function OrderDetails({
             transparent={false}
             onRequestClose={() => setPdfModalVisible(false)}
           >
-            <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+            <SafeAreaView
+              style={{ flex: 1, backgroundColor: "#fff" }}
+              edges={["left", "right", "bottom"]}
+            >
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: 16,
+                  paddingTop: 16 + insets.top,
                   borderBottomWidth: 1,
                   borderBottomColor: "#eee",
                 }}

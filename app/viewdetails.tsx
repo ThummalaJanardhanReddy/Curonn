@@ -182,7 +182,7 @@ export default function ViewDetailsScreen() {
       const payload = {
         latitude,
         longitude,
-        radiusKm: 0,
+        radiusKm: 30,
       };
 
       const response: any = await axiosClient.post(
@@ -776,6 +776,7 @@ export default function ViewDetailsScreen() {
               currentLocation={currentLocation}
               onProfilePress={() => console.log("Profile pressed")}
               showCart={false}
+              showProfile={false}
             />
             <TouchableOpacity
               onPress={() => {
@@ -798,12 +799,10 @@ export default function ViewDetailsScreen() {
             <View style={styles.content}>
               {/* Sample Pickup Date & Time */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Select your preferred date & time
-                </Text>
+                <Text style={styles.sectionTitle}>Date & Time</Text>
                 <View style={styles.dateTimeCard}>
                   <View style={styles.dateSection}>
-                    <Text style={styles.fieldLabel}>Service Date</Text>
+                    <Text style={styles.fieldLabel}>Service Start Date</Text>
                     <TouchableOpacity
                       style={styles.dateInput}
                       onPress={() => setShowDatePicker(true)}
@@ -884,7 +883,6 @@ export default function ViewDetailsScreen() {
                 </View>
               ) : (
                 <View style={styles.modalScrollableContent}>
-                  <Text style={{fontSize: 14, color: colors.primaryText, fontWeight:700}}>Select your preferred diagnostic center</Text>
                   {diagCenters.length === 0 ? (
                     <Text
                       style={{
@@ -910,7 +908,10 @@ export default function ViewDetailsScreen() {
                               <View style={styles.testCard1}>
                                 <View style={styles.testInfo}>
                                   <Text style={styles.testName}>
-                                    {center.centerName}
+                                    {center.centerName} -{" "}
+                                    <Text style={styles.testReportTime}>
+                                      {center.distanceKm?.toFixed(2)} km away
+                                    </Text>
                                   </Text>
 
                                   <Text style={styles.testReportTime}>
@@ -951,8 +952,8 @@ export default function ViewDetailsScreen() {
                                     }
                                     handleBookscanTest(details.id, center.id);
                                   }}
-                                  style={styles.bookButton}
-                                  textStyle={styles.bookButtonText}
+                                  style={styles.diagCenterBookButton}
+                                  textStyle={styles.diagCenterBookButtonText}
                                 />
                                 {!details &&
                                   errors ===
@@ -1023,9 +1024,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   testReportTime: {
-    fontSize: 10,
-    color: "#4B334E",
+    fontSize: 12,
+    color: colors.primaryText,
     fontFamily: fonts.regular,
+    paddingTop: 2,
   },
   testAction: {
     alignItems: "center",
@@ -1036,16 +1038,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   priceRow: {
-    fontSize: 11,
-    color: "#4B334E",
+    fontSize: 12,
+    color: colors.primaryText,
     fontWeight: "500",
     marginBottom: 4,
-    fontFamily: fonts.regular,
   },
   finalPrice1: {
-    fontSize: 16,
-    color: "#000",
-    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: colors.primaryText,
+    fontWeight: "700",
   },
   testActioncard: {
     flexDirection: "row",
@@ -1126,7 +1127,7 @@ const styles = StyleSheet.create({
   },
   testName: {
     fontSize: 16,
-    color: "#000",
+    color: colors.primaryText,
     marginBottom: 3,
     fontFamily: fonts.bold,
   },
@@ -1259,11 +1260,10 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
+    fontSize: 13,
+    color: "#000000",
+    marginBottom: getResponsiveSpacing(2),
     fontWeight: "700",
-    marginBottom: 0,
-    fontSize: 14,
-    lineHeight: 26,
-    color: "#000",
   },
   sectionTitle1: {
     fontWeight: "700",
@@ -1309,7 +1309,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "400",
-    color: colors.primaryText,
+    color: "#333",
     marginBottom: 3,
     fontFamily: fonts.medium,
   },
@@ -1381,7 +1381,7 @@ const styles = StyleSheet.create({
   },
   timeSlotText: {
     fontSize: 11,
-    color: "#333",
+    color: colors.primaryText,
     fontFamily: fonts.regular,
   },
   selectedTimeSlotText: {
@@ -1418,7 +1418,10 @@ const styles = StyleSheet.create({
   },
 
   originalPrice: {
+    fontSize: 13,
     textDecorationLine: "line-through",
+    textDecorationStyle: "solid",
+    fontWeight: "400",
     marginRight: 8,
     color: "#887f8b",
   },
@@ -1435,6 +1438,21 @@ const styles = StyleSheet.create({
   },
   bookButtonText: {
     fontSize: 14,
+    fontWeight: "700",
+  },
+  diagCenterBookButton: {
+    width: 110,
+    height: 30,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: getResponsiveSpacing(23),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  diagCenterBookButtonText: {
+    color: colors.primary,
+    fontSize: 11,
     fontWeight: "700",
   },
 });

@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.curonn.health",
-      "buildNumber": "37",
+      "buildNumber": "39",
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "production"
